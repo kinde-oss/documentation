@@ -1,0 +1,433 @@
+---
+import Button from "./Button.astro";
+// import ChatLauncher from "@components/ChatLauncher/ChatLauncher.astro";
+// import EmptySearchResults from "@components/EmptySearchResults/EmptySearchResults.astro";
+import {Icon} from "astro-icon/components";
+import EmptySearchResults from "./EmptySearchResults.astro";
+import ChatLauncher from "./ChatLauncher.astro";
+// import Link from "@components/Link/Link.astro";
+// import {slackLink} from "@config/productUrls";
+
+export interface Props {
+  suggestions?: any;
+}
+
+const defaultSuggestions = [
+  {
+    title: "Sign up for free",
+    link: "https://app.kinde.com/register",
+    isExternal: true
+  },
+  {
+    title: "Watch a demo",
+    link: "https://kinde.com/product-demo/"
+  },
+  {
+    title: "About Kinde",
+    link: "https://kinde.com/about/"
+  }
+];
+
+const defaultLinks = [
+  {
+    title: "Browse the docs",
+    link: "/"
+  },
+  {
+    title: "See what’s new",
+    link: "https://updates.kinde.com",
+    isExternal: true
+  },
+
+  {
+    title: "View our guides",
+    link: "https://kinde.com/guides/"
+  },
+  {
+    title: "Read our blog",
+    link: "https://kinde.com/blog/"
+  },
+  {
+    title: "Request a feature",
+    link: "https://kinde-21631392.hs-sites.com/en-au/feature-request",
+    isExternal: true
+  },
+  {
+    title: "System status",
+    link: "https://status.kinde.com/",
+    isExternal: true
+  }
+];
+
+const {suggestions = defaultSuggestions} = Astro.props;
+---
+
+<div class="c-help-widget">
+  <div
+    id="c-help-widget__modal"
+    hidden
+    aria-hidden="true"
+    class="c-help-widget__modal js-help-widget__modal"
+    tabindex="-1"
+  >
+    <div class="c-help-widget__modal-greeting">Need a hand?</div>
+    <div class="c-help-widget__modal-content-wrapper">
+      <div class="c-help-widget__modal-suggestions-wrapper">
+        <div class="c-help-widget__modal-search-wrapper">
+          <div class="c-help-widget__modal-search-icon-wrapper">
+            <Icon name="search" size={18} />
+          </div>
+
+          <input
+            name="search"
+            id="search"
+            placeholder="Search"
+            type="search"
+            class="c-help-widget__modal-search js-help-widget__modal-search"
+          />
+        </div>
+        <div class="px-6">
+          <div class="js-default-suggestions">
+            <div class="c-help-widget__modal-suggestions-title">Suggested for you:</div>
+            <ol class="c-help-widget__modal-suggestions-list list-none p-0">
+              {
+                suggestions?.map((suggestion) => (
+                  <li class="c-help-widget__modal-suggestions-list-item">
+                    <a
+                      class="text-sm font-medium text-kinde-grey-900 no-underline underline-offset-[0.3em] hover:underline dark:text-white"
+                      href={suggestion?.link}
+                      target={suggestion?.isExternal ? "_blank" : "_self"}
+                    >
+                      {suggestion?.title}
+                    </a>
+                  </li>
+                ))
+              }
+            </ol>
+          </div>
+          <div class="js-search-suggestions" hidden>
+            <div class="c-help-widget__modal-suggestions-title">Suggested for you:</div>
+            <ul
+              class="c-help-widget__modal-search-suggestions-list js-help-widget__modal-search-suggestions-list list-none p-0"
+            >
+            </ul>
+          </div>
+          <div class="js-empty-search-results" hidden>
+            <EmptySearchResults />
+          </div>
+        </div>
+      </div>
+      <div class="c-help-widget__modal-suggestions-wrapper">
+        <div class="px-6">
+          <ul class="c-help-widget__modal-default-links-list list-none p-0">
+            {
+              defaultLinks?.map((l) => (
+                <li class="c-help-widget__modal-default-links-list-item">
+                  <a
+                    class="text-sm font-medium text-kinde-grey-900 no-underline underline-offset-[0.3em] hover:underline dark:text-white"
+                    href={l?.link}
+                    target={l?.isExternal ? "_blank" : "_self"}
+                  >
+                    {l?.title}
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="c-help-widget__modal-ctas">
+      <div>
+        <div class="c-help-widget__modal-suggestions-title">Join our communities</div>
+        <div class="c-help-widget__modal-ctas-wrapper">
+          <Button
+            url={"https://discord.gg/wHX6j7wG5d"}
+            iconName={"discord"}
+            text={"Join the Kinde Discord community"}
+            variant={"secondary"}
+            isFullWidth
+            isExternal
+            isIconOnly
+            attributes={{title: "Join our Discord community"}}
+            class="test"
+          />
+          <Button
+            url={"#"}
+            iconName={"slack"}
+            text={"Join the Kinde Slack community"}
+            variant={"secondary"}
+            isFullWidth
+            isExternal
+            isIconOnly
+            attributes={{title: "Join our Slack community"}}
+          />
+        </div>
+      </div>
+      <ChatLauncher variant={"help-widget"} />
+    </div>
+  </div>
+  <button
+    aria-controls="c-help-widget__modal"
+    aria-haspopup="true"
+    aria-expanded="false"
+    class="c-help-widget__button js-help-widget__button"
+    type="button"
+  >
+    <Icon name="help-circle" width={24} role="none" aria-hidden="true" /> Help
+  </button>
+</div>
+
+<style>
+  .c-help-widget {
+    --bottom: $token-size-base-space-medium-2;
+    --right: $token-size-base-space-medium-2;
+
+    @apply flex items-end bottom-5 flex-col justify-end fixed z-50 right-5 md:bottom-8 md:right-8;
+  }
+
+  .c-help-widget__modal {
+    animation: fadeInUp 0.2s ease forwards;
+    max-block-size: calc(100vh - 100px);
+    max-block-size: calc(100dvh - 100px);
+
+    @apply bg-white dark:bg-kinde-grey-900  rounded-2xl shadow-elevation-3 grid-rows-[auto_1fr_auto] isolate opacity-0 mb-3  w-[322px] overflow-hidden;
+
+    /* &:focus:not(:focus-visible),
+    &:focus:focus-visible {
+      box-shadow: $token-elevation-base-3;
+      border: none;
+      outline: none;
+    } */
+  }
+
+  .c-help-widget__modal [hidden] {
+    @apply hidden;
+  }
+
+  .c-help-widget__modal.is-active {
+    @apply grid;
+  }
+
+  .c-help-widget__modal-greeting {
+    @apply bg-white dark:bg-kinde-grey-900  border-kinde-grey-100 dark:border-kinde-grey-800 border-b-[1px] text-base font-medium tracking-tight leading-normal pb-4 pt-6 px-12 sticky text-center top-0 z-10;
+  }
+
+  .c-help-widget__modal-content-wrapper {
+    @apply bg-white dark:bg-kinde-grey-900  overscroll-y-contain overflow-y-auto;
+  }
+
+  .c-help-widget__modal-suggestions-wrapper {
+    @apply border-b-[1px] border-kinde-grey-100 dark:border-kinde-grey-800 py-6;
+  }
+
+  .c-help-widget__modal-search-wrapper {
+    @apply relative px-6;
+  }
+
+  .c-help-widget__modal-search-icon-wrapper {
+    @apply grid place-items-center absolute left-10 h-[50px];
+  }
+
+  .c-help-widget__modal-search {
+    @apply bg-white dark:bg-kinde-grey-900  rounded-lg border-kinde-grey-200 dark:border-kinde-grey-800 border-[1px] mb-4 py-3 pl-10 pr-3 w-full;
+  }
+
+  .js-search-suggestions {
+    @apply block transition-all duration-1000;
+  }
+
+  .js-search-suggestions[hidden] {
+    @apply hidden;
+  }
+
+  .c-help-widget__modal-suggestions-title {
+    @apply text-kinde-grey-600 dark:text-kinde-grey-200 text-sm font-normal leading-tight tracking-tighter mb-4 mt-2;
+  }
+
+  .c-help-widget__modal-default-links-list {
+    @apply grid gap-3 grid-cols-2;
+  }
+
+  .c-help-widget__modal-suggestions-list-item:not(:last-child) {
+    @apply text-kinde-grey-600 dark:text-kinde-grey-200 mb-2;
+  }
+
+  .c-help-widget__modal-suggestions-list-item a {
+    @apply text-kinde-grey-900 dark:text-white;
+  }
+
+  .c-help-widget__modal-ctas {
+    @apply flex items-center flex-col justify-center gap-4 p-6 sticky bottom-0 bg-white dark:bg-kinde-grey-900  w-full;
+  }
+
+  .c-help-widget__modal-ctas > div {
+    @apply w-full;
+  }
+
+  .c-help-widget__modal-ctas-wrapper {
+    @apply flex gap-4 w-full;
+  }
+
+  .c-help-widget__button {
+    @apply items-center bg-white dark:bg-kinde-grey-900  border-none rounded-3xl shadow-elevation-4 text-kinde-grey-900 dark:text-white flex text-base font-medium gap-2 justify-center leading-normal tracking-tight outline-none py-3 pr-4 pl-3 cursor-pointer;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+</style>
+
+<script is:inline>
+  (() => {
+    const widgetButton = document.querySelector(".js-help-widget__button");
+    const widgetModal = document.querySelector(".js-help-widget__modal");
+
+    const toggle = (e) => {
+      e.stopPropagation();
+
+      if (!e.target.closest(".is-active")) {
+        widgetModal?.toggleAttribute("hidden");
+        widgetModal?.classList.toggle("is-active");
+
+        const isModalHidden = widgetModal?.hasAttribute("hidden") ? "true" : "false";
+        const isButtonExpanded = isModalHidden === "true" ? "false" : "true";
+
+        widgetModal?.setAttribute("aria-hidden", isModalHidden);
+        widgetButton?.setAttribute("aria-expanded", isButtonExpanded);
+
+        // For setting focus to the modal when it is active to allow for keyboard navigation properly
+        if (isModalHidden === "false") {
+          widgetModal?.focus();
+        }
+
+        if (widgetModal?.contains(document.activeElement) === false) {
+        }
+        // For handling clicking outside
+        widgetModal?.classList.contains("is-active")
+          ? document.addEventListener("click", toggle)
+          : document.removeEventListener("click", toggle);
+      }
+    };
+
+    // Manage closing modal on 'ESC' and returning focus to button
+    document.addEventListener("keydown", function (e) {
+      const closeHelpWidgetModal = () => {
+        widgetModal?.classList.remove("is-active");
+        widgetModal?.setAttribute("hidden", "true");
+        widgetModal?.setAttribute("aria-hidden", "true");
+        widgetButton?.setAttribute("aria-expanded", "false");
+        document.removeEventListener("click", toggle);
+        widgetButton?.focus();
+      };
+
+      if (e.key === "Escape" && widgetModal?.classList.contains("is-active")) {
+        closeHelpWidgetModal();
+      }
+    });
+
+    widgetButton?.addEventListener("click", toggle);
+  })();
+</script>
+
+<!-- Search functionality -->
+<script is:inline>
+  (() => {
+    function debounce(func, timeout = 250) {
+      let timer;
+      return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          func.apply(this, args);
+        }, timeout);
+      };
+    }
+
+    const processChange = debounce(() => getResults());
+
+    const searchInput = document.querySelector(".js-help-widget__modal-search");
+    const defaultSuggestionsWrapper = document.querySelector(".js-default-suggestions");
+    const searchSuggestionsWrapper = document.querySelector(".js-search-suggestions");
+    const resultsList = document.querySelector(".c-help-widget__modal-search-suggestions-list");
+    const emptySearchResultsEl = document.querySelector(".js-empty-search-results");
+
+    let searchTerm = "";
+
+    const buildLink = (fragment, data) => {
+      const li = document.createElement("li");
+      li.classList.add("mb-3", "first:mt-4");
+      const a = document.createElement("a");
+      a.classList.add(
+        "text-kinde-grey-900",
+        "dark:text-white",
+        "text-sm",
+        "font-medium",
+        "no-underline",
+        "hover:underline",
+        "underline-offset-[0.3em]"
+      );
+      a.textContent = data.title;
+      a.href = data.url.replace("/docs", "");
+      li.appendChild(a);
+      fragment.appendChild(li);
+    };
+
+    const getResults = async () => {
+      resultsList.innerHTML = null;
+
+      try {
+        const res = await fetch(`/docs-glob`);
+        const searchResults = await res.json();
+
+        if (searchResults?.length > 0) {
+          const fragment = new DocumentFragment();
+          const filteredResults = searchResults
+            .filter((r) =>
+              r.title
+                .toLowerCase()
+                .includes(
+                  searchTerm.toLowerCase() ||
+                    r.parent?.toLowerCase().includes(searchTerm.toLowerCase())
+                )
+            )
+            .splice(0, 5);
+
+          filteredResults.forEach((result) => {
+            buildLink(fragment, result);
+          });
+
+          resultsList.appendChild(fragment);
+
+          if (searchTerm !== "" && filteredResults?.length > 0) {
+            defaultSuggestionsWrapper.hidden = true;
+            searchSuggestionsWrapper.hidden = false;
+            emptySearchResultsEl.hidden = true;
+          } else if (searchTerm !== "" && filteredResults?.length === 0) {
+            defaultSuggestionsWrapper.hidden = true;
+            searchSuggestionsWrapper.hidden = true;
+            emptySearchResultsEl.hidden = false;
+          } else {
+            defaultSuggestionsWrapper.hidden = false;
+            searchSuggestionsWrapper.hidden = true;
+            emptySearchResultsEl.hidden = true;
+          }
+        }
+      } catch (error) {
+        console.error("search error", error);
+      }
+    };
+
+    searchInput?.addEventListener("input", (e) => {
+      searchTerm = e.target.value;
+
+      processChange();
+    });
+  })();
+</script>

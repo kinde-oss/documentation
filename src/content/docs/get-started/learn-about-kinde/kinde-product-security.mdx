@@ -1,0 +1,71 @@
+---
+page_id: 54d44f6d-3942-4e10-9299-df61b2817b9f
+title: Kinde product security information
+sidebar:
+  order: 3
+relatedArticles:
+  - c53c9254-7bbb-4d58-b949-3ccdc3cd3dee
+  - 162a0888-6b7f-439e-9ba2-7b2c491fc95b
+---
+
+Here’s some of the practices, standards, and methods we use to keep your data, and user’s data secure.
+
+## Auth pages require known origins in the callback URL
+
+To help prevent [XSS attacks](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html), all authentication pages require a [callback URL](/get-started/connect/callback-urls/#set-callback-and-redirect-urls) to be set in Kinde. Authentication does not work correctly without them. Our application will check the callback URLs and parse out the domain for an origin check.
+
+## CSRF protections via `state` parameter
+
+Kinde protects against [CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html) attacks by using and recommending the `state` parameter as part of an auth token. All state changing requests generate a CSRF tokens server side, which are validated on the backed, and cookies are set to sameSite `strict`.
+
+## Hosted auth pages prevent clickjacking
+
+To prevent [clickjacking](https://cheatsheetseries.owasp.org/cheatsheets/Clickjacking_Defense_Cheat_Sheet.html) attacks where a user’s personal information or credentials may be stolen by hidden iFrames, use Kinde’s hosted pages for authentication. Hosted pages have protections in place such as such as strict CSP and security headers to prevent itself from being embedded as an iFrame.
+
+Kinde controls and hosts the authentication pages, so the risk for protecting pages is assumed by Kinde rather than you.
+
+## Enforced password standards
+
+Kinde provides a baseline password protection policy for any customer who wants to include password authentication in their product.
+
+- 8 character minimum
+- No complexity requirements
+- Blocking of 10,000 most common passwords
+- 5 incorrect attempts locks account out for 5 minutes
+
+Note that Kinde recommends, where possible, not using passwords for authentication and instead using [passwordless](/authenticate/about-auth/authentication-methods/#passwordless) or [social](/authenticate/social-sign-in/add-social-sign-in/) integrations. If using passwords for authentication, we recommend adding [multi-factor authentication](https://kinde.com/docs/authentication-and-access/about-multi-factor-authentication/) as an option for users.
+
+## Outage mitigation via rate limits and throttles
+
+Kinde has implemented an application level rate limit and throttle. This helps protect our shared infrastructure and our customers from excessive network traffic that could lead to an outage. Our rate limits are tuned based on the type of traffic, such as API, admin pages, or general auth usage, and will limit the number of connections from an IP in a short space of time. This generally covers all interactions for our service.
+
+## Fingerprinting prevents session highjacking
+
+Kinde implements a method of fingerprinting during the authentication flow to block the transfer of sessions between different browsers that could lead to [session highjacking](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html).
+
+## Enforcement of TLS version and ciphers
+
+Kinde enforces strict [TLS versions](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html) and ciphers across it’s public facing websites and API endpoints.
+
+TLS 1.3
+
+- TLS_AES_128_GCM_SHA256
+- TLS_AES_256_GCM_SHA384
+- TLS_CHACHA20_POLY1305_SHA256
+
+TLS 1.2
+
+- TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+- TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256
+- TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+- TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384
+
+## Preventing third-party script injections with XSS and CSP
+
+Kinde uses various techniques to help prevent the execution of unknown third party scripts and the injection of malicious third party scripts by using XSS protection and CSP.
+
+Kinde’s server rendered application encodes output by default, which prevents most opportunities to inject HTML. The Content Security Policy configured across our webpages prevents the execution of inline and third party scripts.
+
+## We have a WAF
+
+Kinde was implemented a web access firewall ([WAF](https://cheatsheetseries.owasp.org/cheatsheets/Secure_Cloud_Architecture_Cheat_Sheet.html#web-application-firewall)) across all of our public-facing websites and API endpoints. This blocks known malicious traffic patterns and high threat IP addresses.

@@ -1,0 +1,850 @@
+---
+page_id: 7d311fcf-ca33-49ec-9286-419da4a91f41
+title: NextJS App Router SDK
+sidebar:
+  order: 10
+relatedArticles:
+  - 3747b2ea-82a0-4620-b71e-61a0622175e1
+social_sharing_image_url: "https://kinde.com/assets/images/open-graph/DOCS-SSI-SDK_NEXT.png"
+---
+
+This SDK is for NextJS version 13+ and uses Server Side Components and App Router.
+
+New to Kinde? [Get started here](/get-started/guides/first-things-first/)
+
+> 💡 If you’re using version 1 see [Next.js App Router V1](/developer-tools/sdks/backend/nextjs-sdkv1/)  
+> If you’re using the pages router see [NextJS Pages Router](/developer-tools/sdks/backend/nextjs-prev-sdk/)
+
+## Install for a new project
+
+The easiest way to get started is to use the [NextJS starter kit](https://github.com/kinde-starter-kits/kinde-nextjs-app-router-starter-kit), and [watch a demo video](https://www.youtube.com/watch?v=oq3o00E6Xys).
+
+## **Install for an existing project**
+
+```bash
+npm i @kinde-oss/kinde-auth-nextjs
+yarn add @kinde-oss/kinde-auth-nextjs
+pnpm i @kinde-oss/kinde-auth-nextjs
+```
+
+## **Set callback URLs**
+
+1. In Kinde, go to **Settings > Applications > [Your app] > View details**.
+2. Add your callback URLs in the relevant fields. For example:
+   - Allowed callback URLs (also known as redirect URIs) - for example `http://localhost:3000/api/auth/kinde_callback`
+   - Allowed logout redirect URLs - for example `http://localhost:3000`
+3. Select **Save**.
+
+## **Configure environment variables**
+
+Put these variables in a `.env.local` file in the root of your Next.js app. You can find these variables on your Kinde **Settings > Applications > [Your app] > View details** page.
+
+- `KINDE_CLIENT_ID` - Your business’s unique ID on Kinde
+- `KINDE_CLIENT_SECRET` - Your business’s secret key (do not share)
+- `KINDE_ISSUER_URL` - your kinde domain
+- `KINDE_SITE_URL` - where your app is running
+- `KINDE_POST_LOGOUT_REDIRECT_URL` - where you want users to be redirected to after logging out. Make sure this URL is under your allowed logout redirect URLs.
+- `KINDE_POST_LOGIN_REDIRECT_URL` - where you want users to be redirected to after authenticating.
+- `KINDE_AUDIENCE` - optional - a whitespace separated list of audiences to populate the `aud` claim in the token.
+
+Replace the information in the example with your own information. You might also set different URLs depending where your project is running. They need to match the callback URLs you entered in Kinde, above.
+
+```shell
+KINDE_CLIENT_ID=<your_kinde_client_id>
+KINDE_CLIENT_SECRET=<your_kinde_client_secret>
+KINDE_ISSUER_URL=https://<your_kinde_subdomain>.kinde.com
+KINDE_SITE_URL=http://localhost:3000
+KINDE_POST_LOGOUT_REDIRECT_URL=http://localhost:3000
+KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000/dashboard
+```
+
+## **Set up Kinde Auth Route Handlers**
+
+Create the following file `app/api/auth/[kindeAuth]/route.js` inside your Next.js project. Inside the file `route.js` put this code:
+
+```jsx
+import {handleAuth} from "@kinde-oss/kinde-auth-nextjs/server";
+export const GET = handleAuth();
+```
+
+This will handle Kinde Auth endpoints in your Next.js app.
+
+**Important!** Our SDK relies on this file existing in this location specified above.
+
+## Authentication
+
+### Sign up and sign in
+
+The SDK ships with `<LoginLink>` and `<RegisterLink>` components which can be used to start the auth flow.
+
+```jsx
+import {RegisterLink, LoginLink} from "@kinde-oss/kinde-auth-nextjs/components";
+
+...
+
+<LoginLink>Sign in</LoginLink>
+<RegisterLink>Sign up</RegisterLink>
+```
+
+### Redirecting after authentication
+
+**Static redirect**
+
+If you want to redirect users to a certain page after logging in, you can set the `KINDE_POST_LOGIN_REDIRECT_URL` environment variable in your `.env.local` file.
+
+**Dynamic redirect**
+
+You can also set a `postLoginRedirectURL` parameter to tell us where to redirect after authenticating.
+
+```jsx
+import {RegisterLink, LoginLink} from "@kinde-oss/kinde-auth-nextjs/components";
+
+...
+
+<LoginLink postLoginRedirectURL="/dashboard">Sign in</LoginLink>
+<RegisterLink postLoginRedirectURL="/welcome">Sign up</RegisterLink>
+```
+
+This appends `post_login_redirect_url` to the search params when redirecting to Kinde Auth. You can achieve the same result as above, like this:
+
+```jsx
+import { redirect } from "next/navigation";
+...
+
+redirect('/api/auth/login?post_login_redirect_url=/dashboard')
+
+...
+```
+
+### Logout
+
+This is implemented in much the same way as signing up or signing in. A component is provided for you.
+
+```jsx
+import {LogoutLink} from "@kinde-oss/kinde-auth-nextjs/components";
+
+...
+
+<LogoutLink>Log out</LogoutLink>
+```
+
+## Kinde Auth data
+
+### Server components - `getKindeServerSession`
+
+You can get an authorized user’s Kinde Auth data from any server component using the `getKindeServerSession` helper.
+
+Example:
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+import Link from "next/link";
+
+export default async function Home() {
+  const {
+    getAccessToken,
+    getBooleanFlag,
+    getFlag,
+    getIdToken,
+    getIntegerFlag,
+    getOrganization,
+    getPermission,
+    getPermissions,
+    getStringFlag,
+    getUser,
+    getUserOrganizations,
+    isAuthenticated
+  } = getKindeServerSession();
+
+  console.log(await getAccessToken());
+  console.log(await getBooleanFlag("bflag", false));
+  console.log(await getFlag("flag", "x", "s"));
+  console.log(await getIntegerFlag("iflag", 99));
+  console.log(await getOrganization());
+  console.log(await getPermission("eat:chips"));
+  console.log(await getPermissions());
+  console.log(await getStringFlag("sflag", "test"));
+  console.log(await getUser());
+  console.log(await getUserOrganizations());
+  console.log(await isAuthenticated());
+  return (
+    <div className="container">
+      <div className="card hero">
+        <p className="text-display-1 hero-title">
+          Let’s start authenticating <br /> with KindeAuth
+        </p>
+        <p className="text-body-1 hero-tagline">Configure your app</p>
+
+        <Link
+          href="https://kinde.com/docs/sdks/nextjs-sdk"
+          target="_blank"
+          rel="noreferrer"
+          className="btn btn-light btn-big"
+        >
+          Go to docs
+        </Link>
+      </div>
+    </div>
+  );
+}
+```
+
+Reference:
+
+```typescript
+{
+  getAccessToken: () => Promise<string>;
+  getBooleanFlag: (code: string, defaultValue: boolean) => Promise<boolean>;
+  getFlag: (code: string, defaultValue: any, flagType: any) =>
+    Promise<
+      | import("@kinde-oss/kinde-typescript-sdk").GetFlagType
+      | {
+          value: any;
+        }
+    >;
+  getIntegerFlag: (code: string, defaultValue: number) => Promise<number>;
+  getOrganization: () =>
+    Promise<{
+      orgCode: string;
+    }>;
+  getPermission: (name: any) =>
+    Promise<{
+      orgCode: string;
+      isGranted: boolean;
+    }>;
+  getPermissions: () =>
+    Promise<{
+      permissions: string[];
+      orgCode: string;
+    }>;
+  getStringFlag: (code: string, defaultValue: string) => Promise<string>;
+  getUser: () => Promise<any>;
+  getUserOrganizations: () =>
+    Promise<{
+      orgCodes: string[];
+    }>;
+  isAuthenticated: () => Promise<boolean>;
+}
+```
+
+### Client components - `useKindeBrowserClient`
+
+You can get an authorized user’s Kinde Auth data from any client component using the `useKindeBrowser` helper.
+
+Example:
+
+```jsx
+"use client";
+
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+import {LoginLink} from "@kinde-oss/kinde-auth-nextjs/components";
+
+export default function ClientPage() {
+  const {
+    permissions,
+    isLoading,
+    user,
+    accessToken,
+    organization,
+    userOrganizations,
+    getPermission,
+    getBooleanFlag,
+    getIntegerFlag,
+    getFlag,
+    getStringFlag,
+    getClaim,
+    getAccessToken,
+    getToken,
+    getIdToken,
+    getOrganization,
+    getPermissions,
+    getUserOrganizations
+  } = useKindeBrowserClient();
+
+  console.log(getPermission("eat:chips"));
+  console.log(getBooleanFlag("flag", false));
+  console.log(getIntegerFlag("eat:chips", 1));
+  console.log(getStringFlag("eat:chips", "ds"));
+  console.log(getFlag("eat:chips", false, "b"));
+
+  console.log("accessToken", accessToken);
+  console.log(getClaim("aud"));
+  if (isLoading) return <div>Loading...</div>;
+
+  return (
+    <div className="pt-20">
+      {getPermission("eat:chips").isGranted && <h2>YOU CAN EAT CHIPS</h2>}
+      <LoginLink postLoginRedirectURL="/dashboard">Login</LoginLink>
+      <div className="mb-8">
+        <h4 className="text-2xl font-bold dark:text-white mb-2">User</h4>
+
+        <pre className="p-4 rounded bg-slate-950 text-green-300">
+          {JSON.stringify(user, null, 2)}
+        </pre>
+      </div>
+
+      <div className="mb-8">
+        <h4 className="text-2xl font-bold dark:text-white mb-2">Permissions</h4>
+
+        <pre className="p-4 rounded bg-slate-950 text-green-300">
+          {JSON.stringify(permissions, null, 2)}
+        </pre>
+      </div>
+
+      <div className="mb-8">
+        <h4 className="text-2xl font-bold dark:text-white mb-2">Organization</h4>
+
+        <pre className="p-4 rounded bg-slate-950 text-green-300">
+          {JSON.stringify(organization, null, 2)}
+        </pre>
+      </div>
+
+      <div className="mb-8">
+        <h4 className="text-2xl font-bold dark:text-white mb-2">User organizations</h4>
+
+        <pre className="p-4 rounded bg-slate-950 text-green-300">
+          {JSON.stringify(userOrganizations, null, 2)}
+        </pre>
+      </div>
+
+      <div className="mb-8">
+        <h4 className="text-2xl font-bold dark:text-white mb-2">Access token</h4>
+
+        <pre className="p-4 rounded bg-slate-950 text-green-300">
+          {JSON.stringify(accessToken, null, 2)}
+        </pre>
+      </div>
+    </div>
+  );
+}
+```
+
+Reference:
+
+```typescript
+export type State = {
+  /**
+   * - Kinde access token
+   */
+  accessToken: string | null;
+  error?: string | null;
+  isAuthenticated: boolean | null;
+  isLoading: boolean | null;
+  /**
+   * - The organization that the current user is logged in to
+   */
+  organization: string | null;
+  /**
+   * - The current user's permissions
+   */
+  permissions: string[] | null;
+  /**
+   * - Kinde user
+   */
+  user: KindeUser | null;
+  /**
+   * - Organizations that the current user belongs to
+   */
+  userOrganizations: string[] | null;
+  getBooleanFlag: getBooleanFlag;
+  getClaim: getClaim;
+  getFlag: getFlag;
+  getIntegerFlag: getIntegerFlag;
+  getPermission: getPermission;
+  getStringFlag: getStringFlag;
+};
+```
+
+**Tip**: Use `isLoading` to ensure the data is up to date. You can return a loading spinner or something similar if you want.
+
+## Protecting routes
+
+It’s likely that your application will have both pages that are publicly available and private ones which should only be available to logged in users. There are multiple ways you can protect pages with Kinde Auth.
+
+### Protect routes with Kinde Auth data
+
+On the page you want to protect, you can check if the user is authenticated and then handle it right then and there by grabbing the Kinde Auth data.
+
+- In **Server Components** you can get the Kinde Auth data by using the `getKindeServerSession` helper
+- In **Client Components** you can get the Kinde Auth Data using the `useKindeBrowserClient` helper
+
+```jsx
+// app/protected/page.tsx - Server Component
+
+import { LoginLink } from "@kinde-oss/kinde-auth-nextjs/components";
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+
+export default async function Protected() {
+  const { isAuthenticated } = getKindeServerSession();
+
+  return (await isAuthenticated()) ? (
+    <div>
+      This page is protected - but you can view it because you are authenticated
+    </div>
+  ) : (
+    <div>
+      This page is protected, please <LoginLink>Login</LoginLink> to view it
+    </div>
+  );
+}
+
+// app/protected/page.tsx - Client component
+"use client";
+
+import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
+import { LoginLink } from "@kinde-oss/kinde-auth-nextjs/components";
+
+export default function Admin() {
+  const { isAuthenticated, isLoading } = useKindeBrowserClient();
+
+  if (isLoading) return <div>Loading...</div>;
+
+  return isAuthenticated ? (
+    <div>Admin content</div>
+  ) : (
+    <div>
+      You have to <LoginLink>Login</LoginLink> to see this page
+    </div>
+  );
+}
+```
+
+In the example above, we show different content based on whether or not the user is authenticated. If you want to automatically send the user to the sign in screen, you can do something like the following:
+
+```jsx
+// app/protected/page.tsx - Server Component
+
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+import {redirect} from "next/navigation";
+
+export default async function Protected() {
+  const {isAuthenticated} = getKindeServerSession();
+
+  if (!(await isAuthenticated())) {
+    redirect("/api/auth/login");
+  }
+
+  return <div>Protected content</div>;
+}
+
+// app/protected/page.tsx - Client Component
+
+// As of right now, this can't be done in Client Components because of how Next.js handles
+// navigation in client components with prefetching and caching.
+// But you can still achieve an automatic redirect with middleware
+```
+
+If you want the user to be redirected back to that route after signing in, you can set `post_login_redirect_url` in the search params of the redirect.
+
+```jsx
+if (!(await isAuthenticated())) {
+  redirect("/api/auth/login?post_login_redirect_url=/protected");
+}
+```
+
+### Protect routes using middleware
+
+You can also protect routes with Next.js middleware.
+
+> 💡 As of right now the middleware in the app router does not work when trying to redirect to `api/auth/login`. This is because of Next.js caching which causes issues during authentication.
+
+**Default page protection**
+
+We provide a `withAuth` helper that will protect routes covered by the matcher. If the user is not authenticated then they are redirected to login and once they have logged in they will be redirected back to the protected page which they should now have access to.
+
+```jsx
+import {withAuth} from "@kinde-oss/kinde-auth-nextjs/middleware";
+export default function middleware(req) {
+  return withAuth(req);
+}
+export const config = {
+  matcher: ["/admin"]
+};
+```
+
+**Page protection with callback function after authorization**
+
+You can use the `withAuth` helper as shown below with a `middleware` callback function which has access to the `req.kindeAuth` object that exposes the token and user data.
+
+```typescript
+import {withAuth} from "@kinde-oss/kinde-auth-nextjs/middleware";
+
+export default withAuth(async function middleware(req) {
+  console.log("look at me", req.kindeAuth);
+});
+
+export const config = {
+  matcher: ["/admin"]
+};
+```
+
+**Middleware options**
+
+There are options that can be passed into the middleware function to configure its functionality.
+
+- `isReturnToCurrentPage` - redirect the user back to the page they were trying to access
+- `loginPage` - define the path of the login page (where the users are redirected to when not authenticated)
+- `publicPaths` - define the public paths
+- `isAuthorized` - define the criteria for authorization
+
+```typescript
+import {withAuth} from "@kinde-oss/kinde-auth-nextjs/middleware";
+export default withAuth(
+  async function middleware(req) {
+    console.log("look at me", req.kindeAuth);
+  },
+  {
+    isReturnToCurrentPage: true,
+    loginPage: "/login",
+    isAuthorized: ({token}) => {
+      // The user will be considered authorized if they have the permission 'eat:chips'
+      return token.permissions.includes("eat:chips");
+    }
+  }
+);
+
+export const config = {
+  matcher: ["/admin"]
+};
+```
+
+## Kinde Management API
+
+To use the Kinde management API, first you have to enable it for your NextJS application inside Kinde. Navigate to Settings → APIs → Kinde Management API → Applications and enable your Next.js app.
+
+The Kinde Management API can be used in server components and route handlers.
+
+Server Component example:
+
+```typescript
+import { createKindeManagementAPIClient } from "@kinde-oss/kinde-auth-nextjs/server";
+
+export default async function Dashboard() {
+  const apiClient = await createKindeManagementAPIClient();
+  const roles = await apiClient.rolesApi.getRoles();
+  const users = await apiClient.usersApi.getUsers();
+
+  return (
+    <div className="container">
+      <div className="card start-hero">
+        <p className="text-body-2 start-hero-intro">Woohoo!</p>
+        <p className="text-display-2">
+          Your authentication is all sorted.
+          <br />
+          Build the important stuff.
+        </p>
+      </div>
+      <section className="next-steps-section">
+        <h2 className="text-heading-1">Next steps for you</h2>
+      </section>
+
+      <pre>{JSON.stringify(users, null, 2)}</pre>
+    </div>
+  );
+}
+```
+
+Route Handler example:
+
+```typescript
+import {NextResponse} from "next/server";
+import {createKindeManagementAPIClient} from "@kinde-oss/kinde-auth-nextjs/server";
+
+export async function GET() {
+  const client = await createKindeManagementAPIClient();
+  const users = await client.usersApi.getUsers();
+
+  return NextResponse.json({users});
+}
+```
+
+## Organizations
+
+### Create organizations
+
+To create an organization from your app, you can use the `CreateOrgLink` component.
+
+```jsx
+import {CreateOrgLink} from "@kinde-oss/kinde-auth-nextjs/components";
+
+<CreateOrgLink orgName="Hurlstone">Create org</CreateOrgLink>;
+```
+
+### Sign into organizations
+
+You can have your users sign into a specific organization by setting the `orgCode` param in the `LoginLink` and `RegisterLink` components.
+
+```jsx
+import {LoginLink, RegisterLink} from "@kinde-oss/kinde-auth-nextjs/components";
+
+<LoginLink orgCode="org_7392cf35a1e">Login</LoginLink>
+<RegisterLink orgCode="org_7392cf35a1e">Register</RegisterLink>
+```
+
+If the `orgCode` is not specified and the user belongs to multiple organizations, they will be prompted to choose which organization to sign into during the login or register flow.
+
+## Analytics
+
+### UTM tags
+
+UTM tags can be used with the `LoginLink` and `RegisterLink` components to track auth traffic from its origin. You can then track the tags on the Analytics dashboard from within the Kinde app.
+
+```jsx
+import {LoginLink} from "@kinde-oss/kinde-auth-nextjs/components";
+
+<LoginLink
+  authUrlParams={{
+    utm_source: "reddit",
+    utm_medium: "social",
+    utm_campaign: "redjune23",
+    utm_term: "save90",
+    utm_content: "desktop"
+  }}
+>
+  Login
+</LoginLink>;
+```
+
+## Internationalization
+
+You can set the language you wish your users to see when they hit the login flow by including the `lang` attribute as a part of the `authUrlParams` when using the `LoginLink` and `RegisterLink` components.
+
+```jsx
+import {LoginLink} from "@kinde-oss/kinde-auth-nextjs/components";
+
+<LoginLink
+  authUrlParams={{
+    lang: "en-AU"
+  }}
+>
+  Login
+</LoginLink>;
+```
+
+## **Audience**
+
+An `audience` is the intended recipient of an access token - for example the API for your application. The `audience` argument can be passed to the Kinde client to request an audience be added to the provided token.
+
+```jsx
+// .env.local
+...
+KINDE_AUDIENCE=<your-api>
+```
+
+You can request multiple audiences by providing a white space separated list
+
+```jsx
+// .env.local
+...
+KINDE_AUDIENCE=<your-api-1> <your-api-2>
+```
+
+For details on how to connect, see [Register an API](/developer-tools/kinde-api/register-an-api/).
+
+## Working with subdomains
+
+In the case you have a [custom domain](/build/domains/pointing-your-domain/) and you would like to start the authentication flow from a URL like **`auth`**`.mysite.com` and you want to redirect to a URL like **`app`**`.mysite.com` , all you have to do is set the `KINDE_COOKIE_DOMAIN` to match the domain.
+
+```jsx
+// .env
+...
+KINDE_COOKIE_DOMAIN=.mysite.com
+```
+
+If the URL you want to start the authentication flow from and the URL you want to redirect to don’t share the same domain, then this will not work.
+
+## Working with preview URLs
+
+Our Kinde NextJS SDK currently requires that these environment variables `KINDE_SITE_URL`, `KINDE_POST_LOGOUT_REDIRECT_URL`, and `KINDE_POST_LOGIN_REDIRECT_URL` are defined, and that the **callback URLs** and **logout redirect URLs** are added to your app in Kinde.
+
+To add Vercel’s dynamically generated URLs you can either securely use our API to add them on the fly or you can use [wildcard URLs](/get-started/connect/callback-urls/#wildcards-in-callback-urls). It should be noted that whilst wildcards are more convenient it is not as secure as explicitly adding the url to the allowlist via API as we outline below.
+
+Add the following to your `next.config.js`.
+
+```jsx
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  env: {
+    KINDE_SITE_URL: process.env.KINDE_SITE_URL ?? `https://${process.env.VERCEL_URL}`,
+    KINDE_POST_LOGOUT_REDIRECT_URL:
+      process.env.KINDE_POST_LOGOUT_REDIRECT_URL ?? `https://${process.env.VERCEL_URL}`,
+    KINDE_POST_LOGIN_REDIRECT_URL:
+      process.env.KINDE_POST_LOGIN_REDIRECT_URL ?? `https://${process.env.VERCEL_URL}/dashboard`
+  }
+};
+
+module.exports = nextConfig;
+```
+
+This ensures Vercel uses its generated preview URLs to populate the three Kinde variables.
+
+- Make sure the above values match your application (e.g. “/dashboard” for `KINDE_POST_LOGIN_REDIRECT_URL`)
+- Also make sure variables are not set for the preview environment in your Vercel project. If they are, they will be overridden by the new variables in the `next.config.js` file.
+
+### Add callback URLs and logout redirect URLs to Kinde dynamically
+
+Create a script that will run each time a new preview is deployed by Vercel, which will add the newly generated URL to Kinde.
+
+1. Enable the **Kinde Management API** for your NextJS app.
+   1. In Kinde, go to **Settings > Applications** and open the **Details** of your application.
+   2. Select **APIs** in the left menu.
+   3. Switch on the **Kinde Management API** (if it is not on already).
+   4. Select **Save**.
+2. In your application source code, create a folder at the top level called `scripts`.
+3. Within that folder, create a file called `add-urls-to-kinde.js` and add the following code:
+
+   ```jsx
+   async function getAuthToken() {
+     try {
+       const response = await fetch(`${process.env.KINDE_ISSUER_URL}/oauth2/token`, {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/x-www-form-urlencoded",
+           Accept: "application/json"
+         },
+         body: new URLSearchParams({
+           client_id: process.env.KINDE_CLIENT_ID,
+           client_secret: process.env.KINDE_CLIENT_SECRET,
+           grant_type: "client_credentials",
+           audience: `${process.env.KINDE_ISSUER_URL}/api`
+         })
+       });
+
+       if (!response.ok) {
+         throw new Error(`Failed to get auth token: ${response.statusText}`);
+       }
+
+       const data = await response.json();
+       return data.access_token;
+     } catch (error) {
+       console.error("Error getting auth token:", error);
+       throw error;
+     }
+   }
+
+   async function addLogoutUrlToKinde(token) {
+     try {
+       const response = await fetch(
+         `${process.env.KINDE_ISSUER_URL}/api/v1/applications/${process.env.KINDE_CLIENT_ID}/auth_logout_urls`,
+         {
+           method: "POST",
+           headers: {
+             Authorization: `Bearer ${token}`,
+             Accept: "application/json",
+             "Content-Type": "application/json"
+           },
+           body: JSON.stringify({
+             urls: [`https://${process.env.VERCEL_URL}`]
+           })
+         }
+       );
+
+       if (!response.ok) {
+         throw new Error(`Failed to add logout URL to Kinde: ${response.statusText}`);
+       }
+
+       const responseData = await response.json();
+       console.log(`SUCCESS: Logout URL added to Kinde: ${process.env.VERCEL_URL}`, responseData);
+     } catch (error) {
+       console.error("Failed to add logout URL to Kinde", error);
+       throw error;
+     }
+   }
+
+   async function addCallbackUrlToKinde(token) {
+     try {
+       const response = await fetch(
+         `${process.env.KINDE_ISSUER_URL}/api/v1/applications/${process.env.KINDE_CLIENT_ID}/auth_redirect_urls`,
+         {
+           method: "POST",
+           headers: {
+             Authorization: `Bearer ${token}`,
+             Accept: "application/json",
+             "Content-Type": "application/json"
+           },
+           body: JSON.stringify({
+             urls: [`https://${process.env.VERCEL_URL}/api/auth/kinde_callback`]
+           })
+         }
+       );
+
+       if (!response.ok) {
+         throw new Error(`Failed to add callback URL to Kinde: ${response.statusText}`);
+       }
+
+       const responseData = await response.json();
+       console.log(
+         `SUCCESS: Callback URL added to Kinde: ${process.env.VERCEL_URL}/api/auth/kinde_callback`,
+         responseData
+       );
+     } catch (error) {
+       console.error("Failed to add callback URL to Kinde", error);
+       throw error;
+     }
+   }
+
+   (async () => {
+     if (process.env.VERCEL == 1) {
+       try {
+         const authToken = await getAuthToken();
+         await addCallbackUrlToKinde(authToken);
+         await addLogoutUrlToKinde(authToken);
+       } catch (error) {
+         console.error("Script failed:", error);
+       }
+     }
+   })();
+   ```
+
+4. In your `package.json`, add a `postbuild` script that will run the `/scripts/add-urls-to-kinde.js` file after Vercel builds your app.
+
+   ```json
+   "scripts": {
+       "dev": "next dev",
+       "build": "next build",
+       "start": "next start",
+       "lint": "next lint",
+       "postbuild": "node ./scripts/add-urls-to-kinde.js"
+   }
+   ```
+
+5. Commit these changes. The next deploy will add the newly created preview URLs to your Kinde application.
+
+## Health check
+
+To check your configuration, the SDK exposes an endpoint with your settings.
+
+**Note**: The client secret will indicate only if the secret is set or not set correctly.
+
+`/api/auth/health`
+
+```jsx
+{
+	"apiPath": "/api/auth",
+	"redirectURL": "http://localhost:3000/api/auth/kinde_callback",
+	"postLoginRedirectURL": "http://localhost:3000/dashboard",
+	"issuerURL": "https://<your_kinde_subdomain>.kinde.com",
+	"clientID": "<your_kinde_client_id>",
+	"clientSecret": "Set correctly",
+	"postLogoutRedirectURL": "http://localhost:3000",
+	"logoutRedirectURL": "http://localhost:3000"
+}
+```
+
+## Migration guide
+
+Changes when moving from the previous version.
+
+`handleAuth` - is now imported from `“@kinde-oss/kinde-auth-nextjs/server”`
+
+```jsx
+import {handleAuth} from "@kinde-oss/kinde-auth-nextjs/server";
+export const GET = handleAuth();
+```
+
+`getKindeServerSession` - functions returned from `getKindeServerSession` now return promises
+
+```jsx
+const {getUser} = getKindeServerSession();
+const user = await getUser();
+```

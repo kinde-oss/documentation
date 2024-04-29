@@ -1,0 +1,286 @@
+---
+page_id: bc69e746-1ade-4433-8b0f-f2bc7d8a7a6a
+title: Kinde organizations for developers
+sidebar:
+  order: 2
+relatedArticles:
+  - a7b0d16d-262c-4873-a3d3-a426a6f4e42a
+  - 38e9186d-cca5-44a6-86ab-dde9f21167ff
+  - f3e20936-d4da-4abc-8430-7620cae7fa6b
+app_context:
+  - m: organizations
+    s: list
+---
+
+Organizations allow you to group your users into buckets. An organization in Kinde could represent a club, a company, a practice, a department - however you model your business. We’ll refer to them collectively as **organizations** in this topic.
+
+## Important things to know about Kinde organizations
+
+- A user can belong to [multiple organizations](/manage-users/about/manage-users-across-organizations/)
+- The same user can have different [roles and permissions](/manage-users/roles-and-permissions/apply-roles-and-permissions-to-users/) in different organizations
+- By default they inherit global styles - but you can [brand them individually](/design/brand/apply-branding-for-an-organization/)
+- There is a **default organization** where new users are placed if we don’t know which organization they belong to. Auto assigning to this organization can be [turned off](/build/organizations/allow-user-signup-org/#sign-users-up-to-the-default-organization).
+- You can also [turn off](/build/organizations/allow-user-signup-org/#allow-users-to-register-to-a-specific-organization) the ability for users to sign up to specific organizations.
+
+## Creating an organization
+
+There are three ways of creating an organization.
+
+1. [Add](/build/organizations/add-and-manage-organizations/) or [import](/build/organizations/import-organizations/) through the Kinde application.
+2. Add through the [Kinde management API](https://kinde.com/api/docs/#create-organization).
+3. Allow organizations to sign themselves up (see below).
+
+## New organization self-sign up
+
+By default Kinde allows organizations to self-sign up to your project. You can [turn this off](/build/organizations/allow-org-create-on-signup/) in Kinde if you prefer to handle registration another way.
+
+### Basic implementation
+
+To initiate the organization self-sign up flow pass the `is_create_org` parameter in the auth url when redirecting to Kinde. This will prompt the user to register an account and upon successful registration create an organization in the background on Kinde.
+
+Our SDKs contain helpers to achieve this. The below example is from the Kinde React SDK, which ships with a `createOrg` method.
+
+```jsx
+import {useKindeAuth} from "@kinde-oss/kinde-auth-react";
+
+export const RegisterOrgButton = () => {
+  const {createOrg} = useKindeAuth();
+
+  return (
+    <button onClick={createOrg} type="button">
+      Create Organization
+    </button>
+  );
+};
+```
+
+See the [relevant SDK doc](/developer-tools/about/our-sdks/) for your stack, for examples on how to do this.
+
+### Providing an organization name
+
+If you want to pass an organization name to Kinde, you can pass it in the auth url with the `org_name` parameter. A common pattern is to provide an input field in your project for the user to type their preferred name.
+
+Here’s another example using React.
+
+```jsx
+import {useKindeAuth} from "@kinde-oss/kinde-auth-react";
+import {useState} from "react";
+
+const RegisterOrgForm = () => {
+  const {createOrg} = useKindeAuth();
+  const [orgName, setOrgName] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // 1. store whatever you need to in your project
+    // 2. redirect to Kinde
+    createOrg({org_name: orgName});
+  };
+  return (
+    <form>
+      <label for="id_org_name">Org name</label>
+      <input id="id_org_name" onChange={(e) => setOrgName(e.target.value)} type="text" />
+      <button onSubmit={handleSubmit}>Register</button>
+    </form>
+  );
+};
+```
+
+See the [relevant SDK doc](/developer-tools/about/our-sdks/) for your stack, for examples on how to do this.
+
+## Assigning a user to an existing organization
+
+There are a few ways of doing this.
+
+1. Go into Kinde and [add](/manage-users/add-and-edit/add-and-edit-users/) or [import](/manage-users/add-and-edit/import-users-in-bulk/) users manually.
+2. Add users via the [Kinde management API](https://kinde.com/api/docs/#add-organization-users).
+3. Provide a sign up link from your product (see below).
+
+### Signing up new users into an existing organization
+
+As noted earlier, Kinde has the notion of a **default organization** where new users are placed if we don’t know which organization they belong to.
+
+This can be [switched off](/build/organizations/allow-user-signup-org/#sign-users-up-to-the-default-organization), or you can pass an `org_code` parameter in the auth URL to specify which organization you would like users to sign up to.
+
+> ⚠️ Caution: the `org_code` in the http request is vulnerable to manipulation, so only allow registrations to organizations that you would allow anyone to sign up to. If this is not the case, we suggest you leave this switched off and add the user to the right organization later via the [Kinde management API](https://kinde.com/api/docs/#kinde-management-api).
+
+Our SDKs provide specific helper methods for passing the `org_code` parameter. For example, in React, this can be achieved as follows:
+
+```jsx
+import {useKindeAuth} from "@kinde-oss/kinde-auth-react";
+
+export const RegisterOrgButton = (orgCode) => {
+  const {register} = useKindeAuth();
+
+  return (
+    <button onClick={() => register({org_code: orgCode})} type="button">
+      Register for this org
+    </button>
+  );
+};
+```
+
+See the [relevant SDK doc](/developer-tools/about/our-sdks/) for your stack, for examples on how to do this.
+
+### Signing users into an existing organization
+
+The flows are slightly different depending on whether you supply an organization code to us in the auth url as `org_code` parameter.
+
+**No org code provided**
+
+If Kinde is not provided with an `org_code`, there are three possible outcomes:
+
+1. If a user only belongs to a single organization they will be automatically signed into this organization.
+2. If the user belongs to multiple organizations, after they have authenticated we present them with an organization selector that shows all the organizations they have access to. They can then choose one to continue.
+3. If the user belongs to no organizations, they will be signed in without an organization, meaning the `org_code` claim will be omitted from the access token.
+
+Code wise there is nothing different to do from a standard sign in. Again, a React example:
+
+```jsx
+import {useKindeAuth} from "@kinde-oss/kinde-auth-react";
+
+export const LoginButton = () => {
+  const {login} = useKindeAuth();
+  return (
+    <button onClick={login} type="button">
+      Log in
+    </button>
+  );
+};
+```
+
+See the [relevant SDK doc](/developer-tools/about/our-sdks/) for your stack, for examples on how to do this.
+
+**Org code provided**
+
+If Kinde receives the `org_code` parameter in the auth url it means two things:
+
+1. If you have set up [branding for the organization](/design/brand/apply-branding-for-an-organization/) we display this to the end user providing a much more customized experience
+2. If the user is a member of multiple organizations we can skip the organization switcher step mentioned above and sign them straight into the requested organization.
+
+Our SDKs describe how to provide the `org code` in the auth url. Here’s an example from React.
+
+```jsx
+import {useKindeAuth} from "@kinde-oss/kinde-auth-react";
+
+export const LoginOrgButton = (orgCode) => {
+  const {login} = useKindeAuth();
+
+  return (
+    <button onClick={() => login({org_code: orgCode})} type="button">
+      Log in to org
+    </button>
+  );
+};
+```
+
+See the [relevant SDK doc](/developer-tools/about/our-sdks/) for your stack, for examples on how to do this.
+
+## Getting the organization ID
+
+We refer to the organization’s ID as an `org_code` which is unique for each organization. Once a user has authenticated and is returned to your project we expose the `org_code` in their access token.
+
+Each SDK has a way of accessing this. For example in React:
+
+```jsx
+const {getOrganization} = useKindeAuth();
+console.log(getOrganization());
+//returns {orgCode: "org_xxxxxxxxxx"}
+```
+
+See the [relevant SDK doc](/developer-tools/about/our-sdks/) for your stack, for examples on how to do this.
+
+## Getting the list of all organization IDs a user belongs to
+
+If a user belongs to multiple organizations, you might find it useful to get a list of them. You could do this in a couple of ways:
+
+1. Via the [Kinde management API](https://kinde.com/api/docs/#kinde-management-api-organizations)
+2. Reading the `id_token` (see below).
+
+### Using the id_token to get a list of organization IDs
+
+We provide an array of organization codes in the `org_codes` claim of the `id_token`. You can either use a JWT parser to extract these, or use our SDKs provide helper methods.
+
+In React you can use the following helper:
+
+```jsx
+const {getUserOrganizations} = useKindeAuth();
+console.log(getUserOrganizations());
+//returns {orgCodes: ["org_1234", "org_5678"]}
+```
+
+## Roles and Permissions
+
+A user can have different roles and permissions per organization. This means they can have an `admin` role in Organization ABC but a `member` role in Organization XYZ.
+
+You can manage these roles and permissions:
+
+1. In the [Kinde admin area](/manage-users/roles-and-permissions/user-permissions/)
+2. Via the [Kinde Management API](https://kinde.com/api/docs/#kinde-management-api-permissions)
+3. Read them from the `access_token` (see below). Note that only permissions specific to the organization the user is signed into will be returned.
+
+### Using the access_token to get a list of permissions
+
+We provide an array of permissions in the `permissions` claim of the `access_token`. You can either use a JWT parser to extract these, or using our SDK helper methods.
+
+In React you can use the following helper:
+
+```jsx
+const {getUserOrganizations} = useKindeAuth();
+console.log(getUserOrganizations());
+//returns {orgCodes: ["org_1234", "org_5678"]}
+```
+
+### Using an SDK for permission-based access control
+
+Our SDKs also ship with helpers for handling permission checks. For example in React you could use:
+
+```jsx
+const {getPermission} = useKindeAuth();
+
+getPermission("create:todos");
+// {orgCode: "org_1234", isGranted: true}
+```
+
+Then you could gate the feature as follows:
+
+```jsx
+{
+  getPermission("create:todos").isGranted ? <button>Create todo</button> : null;
+}
+```
+
+See the [relevant SDK doc](/developer-tools/about/our-sdks/) for your stack, for examples on how to do this.
+
+## Release management
+
+You can use feature flags to provide different features to different organizations. This is especially helpful if you want to beta test a new feature for your project and only release it to selected organizations.
+
+You can manage these feature flags:
+
+1. In the [Kinde admin area](/releases/feature-flags/add-feature-flag/)
+2. Via the [Kinde Management API](https://kinde.com/api/docs/#kinde-management-api-feature-flags)
+3. Read them from the `access_token` (see below).
+
+### Using the access_token to get a list of feature flags
+
+We provide an array of flags in the `feature_flags` claim of the `access_token`. You can use a JWT parser extract these, or use an [appropriate SDK](/developer-tools/about/our-sdks/) for handler examples.
+
+Here’s an example from the React SDK.
+
+```jsx
+feature_flags: {
+  theme: {
+      "t": "s",
+      "v": "pink"
+ },
+ is_dark_mode: {
+      "t": "b",
+      "v": true
+  },
+ competitions_limit: {
+      "t": "i",
+      "v": 5
+  }
+}
+```

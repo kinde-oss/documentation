@@ -1,0 +1,24 @@
+---
+const sidebar = Astro.props.sidebar;
+
+function findById(array: any) {
+  for (const mainTopic of array) {
+    for (const subtopic of mainTopic.entries) {
+      if (subtopic.entries) {
+        for (const article of subtopic.entries) {
+          if (article.isCurrent) {
+            return `<ul class="flex list-none items-center p-0 text-sm text-zinc-500 dark:text-zinc-400">
+              <li>${mainTopic.label}</li>
+              <li class="before:px-2 before:content-['/']">${subtopic.label}</li>
+            </ul>`;
+          }
+        }
+      }
+    }
+  }
+}
+
+const breadcrumb = findById(sidebar);
+---
+
+<div class="c-breadcrumb" set:html={breadcrumb} />

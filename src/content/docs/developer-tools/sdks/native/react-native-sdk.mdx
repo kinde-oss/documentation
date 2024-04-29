@@ -1,0 +1,1267 @@
+---
+page_id: f626b8e4-79c2-4d17-8148-b298c115a552
+title: React Native SDK
+sidebar:
+  order: 19
+relatedArticles:
+  - 3e372a8b-9168-4d50-a5e7-13941cfbd632
+social_sharing_image_url: "https://kinde.com/assets/images/open-graph/DOCS-SSI-SDK_react-native.png"
+---
+
+The Kinde React Native SDK allows developers to quickly and securely integrate a new or an existing React Native application into the Kinde platform.
+
+## Supported versions
+
+### React Native SDK 0.6x
+
+**`Kinde React Native SDK 0.6x`** is compatible with React Native versions 0.60 to 0.69.
+
+- Github: [kinde-react-native-sdk-0-6x](https://github.com/kinde-oss/kinde-react-native-sdk-0-6x)
+- NPM: [@kinde-oss/react-native-sdk-0-6x](https://www.npmjs.com/package/@kinde-oss/react-native-sdk-0-6x)
+
+### React Native SDK 0.7x
+
+**`Kinde React Native SDK 0.7x`** is compatible with React Native versions 0.70 or higher.
+
+- Github: [kinde-react-native-sdk-0-7x](https://github.com/kinde-oss/kinde-react-native-sdk-0-7x)
+- NPM: [@kinde-oss/react-native-sdk-0-7x](https://www.npmjs.com/package/@kinde-oss/react-native-sdk-0-7x)
+
+### Expo
+
+**`Kinde React Native SDK 0.6x`** and **`Kinde React Native SDK 0.7x`** are designed to work well with Expo. You can easily incorporate them into your Expo projects by following the instructions provided in the [Expo and React Native SDK documentation](/developer-tools/sdks/native/expo-react-native/).
+
+Compatible versions:
+
+- Expo SDK version 46.0.0: Use [Kinde React Native SDK 0.6x](https://www.npmjs.com/package/@kinde-oss/react-native-sdk-0-6x)
+- Expo SDK version 47.0.0 or higher: Use [Kinde React Native SDK 0.7x](https://www.npmjs.com/package/@kinde-oss/react-native-sdk-0-7x)
+
+You can also check out our starter kits on GitHub:
+
+- [Starter kit for Kinde React Native SDK 0.6x](https://github.com/kinde-starter-kits/kinde-react-native-starter-kit-0-6x)
+- [Starter kit for Kinde React Native SDK 0.7x](https://github.com/kinde-starter-kits/kinde-react-native-starter-kit-0-7x)
+
+## Before you begin
+
+- If you haven’t already got a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). Registering gives you a Kinde domain, which you need to get started, e.g. `yourapp.kinde.com`.
+- You will also need Node, the React Native command line interface, a JDK, Android Studio (for Android) and Xcode (for iOS).
+- Follow [the installation instructions for your chosen OS](https://reactnative.dev/docs/environment-setup) to install dependencies.
+
+> ℹ️ **Important**: Fundamentally, both SDK versions have equivalent functionality, so there should be no issue integrating either of them. In this guide, we use examples from version 0.7x. But version 0.6x is identical in terms of integration and application.
+
+## **Installation**
+
+```shell
+npm i @kinde-oss/react-native-sdk-0-7x
+yarn add @kinde-oss/react-native-sdk-0-7x
+pnpm i @kinde-oss/react-native-sdk-0-7x
+```
+
+### **Android**
+
+The SDK requires the `react-native-keychain` and `react-native-inappbrowser-reborn` packages. Sometimes, they may not be automatically linked correctly, resulting in errors when running your app, such as `"Cannot read properties of undefined (reading 'isAvailable')"`. In such cases, you will need to manually link them:
+
+1. Edit `android/settings.gradle`
+
+   ```java
+   include ':react-native-keychain'
+   project(':react-native-keychain').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-keychain/android')
+
+   include ':react-native-inappbrowser-reborn'
+   project(':react-native-inappbrowser-reborn').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-inappbrowser-reborn/android')
+   ```
+
+2. Edit `android/app/build.gradle`
+
+   ```java
+   apply plugin: 'com.android.application'
+
+   android {
+     ...
+   }
+
+   dependencies {
+     ...
+
+     implementation project(':react-native-keychain')
+   	implementation project(':react-native-inappbrowser-reborn')
+
+     ...
+   }
+   ```
+
+3. Edit `MainApplication.java`
+
+   ```java
+   import com.oblador.keychain.KeychainPackage;
+   import com.proyecto26.inappbrowser.RNInAppBrowserPackage;
+   ...
+
+   public class MainApplication extends Application implements ReactApplication {
+       private final ReactNativeHost mReactNativeHost =
+         new ReactNativeHost(this) {
+           ...
+           @Override
+           protected List<ReactPackage> getPackages() {
+   					...
+             List<ReactPackage> packages = new PackageList(this).getPackages();
+             packages.add(new KeychainPackage());
+             packages.add(new RNInAppBrowserPackage());
+   					...
+             return packages;
+           }
+           ...
+         };
+
+     ...
+   }
+   ```
+
+In React Native version 0.73 or above, the `MainApplication.java` file has been replaced with `MainApplication.kt`
+
+```kotlin
+import com.oblador.keychain.KeychainPackage;
+import com.proyecto26.inappbrowser.RNInAppBrowserPackage;
+...
+
+class MainApplication : Application(), ReactApplication {
+    override val reactNativeHost: ReactNativeHost =
+      object : DefaultReactNativeHost(this) {
+        override fun getPackages(): List<ReactPackage> =
+            PackageList(this).packages.apply {
+              // Packages that cannot be autolinked yet can be added manually here, for example:
+              // add(MyReactNativePackage())
+              add(KeychainPackage());
+              add(RNInAppBrowserPackage());
+            }
+
+        ...
+      }
+
+  ...
+}
+```
+
+### **iOS**
+
+To update iOS native dependencies, you can use **CocoaPods**. We recommend installing **CocoaPods** using [Homebrew](https://brew.sh/).
+
+```shell
+brew install cocoapods
+
+cd ios && pod install
+```
+
+The SDK requires the `react-native-keychain` and `react-native-inappbrowser-reborn` packages. Sometimes, they may not be automatically linked correctly, resulting in errors when running your app, such as `"Cannot read properties of undefined (reading 'isAvailable')"`. In such cases, you will need to manually link them:
+
+1. **Option: With CocoaPods (Highly recommended)**
+
+   Please add the following lines to your **Podfile**, and then run `pod update`:
+
+   ```swift
+   pod 'RNKeychain', :path => '../node_modules/react-native-keychain'
+   pod 'RNInAppBrowser', :path => '../node_modules/react-native-inappbrowser-reborn'
+   ```
+
+2. **Option: Manually link the packages with Xcode**
+   - Go to the **Build Phases** tab and choose **Link Binary With Libraries.**
+   - Select **+**
+   - Add **Other** > **Add Files** > **node_modules/react-native-keychain/RNKeychain.xcodeproj** (similar with **RNInAppBrowser**)
+   - Add **libRNKeychain.a** (similar with **RNInAppBrowser**)
+   - Clean and rebuild.
+
+If you encounter any errors during the SDK installation process, you can refer to the General Tips section at the end of this topic.
+
+## K**inde configuration**
+
+1. In Kinde, go to **Settings > Applications.**
+2. Select **View details** on the **Front-end app**.
+3. Scroll down to the **Callback URLs** section.
+4. Add in the callback URLs for your React Native app, which should look something like this:
+   - Allowed callback URLs - `myapp://myhost.kinde.com/kinde_callback`
+   - Allowed logout redirect URLs - `myapp://myhost.kinde.com/kinde_callback`
+
+Make sure you press the Save button at the bottom of the page!
+
+Note: The `myapp://myhost.kinde.com/kinde_callback` is used as an example of local URL Scheme, change to the local local URL Scheme that you use.
+
+## Environments
+
+If you would like to use our Environments feature as part of your development process. You will need to create them first within your Kinde account. In this case you would use the Environment subdomain in the code block above.
+
+## Configure your app
+
+### **Environment variables**
+
+Put these variables in your .env file. You can find these variables on the same page as where you set the callback URLs.
+
+- `KINDE_ISSUER_URL` - your Kinde domain
+- `KINDE_POST_CALLBACK_URL` - After the user authenticates we will callback to this address. Make sure this URL is under your allowed callback URLs
+- `KINDE_POST_LOGOUT_REDIRECT_URL` - where you want users to be redirected to after logging out. Make sure this URL is under your allowed logout redirect URLs
+- `KINDE_CLIENT_ID` - you can find this on the App Keys page
+
+```typescript
+KINDE_ISSUER_URL=https://your_kinde_domain.kinde.com
+KINDE_POST_CALLBACK_URL=myapp://your_kinde_domain.kinde.com/kinde_callback
+KINDE_POST_LOGOUT_REDIRECT_URL=myapp://your_kinde_domain.kinde.com/kinde_callback
+KINDE_CLIENT_ID=your_kinde_client_id
+```
+
+Configuration example:
+
+```typescript
+KINDE_ISSUER_URL=https://myhost.kinde.com
+KINDE_POST_CALLBACK_URL=myapp://myhost.kinde.com/kinde_callback
+KINDE_POST_LOGOUT_REDIRECT_URL=myapp://myhost.kinde.com/kinde_callback
+KINDE_CLIENT_ID=myclient@live
+```
+
+## Configuration deep link
+
+### **Android**
+
+Open `AndroidManifest.xml` and update your scheme by adding a new block in activity.
+
+```xml
+<intent-filter>
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="myapp" android:host="your_kinde_host" />  // Please modify sheme and host to reflect your preferences.
+</intent-filter>
+```
+
+### **iOS**
+
+You need to link `RCTLinking` to your project using the steps below.
+
+1. If you also want to listen to incoming app links during your app's execution, add the following lines to your `AppDelegate.m`.
+
+   ```swift
+   // iOS 9.x or newer
+   #import <React/RCTLinkingManager.h>
+   - (BOOL)application:(UIApplication *)application
+      openURL:(NSURL *)url
+      options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options
+   {
+     return [RCTLinkingManager application:application openURL:url options:options];
+   }
+   ```
+
+2. If you're targeting iOS 8.x or older, use the following code instead.
+
+   ```swift
+   // iOS 8.x or older
+   #import <React/RCTLinkingManager.h>
+   - (BOOL)application:(UIApplication *)application openURL:(NSURL *)url
+     sourceApplication:(NSString *)sourceApplication annotation:(id)annotation
+   {
+     return [RCTLinkingManager application:application openURL:url
+                         sourceApplication:sourceApplication annotation:annotation];
+   }
+   ```
+
+3. Make sure you have a configuration URL scheme in `Info.plist`, so the app can be opened by deep link.
+
+   ```swift
+   <key>CFBundleURLTypes</key>
+   <array>
+     <dict>
+       <key>CFBundleTypeRole</key>
+       <string>Editor</string>
+       <key>CFBundleURLName</key>
+       <string>myapp</string> // you can change it
+       <key>CFBundleURLSchemes</key>
+       <array>
+         <string>myapp</string> // you can change it
+       </array>
+     </dict>
+   </arra
+   ```
+
+## Integrate with your app
+
+To create a new instance of the KindeSDK object, execute the code below.
+
+```typescript
+import { KindeSDK } from '@kinde-oss/react-native-sdk-0-7x';
+...
+
+...
+const client = new KindeSDK(YOUR_KINDE_ISSUER, YOUR_KINDE_REDIRECT_URI, YOUR_KINDE_CLIENT_ID, YOUR_KINDE_LOGOUT_REDIRECT_URI);
+```
+
+## Sign in and registration
+
+Kinde provides methods for easily implementing a login / register flow. You can add buttons as follows.
+
+```typescript
+<View>
+    <View>
+        <Button title="Sign In" onPress={handleSignIn} />
+    </View>
+    <View>
+        <Button title="Sign Up" color="#000" onPress={handleSignUp} />
+    </View>
+</View>
+```
+
+Then define new functions that match for each button.
+
+**Note**: Before proceeding, make sure you’ve defined the **KindeSDK** as a **client** variable.
+
+```typescript
+...
+const handleSignUp = async () => {
+  const token = await client.register();
+  if (token) {
+    // User was authenticated
+  }
+};
+
+const handleSignIn = async () => {
+  const token = await client.login();
+  if (token) {
+    // User was authenticated
+  }
+};
+...
+```
+
+## **Log out**
+
+This is implemented in much the same way as signing in or registering. The Kinde SPA client comes with a logout method:
+
+```typescript
+const handleLogout = async () => {
+  const loggedOut = await client.logout();
+  if (loggedOut) {
+    // User was logged out
+  }
+};
+```
+
+We have also implemented an API for token revocation. Pass `true` as an argument in the `logout` function. This flag will assist in revoking the token without having to open the website within your apps.
+
+```typescript
+const handleLogout = async () => {
+  const loggedOut = await client.logout(true);
+  if (loggedOut) {
+    // User was logged out
+  }
+};
+```
+
+**Note: Handle redirects are now deprecated**
+
+Starting from version 1.1 of the SDK, the need to handle redirects has been eliminated. Authentication is now performed by launching a web browser within your app instead of relying on an external browser. For a comprehensive example of how to handle authentication, see below.
+
+## **Full code sample for authentication**
+
+```typescript
+const checkAuthenticate = async () => {
+  // Using `isAuthenticated` to check if the user is authenticated or not
+  if (await client.isAuthenticated) {
+    // Need to implement, e.g: call an api, etc...
+  } else {
+    // Need to implement, e.g: redirect user to sign in, etc..
+  }
+};
+
+useEffect(() => {
+  checkAuthenticate();
+}, []);
+
+const handleSignIn = async () => {
+  const token = await client.login();
+
+  if (token) {
+    // Need to implement, e.g: call an api, etc...
+  }
+};
+
+const handleSignUp = async () => {
+  const token = await client.register();
+
+  if (token) {
+    // Need to implement, e.g: call an api, etc...
+  }
+};
+
+const handleLogout = async () => {
+  // With open web in your apps
+  const isLoggedOut = await client.logout();
+
+  if (isLoggedOut) {
+    // Need to implement, e.g: redirect user to login screen, etc...
+  }
+
+  // Without open web in your apps
+  const isLoggedOut = await client.logout();
+
+  if (isLoggedOut) {
+    // Need to implement, e.g: redirect user to login screen, etc...
+  }
+};
+```
+
+## **Get user information**
+
+To access the user information, use the `getUserDetails` helper function.
+
+```typescript
+const userProfile = await client.getUserDetails();
+console.log(userProfile);
+// output: {"given_name":"Dave","id":"abcdef","family_name":"Smith","email":"dave@smith.com"}
+```
+
+## View users in Kinde
+
+Go to the Users page in Kinde to see your newly registered user.
+
+### User Permissions
+
+Once a user has been verified, your product/application will return the JWT token with an array of permissions for that user. You will need to configure your product/application to read permissions and unlock the respective functions.
+
+[Set permissions](/manage-users/roles-and-permissions/user-permissions/) in your Kinde account. Here’s an example set of permissions.
+
+```typescript
+const permissions = [
+  "create:todos",
+  "update:todos",
+  "read:todos",
+  "delete:todos",
+  "create:tasks",
+  "update:tasks",
+  "read:tasks",
+  "delete:tasks"
+];
+```
+
+We provide helper functions to more easily access permissions.
+
+```typescript
+await client.getPermission("create:todos");
+// {orgCode: "org_1234", isGranted: true}
+
+await client.getPermissions();
+// {orgCode: "org_1234", permissions: ["create:todos", "update:todos", "read:todos"]}
+```
+
+A practical example in code might look something like.
+
+```typescript
+if ((await client.getPermission("create:todos")).isGranted) {
+  // show Create Todo button in UI
+}
+```
+
+## Audience
+
+An audience is the intended recipient of an access token - for example the API for your application. The audience argument can be passed to the Kinde client to request an audience be added to the token.
+
+The audience of a token is the intended recipient of the token.
+
+```typescript
+const client = new KindeSDK(
+  YOUR_KINDE_ISSUER,
+  YOUR_KINDE_REDIRECT_URI,
+  YOUR_KINDE_CLIENT_ID,
+  YOUR_KINDE_LOGOUT_REDIRECT_URI,
+  YOUR_SCOPES,
+  {
+    audience: "api.yourapp.com"
+  }
+);
+```
+
+For details on how to connect, see [Register an API](/developer-tools/kinde-api/register-an-api/).
+
+## Overriding scope
+
+By default the `KindeSDK` requests the following scopes:
+
+- profile
+- email
+- offline
+- openid
+
+You can override this by passing scope into the KindeSDK.
+
+```typescript
+const client = new KindeSDK(
+  YOUR_KINDE_ISSUER,
+  YOUR_KINDE_REDIRECT_URI,
+  YOUR_KINDE_CLIENT_ID,
+  YOUR_KINDE_LOGOUT_REDIRECT_URI,
+  "profile email offline openid"
+);
+```
+
+## Getting claims
+
+We have provided a helper to grab any claim from your id or access tokens. The helper defaults to access tokens:
+
+```typescript
+await client.getClaim("aud");
+// { name: "aud", value ["api.yourapp.com"] }
+
+await client.getClaim("given_name", "id_token");
+// { name: "given_name", value: "David" }
+```
+
+## Organizations
+
+### Create an organization
+
+To create a new organization within your application, you will need to run a similar function to this.
+
+```typescript
+<Button title="Create Organization" onPress={handleCreateOrg} />
+```
+
+Then define the function of the button.
+
+Make sure you've already defined `KindeSDK` as the **client** in the state.
+
+```typescript
+const handleCreateOrg = () => {
+  client.createOrg();
+};
+
+// You can also pass `org_name` as your organization
+client.createOrg({org_name: "Your Organization"});
+```
+
+### Sign in and sign up to organizations
+
+Kinde has a unique code for every organization. You’ll have to pass this code through when you register a new user.
+
+Example function below:
+
+```typescript
+client.register({org_code: "your_org_code"});
+```
+
+If you want a user to sign in into a particular organization, pass this code along with the sign in method.
+
+```typescript
+client.login({org_code: "your_org_code"});
+```
+
+Following authentication, Kinde provides a json web token (jwt) to your application. Along with the standard information we also include the `org_code` and the permissions for that organization (this is important as a user can belong to multiple organizations and have different permissions for each). Example of a returned token:
+
+Example of a returned token:
+
+```typescript
+{
+    "aud": [],
+    "exp": 1658475930,
+    "iat": 1658472329,
+    "iss": "https://your_subdomain.kinde.com",
+    "jti": "123457890",
+    "org_code": "org_1234",
+    "permissions": ["read:todos", "create:todos"],
+    "scp": ["openid", "profile", "email", "offline"],
+    "sub": "kp:123457890"
+}
+```
+
+The `id_token` will also contain an array of organizations that a user belongs to - this is useful if you wanted to build out an organization switcher for example.
+
+```typescript
+{
+  ...
+  "org_codes": ["org_1234", "org_4567"]
+  ...
+}
+```
+
+There are two helper functions you can use to extract information.
+
+```typescript
+await client.getOrganization();
+// {orgCode: "org_1234"}
+
+await client.getUserOrganizations();
+// {orgCodes: ["org_1234", "org_abcd"]}
+```
+
+For more information about how organizations work in Kinde, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
+
+## **Feature Flags**
+
+We have provided a helper to return any features flag from the access token:
+
+```typescript
+client.getFlag('theme')
+// returns
+{
+		"is_default": false
+  	"value": "pink",
+  	"code": "theme",
+  	"type": "string",
+}
+
+client.getFlag('no-feature-flag')
+// Error: This flag 'no-feature-flag' was not found, and no default value has been provided
+
+client.getFlag('no-feature-flag', 'default-value')
+// returns
+{
+		"is_default": true
+		"code": "no-feature-flag",
+		"value": "default-value",
+}
+
+client.getFlag('theme', 'default-theme', 'b')
+// Error: Flag 'theme' is type string - requested type boolean
+```
+
+We also require wrapper functions by type which should leverage `getFlag` above.
+
+### **Get boolean flags**
+
+```typescript
+/**
+ * Get a boolean flag from the feature_flags claim of the access_token.
+ * @param {String} code - The name of the flag.
+ * @param {Boolean} [defaultValue] - A fallback value if the flag isn't found.
+ * @return {Boolean}
+ */
+kindeClient.getBooleanFlag(code, defaultValue);
+
+kindeClient.getBooleanFlag("is_dark_mode");
+// true
+
+kindeClient.getBooleanFlag("is_dark_mode", false);
+// true
+
+kindeClient.getBooleanFlag("new_feature");
+// Error: This flag 'new_feature' was not found, and no default value has been provided
+
+kindeClient.getBooleanFlag("new_feature", false);
+// false (flag does not exist so falls back to default)
+
+kindeClient.getBooleanFlag("theme", "blue");
+// Error: Flag 'theme' is type string - requested type boolean
+```
+
+### Get string flags
+
+```typescript
+/**
+ * Get a string flag from the feature_flags claim of the access_token.
+ * @param {String} code - The name of the flag.
+ * @param {String} [defaultValue] - A fallback value if the flag isn't found.
+ * @return {String}
+ */
+kindeClient.getStringFlag(code, defaultValue);
+
+/* Example usage */
+kindeClient.getStringFlag("theme");
+// pink
+
+kindeClient.getStringFlag("theme", "black");
+// true
+
+kindeClient.getStringFlag("cta_color");
+// Error: This flag 'cta_color' was not found, and no default value has been provided
+
+kindeClient.getStringFlag("cta_color", "blue");
+// blue (flag does not exist so falls back to default)
+
+kindeClient.getStringFlag("is_dark_mode", false);
+// Error: Flag 'is_dark_mode' is type string - requested type boolean
+```
+
+### **Get integer flags**
+
+```typescript
+/**
+ * Get an integer flag from the feature_flags claim of the access_token.
+ * @param {String} code - The name of the flag.
+ * @param {Integer} [defaultValue] - A fallback value if the flag isn't found.
+ * @return {Integer}
+ */
+kindeClient.getIntegerFlag(code, defaultValue);
+
+kindeClient.getIntegerFlag("competitions_limit");
+// 5
+
+kindeClient.getIntegerFlag("competitions_limit", 3);
+// 5
+
+kindeClient.getIntegerFlag("team_count");
+// Error: This flag 'team_count' was not found, and no default value has been provided
+
+kindeClient.getIntegerFlag("team_count", 2);
+// 2 (flag does not exist so falls back to default)
+
+kindeClient.getIntegerFlag("is_dark_mode", false);
+// Error: Flag 'is_dark_mode' is type boolean - requested type integer+
+```
+
+## Token Storage
+
+Once the user has successfully authenticated, you'll have a JWT and a refresh token and that has been stored securely. E.g. using the `getAccessToken` method of the `Storage` class to get an access token.
+
+```typescript
+...
+import { Storage } from '@kinde-oss/react-native-sdk-0-7x'
+...
+
+const accessToken = await Storage.getAccessToken();
+console.log('access_token', accessToken);
+```
+
+We're using the [react-native-keychain](https://www.npmjs.com/package/react-native-keychain) for `React Native`
+
+The storage handler can be found at: [Storage class](https://github.com/kinde-oss/kinde-react-native-sdk-0-7x/blob/main/dist/SDK/Storage/index.d.ts)
+
+## **How to test**
+
+Run the test suite using the following command at the root of your React Native.
+
+```shell
+npm run test
+```
+
+Note: Ensure you have already run `npm install`.
+
+## SDK API Reference
+
+### `issuer`
+
+Either your Kinde URL or your custom domain. e.g `https://yourapp.kinde.com`.
+
+Type: `string`
+
+Required: Yes
+
+### `redirectUri`
+
+The URL that the user will be returned to after authentication.
+
+Type: `string`
+
+Required: Yes
+
+### `clientId`
+
+The unique ID of your application in Kinde.
+
+Type: `string`
+
+Required: Yes
+
+### `logoutRedirectUri`
+
+Where your user will be redirected when they sign out.
+
+Type: `string`
+
+Required: Yes
+
+### `scope`
+
+The scopes to be requested from Kinde.
+
+Type: `boolean`
+
+Required: No
+
+Default: `openid profile email offline`
+
+### `additionalParameters`
+
+Additional parameters that will be passed in the authorization request.
+
+Type: `object`
+
+Required: No
+
+Default: `{}`
+
+### `additionalParameters` `- audience`
+
+The audience claim for the JWT.
+
+Type: `string`
+
+Required: No
+
+### **KindeSDK** methods
+
+### `login`
+
+Constructs a redirect URL and sends the user to Kinde to sign in.
+
+Arguments:
+
+```typescript
+{
+	org_code?: string
+}
+```
+
+Usage:
+
+```typescript
+await kinde.login();
+// or
+await kinde.login({org_code: "your organization code"});
+```
+
+Allow `org_code` to be provided if a specific organization is being signed into.
+
+Sample output:
+
+```typescript
+{
+	"access_token": "eyJhbGciOiJSUzI...",
+	"expires_in": 86400,
+	"id_token": "eyJhbGciOiJSU...",
+	"refresh_token": "yXI1bFQKbXKLD7AIU...",
+	"scope": "openid profile email offline",
+	"token_type": "bearer"
+}
+```
+
+### `register`
+
+Constructs a redirect URL and sends the user to Kinde to sign up.
+
+Arguments:
+
+```typescript
+{
+	org_code?: string
+}
+```
+
+Usage:
+
+```typescript
+await kinde.register();
+// or
+await kinde.register({org_code: "your organization code"});
+```
+
+Allow `org_code` to be provided if a specific organization is being registered to.
+
+Sample output:
+
+```typescript
+{
+	"access_token": "eyJhbGciOiJSUzI...",
+	"expires_in": 86400,
+	"id_token": "eyJhbGciOiJSU...",
+	"refresh_token": "yXI1bFQKbXKLD7AIU...",
+	"scope": "openid profile email offline",
+	"token_type": "bearer"
+}
+```
+
+### `logout`
+
+Logs the user out of Kinde.
+
+Arguments:
+
+```typescript
+isRevoke: boolean; // default is false
+```
+
+Usage:
+
+```typescript
+await kinde.logout();
+// or
+await kinde.logout(true);
+```
+
+Sample output: `true` or `false`
+
+### `getToken`
+
+Returns the raw Access token from URL after logged from Kinde.
+
+Arguments:
+
+```typescript
+url?: string
+```
+
+Usage:
+
+```typescript
+await kinde.getToken(url);
+// or
+await kinde.getToken();
+```
+
+You need to have already authenticated. Otherwise, an error will occur.
+
+Sample output:
+
+```typescript
+{
+	"access_token": "eyJhbGciOiJSUzI...",
+	"expires_in": 86400,
+	"id_token": "eyJhbGciOiJSU...",
+	"refresh_token": "yXI1bFQKbXKLD7AIU...",
+	"scope": "openid profile email offline",
+	"token_type": "bearer"
+}
+```
+
+### `createOrg`
+
+Constructs a redirect URL and sends the user to Kinde to sign up and create a new organization in your business.
+
+Arguments:
+
+```typescript
+{
+	org_name?: string
+}
+```
+
+Usage:
+
+```typescript
+await kinde.createOrg(); 
+// or 
+await kinde.createOrg({org_name: 'your organization name'}); _**//**_
+```
+
+Allow `org_name` to be provided if you want a specific organization name when you create.
+
+Sample output:
+
+```typescript
+{
+	"access_token": "eyJhbGciOiJSUzI...",
+	"expires_in": 86400,
+	"id_token": "eyJhbGciOiJSU...",
+	"refresh_token": "yXI1bFQKbXKLD7AIU...",
+	"scope": "openid profile email offline",
+	"token_type": "bearer"
+}
+```
+
+### `getClaim`
+
+Gets a claim from an access or ID token.
+
+Arguments:
+
+```typescript
+claim: string;
+tokenKey?: string
+```
+
+Usage:
+
+```typescript
+await kinde.getClaim("given_name", "id_token");
+```
+
+Sample output:
+
+```typescript
+{ name: "give_name", value: "David"}
+```
+
+### `getPermission`
+
+Returns the state of a given permission.
+
+Arguments: `key: string`
+
+Usage:
+
+```typescript
+await kinde.getPermission("read:todos");
+```
+
+Sample output:
+
+```typescript
+{
+	"orgCode": "org_1234",
+	"isGranted": true
+}
+```
+
+### `getPermissions`
+
+Returns all permissions for the current user for the organization they are signed into.
+
+Usage:
+
+```typescript
+await kinde.getPermissions();
+```
+
+Sample output:
+
+```typescript
+{
+	"orgCode":"org_1234",
+	"permissions": ["create:todos","update:todos","read:todos"]
+}
+```
+
+### `getOrganization`
+
+Get details for the organization your user is signed into.
+
+Usage:
+
+```typescript
+await kinde.getOrganization();
+```
+
+Sample output:
+
+```typescript
+{
+	"orgCode": "org_1234"
+}
+```
+
+### `getUserDetails`
+
+Returns the profile for the current user.
+
+Usage:
+
+```typescript
+await kinde.getUserDetails();
+```
+
+Sample output:
+
+```typescript
+{
+	"given_name": "Dave",
+	"id": "abcdef",
+	"family_name": "Smith",
+	"email": "dave@smith.com"
+}
+```
+
+### `getUserOrganizations`
+
+Gets an array of all organizations the user has access to.
+
+Usage:
+
+```typescript
+await kinde.getUserOrganizations();
+```
+
+Sample output:
+
+```typescript
+{ "orgCodes": ["org1234", "org5678"] }
+```
+
+### `isAuthenticated`
+
+Return the boolean to demonstrate whether the user is authenticated or not.
+
+Usage:
+
+```typescript
+await kinde.isAuthenticate;
+```
+
+Sample output: `true` or `false`
+
+### **`getFlag`**
+
+Get a flag from the feature_flags claim of the `access_token`.
+
+Arguments:
+
+```typescript
+flagName : string;
+options? :  OptionalFlag = {}
+flagType? : FlagType
+
+
+type FlagType = 's' | 'b' | 'i';
+
+type OptionalFlag = {
+	defaultValue?: string | boolean | number
+}
+```
+
+Usage:
+
+```typescript
+kinde.getFlag("theme");
+```
+
+Sample output:
+
+```typescript
+{
+    "code": "theme",
+    "type": "string",
+    "value": "pink",
+    "is_default": false
+}
+```
+
+### **`getBooleanFlag`**
+
+Get a boolean flag from the `feature_flags` claim of the access token
+
+Arguments:
+
+```typescript
+flagName: string
+defaultValue?: boolean
+```
+
+Usage:
+
+```typescript
+kinde.getBooleanFlag("is_dark_mode");
+```
+
+Sample output: `true`
+
+### **`getStringFlag`**
+
+Get a string flag from the `feature_flags` claim of the access token
+
+Arguments:
+
+```typescript
+flagName: string
+defaultValue?: string
+```
+
+Usage:
+
+```typescript
+kinde.getStringFlag("theme");
+```
+
+Sample output: `black`
+
+### **`getIntegerFlag`**
+
+Get a integer flag from the `feature_flags` claim of the access token
+
+Arguments:
+
+```typescript
+flagName: string
+defaultValue?: number
+```
+
+Usage:
+
+```typescript
+kinde.getIntegerFlag("team_count");
+```
+
+Sample output: `2`
+
+## General tips
+
+### **Building issues**
+
+**`'value'`** **is unavailable: introduced in iOS 12.0**
+
+If you got the error **'value' is unavailable: introduced in iOS 12.0** when trying to build the app, you can follow the below steps to fix that:
+
+1. In your Xcode project navigator, select **Pods.**
+2. Under Targets, select **React-Codegen**.
+3. Select the **Build Settings** tab.
+4. Under **Deployment**, set **iOS Deployment Target** to **12.4.**
+5. Clean project and rebuild: **Product > Clean Build Folder, Product > Build.**
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/e441dff0-bc34-40a6-5854-2f390e805300/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+6. Dependency `'androidx.browser:browser:1.6.0-beta01'` requires libraries and applications that depend on it to compile against version 34 or later of the Android APIs
+
+   The solution is add `androidXBrowser = "1.4.0"` in your project.
+
+   ```java
+   // android/build.gradle
+   buildscript {
+       ...
+       ext {
+           // ...
+           androidXBrowser = "1.4.0"
+           // ....
+       }
+       ...
+   }
+   ```
+
+7. Duplicate class **kotlin.collections.jdk8.CollectionsJDK8Kt** found in modules **jetified-kotlin-stdlib-1.8.10** (org.jetbrains.kotlin:kotlin-stdlib:1.8.10) and **jetified-kotlin-stdlib-jdk8-1.7.22** (org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.22)
+
+   The solution is add `org.jetbrains.kotlin:kotlin-bom:1.8.0` dependency in your project.
+
+   ```java
+   // android/app/build.grade
+   dependencies {
+       ...
+       implementation(platform("org.jetbrains.kotlin:kotlin-bom:1.8.0"))
+       ...
+   }
+
+
+   ```
+
+### **Caching issues**
+
+Sometimes there will be issues related to caching when you develop React Native.
+There are some recommendations for cleaning the cache:
+
+1. Remove `node_modules`, `yarn.lock` or `package-lock.json`.
+2. Clean cache: `yarn cache clean` or `npm cache clean --force`.
+3. Make sure you have changed values in `.env` file.
+4. Trying to install packages again: `yarn install` or `npm install`.
+5. Run Metro Bundler: `yarn start --reset-cache` or `npm start --reset-cache`.
+
+Assume your StarterKit path is `<StarterKit_PATH>`.
+
+**Clean cache for Android**
+
+- Run this:
+
+  ```shell
+  cd <StarterKit_PATH>/android
+  ./gradlew clean
+
+  ```
+
+**Clean cache for iOS**
+
+1. Run this:
+
+   ```shell
+   cd <StarterKit_PATH>/ios
+   rm -rf Pods && rm Podfile.lock
+
+   ```
+
+2. Clean build folders on **Xcode**.
+
+If you need help connecting to Kinde, please contact us at [support@kinde.com](mailto:support@kinde.com).

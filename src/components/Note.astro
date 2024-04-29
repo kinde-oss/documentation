@@ -1,0 +1,52 @@
+---
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  type: "note" | "caution" | "danger" | "tip";
+}
+
+const noteData = {
+  note: {
+    bg: "bg-kinde-grey-50",
+    icon: "thumbs-up",
+  },
+  caution: {
+    bg: "bg-yellow-200",
+    icon: "thumbs-up",
+  },
+  danger: {
+    bg: "bg-orange-700",
+    icon: "thumbs-up",
+  },
+  tip: {
+    bg: "bg-purple-100",
+    icon: "thumbs-up",
+  },
+};
+
+const { type = "note" } = Astro.props;
+---
+
+<aside
+  aria-label={type.toUpperCase()}
+  class:list={[
+    "aside not-content px-6 py-8 rounded-2xl flex flex-col gap-4",
+    {
+      [noteData[type].bg]: true,
+    },
+  ]}
+>
+  <div class="note-header flex items-center gap-4">
+    <Icon name={noteData[type].icon} size={24} />
+    <div aria-hidden="true" class="font-medium text-base capitalize">{type}</div>
+  </div>
+  <div class="note-body">
+    <slot />
+  </div>
+</aside>
+
+<style>
+  :global(.note-body .expressive-code) {
+    @apply mt-4;
+  }
+</style>

@@ -1,0 +1,1059 @@
+---
+page_id: 4ab29e69-2f16-43f6-9ad9-862408abcc2c
+title: Flutter SDK
+sidebar:
+  order: 21
+relatedArticles:
+  - 02d02820-92da-4721-9a91-222c9b095869
+social_sharing_image_url: "https://kinde.com/assets/images/open-graph/DOCS-SSI-SDK_Flutter.png"
+---
+
+The Kinde’s Flutter SDK allows developers to integrate Kinde Authentication into their Flutter projects. Integrate [Kinde](https://kinde.com/) authentication with your Flutter app. When you configure, register, log in, and log out, the authentication state is securely stored across app restarts.
+
+## Register with Kinde
+
+If you haven’t already got a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). Registering gives you a Kinde domain, which you need to get started, e.g. yourapp.kinde.com.
+
+## Before you install
+
+This SDK is suitable for:
+
+- Flutter 3.10.0 or later.
+- Dart 3.0.6 or later.
+
+## Install SDK
+
+KindeSDK is available through [pub.dev](https://pub.dev/packages/kinde_flutter_sdk). To install it, simply add the following line to your pubspec.yaml:
+
+```dart
+kinde_flutter_sdk: <latest-version>
+```
+
+## Integrate with your app
+
+The `kinde_flutter_sdk` package is intended to work with Flutter Projects.
+
+Within the main function, ensure WidgetsFlutterBinding is initialized. `KindeFlutterSDK.initializeSDK()` must be called before using the SDK. If you’re using an .env file, provide the .env filename inside the load function. See below:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:kinde_flutter_sdk/kinde_flutter_sdk.dart';
+
+WidgetsFlutterBinding.ensureInitialized();
+await dotenv.load(fileName: ".env");
+await KindeFlutterSDK.initializeSDK(
+    authDomain: dotenv.env['KINDE_AUTH_DOMAIN']!,
+    authClientId: dotenv.env['KINDE_AUTH_CLIENT_ID']!,
+    loginRedirectUri: dotenv.env['KINDE_LOGIN_REDIRECT_URI']!,
+    logoutRedirectUri: dotenv.env['KINDE_LOGOUT_REDIRECT_URI']!,
+    audience: dotenv.env['KINDE_AUDIENCE'], //optional
+		scopes: ["email","profile","offline","openid"] // optional
+);
+```
+
+**Note:** To setup the .env file in your flutter package, check the [**flutter_dotenv**](https://pub.dev/packages/flutter_dotenv) package.
+
+### **Environment variables:**
+
+Put these variables in your `.env` file. You can find these variables on your **Settings > Applications > [Your app] > View details** page.
+
+- `KINDE_AUTH_DOMAIN` - your Kinde domain
+- `KINDE_CLIENT_ID` - your Kinde client ID
+- `KINDE_LOGIN_REDIRECT_URI` - your callback url to redirect to after authentication. Make sure this URL is under your **Allowed callback URLs**.
+- `KINDE_LOGOUT_REDIRECT_URI` - where you want users to be redirected to after logging out. Make sure this URL is under your **Allowed logout redirect URLs**.
+- `KINDE_AUDIENCE` (optional)- the intended recipient of an access token. To fetch this value, go to **Settings > Applications > [Your app] > APIs**
+
+Below is an example of a `.env` file
+
+```bash
+KINDE_AUTH_DOMAIN=https://<your_kinde_subdomain>.kinde.com
+KINDE_AUTH_CLIENT_ID=<your_kinde_client_id>
+KINDE_LOGIN_REDIRECT_URI=<your_custom_scheme>://kinde_callback
+KINDE_LOGOUT_REDIRECT_URI=<your_custom_scheme>://kinde_logoutcallback
+KINDE_AUDIENCE=<your_kinde_audience>
+```
+
+**Example:**
+
+```bash
+KINDE_AUTH_DOMAIN='https://myapp.kinde.com'
+KINDE_AUTH_CLIENT_ID='clientid'
+KINDE_LOGIN_REDIRECT_URI='com.kinde.myapp://kinde_callback'
+KINDE_LOGOUT_REDIRECT_URI='com.kinde.myapp://kinde_logoutcallback'
+KINDE_AUDIENCE='myapp.kinde.com/api'
+```
+
+**Note:** Be sure to add the .env file in your .gitignore file. See the GitHub link [here](https://github.com/github/gitignore/blob/main/Dart.gitignore).
+
+## Configure your app
+
+**Android Setup**
+
+Go to the `build.gradle` file in the **Android > App** folder for your Android app.
+
+Specify the custom scheme similar to the following, but replace `<your_custom_scheme>` with your own value.
+
+```groovy
+  android {
+    ...
+    defaultConfig {
+        ...
+        manifestPlaceholders += [
+                'appAuthRedirectScheme': '<your_custom_scheme>'
+        ]
+    }
+}
+```
+
+**iOS Setup**
+
+Go to the `Info.plist` located at **ios > Runner** for your iOS/macOS app.
+
+Specify the custom scheme similar to the following but replace `<your_custom_scheme>` with your own value.
+
+```xml
+ <key>CFBundleURLTypes</key>
+<array>
+    <dict>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+            <string><your_custom_scheme></string>
+        </array>
+    </dict>
+</array>
+```
+
+**Note:** `<your_custom_scheme>` has been defined previously as [`com.kinde.app`](http://com.kinde.app/) You can define your own custom scheme to correspond to the package name.
+
+## Set callback URLs
+
+For your app to work with Kinde, you need to set callback and logout redirect URLs.
+
+Replace the values you see in `<code brackets>` with your own values.
+
+1. In Kinde, go to **Settings > Applications.**
+2. Select **View details** on your app.
+3. Scroll down to the **Callback URLs** section.
+4. Add in the callback URLs for your app, which might look something like this:
+   - Allowed callback URLs: `<your_custom_scheme>://kinde_callback`
+   - Allowed logout redirect URLs: `<your_custom_scheme>://kinde_logoutcallback`
+
+```dart
+  loginRedirectUri: 'com.kinde.myapp://kinde_callback',
+  logoutRedirectUri: 'com.kinde.myapp://kinde_logoutcallback',
+```
+
+1. Select **Save**.
+
+**Tip**: Make sure there are no hidden spaces in URLs and remove the ‘/’ backslash at the end.
+
+**Note:** For more details, please visit the link [Set callback and redirect URLs](/get-started/connect/callback-urls/).
+
+## Environments
+
+If you would like to use different Environments as part of your development process, you will need to [add them within your Kinde business](/build/environments/environments/) first. You will also need to add the Environment subdomain to the code block above.
+
+## Sign in and **sign up**
+
+Kinde supports an easy to implement login / register flow. Use the functions examples below to redirect your users to Kinde, where they authenticate before being redirected back to your app.
+
+### Kinde Client
+
+Make sure you’ve already defined **KindeFlutterSDK.instance** variable.
+
+```dart
+final sdk = KindeFlutterSDK.instance;
+```
+
+### R**edirect after authentication**
+
+The Kinde client provides methods for a simple login / register flow which authenticates the user and redirects them back to the app.
+
+```dart
+...
+final String token = await sdk.login();
+// or sdk.login(type: AuthFlowType.pkce) for apply pkce flow
+...
+await sdk.register();
+// or sdk.register(type: AuthFlowType.pkce) for apply pkce flow
+...
+```
+
+**Note:** Kinde supports the PKCE extension, in which the `code_challenge` and  `code_challenge_method`  parameters are also required. For More information, visit [Using OAuth Scopes.](/build/tokens/oath-scopes/#authorization-code-flow-with-proof-key-for-code-exchange-pkce)
+
+### Signing out
+
+This is implemented in much the same way as logging in or registering. The Kinde SDK client comes with a logout method.
+
+```dart
+....
+await sdk.logout()
+....
+```
+
+### Test sign up
+
+Register your first user by signing up yourself. You’ll see your newly registered user on the **Users** page in Kinde.
+
+## Get user information
+
+To access the user information, call one of the `getUser` or `getUserProfileV2` methods.
+
+```dart
+sdk.getUser().then((value) {
+     print('User: ${value?.firstName ?? '
+         '} ${value?.lastName ?? '
+         '}');
+ });
+```
+
+### User profile
+
+```dart
+final userProfile = await sdk.getUserProfileV2();
+print(userProfile);
+
+// returns
+UserProfile {
+  id=kp_12345678910,
+  preferredEmail=dave@smith.com,
+  lastName=smith,
+  firstName=dave,
+}
+```
+
+Both method returns the sub(unique id of user In Kinde Console), `id`, `firstName`, `lastName`, `picture`, and `preferredEmail`, etc.
+
+### Check if user is authenticated
+
+We’ve provided a helper to get a boolean value to check if a user is signed in by verifying that the access token is still valid.
+
+```dart
+final isAuthenticated = await sdk.isAuthenticate();
+if (isAuthenticated) {
+	// Need to implement, e.g: call an api, etc...
+} else {
+	// Need to implement, e.g: redirect user to sign in, etc..
+}
+```
+
+### User permissions
+
+Once the user has logged in, the JWT token is returned which contains an array of permissions of that user. Read the permissions and implement the functionality in your application accordingly.
+
+[Set permissions](/manage-users/roles-and-permissions/user-permissions/) in your Kinde account. Here’s an example set of permissions.
+
+```dart
+List<String> permissions = [
+    "create:todos",
+    "update:todos",
+    "read:todos",
+    "delete:todos",
+    "create:tasks",
+    "update:tasks",
+    "read:tasks",
+    "delete:tasks",
+];
+```
+
+We provide helper functions to more easily access the permissions claim:
+
+```dart
+final ClaimPermissions sdkPermissions = sdk.getPermissions(); //to fetch list of permissions
+final ClaimPermission sdkPermission = sdk.getPermission('permissionName'); //to fetch a single permission
+```
+
+### Examples
+
+To fetch a list of permissions, we use the following permission function:
+
+```dart
+Future<void> getPermissions() async {
+    final ClaimPermissions sdkPermissions = sdk.getPermissions();
+    print(sdkPermissions.permissions); //list of claim permissions granted to user
+  }
+```
+
+To fetch a single permission, we use the following permission function:
+
+```dart
+Future<void> getPermission() async {
+    final ClaimPermission sdkPermission = sdk.getPermission('permissionName');
+    print(sdkPermission.isGranted); //Check if permission is granted.
+		print(sdkPermission.orgCode); //orgCode for specific organization.
+  }
+```
+
+## Call Your API (Token storage)
+
+After the user has successfully logged in, you will have a JSON Web Token (JWT) and a refresh token securely stored. You can retrieve an access token by utilizing the `getToken` method.
+
+```dart
+final access_token = await sdk.getToken();
+```
+
+If the `accessToken` has expired, but the `refreshToken` is valid, the `getToken` method will automatically fetch the `newToken` using the built in `refreshToken` interceptor. To implement the methods in your front-end application with encrypted storage using flutter_secure_storage and hive, use the following code:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:kinde_flutter_sdk/kinde_flutter_sdk.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:hive/hive.dart';
+
+Future<void> initEncryptedHive() async {
+    const FlutterSecureStorage secureStorage =  FlutterSecureStorage();
+  var containsEncryptionKey = await secureStorage.containsKey(key: 'encryptionKey');
+  if (!containsEncryptionKey) {
+    var key = Hive.generateSecureKey();
+    await secureStorage.write(key: 'encryptionKey', value: base64UrlEncode(key));
+  }
+
+}
+void main(){
+ WidgetsFlutterBinding.ensureInitialized();
+ await initEncryptedHive();
+ await dotenv.load(fileName: ".env");
+ await KindeFlutterSDK.initializeSDK(
+    authDomain: dotenv.env['KINDE_AUTH_DOMAIN']!,
+    authClientId: dotenv.env['KINDE_AUTH_CLIENT_ID']!,
+    loginRedirectUri: dotenv.env['KINDE_LOGIN_REDIRECT_URI']!,
+    logoutRedirectUri: dotenv.env['KINDE_LOGOUT_REDIRECT_URI']!,
+    audience: dotenv.env['KINDE_AUDIENCE'],
+ );
+}
+```
+
+```dart
+Future < Box > hiveEncryptedBox() async {
+    // Hive Encrypted Box Added
+    const FlutterSecureStorage secureStorage = FlutterSecureStorage();
+    String ? key = await secureStorage.read(key: 'encryptionKey');
+    var encryptionKey = base64Url.decode(key!);
+    var box = await Hive.openBox('myBox', encryptionCipher: HiveAesCipher(encryptionKey));
+    return box;
+}
+Future < String > returnAccessToken() async {
+    final box = await hiveEncryptedBox();
+    var token = box.get('token', defaultValue: '');
+    if (token == '') {
+        return await getNewToken();
+    } else if (token != null) {
+        bool hasExpired = JwtDecoder.isExpired(token);
+        if (hasExpired) {
+            return await getNewToken();
+        }
+        return token;
+    } else {
+        return getNewToken();
+    }
+}
+Future < String > getNewToken() async {
+    String ? token = await sdk.getToken();
+    if (token == null) return 'Refresh Token Expired'; // Redirect user to the login page
+    var box = await hiveEncryptedBox();
+    await box.put('token', token);
+    return token;
+}
+```
+
+**Note:** To setup [hive](https://pub.dev/packages/hive) and [flutter_secure_storage](https://pub.dev/packages/flutter_secure_storage), visit the [pub.dev](http://pub.dev/) .
+
+You may also use Android KeyStore or iOS Realm to store tokens.
+
+## **Audience**
+
+An `audience` is the intended recipient of an access token - for example the API for your application. The audience argument can be passed to the Kinde client to request an audience be added to the provided token.
+
+The audience of a token is the intended recipient of the token.
+
+```dart
+await KindeFlutterSDK.initializeSDK(
+   ...
+   audience: 'myapp.kinde.com/api',
+   ...
+);
+```
+
+For details on how to connect, see [Register an API](/developer-tools/kinde-api/register-an-api/).
+
+## Organizations
+
+### Create an organization
+
+To have a new organization created within your application, you will need to set up the following function:
+
+```dart
+Future<void> createOrg() async {
+   await sdk.createOrg(orgName: string);
+}
+```
+
+### **Optional type parameter**
+
+```dart
+Future<void> createOrg() async {
+   await sdk.createOrg(orgName: string,type: AuthFlowType.pkce);
+}
+```
+
+### Sign up and sign in to organizations
+
+The Kinde client provides methods for you easily sign up and sign in users into organizations.
+
+```dart
+Future < void > loginUser() async {
+    final token = await sdk.login(orgCode: 'orgCode');
+    // or sdk.login(orgCode:'orgCode', type: AuthFlowType.pkce) for apply pkce flow
+    print(token);
+}
+Future < void > registerUser() async {
+    await sdk.register(orgCode: 'orgCode');
+    // or sdk.register(orgCode:'orgCode', type: AuthFlowType.pkce) for apply pkce flow
+}
+```
+
+Following authentication, Kinde provides a json web token (jwt) to your application. Along with the standard information we also include the `org_code` and the permissions for that organization (this is important as a user can belong to multiple organizations and have different permissions for each).
+
+Example of a returned token:
+
+```json
+{
+  "aud": [], //audience
+  "exp": 1658475930, //token expiry
+  "iat": 1658472329,
+  "iss": "https://your_subdomain.kinde.com",
+  "jti": "123457890",
+  "org_code": "org_1234", //organization codes
+  "permissions": ["read:todos", "create:todos"], //list of permissions
+  "scp": ["openid", "profile", "email", "offline"], //scopes
+  "sub": "kp:123457890"
+}
+```
+
+The `id_token` will also contain an array of organizations that a user belongs to - this is useful if you wanted to build out an organization switcher for example.
+
+```json
+[
+		...
+		"org_codes": ["org_1234", "org_4567"]
+		...
+];
+```
+
+You can also fetch the org_code by:
+
+1. Sign into [kinde.com](https://kinde.com/).
+2. In Kinde, go to **Organizations** and fetch the org_code for which you want to register user’s.
+
+### Fetch organizations
+
+```dart
+sdk.getOrganization();
+// ClaimOrganization(code: "org_1234")
+
+sdk.getUserOrganizations();
+// ClaimOrganizations(orgCodes: [Organization(code: "org_1234"), Organization(code: "org_abcd")])
+```
+
+To shift users between organizations visit [user-management.](/manage-users/about/)
+
+## Scopes
+
+### Default **scopes**
+
+By default the KindeSDK requests the following scopes:
+
+- **openid:** Perform an OpenID connect sign-in.
+- **profile:** Retrieve the user’s profile.
+- **offline:** Retrieve a Refresh Token for offline access from the application.
+- **email:** Retrieve the user’s email.
+
+### Overriding scopes
+
+You can override this by passing scope into the initializeSDK() function
+
+```dart
+await KindeFlutterSDK.initializeSDK(
+    ...
+    scopes = ["email", "profile"],
+    ...
+ );
+```
+
+### Getting claims
+
+We have provided a helper to grab any claim from your id or access tokens. The helper defaults to access tokens:
+
+```typescript
+sdk.getClaim(claim:'aud'); // { name: "aud", value: ["local-testing@kinde.com"] }
+
+sdk.getClaim(claim:'email',tokenType: TokenType.idToken);
+// { name: "email", value: "first.last@test.com" }
+
+sdk.getClaim(claim:'email',tokenType: TokenType.accessToken);
+```
+
+## Feature Flags
+
+We have provided a helper to grab any feature flags from the `access_token`:
+
+When a user signs in, the access token your product/application receives contains a custom claim called `feature_flags`, which is an object detailing the feature flags for that user.
+Here’s an example of how to fetch feature_flags directly from the jwt token.
+
+```dart
+void getFeatureFlags() async {
+    String ? token = await sdk.getToken();
+    if (token != null) {
+        Map < String, dynamic > decoded = JwtDecoder.decode(token);
+        print(decoded['feature_flags']);
+    }
+}
+```
+
+Decoding the token using the [jwt.io](http://jwt.io/) website also references the following object that is contained within the token:
+
+```json
+feature_flags: {
+    theme: {
+        "t": "s",
+        "v": "pink"
+    },
+    is_dark_mode: {
+        "t": "b",
+        "v": true
+    },
+    competitions_limit: {
+        "t": "i",
+        "v": 5
+    }
+}
+```
+
+**Note: Setup** [**JwtDecoder**](https://pub.dev/packages/jwt_decoder) **using this link.**
+
+In order to minimize the payload in the token we have used single letter keys / values where possible. The single letters represent the following:
+`t` = type,
+`v` = value,
+`s` = String,
+`b` = Boolean,
+`i` = Integer,
+
+You can set feature flags in your Kinde account by visiting: [Add Feature Flags](/releases/feature-flags/add-feature-flag/)
+
+We also provide helper functions to more easily access feature flags:
+
+```dart
+sdk.getFlag(code: "featureFlagCode",defaultValue: 'defaultValue',type: FlagType)
+```
+
+To fetch `featureFlagCode`, In Kinde, navigate to **Releases** **> Feature Flags.**
+
+A practical example in code would look something like:
+
+```dart
+void getFlagInfo() {
+    final Flag ? info = sdk.getFlag(code: 'featureFlagCode', defaultValue: '', type: FlagType.string);
+    print(info?.code);
+}
+```
+
+## Wrapper functions
+
+We also require wrapper functions by type which should leverage `getFlag` above.
+
+Boolean wrapper
+
+```dart
+/**
+ * Get a boolean flag from the feature_flags claim of the access_token.
+ * @param {String} code - The name of the flag.
+ * @param {Boolean} [defaultValue] - A fallback value if the flag isn't found.
+ * @return {Boolean}
+ */
+sdk.getBooleanFlag(code, defaultValue);
+
+sdk.getBooleanFlag("is_dark_mode");
+// true
+
+sdk.getBooleanFlag("is_dark_mode", false);
+// true
+
+sdk.getBooleanFlag("new_feature");
+// Error - flag does not exist and no default provided
+
+sdk.getBooleanFlag("new_feature", false);
+// false (flag does not exist so falls back to default)
+
+sdk.getBooleanFlag("theme", "blue");
+// Error - Flag "theme" is of type string not boolean
+```
+
+String wrapper
+
+```dart
+/**
+ * Get a string flag from the feature_flags claim of the access_token.
+ * @param {String} code - The name of the flag.
+ * @param {String} [defaultValue] - A fallback value if the flag isn't found.
+ * @return {String}
+ */
+sdk.getStringFlag(code, defaultValue);
+
+/* Example usage */
+sdk.getStringFlag("theme");
+// pink
+
+sdk.getStringFlag("theme", "black");
+// true
+
+sdk.getStringFlag("cta_color");
+// Error - flag does not exist and no default provided
+
+sdk.getStringFlag("cta_color", "blue");
+// blue (flag does not exist so falls back to default)
+
+sdk.getStringFlag("is_dark_mode", false);
+// Error - Flag "is_dark_mode" is of type boolean not string
+```
+
+Integer wrapper
+
+```dart
+/**
+ * Get an integer flag from the feature_flags claim of the access_token.
+ * @param {String} code - The name of the flag.
+ * @param {Integer} [defaultValue] - A fallback value if the flag isn't found.
+ * @return {Integer}
+ */
+sdk.getIntegerFlag(code, defaultValue);
+
+sdk.getIntegerFlag("competitions_limit");
+// 5
+
+sdk.getIntegerFlag("competitions_limit", 3);
+// 5
+
+sdk.getIntegerFlag("team_count");
+// Error - flag does not exist and no default provided
+
+sdk.getIntegerFlag("team_count", 2);
+// false (flag does not exist so falls back to default)
+
+sdk.getIntegerFlag("is_dark_mode", false);
+// Error - Flag "is_dark_mode" is of type boolean not integer
+```
+
+Example of wrapper function:
+
+```dart
+void getTheme() {
+    final theme = sdk.getStringFlag("theme", "black");
+    if (theme == "black") {
+        //code to execute when theme is black.
+    } else if (theme == "blue") {
+        //code to execute when theme is blue.
+    }
+}
+void isDarkMode() {
+    final isDarkMode = sdk.getBooleanFlag("is_dark_mode", false);
+    if (isDarkMode) {
+        //code to execute in dark mode.
+    } else {
+        // code to execute in light mode.
+    }
+}
+int getTeamCount() {
+    final teamCount = sdk.getIntegerFlag("team_count", 2);
+    print(teamCount);
+    return teamCount;
+}
+```
+
+## SDK API Reference
+
+### `authDomain`
+
+Either your Kinde instance url or your custom domain. e.g. `https://yourapp.kinde.com/`
+
+Type: `string`
+
+Required: Yes
+
+---
+
+### `clientId`
+
+The id of your application - get this from the Kinde admin area.
+
+Type: `string`
+
+Required: Yes
+
+---
+
+### `loginRedirectUri`
+
+The url that the user will be returned to after authentication.
+
+Type: `string`
+
+Required: Yes
+
+---
+
+### `logoutRedirectUri`
+
+Where your user will be redirected upon logout.
+
+Type: `string`
+
+Required: Yes
+
+---
+
+### `audience`
+
+The audience claim for the JWT.
+
+Type: `string`
+
+Required: No
+
+---
+
+### `scope`
+
+The scopes to be requested from Kinde.
+
+Type: `string`
+
+Required: No
+
+Default: `openid` `profile` `email` `offline`
+
+---
+
+## **KindeSDK Methods**
+
+### `login`
+
+Constructs redirect url and sends user to Kinde to sign in.
+
+**Usage:**
+
+```dart
+sdk.login();
+```
+
+### `register`
+
+Constructs redirect url and sends user to Kinde to sign up.
+
+**Usage:**
+
+```dart
+sdk.register();
+```
+
+### `logout`
+
+Logs the user out of Kinde.
+
+**Usage:**
+
+```dart
+sdk.logout();
+```
+
+### `isAuthenticated`
+
+Check if the user is authenticated.
+
+**Usage:**
+
+```dart
+sdk.isAuthenticated();
+```
+
+**Sample output:**
+
+```dart
+true or false
+```
+
+### `createOrg`
+
+Constructs redirect url and sends user to Kinde to sign up and create a new org for your business.
+
+**Arguments:**
+
+```dart
+ options?: CreateOrgURLOptions {
+   org_name?: "string";
+   org_code?: "string";
+   state?: "string";
+}
+```
+
+**Usage:**
+
+```dart
+sdk.createOrg(
+  org_name: "org_1234"
+);
+```
+
+### `getClaim`
+
+Extract the provided claim from the provided token type in the current session, the returned object includes the provided claim.
+
+**Arguments:**
+
+```dart
+claim: "string", 
+tokenKey?: TokenType "access_token" | "id_token"
+```
+
+**Usage:**
+
+```dart
+sdk.getClaim(claim:"given_name", tokenType: TokenType);
+```
+
+### `getPermission`
+
+Returns the state of a given permission.
+
+**Arguments:**
+
+```dart
+ key: "string"
+```
+
+**Usage:**
+
+```dart
+sdk.getPermission("permission");
+```
+
+**Sample output:**
+
+```dart
+{ orgCode : 'org_1234', isGranted : true}
+```
+
+### `getPermissions`
+
+Returns all permissions for the current user for the organization they are logged into.
+
+**Usage:**
+
+```dart
+sdk.getPermissions();
+```
+
+**Sample output:**
+
+```dart
+{ orgCode : 'org_1234', permissions : ['create:todos', 'update:todos', 'read:todos'] }
+```
+
+### `getOrganization`
+
+Get details for the organization your user is logged into.
+
+**Usage:**
+
+```dart
+sdk.getOrganization();
+```
+
+**Sample output:**
+
+```dart
+{ orgCode : 'org_1234' }
+```
+
+### `getUserOrganizations`
+
+Gets an array of all organizations the user has access to.
+
+**Usage:**
+
+```dart
+sdk.getUserOrganizations();
+```
+
+**Sample output:**
+
+```dart
+{ orgCodes: ['org_7052552de68', 'org_5a5c29381327'] }
+```
+
+### `getUser`
+
+Extracts the user details from the Id token obtained post authentication.
+
+**Usage:**
+
+```dart
+sdk.getUser();
+```
+
+**Sample output:**
+
+```dart
+{
+"id":"kp_12345678910",
+"preferredEmail":"dave@smith.com",
+"lastName":"smith",
+"firstName":"dave",
+}
+```
+
+### `getToken`
+
+Returns the access token obtained post authentication.
+
+**Usage:**
+
+```dart
+sdk.getToken();
+```
+
+**Sample output:**
+
+```dart
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+    .eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ
+    .SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c;
+```
+
+---
+
+### `getUserProfile`
+
+Extracts makes use of the `getToken` method above to fetch user details
+
+**Usage:**
+
+```dart
+sdk.getUserProfile();
+```
+
+**Sample output:**
+
+```dart
+{ given_name: 'Dave', id: 'abcdef', family_name : 'Smith', email : 'mailto:dave@smith.com' }
+```
+
+### `getFlag`
+
+Get a flag from the feature_flags claim of the `access_token`
+
+**Arguments:**
+
+```dart
+code : "string"
+defaultValue? :  FlagType[keyof FlagType]
+flagType? : [key of FlagType]
+
+interface FlagType {
+    s: string;
+    b: boolean;
+    i: number;
+}
+interface GetFlagType {
+    type?: 'string' | 'boolean' | 'number';
+    value: FlagType[keyof FlagType];
+    is_default: boolean;
+    code: "string";
+}
+```
+
+**Usage:**
+
+```dart
+sdk.getFlag(code:"theme");
+```
+
+**Sample output:**
+
+```dart
+{ "code": "theme", "type": "string", "value": "pink", "is_default": false }
+```
+
+### `getBooleanFlag`
+
+Get a boolean flag from the feature_flags claim of the `access_token`
+
+**Arguments:**
+
+```dart
+code : "string"
+defaultValue? :  boolean
+```
+
+**Usage:**
+
+```dart
+sdk.getBooleanFlag(code:"is_dark_mode");
+```
+
+**Sample output:**
+
+```dart
+true or false
+```
+
+### `getStringFlag`
+
+Get a string flag from the feature_flags claim of the `access_token`
+
+**Arguments:**
+
+```dart
+code : "string"
+defaultValue? :  "string"
+```
+
+**Usage:**
+
+```dart
+sdk.getStringFlag(code:"theme");
+```
+
+**Sample output:**
+
+```dart
+pink
+```
+
+### `getIntegerFlag`
+
+Get an integer flag from the feature_flags claim of the `access_token`
+
+**Arguments:**
+
+```dart
+code : "string"
+defaultValue? :  number
+```
+
+**Usage:**
+
+```dart
+sdk.getIntegerFlag(code:"team_count");
+```
+
+**Sample output:**
+
+```dart
+2
+```
+
+If you need help connecting to Kinde, contact us at [support@kinde.com](mailto:support@kinde.com).

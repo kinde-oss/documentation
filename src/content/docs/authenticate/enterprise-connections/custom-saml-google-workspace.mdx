@@ -1,0 +1,157 @@
+---
+page_id: 0dfcab9d-8610-4881-9293-8501bd472041
+title: Custom SAML with Google Workspace
+sidebar:
+  order: 4
+relatedArticles:
+  - 66b2a627-b24a-4ccf-a792-80a6a9fe35ef
+  - e100d77b-530b-4327-8216-93c955657e0c
+---
+
+You can set up SAML to work with your Google Workspace.
+
+## Hosting the SAML metadata XML file
+
+Google does not support hosting your SAML metadata XML file on their web services, but Kinde requires access to the file via URL so that certificates are always up to date. We recommend you host the file on a public web service that can be accessed by Kinde. For example, you could use an [AWS S3](https://aws.amazon.com/s3/) bucket, [Cloudflare R2](https://developers.cloudflare.com/r2/), or public website.
+
+## Step 1: Add Google Workspace SAML in Kinde
+
+> 💡 Sign in to both Kinde and the Google Workspace Admin Console in separate tabs or windows, so that you can switch back and forth.
+
+1. In Kinde, go to **Settings > Authentication**.
+2. Scroll down to **Enterprise Connections** and select **Add connection**.
+3. Select **Custom SAML** and then select **Save**.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/95684e7d-63ea-4eb5-c386-8eb090b42e00/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+4. On the Custom SAML tile, select **Configure.**
+5. In the dialog that appears:
+
+   1. Enter the **Connection name**. This name is what will appear on the button on the authentication screen. We will call it ‘Google Workspace’ for this example.
+   2. Enter an **Entity ID**. This field can be any mix of numbers and letters, as long as it matches your IdP configuration. Copy this somewhere you can access it later.
+   3. If you are adding this connection to a live environment, you will be prompted to enter an **IdP Metadata URL** before you can save. If you are not sure of the file location, enter any URL and we will update this later.
+
+   <img
+     src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4fa556a1-7f8e-4926-d7ef-a274409e7700/public"
+     alt=""
+     width="672px"
+     height="auto"
+     fetchpriority="low"
+     loading="lazy"
+     decoding="async"
+   />
+
+6. Scroll down and copy the **ACS URL**. Paste the URL somewhere you can access it later.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c2201994-75d8-44a9-1ced-d3890e359300/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+7. Select **Save**. We will need to get some information from Google Workspace Console to complete these fields.
+
+## Step 2: Configure Google Workspace Admin Console
+
+1. Sign in to your [Google Workspace Admin Console](https://admin.google.com/).
+2. In the main menu, go to **Apps > Web and Mobile Apps**.
+3. Select **Add App > Add custom SAML app.**
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d02e7219-70e1-437c-41b3-b60263568900/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+4. Complete the **App details** window:
+
+   1. Enter a name in the **App name** field.
+   2. Enter a **Description** for the app.
+   3. If you want, upload an icon for the app.
+   4. Select **Continue**.
+
+   <img
+     src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/859218b5-4ca0-4fab-2475-3146088dc700/public"
+     alt=""
+     width="672px"
+     height="auto"
+     fetchpriority="low"
+     loading="lazy"
+     decoding="async"
+   />
+
+5. Copy the **Google Identity Provider details** by selecting **DOWNLOAD METADATA** under Option 1. This is the file you will need to upload to a file storage location and provide a URL to finish setting up in Kinde.
+6. Select **Continue**.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/91f8d1a9-bcd0-4b11-702e-c4593ac73d00/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+7. Enter the **Service provider details**:
+   1. Enter or paste in the **ACS URL** you copied from Kinde earlier.
+   2. Enter or paste the **Entity ID**, this needs to match what was entered in Kinde earlier.
+   3. Set the **Name ID format** as **EMAIL**.
+   4. Select **Continue**.
+8. On the **Attribute mapping** page, select **Finish**.
+9. If you want to grant access to other users, select the chevron in the right corner of the **User access** panel. This opens additional options.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c7e3c185-e1db-49b2-8e02-25ca7320cf00/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+10. If you want, you can change the access to suit your organization’s needs. You can do this per Organizational unit or switch **ON for everyone.**
+11. Select **Save**.
+
+## Step 3: Upload metadata file
+
+As mentioned at the start, you need to upload the **metadata file** that you downloaded, to somewhere publicly accessible. This is because Google does not provide a publicly available URL for the metadata file.
+
+1. Upload the metadata file to your storage location.
+2. Copy the URL for the file.
+
+## Step 4: Complete Kinde configuration
+
+1. In Kinde, go to **Settings > Authentication**.
+2. Scroll down to **Enterprise Connections.**
+3. On the **Google Workspace** tile, select **Configure.**
+4. In the **IdP metadata URL** field, paste the URL for the metadata file.
+5. Select **Save**.
+
+## Test the connection
+
+Once you have completed the above steps, you should be able to see a **Google Workspace** sign-in button on your product’s authentication screen. Note: if you gave the enterprise connection a different name in Kinde, the button will have the name you entered.
+
+If you can’t see the button:
+
+- Check that the metadata URL and other connection details are correct in Kinde.
+- Check that user access is set up in your app, in the Google Workspace Console.
+
+Try to sign in and hopefully - success!!

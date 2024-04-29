@@ -1,0 +1,76 @@
+---
+import {Icon} from "astro-icon/components";
+
+const {dir, labels, pagination} = Astro.props;
+const {prev, next} = pagination;
+const isRtl = dir === "rtl";
+---
+
+<div class="pagination-links" dir={dir}>
+  {
+    prev && (
+      <a href={prev.href} rel="prev">
+        <span class="link-label">{labels["page.previousLink"]}</span>
+        <span class="link-title-wrapper">
+          <Icon name={isRtl ? "arrow-right" : "arrow-left"} size={24} class="dark:text-white" />
+          <span class="link-title">{prev.label}</span>
+        </span>
+      </a>
+    )
+  }
+  {!prev && <div />}
+  {
+    next && (
+      <a href={next.href} rel="next">
+        <span class="link-label">{labels["page.nextLink"]}</span>
+        <span class="link-title-wrapper">
+          <span class="link-title">{next.label}</span>
+          <Icon name={isRtl ? "arrow-left" : "arrow-right"} size={24} class="dark:text-white" />
+        </span>
+      </a>
+    )
+  }
+  {!next && <div />}
+</div>
+
+<style>
+  .pagination-links {
+    @apply grid gap-4 md:grid-cols-2 border-t-[1px] border-kinde-grey-100 dark:border-kinde-grey-800 py-4 w-full;
+  }
+
+  .pagination-links a {
+    @apply flex flex-col no-underline gap-2 rounded-lg px-2 py-3 hover:no-underline duration-200 dark:hover:!bg-kinde-grey-900;
+  }
+
+  [rel="next"] {
+    @apply items-end text-right;
+  }
+
+  .link-label {
+    @apply text-kinde-grey-600 dark:text-kinde-grey-300;
+  }
+
+  [rel="prev"] .link-label {
+    @apply pl-2 text-sm;
+  }
+
+  [rel="next"] .link-label {
+    @apply pr-2 text-sm;
+  }
+
+  .link-title-wrapper {
+    @apply flex gap-2 items-start;
+  }
+
+  .link-title-wrapper svg {
+    @apply mt-1.5;
+  }
+
+  .link-title {
+    @apply leading-none font-medium text-kinde-grey-900 dark:text-white;
+  }
+
+  svg {
+    @apply shrink-0;
+  }
+</style>

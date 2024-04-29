@@ -1,0 +1,88 @@
+---
+page_id: 84581694-59d6-4a02-ab8b-c7a2889713d5
+title: About webhooks
+sidebar:
+  order: 1
+relatedArticles:
+  - 7fe91aba-930c-4a63-8996-85af6bb605a7
+  - 95bf5e04-3415-4dc8-9ff6-953171df3f8b
+---
+
+> ℹ️ This is a beta feature. You need to [request access](https://kinde-21631392.hs-sites.com/en-au/beta-feature-interest).
+
+Webhooks are a way of monitoring events in Kinde, so that you can be notified and take action when something you’re monitoring happens.
+
+## How webhooks work
+
+When you create a webhook, you register your own URL endpoints in Kinde and associate them with a Kinde event (e.g. when a user is created). When an endpoint is triggered, Kinde sends data about the event, so that you can initiate an action in your application or store the data.
+
+A simple example would be setting up a webhook for when a new user is created in Kinde. This event can be set up to trigger an update to your database, enabling your system to automatically send a welcome email.
+
+## Webhooks flow
+
+1. Webhook endpoints are registered in Kinde.
+2. An event occurs in your account, e.g. `user.created`.
+3. Your endpoint will be called with a JWT containing the data object about that event, and details about the webhook.
+   1. If a `200` response is received, the workflow is complete.
+   2. If it fails to receive a response, it will retry using a back-off policy (see **Webhooks responses and retry policy** below).
+4. In your application you should verify the authenticity of the webhook request, and decode the JWT (see **Webhooks security** below).
+5. Logic is triggered in your application using the event data.
+
+## Webhooks identifiers
+
+There are a number of unique IDs you will come across with webhooks.
+
+- **Webhook ID**: prefixed with `webhook_`, this refers to the webhooks that you create in Kinde. Webhook IDs are exposed via the Kinde Management API webhook endpoints. You can get a list of webhooks via the endpoint `GET /api/v1/webhooks`
+- **Event ID**: prefixed with `event_`, this is the ID of an event that has occurred in your account, and is included as `event_id` in webhook request payloads. You can use this ID to retrieve an event from Kinde’s API using `GET /api/v1/events/{event_id}`
+- **Webhook Request ID**: found in the webhook headers as `webhook-id`, this is unique to a webhook and event, and will not change between attempts. You can use this as the idempotency key (see Webhooks security below).
+
+## Webhooks security
+
+### Idempotency key
+
+Each webhook has a webhook-id header that can be used to avoid reprocessing the same webhook request. This is referred to as the ‘idempotency key’ meaning that multiple requests will result in the same outcome.
+
+### Prevent Replay Attacks
+
+A replay attack occurs when a payload is intercepted, potentially modified and re-transmitted. Kinde webhooks contain a ‘timestamp’ attribute in the payload, and the payload is a signed JSON Web Token (JWT). This allows you to verify that the request came from Kinde, and check the timestamp to prevent replay attacks.
+
+### Verify an event
+
+You can request events by their event_id using the Kinde management api via `/api/v1/events/{event_id}`. The event_id is provided in all webhook requests.
+
+## Webhooks best practices
+
+Ensure webhooks are secure and optimized.
+
+- Handle duplicate request attempts by checking that the webhook-id header has not already been received and processed, making your processing idempotent
+- Verify the JWT to ensure that the request came from Kinde using your public JWKS file
+- Only add the events to your endpoint that your implementation requires, listening for all events creates unnecessary load on your server
+- Endpoints must use HTTPS
+- Return a 200 from your endpoint to indicate it has received the request
+
+## Webhooks responses and retry policy
+
+If we fail to receive a 200 response from your endpoint, Kinde operates a back-off retry policy, this roughly equates to the following attempts:
+
+- Immediately
+- After 5 seconds
+- After 30 seconds
+- After 2 minutes
+- After 10 minutes
+- After 1 hour
+- After 4 hours
+- Every 12 hours until 36 hours
+
+## Webhooks terminology
+
+You’ll come across these terms when you start using webhooks.
+
+**Endpoint** - the URL called when an event occurs.
+
+**Event type** - something that happens in Kinde, e.g. a user is created.
+
+**Event** - an instance of an event type that happens in Kinde, e.g. Jane Doe just signed up.
+
+**Request** - the request object sent to your endpoint that contains a JSON Web Token (JWT) with the event data and details about the event.
+
+**Attempt** - an instance of a request making an http request, multiple request attempts may be made if we do not receive a 200 response.

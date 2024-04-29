@@ -1,0 +1,129 @@
+---
+import {Icon} from "astro-icon/components";
+---
+
+<div class="relative flex items-center justify-center px-3">
+  <label class="sr-only" id="picker-label">Theme</label>
+  <button
+    type="button"
+    id="picker"
+    aria-haspopup="listbox"
+    aria-expanded="false"
+    aria-labelledby="picker-label"
+    aria-controls="theme-list"
+    class="flex cursor-pointer items-center bg-transparent hover:opacity-75"
+  >
+    <Icon class="dark:hidden" name="sun" size={24} />
+    <Icon class="hidden dark:inline" name="moon" size={24} />
+  </button>
+  <ul
+    class="dark:highlight-white/5 absolute top-full z-50 mt-6 hidden w-36 overflow-hidden rounded-lg border-[1px] bg-white p-3 text-sm font-medium text-black ring-1 ring-kinde-grey-900/10 lg:left-0 dark:border-kinde-grey-800 dark:bg-kinde-grey-900 dark:text-white dark:ring-0 dark:ring-kinde-grey-100"
+    aria-labelledby="picker"
+    aria-orientation="vertical"
+    id="theme-list"
+    role="listbox"
+    tabindex="0"
+  >
+    <li
+      class="flex cursor-pointer rounded-md px-3 py-2 hover:bg-kinde-grey-50 aria-selected:bg-kinde-grey-50 dark:bg-kinde-grey-900 dark:hover:bg-black dark:aria-selected:bg-black"
+      id="light-theme"
+      role="option"
+      tabindex="-1"
+      aria-selected="false"
+      data-theme-option="light"
+    >
+      Light
+    </li><li
+      class="flex cursor-pointer rounded-md px-3 py-2 hover:bg-kinde-grey-50 aria-selected:bg-kinde-grey-50 dark:bg-kinde-grey-900 dark:hover:bg-black dark:aria-selected:bg-black"
+      id="dark-theme"
+      role="option"
+      tabindex="-1"
+      aria-selected="false"
+      data-theme-option="dark"
+    >
+      Dark
+    </li><li
+      class="flex cursor-pointer rounded-md px-3 py-2 hover:bg-kinde-grey-50 aria-selected:bg-kinde-grey-50 dark:bg-kinde-grey-900 dark:hover:bg-black dark:aria-selected:bg-black"
+      id="system-theme"
+      role="option"
+      tabindex="-1"
+      aria-selected="false"
+      data-theme-option="system"
+    >
+      System
+    </li>
+  </ul>
+</div>
+
+<script is:inline>
+  const picker = document.querySelector("#picker");
+  const themeList = document.querySelector("#theme-list");
+  const themeOptions = document.querySelectorAll("[data-theme-option]");
+
+  function closePicker() {
+    console.log("close the p[icker");
+    themeList.classList.add("hidden");
+    picker.setAttribute("aria-expanded", "false");
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+
+    if (theme === "light") {
+      document.documentElement.setAttribute("data-theme", "light");
+    } else if (theme === "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
+    } else {
+      systemThemeUpdate();
+    }
+
+    themeList.setAttribute("aria-activedescendant", `theme-${theme}`);
+
+    themeOptions.forEach((option) => {
+      if (option.dataset.themeOption === theme) {
+        option.setAttribute("aria-selected", "true");
+      } else {
+        option.setAttribute("aria-selected", "false");
+      }
+    });
+
+    themeList.classList.add("hidden");
+    picker.setAttribute("aria-expanded", "false");
+  }
+
+  function systemThemeUpdate() {
+    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+    if (systemTheme === "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
+    } else {
+      document.documentElement.setAttribute("data-theme", "light");
+    }
+  }
+
+  document.getElementById("light-theme").addEventListener("click", () => applyTheme("light"));
+  document.getElementById("dark-theme").addEventListener("click", () => applyTheme("dark"));
+  document.getElementById("system-theme").addEventListener("click", () => applyTheme("system"));
+
+  // Apply the saved or system theme on load
+  const savedTheme = localStorage.getItem("theme") || "system";
+  applyTheme(savedTheme);
+
+  // Listen for system theme changes
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", systemThemeUpdate);
+
+  picker.addEventListener("click", (e) => {
+    if (picker.getAttribute("aria-expanded") === "false") {
+      picker.setAttribute("aria-expanded", "true");
+    } else {
+      picker.setAttribute("aria-expanded", "false");
+    }
+    themeList.classList.toggle("hidden");
+  });
+
+  themeList.addEventListener("blur", () => {
+    closePicker();
+  });
+</script>

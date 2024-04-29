@@ -1,0 +1,39 @@
+---
+export interface Props {
+  isSticky?: boolean;
+  removeBorder?: boolean;
+}
+
+const { isSticky = true, removeBorder = false } = Astro.props;
+---
+
+<div
+  class:list={[
+    "c-tablist",
+    {
+      ["c-tablist--is-sticky"]: isSticky,
+      ["c-tablist--no-border"]: removeBorder,
+    },
+  ]}
+  role="tablist"
+>
+  <slot />
+</div>
+
+<style>
+  .c-tablist[role="tablist"] {
+    @apply relative  border-kinde-grey-100 flex w-full z-10 flex-wrap sm:flex-nowrap;
+  }
+
+  .c-tablist[role="tablist"].c-tablist--is-sticky {
+    --position: sticky;
+
+    top: var(--header-container-height);
+
+    @apply sticky bg-white;
+  }
+
+  .c-tablist[role="tablist"].c-tablist--no-border {
+    @apply border-b-0;
+  }
+</style>

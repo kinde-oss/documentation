@@ -1,0 +1,64 @@
+---
+page_id: f99396dc-d158-4d37-a98b-386485b1ff69
+title: Call the Kinde API - NodeJS example
+sidebar:
+  order: 5
+relatedArticles:
+  - 6bf993fc-a195-4836-8eaf-133812be8876
+  - 51899f7f-3436-46e0-9a1b-6ecc3603a0df
+  - cffc17b9-2d10-4f42-8c84-a12b263a6040
+---
+
+If you don’t use Postman or other similar tools to test your connections, here’s an example of how to call the [Kinde Management API](https://kinde.com/api/docs/#kinde-management-api) in NodeJS.
+
+1. [Add a machine to machine application](/developer-tools/kinde-api/add-a-m2m-application-for-api-access/#add-a-machine-to-machine-application-for-api-access) for API access, and copy the **App keys - Domain, Client ID** and **Client secret** from the application.
+2. Call the Kinde token endpoint using the app key details you copied at step 1. Here’s a code sample in NodeJS. This should return an access token.
+
+   ```jsx
+   const getAccessToken = async () => {
+     try {
+       const searchParams = {
+         grant_type: "client_credentials",
+         client_id: "<your_client_id>",
+         client_secret: "<your_secret_id>",
+         audience: "https://<your_subdomain>.kinde.com/api"
+       };
+
+       const res = await fetch("https://<your_subdomain>.kinde.com/oauth2/token", {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/x-www-form-urlencoded"
+         },
+         body: new URLSearchParams(searchParams)
+       });
+       const token = await res.json();
+       console.log({token});
+     } catch (err) {
+       console.error(err);
+     }
+   };
+   ```
+
+3. Use the access token to call the Kinde management API. Here’s an example of calling the `users` endpoint in NodeJS:
+
+   ```jsx
+   const getUsers = async () => {
+     const accessToken = await getAccessToken();
+
+     const headers = {
+       'Accept': 'application/json',
+       'Authorization':  `Bearer ${accessToken}`
+     };
+    try {
+     const res = await fetch('https://<your_subdomain>.kinde.com/api/v1/users', {
+       method: 'GET',
+       headers: headers
+     });
+     const data = await res.json();
+     console.log({data});
+    } catch (err) {
+     console.error(err);
+   }
+   ```
+
+4. Dive into our [API docs](https://kinde.com/api/docs/#kinde-management-api) and starting connecting your product to ours.
