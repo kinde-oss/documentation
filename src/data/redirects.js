@@ -174,5 +174,14 @@ export const redirects = {
   "/docs/connect-to-kinde/getting-app-keys/": "/get-started/connect/getting-app-keys/",
   "/docs/connect-to-kinde/switch-to-kinde-for-user-authentication/": "/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/",
   "/docs/connect-to-kinde/byo-code/": "/get-started/guides/byo-code/",
-  "/docs/connect-to-kinde/first-things-first/": "/get-started/guides/first-things-first/"
+  "/docs/connect-to-kinde/first-things-first/": "/get-started/guides/first-things-first/",
+  "/docs/user-management/hotjar/": "/manage-users/view-activity/hotjar/",
+  "/docs/undefined/": "/billing/about-payments-and-plans/",
+  "/docs/authentication-and-access/set-up-user-authentication/": "/authenticate/authentication-methods/set-up-user-authentication/",
+  "/docs/authentication-and-access/custom-saml/": "/authenticate/enterprise-connections/custom-saml/",
+  "/docs/authentication-and-access/about-multi-factor-authentication/": "/authenticate/multi-factor-auth/about-multi-factor-authentication/",
+  "/docs/authentication-and-access/phone-authentication/": "/authenticate/authentication-methods/phone-authentication/",
+  "/docs/authentication-and-access/enable-multi-factor-authentication/": "/authenticate/multi-factor-auth/enable-multi-factor-authentication/",
+  "/docs/developer-tools/kinde-edge-workers/": "/integrate/third-party-tools/kinde-edge-workers/",
+  "/docs/customize/set-up-subscription-form/": "/design/forms/set-up-subscription-form/"
 };

@@ -15,7 +15,7 @@ const FILTER = {
     {
       property: "Status",
       status: {
-       equals: "Done"
+       does_not_equal: "Draft"
       },
     },
     {
