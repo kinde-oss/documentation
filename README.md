@@ -1,0 +1,1 @@
+# Kinde documentation placeholder
