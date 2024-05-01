@@ -38,11 +38,11 @@ export default defineConfig({
   redirects: redirects,
   integrations: [
     starlight({
-      title: 'Kinde docs',
+      title: "Kinde docs",
       description: "Our developer tools provide everything you need to get started with Kinde.",
       disable404Route: true,
       social: {
-        github: "https://github.com/kinde-oss/documentation"
+        github: "https://github.com/kinde-oss" /* update to repo specific one when it is public */
       },
       sidebar: sidebarConfig,
       customCss: [
@@ -60,7 +60,7 @@ export default defineConfig({
             href: "/favicon.png",
             sizes: "any"
           }
-        },
+        }
       ],
       components: {
         Head: "./src/starlight-overrides/Head.astro",
