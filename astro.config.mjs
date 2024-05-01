@@ -46,6 +46,8 @@ const expressiveCodeOptions = {
 
 // https://astro.build/config
 export default defineConfig({
+  prefetch: false,
+  site: "https://docs.kinde.com",
   devToolbar: {
     enabled: false
   },
