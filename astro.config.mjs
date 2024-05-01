@@ -50,11 +50,6 @@ export default defineConfig({
     enabled: false
   },
   redirects: redirects,
-  experimental: {
-    contentCollectionCache: true,
-    clientPrerender: true,
-    directRenderScript: true
-  },
   integrations: [
     starlight({
       title: 'Kinde docs',
