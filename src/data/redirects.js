@@ -183,5 +183,6 @@ export const redirects = {
   "/docs/authentication-and-access/phone-authentication/": "/authenticate/authentication-methods/phone-authentication/",
   "/docs/authentication-and-access/enable-multi-factor-authentication/": "/authenticate/multi-factor-auth/enable-multi-factor-authentication/",
   "/docs/developer-tools/kinde-edge-workers/": "/integrate/third-party-tools/kinde-edge-workers/",
-  "/docs/customize/set-up-subscription-form/": "/design/forms/set-up-subscription-form/"
+  "/docs/customize/set-up-subscription-form/": "/design/forms/set-up-subscription-form/",
+  "/docs/authentication-and-access/refresh-saml-certificate/": "/authenticate/enterprise-connections/refresh-saml-certificate/"
 };
