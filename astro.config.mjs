@@ -14,8 +14,25 @@ import AutoImport from "astro-auto-import";
 import starlightLinksValidator from "starlight-links-validator";
 import {redirects} from './src/data/redirects';
 
+
+
 // TODO:
 import sitemap from "@astrojs/sitemap";
+
+const shouldLoadPlausible = import.meta.env.PROD && import.meta.env.PUBLIC_IS_ANALYTICS_ENABLED;
+
+const plausibleScriptTag = shouldLoadPlausible ?  {
+          tag: "script",
+          attrs: {
+            src: "https://plausible.io/js/script.tagged-events.js",
+            "data-domain": "kinde.com",
+            defer: true
+          }
+        }  : {
+          tag: "script",
+          content: "// placeholder for Plausible script. Only loaded correctly in production with `PUBLIC_IS_ANALYTICS_ENABLED` set to `true`."
+        };
+
 const expressiveCodeOptions = {
   themes: ["min-dark", "material-theme-lighter"],
   styleOverrides: {
@@ -29,20 +46,20 @@ const expressiveCodeOptions = {
 
 // https://astro.build/config
 export default defineConfig({
-  prefetch: true,
   devToolbar: {
     enabled: false
   },
   redirects: redirects,
   experimental: {
-    contentCollectionCache: false,
+    contentCollectionCache: true,
     clientPrerender: true,
-    directRenderScript: false
+    directRenderScript: true
   },
   integrations: [
     starlight({
-      title: "Kinde Docs",
+      title: 'Kinde docs',
       description: "Our developer tools provide everything you need to get started with Kinde.",
+      disable404Route: true,
       social: {
         github: "https://github.com/kinde-oss/documentation"
       },
@@ -62,7 +79,8 @@ export default defineConfig({
             href: "/favicon.png",
             sizes: "any"
           }
-        }
+        },
+        plausibleScriptTag
       ],
       components: {
         Head: "./src/starlight-overrides/Head.astro",
