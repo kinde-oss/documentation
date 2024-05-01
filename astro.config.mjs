@@ -19,7 +19,7 @@ import {redirects} from './src/data/redirects';
 // TODO:
 import sitemap from "@astrojs/sitemap";
 
-const shouldLoadPlausible = import.meta.env.PROD && import.meta.env.PUBLIC_IS_ANALYTICS_ENABLED;
+const shouldLoadPlausible = import.meta.env.PUBLIC_IS_ANALYTICS_ENABLED === true;
 
 const plausibleScriptTag = shouldLoadPlausible ?  {
           tag: "script",
