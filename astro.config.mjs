@@ -73,7 +73,7 @@ export default defineConfig({
         SiteTitle: "./src/starlight-overrides/SiteTitle.astro",
         Pagination: "./src/starlight-overrides/Pagination.astro",
         MobileMenuFooter: "./src/starlight-overrides/MobileMenuFooter.astro",
-        Sidebar: "./src/starlight-overrides/Sidebar.astro"
+        Sidebar: "./src/starlight-overrides/Sidebar.astro",
       },
       tableOfContents: {
         maxHeadingLevel: 2
