@@ -1,49 +1,93 @@
 ---
-
+import {Icon} from "astro-icon/components";
 ---
 
-<div class="c-docsearch js-docsearch"></div>
+<button
+  class="flex w-full items-center justify-start gap-2 rounded-lg border-[1px] border-kinde-grey-100 bg-transparent p-3 hover:cursor-pointer"
+  kui-trigger="search"
+>
+  <Icon name="search" size={20} />
+  <span class="leading-[1] text-kinde-grey-700 dark:text-white">Search docs</span>
+</button>
 
-<style>
-  .c-docsearch {
-    display: grid;
-    place-items: center end;
-    width: 100%;
-  }
-</style>
+<div class="c-docsearch hidden" hidden></div>
 
 <script>
-  import docsearch from "@docsearch/js";
-  import "@docsearch/css";
-  import "@styles/vendors/algolia.css";
+  let docSearchButton: Element | null;
+  let previousFocusedElement: EventTarget | null = null;
 
-  (() => {
-    docsearch({
-      container: ".js-docsearch",
-      appId: import.meta.env.PUBLIC_ALGOLIA_APP_ID,
-      indexName: import.meta.env.PUBLIC_ALGOLIA_INDEX_NAME,
-      apiKey: import.meta.env.PUBLIC_ALGOLIA_API_KEY,
-      placeholder: "Search docs",
-      transformItems: (items) => {
-        return items.map((item) => {
-          // We transform the absolute URL into a relative URL to
-          // work better on localhost, dev URLS.
-          const a = document.createElement("a");
-          a.href = item.url;
-          const hash = a.hash;
+  function initializeDocSearch() {
+    console.log("Initializing...", docSearchButton);
 
-          return {...item, url: `${a.pathname}${hash}`};
+    import("@docsearch/css/dist/style.css");
+    import("@styles/vendors/algolia.css");
+
+    import("@docsearch/js/dist/esm/index.js")
+      .then(({default: docsearch}) => {
+        docsearch({
+          container: ".c-docsearch",
+          appId: import.meta.env.PUBLIC_ALGOLIA_APP_ID,
+          indexName: import.meta.env.PUBLIC_ALGOLIA_INDEX_NAME,
+          apiKey: import.meta.env.PUBLIC_ALGOLIA_API_KEY,
+          placeholder: "Search docs",
+          transformItems: (items) => {
+            return items.map((item) => {
+              // We transform the absolute URL into a relative URL to
+              // work better on localhost, dev URLS.
+              const a = document.createElement("a");
+              a.href = item.url;
+              const hash = a.hash;
+
+              return {...item, url: `${a.pathname}${hash}`};
+            });
+          }
         });
+      })
+      .then(() => {
+        docSearchButton = document.querySelector(".DocSearch-Button");
+        docSearchButton?.click();
+      })
+      .catch((error) => console.log(error));
+  }
+
+  const searchTriggers = document.querySelectorAll('[kui-trigger="search"]');
+
+  if (searchTriggers) {
+    searchTriggers.forEach((trigger) => {
+      trigger.addEventListener("click", () => {
+        if (!docSearchButton) {
+          initializeDocSearch();
+        } else {
+          docSearchButton.click();
+        }
+      });
+    });
+
+    document.addEventListener("keydown", function (event) {
+      let key = event.key.toLowerCase();
+
+      // If Escape key is pressed
+      if (key === "escape") {
+        // Return focus to the previously focused element, if it exists
+        if (previousFocusedElement) {
+          previousFocusedElement.focus();
+        }
+      }
+
+      // Check if '/' key is pressed or appropriate modifier key + k is pressed
+      if ((key === "/" && !event.shiftKey) || (key === "k" && (event.ctrlKey || event.metaKey))) {
+        if (!docSearchButton) {
+          initializeDocSearch();
+        } else {
+          docSearchButton.click();
+        }
       }
     });
 
-    const searchTriggers = document.querySelectorAll('[kui-trigger="search"]');
-    const docSearchButton = document.querySelector(".DocSearch-Button") as HTMLElement;
-
-    searchTriggers.forEach((trigger) => {
-      trigger.addEventListener("click", () => {
-        docSearchButton?.click();
-      });
+    document.addEventListener("focusin", function (event) {
+      if (!event.target.classList.contains("DocSearch-Input")) {
+        previousFocusedElement = event.target;
+      }
     });
-  })();
+  }
 </script>
