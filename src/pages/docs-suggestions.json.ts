@@ -7,8 +7,7 @@ export const GET: APIRoute = () => {
     JSON.stringify(
       Object.keys(docs).map((url) => ({
         url: "https://docs.kinde.com" + url.split("/content/docs")[1].split(".")[0] + "/",
-        title: docs[url].frontmatter.title,
-        app_context: docs[url].frontmatter.app_context
+        ...docs[url].frontmatter
       })),
       null,
       2
