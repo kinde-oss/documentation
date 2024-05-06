@@ -27,12 +27,12 @@ const sidebarConfig = [
         collapsed: false
       },
       {
-        label: "APIs & SDKs",
+        label: "APIs and SDKs",
         autogenerate: {directory: "get-started/apis-and-sdks"},
         collapsed: false
       },
       {
-        label: "Team & account",
+        label: "Team and account",
         autogenerate: {directory: "get-started/team-and-account"},
         collapsed: false
       }
@@ -306,11 +306,11 @@ const sidebarConfig = [
         autogenerate: {directory: "manage-your-account/your-data"},
         collapsed: false
       },
-      {
-        label: "Team",
-        autogenerate: {directory: "manage-your-account/team"},
-        collapsed: false
-      },
+      // {
+      //   label: "Team",
+      //   autogenerate: {directory: "manage-your-account/team"},
+      //   collapsed: false
+      // },
       {
         label: "Business information",
         autogenerate: {directory: "manage-your-account/business-information"},
