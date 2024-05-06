@@ -11,6 +11,8 @@ const yamlPath = path.join(__dirname, "customHttp.yml");
 // Set to store unique hashes
 const scriptSrcHashes = new Set();
 
+const predefinedScriptSrcItems = ["'self'", "*.plausible.io", "*.kinde.com"];
+
 function hashScriptContent(content) {
   return crypto.createHash("sha256").update(content, "utf-8").digest("base64");
 }
@@ -64,9 +66,24 @@ function updateCSP(config) {
   const cspHeader = headers.find((header) => header.key === "Content-Security-Policy");
   const scriptSrcMatch = /script-src\s[^;]*/;
   const currentScriptSrc = cspHeader.value.match(scriptSrcMatch)[0];
-  const hashesString = Array.from(scriptSrcHashes).join(" ");
-  cspHeader.value = cspHeader.value.replace(scriptSrcMatch, `${currentScriptSrc} ${hashesString}`);
+
+  // Parse existing hashes and ensure no duplicates with new ones
+  const existingHashes = new Set(
+    currentScriptSrc.split(" ").filter((part) => part.startsWith("'sha256-"))
+  );
+  scriptSrcHashes.forEach((hash) => existingHashes.add(hash));
+
+  // Add predefined items to the set of hashes
+  predefinedScriptSrcItems.forEach((item) => existingHashes.add(item));
+
+  // Convert Set back to string and update the CSP value
+  cspHeader.value = cspHeader.value.replace(
+    scriptSrcMatch,
+    `script-src ${Array.from(existingHashes).join(" ")}`
+  );
 }
+
+
 
 // Main execution
 scanDirectory(distPath); // Fill scriptSrcHashes with hashes
