@@ -74,6 +74,7 @@ export default defineConfig({
         Pagination: "./src/starlight-overrides/Pagination.astro",
         MobileMenuFooter: "./src/starlight-overrides/MobileMenuFooter.astro",
         Sidebar: "./src/starlight-overrides/Sidebar.astro",
+        SocialIcons: "./src/starlight-overrides/SocialIcons.astro"
       },
       tableOfContents: {
         maxHeadingLevel: 2
