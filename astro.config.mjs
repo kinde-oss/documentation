@@ -9,8 +9,6 @@ import { rehypeTable } from "./plugins/rehype-table.mjs";
 import icon from "astro-icon";
 import { rehypeExternalLinks } from "./plugins/rehype-external-links.mjs";
 import AutoImport from "astro-auto-import";
-
-// TODO:
 import starlightLinksValidator from "starlight-links-validator";
 import {redirects} from './src/data/redirects';
 
@@ -98,7 +96,8 @@ export default defineConfig({
         "./src/components/FileTree.astro"
       ]
     }),
-    sitemap()
+    sitemap(),
+    starlightLinksValidator()
   ],
   build: {
     inlineStylesheets: "auto"
