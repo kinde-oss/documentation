@@ -2,6 +2,10 @@
 import type {Props} from "@astrojs/starlight/props";
 import Default from "@astrojs/starlight/components/Head.astro";
 import config from "virtual:starlight/user-config";
+
+const hasCustomOGImage = Astro.props.entry.data.head.find((t) =>
+  t.attrs.property === "og:image" ? true : false
+);
 ---
 
 {
@@ -9,6 +13,9 @@ import config from "virtual:starlight/user-config";
     <script data-domain="kinde.com" src="https://plausible.io/js/script.tagged-events.js" defer />
   )
 }
+
 <Default {...Astro.props}>
   <slot />
 </Default>
+
+{!hasCustomOGImage && <meta property="og:image" content={`${Astro.url.href}og-image.png`} />}

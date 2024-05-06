@@ -196,12 +196,19 @@ try {
     frontmatter = `${frontmatter}\nrelatedArticles: [${post.relatedArticles}]`;
   }
 
-  if (socialSharingImageURL) {
-    frontmatter = `${frontmatter}\nsocial_sharing_image_url: ${post.socialSharingImageURL}`;
-  }
-
   if (appContext) {
     frontmatter = `${frontmatter}\napp_context: ${post.appContext}`;
+  }
+
+  if (socialSharingImageURL) {
+    const tagContent = `
+      - tag: meta
+        attrs:
+          property: "og:image"
+          content: ${post.socialSharingImageURL}
+          
+    `;
+    frontmatter = `${frontmatter}\nhead: ${tagContent}`;
   }
 
   frontmatter = `${frontmatter}\n---`;
