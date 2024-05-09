@@ -154,6 +154,7 @@ export default async function Home() {
     getOrganization,
     getPermission,
     getPermissions,
+    getRoles,
     getStringFlag,
     getUser,
     getUserOrganizations,
@@ -221,6 +222,14 @@ Reference:
       permissions: string[];
       orgCode: string;
     }>;
+  getRoles: () =>
+    Promise<
+      {
+        id: string;
+        key: string;
+        name: string;
+      }[]
+    >;
   getStringFlag: (code: string, defaultValue: string) => Promise<string>;
   getUser: () => Promise<any>;
   getUserOrganizations: () =>
@@ -510,6 +519,24 @@ export default withAuth(
 export const config = {
   matcher: ["/admin"]
 };
+```
+
+## Refreshing Kinde data
+
+Kinde data can be updated via the UI or with the Management API. To have these updates be reflected in your app, you will need to get the most up-to-date Kinde data and then refresh the tokens in your session.
+
+To get the most up-to-date Kinde data in your session, use the `refreshTokens` helper function.
+
+```jsx
+const {refreshTokens} = getKindeServerSession();
+
+const handleRefresh = async () => {
+	await refreshTokens();
+}
+
+...
+
+<button onClick={handleRefresh}>Get up to date data</button>
 ```
 
 ## Kinde Management API
@@ -833,6 +860,16 @@ To check your configuration, the SDK exposes an endpoint with your settings.
 	"postLogoutRedirectURL": "http://localhost:3000",
 	"logoutRedirectURL": "http://localhost:3000"
 }
+```
+
+## Debug mode
+
+In debug mode you will see more logs in your console that may help with debugging.
+
+```jsx
+// .env
+
+KINDE_DEBUG_MODE = true;
 ```
 
 ## Migration guide
