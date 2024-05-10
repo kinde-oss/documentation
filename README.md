@@ -1,54 +1,56 @@
-# Starlight Starter Kit: Tailwind
+# Documentation (beta)
 
-[![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
+This branch is in constant development and we’re still using Notion as our source of truth until we are ready to make this repo public.
 
-```
-npm create astro@latest -- --template starlight/tailwind
-```
+You can see the "old" docs instructions regarding the Notion set up below.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/starlight/tree/main/examples/tailwind)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/starlight/tree/main/examples/tailwind)
+## Docs site (using Notion as a CMS)
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+> Important: Do not update the `src/content/docs/**.md` files via the source code. These are to be managed via Notion now. Please read below.
 
-## 🚀 Project Structure
+It is important to note that this is an early version and its current state conforms with our current deployment pipeline. Things may change in the future. Articles are added/updated in the [Docs database (In Notion)](https://www.notion.so/1f3cd8d00cc247ec9ce32557c566ae57).
 
-Inside of your Astro + Starlight project, you'll see the following folders and files:
+You’ll need a couple of enviroment variables from the `Kinde Website env` item in `1Password`:
 
-```
-.
-├── public/
-├── src/
-│   ├── assets/
-│   ├── content/
-│   │   ├── docs/
-│   │   └── config.ts
-│   └── env.d.ts
-├── astro.config.mjs
-├── package.json
-├── tailwind.config.mjs
-└── tsconfig.json
-```
+- `NOTION_TOKEN`
+- `NOTION_DOCS_DB`
 
-Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
+### Generating the files with `npm run cms`:
 
-Images can be added to `src/assets/` and embedded in Markdown with a relative link.
+When editors need a PR open, they will contact a developer (in the future we will automate this) and the developer you need to create a branch and run the `npm run cms` script within the `website` folder. This script will:
+1 - Get articles from Notion (`getNotionContent.mjs`)
+2 - Build the website
+3 - Create the `JSON` file at `../app/dist_root/website_assets/docs.json` to be consumed by the `app` along with `../app/src/get_docs_json.roast`
+4 - Lint the website to avoid commiting updated `.md`
+5 - These all happen in sequence.
 
-Static assets, like favicons, can be placed in the `public/` directory.
+### ⚠️ Important
 
-## 🧞 Commands
+If you run into any issues when running `npm run cms`, chances are that:
 
-All commands are run from the root of the project, from a terminal:
+- Sometimes the Notion API is a bit "flaky", so you just need to re-run the script.
+- The Notion articles recently created may be missing a property. Additional info on what the properties are and more are available [here](https://www.notion.so/kinde/Docs-1448c78d272447eb85c086c3f7b0447c#d701b39998b74e5e84ea779fe46ac9e3)
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+### ⚠️ Manual actions
 
-## 👀 Want to learn more?
+Some actions will require manual intervention — at least for now. This is in part because of either how the current state of the Notion API works or given the limitations of our current deployment structure/pipeline and/or security restrictions. These are:
 
-Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).
+#### Deleting an article
+
+Simply deleting an article from the database won’t remove it from the source code. If an article needs to be removed, editors will contact engineering/developers.
+
+#### Updating an articles’ URL (`Slug`)
+
+If an article URL needs to be updated, editors will contact engineering/developers. The "old" article won't be removed automatically, so developers will need to remove it from the source code and apply redirects when appropriate.
+
+#### Adding a SDK icon to the index page
+
+These needed to be added by a developer. We may be able to make this possible via Notion in the future, but we’ll be doing this manually for the time being.
+
+#### Adding new Topics
+
+This needs to be added manually by a developer in `src/data/docs/structure.mjs` first. We may be able to make this possible via Notion in the future, but we’ll be doing this manually for the time being.
+
+#### Updating the order of Topics
+
+This needs to be updated manually by a developer in `src/data/docs/structure.mjs` first. We may be able to make this possible via Notion in the future, but we’ll be doing this manually for the time being.
