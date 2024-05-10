@@ -30,9 +30,6 @@ export default defineConfig({
   devToolbar: {
     enabled: false
   },
-  experimental: {
-    contentCollectionCache: true
-  },
   integrations: [starlight({
     title: "Kinde docs",
     description: "Our developer tools provide everything you need to get started with Kinde.",
