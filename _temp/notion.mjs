@@ -23,7 +23,7 @@ const FILTER = {
       number: {
         is_not_empty: true,
       },
-    }
+    },
   ],
 };
 
