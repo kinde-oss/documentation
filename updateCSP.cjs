@@ -11,7 +11,7 @@ const yamlPath = path.join(__dirname, "customHttp.yml");
 // Set to store unique hashes
 const scriptSrcHashes = new Set();
 
-const predefinedScriptSrcItems = ["'self'", "plausible.io", "widgets.kinde.com", "kinde.com"];
+const predefinedScriptSrcItems = ["'self'", "widgets.kinde.com", "kinde.com"];
 
 function hashScriptContent(content) {
   return crypto.createHash("sha256").update(content, "utf-8").digest("base64");
