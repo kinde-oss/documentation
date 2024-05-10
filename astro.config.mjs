@@ -1,19 +1,16 @@
-import { defineConfig } from 'astro/config';
+import sitemap from "@astrojs/sitemap";
 import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
-import sidebarConfig from './src/data/sidebarConfig';
-import rehypeSlug from "rehype-slug";
-import rehypeAutolinkHeadings from "rehype-autolink-headings";
-import { autolinkConfig } from "./plugins/rehype-autolink-config";
-import { rehypeTable } from "./plugins/rehype-table.mjs";
-import icon from "astro-icon";
-import { rehypeExternalLinks } from "./plugins/rehype-external-links.mjs";
 import AutoImport from "astro-auto-import";
+import icon from "astro-icon";
+import { defineConfig } from 'astro/config';
+import rehypeAutolinkHeadings from "rehype-autolink-headings";
+import rehypeSlug from "rehype-slug";
 import starlightLinksValidator from "starlight-links-validator";
-import {redirects} from './src/data/redirects';
-
-// TODO:
-import sitemap from "@astrojs/sitemap";
+import { autolinkConfig } from "./plugins/rehype-autolink-config";
+import { rehypeExternalLinks } from "./plugins/rehype-external-links.mjs";
+import { rehypeTable } from "./plugins/rehype-table.mjs";
+import sidebarConfig from './src/data/sidebarConfig';
 
 const expressiveCodeOptions = {
   themes: ["min-dark", "material-theme-lighter"],
@@ -33,7 +30,10 @@ export default defineConfig({
   devToolbar: {
     enabled: false
   },
-  redirects: redirects,
+  experimental: {
+    directRenderScript: true,
+    contentCollectionCache: true
+  },
   integrations: [
     starlight({
       title: "Kinde docs",
@@ -99,9 +99,6 @@ export default defineConfig({
     sitemap(),
     starlightLinksValidator()
   ],
-  build: {
-    inlineStylesheets: "auto"
-  },
   markdown: {
     rehypePlugins: [
       rehypeSlug,
