@@ -11,7 +11,7 @@ import { autolinkConfig } from "./plugins/rehype-autolink-config";
 import { rehypeExternalLinks } from "./plugins/rehype-external-links.mjs";
 import { rehypeTable } from "./plugins/rehype-table.mjs";
 import sidebarConfig from './src/data/sidebarConfig';
-import compressor from "astro-compressor";
+
 const expressiveCodeOptions = {
   themes: ["min-dark", "material-theme-lighter"],
   styleOverrides: {
@@ -75,7 +75,7 @@ export default defineConfig({
     applyBaseStyles: false
   }), icon(), AutoImport({
     imports: ["./src/components/SDKSelector.astro", "./src/components/YoutubeVideo.astro", "./src/components/Note.astro", "./src/components/FileTree.astro"]
-  }), sitemap(), starlightLinksValidator(), compressor({gzip: true, brotli: true, fileExtensions: [".html", ".js", ".css"]})],
+  }), sitemap(), starlightLinksValidator()],
   markdown: {
     rehypePlugins: [rehypeSlug, [rehypeAutolinkHeadings, autolinkConfig], rehypeTable, rehypeExternalLinks]
   }
