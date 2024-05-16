@@ -557,63 +557,9 @@ KINDE_AUTH_API_PATH="/my/custom/path"
 
 ## Kinde Management API
 
-The sections below relate to how to call the Kinde Management API using the Next.js SDK.
+You need to enable the application’s access to the Kinde Management API. You can do this in Kinde by going to **Settings > APIs > Kinde Management API** and then toggling on your Next.js application under the **Applications** tab.
 
-### Getting access
-
-1. Enable the application access to the Kinde Management API. You can do this in Kinde by going to **Settings > APIs > Kinde Management API** and then toggling on your Next.js application under the **Applications** tab.
-2. Find the audience defined by the Kinde Management API under the **Application details** tab, then set the `KINDE_AUDIENCE` in your `.env` file to match the audience. It should look something like:
-
-   ```jsx
-   // .env
-   ...
-   KINDE_AUDIENCE=https://your_kinde_domain.kinde.com/api
-   ...
-   ```
-
-3. Create a Kinde Management API Client in your app.
-
-   We provide a helper function `createKindeManagementAPIClient` to do that. This can be done in [Next.js API Routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) and in [Next.js getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props) where you just have to pass through the `Request` and `Response` objects.
-
-4. Choose the API you want to use (e.g. Users, Permissions, Roles). You can see what is available in the [Kinde Management API docs](https://kinde.com/api/docs/#kinde-management-api).
-5. Call one of the helper functions from the API.
-
-```jsx
-// Next.js API Route - e.g. /api/kindeUser.ts
-
-import { createKindeManagementAPIClient } from "@kinde-oss/kinde-auth-nextjs/server";
-import type { NextApiRequest, NextApiResponse } from "next";
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  ...
-  const client = await createKindeManagementAPIClient(req, res);
-  const users = await client.usersApi.getUsers();
-
-  if(users.code === "OK") {
-    return res.status(200).json({ users });
-  } else {
-  ...
-}
-```
-
-```jsx
-// Next.js getServerSideProps - e.g. pages/users/index.tsx
-
-...
-export async function getServerSideProps({ req, res }) {
-  const client = await createKindeManagementAPIClient(req, res);
-  const users = await client.usersApi.getUsers();
-  return {
-   props: {
-     users
-   }
-  }
-};
-...
-```
+To use our management API please see [@kinde/management-api-js](https://github.com/kinde-oss/management-api-js)
 
 ### Troubleshooting
 

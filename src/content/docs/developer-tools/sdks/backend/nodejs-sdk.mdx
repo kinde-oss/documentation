@@ -460,71 +460,11 @@ const access_token = await kindeClient.getToken(req);
 console.log("access_token", accessToken);
 ```
 
-## **Kinde Management API**
+## Kinde Management API
 
-The sections below relate to how to call the Kinde Management API. You need to [add a machine to machine application](/developer-tools/kinde-api/add-a-m2m-application-for-api-access/) and [get an access token to connect](/developer-tools/kinde-api/get-access-token-for-connecting-securely-to-kindes-api/):
+You need to enable the application’s access to the Kinde Management API. You can do this in Kinde by going to **Settings > APIs > Kinde Management API** and then toggling on your Next.js application under the **Applications** tab.
 
-```jsx
-const {KindeClient, ApiClient, OAuthApi} = require("@kinde-oss/kinde-nodejs-sdk");
-
-// Get Access Token
-const access_token = await kindeClient.getToken(req);
-
-const apiClient = new ApiClient("https://your_kinde_domain.com");
-
-// Set access token in the headers request
-apiClient.authentications.kindeBearerAuth.accessToken = access_token;
-
-const apiInstance = new OAuthApi(apiClient);
-apiInstance.getUserProfileV2((error, data) => {
-  if (error) {
-    console.error(error);
-  } else {
-    console.log("API called successfully. Returned data: " + JSON.stringify(data, null, 2));
-  }
-});
-
-// Another case with get users of your origization.
-const {
-  KindeClient,
-  ApiClient,
-  UsersApi,
-  CreateUserRequest
-} = require("@kinde-oss/kinde-nodejs-sdk");
-
-const options = {
-  domain: process.env.KINDE_DOMAIN,
-  clientId: process.env.KINDE_CLIENT_ID,
-  clientSecret: process.env.KINDE_CLIENT_SECRET,
-  redirectUri: process.env.KINDE_REDIRECT_URI,
-  logoutRedirectUri: process.env.KINDE_LOGOUT_REDIRECT_URI || "",
-  grantType: GrantType.CLIENT_CREDENTIALS,
-  audience: "https://your_kinde_domain.kinde.com/api",
-  scope: ""
-};
-const kindeClient = new KindeClient(options);
-
-const access_token = await kindeClient.getToken(req);
-
-const apiClient = new ApiClient(process.env.KINDE_DOMAIN);
-
-// Set access token in the headers request
-apiClient.authentications.kindeBearerAuth.accessToken = access_token;
-
-const apiInstance = new UsersApi(apiClient);
-const opts = {
-  pageSize: 5
-};
-apiInstance.getUsers(opts, (error, data) => {
-  if (error) {
-    console.error(error);
-  } else {
-    console.log("API called successfully. Returned data: " + JSON.stringify(data, null, 2));
-  }
-});
-```
-
-The documentation details can be found at: [https://github.com/kinde-oss/kinde-nodejs-sdk/tree/main/docs](https://github.com/kinde-oss/kinde-nodejs-sdk/tree/main/docs)
+To use our management API please see [@kinde/management-api-js](https://github.com/kinde-oss/management-api-js)
 
 ## **SDK API reference**
 

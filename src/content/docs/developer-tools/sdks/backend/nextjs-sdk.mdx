@@ -541,19 +541,18 @@ const handleRefresh = async () => {
 
 ## Kinde Management API
 
-To use the Kinde management API, first you have to enable it for your NextJS application inside Kinde. Navigate to Settings → APIs → Kinde Management API → Applications and enable your Next.js app.
+You need to enable the application’s access to the Kinde Management API. You can do this in Kinde by going to **Settings > APIs > Kinde Management API** and then toggling on your Next.js application under the **Applications** tab.
 
-The Kinde Management API can be used in server components and route handlers.
+To use our management API please see [@kinde/management-api-js](https://github.com/kinde-oss/management-api-js)
 
 Server Component example:
 
 ```typescript
-import { createKindeManagementAPIClient } from "@kinde-oss/kinde-auth-nextjs/server";
+import { Roles, Users } from "@kinde/management-api-js";
 
 export default async function Dashboard() {
-  const apiClient = await createKindeManagementAPIClient();
-  const roles = await apiClient.rolesApi.getRoles();
-  const users = await apiClient.usersApi.getUsers();
+  const { roles } = await Roles.getRoles();
+  const { users } = await Users.getUsers();
 
   return (
     <div className="container">
@@ -579,11 +578,10 @@ Route Handler example:
 
 ```typescript
 import {NextResponse} from "next/server";
-import {createKindeManagementAPIClient} from "@kinde-oss/kinde-auth-nextjs/server";
+import {Users} from "@kinde/management-api-js";
 
 export async function GET() {
-  const client = await createKindeManagementAPIClient();
-  const users = await client.usersApi.getUsers();
+  const {users} = await Users.getUsers();
 
   return NextResponse.json({users});
 }

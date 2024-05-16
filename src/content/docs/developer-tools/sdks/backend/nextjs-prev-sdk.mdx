@@ -628,14 +628,14 @@ export const config = {
 
 ## Kinde Management API
 
-You have to navigate to Settings → APIs → Kinde Management API → Applications and enable your Next.js app.
+You need to enable the application’s access to the Kinde Management API. You can do this in Kinde by going to **Settings > APIs > Kinde Management API** and then toggling on your Next.js application under the **Applications** tab.
+
+To use our management API please see [@kinde/management-api-js](https://github.com/kinde-oss/management-api-js)
 
 `getServerSideProps` example:
 
 ```typescript
-import {
-  createKindeManagementAPIClient,
-} from "@kinde-oss/kinde-auth-nextjs/server";
+import { Users } from "@kinde/management-api-js";
 
 export async function getServerSideProps({
   req,
@@ -644,12 +644,10 @@ export async function getServerSideProps({
   req: Request;
   res: Response;
 }) {
-  const client = await createKindeManagementAPIClient(req, res);
-  const users = await client.usersApi.getUsers();
+  const { users } = await Users.getUsers();
   return {
     props: {
-			// we do this hack to resolve any undefined values
-      users: JSON.parse(JSON.stringify(users)),
+      users,
     },
   };
 }
@@ -663,12 +661,11 @@ export default function Server({ users }: any) {
 API route example:
 
 ```typescript
-import {createKindeManagementAPIClient} from "@kinde-oss/kinde-auth-nextjs/server";
+import {Users} from "@kinde/management-api-js";
 import type {NextApiRequest, NextApiResponse} from "next";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const client = await createKindeManagementAPIClient(req, res);
-  const users = await client.usersApi.getUsers();
+  const users = await await Users.getUsers();
   if (users.code === "OK") {
     return res.status(200).json({users});
   } else {
