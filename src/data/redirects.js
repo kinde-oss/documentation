@@ -185,5 +185,6 @@ export const redirects = {
   "/docs/developer-tools/kinde-edge-workers/": "/integrate/third-party-tools/kinde-edge-workers/",
   "/docs/customize/set-up-subscription-form/": "/design/forms/set-up-subscription-form/",
   "/docs/authentication-and-access/refresh-saml-certificate/": "/authenticate/enterprise-connections/refresh-saml-certificate/",
-  "/docs/developer-tools/access-to-your-api/": "/developer-tools/kinde-api/access-to-your-api/"
+  "/docs/developer-tools/access-to-your-api/": "/developer-tools/kinde-api/access-to-your-api/",
+  "/docs/undefined/kinde-wordpress/": "/integrate/third-party-tools/kinde-wordpress/"
 };
