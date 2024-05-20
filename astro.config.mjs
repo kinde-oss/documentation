@@ -30,53 +30,77 @@ export default defineConfig({
   devToolbar: {
     enabled: false
   },
-  integrations: [starlight({
-    title: "Kinde docs",
-    description: "Our developer tools provide everything you need to get started with Kinde.",
-    disable404Route: true,
-    social: {
-      github: "https://github.com/kinde-oss" /* update to repo specific one when it is public */
-    },
-    sidebar: sidebarConfig,
-    customCss: ["@fontsource/inter/400.css", "@fontsource/inter/500.css", "./src/styles/custom.css", "./src/styles/tailwind.css"],
-    pagefind: false,
-    head: [{
-      tag: "link",
-      attrs: {
-        rel: "icon",
-        href: "/favicon.png",
-        sizes: "any"
-      }
-    }],
-    components: {
-      Head: "./src/starlight-overrides/Head.astro",
-      Header: "./src/starlight-overrides/Header.astro",
-      Footer: "./src/starlight-overrides/Footer.astro",
-      Search: "./src/starlight-overrides/Search.astro",
-      PageFrame: "./src/starlight-overrides/Page.astro",
-      PageTitle: "./src/starlight-overrides/PageTitle.astro",
-      ThemeSelect: "./src/starlight-overrides/ThemeSelect.astro",
-      SiteTitle: "./src/starlight-overrides/SiteTitle.astro",
-      Pagination: "./src/starlight-overrides/Pagination.astro",
-      MobileMenuFooter: "./src/starlight-overrides/MobileMenuFooter.astro",
-      Sidebar: "./src/starlight-overrides/Sidebar.astro",
-      SocialIcons: "./src/starlight-overrides/SocialIcons.astro"
-    },
-    tableOfContents: {
-      maxHeadingLevel: 2
-    },
-    // editLink: {
-    //   baseUrl: "https://github.com/kinde-oss/documentation/edit/main",
-    // },
-    lastUpdated: false,
-    titleDelimiter: "-",
-    expressiveCode: expressiveCodeOptions
-  }), tailwind({
-    applyBaseStyles: false
-  }), icon(), AutoImport({
-    imports: ["./src/components/SDKSelector.astro", "./src/components/YoutubeVideo.astro", "./src/components/Note.astro", "./src/components/FileTree.astro"]
-  }), sitemap(), starlightLinksValidator()],
   markdown: {
-    rehypePlugins: [rehypeSlug, [rehypeAutolinkHeadings, autolinkConfig], rehypeTable, rehypeExternalLinks]
-  }
+    rehypePlugins: [
+      rehypeSlug,
+      [rehypeAutolinkHeadings, autolinkConfig],
+      rehypeTable,
+      rehypeExternalLinks
+    ]
+  },
+  integrations: [
+    starlight({
+      title: "Kinde docs",
+      description: "Our developer tools provide everything you need to get started with Kinde.",
+      disable404Route: true,
+      social: {
+        github: "https://github.com/kinde-oss" /* update to repo specific one when it is public */
+      },
+      sidebar: sidebarConfig,
+      customCss: [
+        "@fontsource/inter/400.css",
+        "@fontsource/inter/500.css",
+        "./src/styles/custom.css",
+        "./src/styles/tailwind.css"
+      ],
+      pagefind: false,
+      head: [
+        {
+          tag: "link",
+          attrs: {
+            rel: "icon",
+            href: "/favicon.png",
+            sizes: "any"
+          }
+        }
+      ],
+      components: {
+        Head: "./src/starlight-overrides/Head.astro",
+        Header: "./src/starlight-overrides/Header.astro",
+        Footer: "./src/starlight-overrides/Footer.astro",
+        Search: "./src/starlight-overrides/Search.astro",
+        PageFrame: "./src/starlight-overrides/Page.astro",
+        PageTitle: "./src/starlight-overrides/PageTitle.astro",
+        ThemeSelect: "./src/starlight-overrides/ThemeSelect.astro",
+        SiteTitle: "./src/starlight-overrides/SiteTitle.astro",
+        Pagination: "./src/starlight-overrides/Pagination.astro",
+        MobileMenuFooter: "./src/starlight-overrides/MobileMenuFooter.astro",
+        Sidebar: "./src/starlight-overrides/Sidebar.astro",
+        SocialIcons: "./src/starlight-overrides/SocialIcons.astro"
+      },
+      tableOfContents: {
+        maxHeadingLevel: 2
+      },
+      // editLink: {
+      //   baseUrl: "https://github.com/kinde-oss/documentation/edit/main",
+      // },
+      lastUpdated: false,
+      titleDelimiter: "-",
+      expressiveCode: expressiveCodeOptions
+    }),
+    tailwind({
+      applyBaseStyles: false
+    }),
+    icon(),
+    sitemap(),
+    starlightLinksValidator(),
+    AutoImport({
+      imports: [
+        "./src/components/SDKSelector.astro",
+        "./src/components/YoutubeVideo.astro",
+        "./src/components/Note.astro",
+        "./src/components/FileTree.astro"
+      ]
+    })
+  ]
 });
