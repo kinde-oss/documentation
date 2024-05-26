@@ -187,5 +187,6 @@ export const redirects = {
   "/docs/authentication-and-access/refresh-saml-certificate/": "/authenticate/enterprise-connections/refresh-saml-certificate/",
   "/docs/developer-tools/access-to-your-api/": "/developer-tools/kinde-api/access-to-your-api/",
   "/docs/undefined/kinde-wordpress/": "/integrate/third-party-tools/kinde-wordpress/",
-  "/docs/build/rotate-client-secret/": "/build/applications/rotate-client-secret/"
+  "/docs/build/rotate-client-secret/": "/build/applications/rotate-client-secret/",
+  "/docs/developer-tools/authenticating-spa/": "/build/applications/authenticating-spa/"
 };
