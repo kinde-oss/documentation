@@ -91,6 +91,29 @@ n2m.setCustomTransformer("embed", async (block) => {
 />`         
 });
 
+n2m.setCustomTransformer("video", async (block) => {
+
+
+  if (block.video.external.url.includes('youtu.be')) {
+    // Define the URL
+    const url = block.video.external.url;
+
+    // Define the regular expression to match the value after youtu.be/ and before any query strings
+    const regex = /youtu\.be\/([^?]+)/;
+
+    // Use the regex to find the match
+    const match = url.match(regex);
+
+    // Extract the matched value if it exists
+    const videoId = match ? match[1] : null;
+
+    return `
+<YoutubeVideo videoId={"${videoId}"} />`
+} 
+
+  return 
+});
+
 
 
 // For the code blocks, Notion returns 'c#', but we need 'csharp' to comply with Astro/Prism css classes, so we modify 'c#' -> 'csharp'. Notion currently does not have 'jsx' as a language choice, so we make all 'javascript' -> 'jsx'.

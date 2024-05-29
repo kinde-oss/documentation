@@ -4,9 +4,10 @@ const path = require("path");
 const baseDirectoryPath = path.join(__dirname, "../src/content/docs");
 
 function escapeCharactersOutsideCodeAndFrontmatter(fileContent) {
-  // Pattern to match code blocks and frontmatter
+  // Pattern to match code blocks, frontmatter, and YoutubeVideo components
   const codeBlockPattern = /(```[\s\S]*?```|`[\s\S]*?`)/g;
   const frontMatterPattern = /^---[\s\S]+?---/;
+  const youtubeVideoPattern = /<YoutubeVideo\s[^>]*\/>/g;
 
   let result = "";
   let contentToProcess = fileContent;
@@ -19,21 +20,27 @@ function escapeCharactersOutsideCodeAndFrontmatter(fileContent) {
     contentToProcess = fileContent.slice(frontMatterMatch[0].length);
   }
 
-  let match;
   let lastIndex = 0;
 
-  while ((match = codeBlockPattern.exec(contentToProcess)) !== null) {
-    // Text before code block
-    let textOutsideCode = contentToProcess.slice(lastIndex, match.index);
-    result += textOutsideCode.replace(/<(?!img)/g, "\\<").replace(/{/g, "\\{");
+  const combinedPattern = new RegExp(
+    `(${codeBlockPattern.source})|(${youtubeVideoPattern.source})`,
+    "g"
+  );
 
-    // Code block (untouched)
+  let match;
+
+  while ((match = combinedPattern.exec(contentToProcess)) !== null) {
+    // Text before code block or YoutubeVideo component
+    let textOutsideSpecialSections = contentToProcess.slice(lastIndex, match.index);
+    result += textOutsideSpecialSections.replace(/<(?!img)/g, "\\<").replace(/{/g, "\\{");
+
+    // Special section (untouched)
     result += match[0];
 
     lastIndex = match.index + match[0].length;
   }
 
-  // Remaining text after the last code block
+  // Remaining text after the last special section
   result += contentToProcess
     .slice(lastIndex)
     .replace(/<(?!img)/g, "\\<")
