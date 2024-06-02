@@ -1,32 +1,11 @@
 ---
-import Button from "./Button.astro";
-// import ChatLauncher from "@components/ChatLauncher/ChatLauncher.astro";
-// import EmptySearchResults from "@components/EmptySearchResults/EmptySearchResults.astro";
 import {Icon} from "astro-icon/components";
-import EmptySearchResults from "./EmptySearchResults.astro";
+import Button from "./Button.astro";
 import ChatLauncher from "./ChatLauncher.astro";
-// import Link from "@components/Link/Link.astro";
-// import {slackLink} from "@config/productUrls";
 
 export interface Props {
   suggestions?: any;
 }
-
-const defaultSuggestions = [
-  {
-    title: "Sign up for free",
-    link: "https://app.kinde.com/register",
-    isExternal: true
-  },
-  {
-    title: "Watch a demo",
-    link: "https://kinde.com/product-demo/"
-  },
-  {
-    title: "About Kinde",
-    link: "https://kinde.com/about/"
-  }
-];
 
 const defaultLinks = [
   {
@@ -58,8 +37,6 @@ const defaultLinks = [
     isExternal: true
   }
 ];
-
-const {suggestions = defaultSuggestions} = Astro.props;
 ---
 
 <div class="c-help-widget">
@@ -75,42 +52,12 @@ const {suggestions = defaultSuggestions} = Astro.props;
       <div class="c-help-widget__modal-suggestions-wrapper">
         <div class="c-help-widget__modal-search-wrapper">
           <button
-            class="mb-4 flex w-full items-center justify-start gap-2 rounded-lg border-[1px] border-kinde-grey-100 bg-transparent px-4 py-3 hover:cursor-pointer"
+            class="flex w-full items-center justify-start gap-2 rounded-lg border-[1px] border-kinde-grey-100 bg-transparent px-4 py-3 hover:cursor-pointer"
             kui-trigger="search"
           >
             <Icon name="search" size={20} />
             <span class="text-kinde-grey-700 dark:text-white">Search docs</span>
           </button>
-        </div>
-        <div class="px-6">
-          <div class="js-default-suggestions">
-            <div class="c-help-widget__modal-suggestions-title">Suggested for you:</div>
-            <ol class="c-help-widget__modal-suggestions-list list-none p-0">
-              {
-                suggestions?.map((suggestion) => (
-                  <li class="c-help-widget__modal-suggestions-list-item">
-                    <a
-                      class="text-sm font-medium text-kinde-grey-900 no-underline underline-offset-[0.3em] hover:underline dark:text-white"
-                      href={suggestion?.link}
-                      target={suggestion?.isExternal ? "_blank" : "_self"}
-                    >
-                      {suggestion?.title}
-                    </a>
-                  </li>
-                ))
-              }
-            </ol>
-          </div>
-          <div class="js-search-suggestions" hidden>
-            <div class="c-help-widget__modal-suggestions-title">Suggested for you:</div>
-            <ul
-              class="c-help-widget__modal-search-suggestions-list js-help-widget__modal-search-suggestions-list list-none p-0"
-            >
-            </ul>
-          </div>
-          <div class="js-empty-search-results" hidden>
-            <EmptySearchResults />
-          </div>
         </div>
       </div>
       <div class="c-help-widget__modal-suggestions-wrapper">
@@ -188,13 +135,6 @@ const {suggestions = defaultSuggestions} = Astro.props;
     max-block-size: calc(100dvh - 100px);
 
     @apply bg-white dark:bg-kinde-grey-900  rounded-2xl shadow-elevation-3 grid-rows-[auto_1fr_auto] isolate opacity-0 mb-3  w-[322px] overflow-hidden;
-
-    /* &:focus:not(:focus-visible),
-    &:focus:focus-visible {
-      box-shadow: $token-elevation-base-3;
-      border: none;
-      outline: none;
-    } */
   }
 
   .c-help-widget__modal [hidden] {
@@ -219,22 +159,6 @@ const {suggestions = defaultSuggestions} = Astro.props;
 
   .c-help-widget__modal-search-wrapper {
     @apply relative px-6;
-  }
-
-  .c-help-widget__modal-search-icon-wrapper {
-    @apply grid place-items-center absolute left-10 h-[54px];
-  }
-
-  .c-help-widget__modal-search {
-    @apply bg-white dark:bg-kinde-grey-900  rounded-lg border-kinde-grey-200 dark:border-kinde-grey-800 border-[1px] mb-4 py-3 pl-10 pr-3 w-full;
-  }
-
-  .js-search-suggestions {
-    @apply block transition-all duration-1000;
-  }
-
-  .js-search-suggestions[hidden] {
-    @apply hidden;
   }
 
   .c-help-widget__modal-suggestions-title {
@@ -330,100 +254,5 @@ const {suggestions = defaultSuggestions} = Astro.props;
     });
 
     widgetButton?.addEventListener("click", toggle);
-  })();
-</script>
-
-<!-- Search functionality -->
-<script is:inline>
-  (() => {
-    function debounce(func, timeout = 250) {
-      let timer;
-      return (...args) => {
-        clearTimeout(timer);
-        timer = setTimeout(() => {
-          func.apply(this, args);
-        }, timeout);
-      };
-    }
-
-    const processChange = debounce(() => getResults());
-
-    const searchInput = document.querySelector(".js-help-widget__modal-search");
-    const defaultSuggestionsWrapper = document.querySelector(".js-default-suggestions");
-    const searchSuggestionsWrapper = document.querySelector(".js-search-suggestions");
-    const resultsList = document.querySelector(".c-help-widget__modal-search-suggestions-list");
-    const emptySearchResultsEl = document.querySelector(".js-empty-search-results");
-
-    let searchTerm = "";
-
-    const buildLink = (fragment, data) => {
-      const li = document.createElement("li");
-      li.classList.add("mb-3", "first:mt-4");
-      const a = document.createElement("a");
-      a.classList.add(
-        "text-kinde-grey-900",
-        "dark:text-white",
-        "text-sm",
-        "font-medium",
-        "no-underline",
-        "hover:underline",
-        "underline-offset-[0.3em]"
-      );
-      a.textContent = data.title;
-      a.href = data.url.replace("/docs", "");
-      li.appendChild(a);
-      fragment.appendChild(li);
-    };
-
-    const getResults = async () => {
-      resultsList.innerHTML = null;
-
-      try {
-        const res = await fetch(`/docs-glob.json`);
-        const searchResults = await res.json();
-
-        if (searchResults?.length > 0) {
-          const fragment = new DocumentFragment();
-          const filteredResults = searchResults
-            .filter((r) =>
-              r.title
-                .toLowerCase()
-                .includes(
-                  searchTerm.toLowerCase() ||
-                    r.parent?.toLowerCase().includes(searchTerm.toLowerCase())
-                )
-            )
-            .splice(0, 5);
-
-          filteredResults.forEach((result) => {
-            buildLink(fragment, result);
-          });
-
-          resultsList.appendChild(fragment);
-
-          if (searchTerm !== "" && filteredResults?.length > 0) {
-            defaultSuggestionsWrapper.hidden = true;
-            searchSuggestionsWrapper.hidden = false;
-            emptySearchResultsEl.hidden = true;
-          } else if (searchTerm !== "" && filteredResults?.length === 0) {
-            defaultSuggestionsWrapper.hidden = true;
-            searchSuggestionsWrapper.hidden = true;
-            emptySearchResultsEl.hidden = false;
-          } else {
-            defaultSuggestionsWrapper.hidden = false;
-            searchSuggestionsWrapper.hidden = true;
-            emptySearchResultsEl.hidden = true;
-          }
-        }
-      } catch (error) {
-        console.error("search error", error);
-      }
-    };
-
-    searchInput?.addEventListener("input", (e) => {
-      searchTerm = e.target.value;
-
-      processChange();
-    });
   })();
 </script>
