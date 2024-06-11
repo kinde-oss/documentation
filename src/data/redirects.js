@@ -191,5 +191,7 @@ export const redirects = {
   "/docs/developer-tools/authenticating-spa/": "/build/applications/authenticating-spa/",
   "/docs/developer-tools/custom-api-scopes/": "/developer-tools/kinde-api/custom-api-scopes/",
   "/docs/authentication-and-access/advanced-organization/": "/authenticate/custom-configurations/advanced-organization/",
-  "/docs/authentication-and-access/organization-auth-experience/": "/authenticate/manage-authentication/organization-auth-experience/"
+  "/docs/authentication-and-access/organization-auth-experience/": "/authenticate/manage-authentication/organization-auth-experience/",
+  "/docs/authentication-and-access/undefined/": "/authenticate/custom-configurations/undefined/",
+  "/docs/authentication-and-access/proxy-your-kinde-auth-pages-through-cloudflare/": "/authenticate/custom-configurations/proxy-your-kinde-auth-pages-through-cloudflare/"
 };
