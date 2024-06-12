@@ -17,13 +17,15 @@ All services are setup in AWS and are configured to use multiple availability zo
 
 ## Bot detection
 
-Kinde does not currently have any Bot Detection systems (apart from what is provided via AWS) as our customers largely use passwordless authentication options or are using MFA. It is on our product roadmap to add this in future.
+Native bot detection is on the roadmap, which will allow customers to bring their own CloudFlare integration key to apply bot detection and protections directly to their Kinde hosted auth pages. This will allow customers to adjust the level of protection based on their own risk profile. Please see our [roadmap](https://updates.kinde.com/board) for updates.
+
+Alternatively, customers can implement bot detection and CAPTCHA if your DNS is hosted via CloudFlare. Kinde's hosted pages, with a custom domain, can be proxied through CloudFlare to incorporate advanced web attack protection features, including bot detection and CloudFlare's Turnstile (CloudFlare's equivalent to CAPTCHA).
 
 ## Brute force protection
 
-Brute force lockouts are applied after 5 unsuccessful sign in attempts made via an incorrect passwordless code (OTP), password, or multi-factor authentication code.
+Kinde protects from brute force attacks with a combination of techniques. To protect against volumetric attacks, we use AWS WAF to block traffic that matches OWASP threat rules and also use our own application throttling. To protect against password brute forcing, we will automatically lock out accounts after 5 consecutive failed attempts of the passwordless code (OTP, password, or multi-factor authentication code for a short period of time. Admins can manually unlock accounts if necessary.
 
-We also use blowfish salting and adaptive hashing algorithms, which prevents brute-forcing and time-based attacks. We will continue to evolve our methods to ensure strong security.
+Suspicious IPs performing large scale scanning and probing will automatically blocked for a short amount of time based on configured rate limits. Kinde has rate limit thresholds for "buckets" of traffic such as API or token events, which can be tuned with help from our support team.
 
 ## **Business continuity and disaster recovery**
 
@@ -75,4 +77,4 @@ All container images are scanned at build using AWS Inspector for dependencies
 
 ## **Changes to this document**
 
-Last updated 05 April, 2024.
+Last updated 12 June, 2024.

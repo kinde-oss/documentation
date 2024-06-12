@@ -15,7 +15,7 @@ const FILTER = {
     {
       property: "Status",
       status: {
-       equals: "Done"
+       does_not_equal: "Draft"
       },
     },
     {
@@ -258,6 +258,7 @@ const getDocArticleMetadata = async (post) => {
   
   const cleanedPost = {
     id: post.id,
+    status: post.properties.Status.status.name,
     title:
       post.properties.NEW_TITLE?.rich_text[0]?.plain_text ??
       post.properties.Name.title[0].plain_text,
@@ -310,9 +311,9 @@ const getDocArticleMetadata = async (post) => {
   };
 
   
-  updateRedirectsFile(cleanedPost.oldURL.replace("https://kinde.com", ""), cleanedPost.newURL.replace("index/", ""));
+  updateRedirectsFile(cleanedPost.oldURL, cleanedPost.newURL.replace("index/", ""));
 
-  return await createMarkdownFiles(cleanedPost);
+  return cleanedPost.status === "Done" ? await createMarkdownFiles(cleanedPost) : true;
 };
 
 
