@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import matter from "gray-matter";
-import {redirects} from "../src/data/redirects.js"
+import {redirects} from "../src/data/redirects.js";
 
 async function findMdxFiles(dirPath) {
   let files = await fs.readdir(dirPath, {withFileTypes: true});
@@ -24,9 +24,9 @@ async function updateMdxFiles(mdxFiles, urls) {
     let content = await fs.readFile(filePath, "utf8");
     let {data, content: mdxContent} = matter(content);
 
-    for (let url of urls) {
-      if (data.oldURL === url.oldURL) {
-        data.newURL = url.newURL;
+    for (let [oldURL, newURL] of Object.entries(urls)) {
+      if (data.oldURL === oldURL) {
+        data.newURL = newURL;
         break;
       }
     }
@@ -37,10 +37,8 @@ async function updateMdxFiles(mdxFiles, urls) {
 }
 
 async function main() {
-  const docsDirPath = path.join(
-    path.dirname(new URL(import.meta.url).pathname),
-    "../src/content/docs"
-  );
+  const __dirname = path.dirname(new URL(import.meta.url).pathname);
+  const docsDirPath = path.join(__dirname, "../src/content/docs");
   const mdxFiles = await findMdxFiles(docsDirPath);
 
   await updateMdxFiles(mdxFiles, redirects);

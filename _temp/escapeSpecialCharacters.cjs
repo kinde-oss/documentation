@@ -32,7 +32,9 @@ function escapeCharactersOutsideCodeAndFrontmatter(fileContent) {
   while ((match = combinedPattern.exec(contentToProcess)) !== null) {
     // Text before code block or YoutubeVideo component
     let textOutsideSpecialSections = contentToProcess.slice(lastIndex, match.index);
-    result += textOutsideSpecialSections.replace(/<(?!img)/g, "\\<").replace(/{/g, "\\{");
+    result += textOutsideSpecialSections
+      .replace(/(?<!\\)<(?!img)/g, "\\<")
+      .replace(/(?<!\\){/g, "\\{");
 
     // Special section (untouched)
     result += match[0];
@@ -43,8 +45,8 @@ function escapeCharactersOutsideCodeAndFrontmatter(fileContent) {
   // Remaining text after the last special section
   result += contentToProcess
     .slice(lastIndex)
-    .replace(/<(?!img)/g, "\\<")
-    .replace(/{/g, "\\{");
+    .replace(/(?<!\\)<(?!img)/g, "\\<")
+    .replace(/(?<!\\){/g, "\\{");
 
   return result;
 }

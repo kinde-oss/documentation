@@ -15,16 +15,22 @@ const FILTER = {
     {
       property: "Status",
       status: {
-       does_not_equal: "Draft"
-      },
+        does_not_equal: "Draft"
+      }
     },
     {
       property: "NEW_ORDER",
       number: {
-        is_not_empty: true,
-      },
+        is_not_empty: true
+      }
     },
-  ],
+    {
+      timestamp: "last_edited_time",
+      last_edited_time: {
+        past_month: {}
+      }
+    }
+  ]
 };
 
 
