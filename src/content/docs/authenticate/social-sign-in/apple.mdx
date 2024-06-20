@@ -90,15 +90,16 @@ You can use open source libraries for creating and signing JWT tokens for your c
 
      ecdsa_key = OpenSSL::PKey::EC.new IO.read key_file
      headers = {
-     'kid' => key_id
+      'kid' => key_id
      }
 
      claims = {
-     'iss' => team_id,
-     'iat' => Time.now.to_i,
-     'exp' => Time.now.to_i + 86400*180,
-     'aud' => 'https://appleid.apple.com',
-     'sub' => client_id,
+      'iss' => team_id,
+      'iat' => Time.now.to_i,
+      # Note that this is the maximum exp value of 6 months
+      'exp' => Time.now.to_i + 86400*180,
+      'aud' => 'https://appleid.apple.com',
+      'sub' => client_id,
      }
 
      token = JWT.encode claims, ecdsa_key, 'ES256', headers
