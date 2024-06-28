@@ -1,7 +1,82 @@
+---
+page_id: 51899f7f-3436-46e0-9a1b-6ecc3603a0df
+title: Register and manage APIs
+sidebar:
+  order: 1
+relatedArticles:
+  - cffc17b9-2d10-4f42-8c84-a12b263a6040
+  - b98cb579-f80c-4f17-92a6-059f976ae081
+app_context:
+  - m: settings
+    s: apis
+---
+
+If you manage your application’s data using APIs, you can register them with Kinde.
+
+Doing this facilitates authentication between your back-end code framework and front-end application where users sign in.
+
+When you register your API with Kinde and link it to a Kinde application, the API will be in the audience (`aud`) claim of the token. The token can then be used to make a request from the front-end to the back-end, which verifies the token and checks the `aud` claim.
+
+## To register an API in Kinde
+
+1. Go to **Settings** > **APIs**.
+2. Select **Add API**.
+3. Enter an **API name** and **Audience**. The audience (`aud`) is a unique identifier for this API. Often a short code or the URL of the API is used.
+4. Select **Save**. The details window for the API opens. You’ll notice that an ID has been created, but it is not editable and neither is the audience. You can copy these details, however.
+5. To authorize this API for your apps, select **Applications** in the left menu.
+6. Select the three dots menu next to the relevant application, then choose **Authorize application**.
+
+## Request an audience be added to a token
+
+### Audience in a user token
+
+Our SDKs accept an `audience` parameter. As an example for the React SDK you would use:
+
+```jsx
+<KindeProvider
+  audience="api.example.com/v1"
+  clientId="someClientId"
+  domain="https://kinde.example.com"
+>
+  <MyApp />
+</KindeProvider>
+```
+
+When the request is received, Kinde will check that an API with a matching audience has been registered and is enabled for the application with the requested clientId. (In the example above `someClientId`). If there is a match it will return the `aud` claim as part of the Access token. For example:
+
+```jsx
+{
+  aud: ["api.example.com/v1"];
+}
+```
+
+When you use this Access token in your product and send it to your product’s API, you can check for the existence of this `aud` claim in the token as part of your verification checks.
+
+### Audience in an M2M token
+
+If you are using Postman, you can include the `audience` claim in a token request. If you’re doing it manually, send a POST request to this endpoint: `https://<your_subdomain>.kinde.com/oauth2/token` and include the following in the body.
+
+```jsx
 {
       grant_type: "client_credentials",
       client_id: "<your_M2M_client_id>",
       client_secret: "<your_M2M_client_secret>",
       audience: "<your_audience_value>",
-      scope: "read:competitions drink:milk"   <-- NEW BIT
+      scope: "read:finance write:accounts" 
     }
+```
+
+## Authorize or revoke authorization of an app from the API
+
+1. Go to **Settings** > **APIs**.
+2. Select **Configure** on the relevant API card. The API detail opens.
+3. Select **Applications** in the left.
+4. Select the three dots menu next to an application, then choose **Authorize application** or **Revoke authiorization**.
+
+## Delete an API
+
+If you no longer need to have an API registered in Kinde, you can delete it. This action cannot be reversed.
+
+1. Go to **Settings** > **APIs**.
+2. On the API you want to delete, select the three dots and then select **Delete API**. A confirmation window appears.
+3. To confirm, select **Delete API**.
