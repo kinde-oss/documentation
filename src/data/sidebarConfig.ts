@@ -111,7 +111,7 @@ const sidebarConfig = [
         label: "Your APIs",
         autogenerate: {directory: "developer-tools/your-apis"},
         collapsed: false
-      }
+      },
     ]
   },
   {
