@@ -106,7 +106,7 @@ const sidebarConfig = [
         label: "Kinde API",
         autogenerate: {directory: "developer-tools/kinde-api"},
         collapsed: false
-      }
+      },
       {
         label: "Your APIs",
         autogenerate: {directory: "developer-tools/your-apis"},
