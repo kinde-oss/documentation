@@ -151,7 +151,7 @@ const sidebarConfig = [
         collapsed: false
       },
       {
-        label: "Social sign in",
+        label: "Social connections",
         autogenerate: {directory: "authenticate/social-sign-in"},
         collapsed: false
       }
