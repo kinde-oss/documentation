@@ -205,7 +205,7 @@ const redirects = {
   "/docs/developer-tools/api-example-node/": "/developer-tools/kinde-api/api-example-node/",
   "/docs/build/test-the-connection-to-kindes-api/":
     "/developer-tools/kinde-api/test-the-connection-to-kindes-api/",
-  "/docs/build/register-an-api/": "/developer-tools/kinde-api/register-an-api/",
+  "/docs/build/register-an-api/": "/developer-tools/your-apis/register-manage-apis/",
   "/docs/developer-tools/apollo-graphql/": "/developer-tools/sdks/other/apollo-graphql/",
   "/docs/developer-tools/node-express-graphql/":
     "/developer-tools/sdks/other/node-express-graphql/",
@@ -236,7 +236,7 @@ const redirects = {
     "/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/",
   "/docs/connect-to-kinde/byo-code/": "/get-started/guides/byo-code/",
   "/docs/connect-to-kinde/start-with-starter-kit/": "/get-started/guides/start-with-starter-kit/",
-  "/docs/connect-to-kinde/first-things-first/": "/get-started/guides/first-things-first/",
+  "/docs/connect-to-kinde/first-things-first/": "/get-started/guides/first-things-first/"
 };
 
 export default redirects;
