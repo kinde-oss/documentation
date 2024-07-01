@@ -30,6 +30,14 @@ export default defineConfig({
   devToolbar: {
     enabled: false
   },
+  redirects: {
+    "/developer-tools/kinde-api/register-manage-apis/":
+      "/developer-tools/your-apis/register-manage-apis/",
+    "/developer-tools/kinde-api/protect-your-api/": "/developer-tools/your-apis/protect-your-api/",
+    "/developer-tools/kinde-api/access-to-your-api/":
+      "/developer-tools/your-apis/access-to-your-api/",
+    "/developer-tools/kinde-api/custom-api-scopes/": "/developer-tools/your-apis/custom-api-scopes/"
+  },
   markdown: {
     rehypePlugins: [
       rehypeSlug,
