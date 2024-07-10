@@ -23,6 +23,14 @@ export default {
     extend: {
       colors: {
         kinde: {
+          amber: {
+            100: "#FFF4DB",
+            900: "#95680E"
+          },
+          blue: {
+            100: "#EBF2FF",
+            900: "#002D80"
+          },
           grey: {
             50: "#F5F5F5",
             100: "#EBEBEB",
@@ -34,6 +42,14 @@ export default {
             700: "#4D4D4D",
             800: "#2B2B2B",
             900: "#0F0F0F"
+          },
+          purple: {
+            100: "#F4E5FF",
+            500: "#903DD1"
+          },
+          red: {
+            100: "#FFEBEB",
+            900: "#800000"
           }
         },
         // Your preferred accent color. Indigo is closest to Starlight’s defaults.

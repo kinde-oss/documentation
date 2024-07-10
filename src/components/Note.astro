@@ -1,52 +1,96 @@
 ---
-import { Icon } from "astro-icon/components";
+import {Icon} from "astro-icon/components";
 
 interface Props {
-  type: "note" | "caution" | "danger" | "tip";
+  type?: "info" | "warning" | "danger" | "upgrade";
+  title?: string;
 }
 
 const noteData = {
-  note: {
-    bg: "bg-kinde-grey-50",
-    icon: "thumbs-up",
+  info: {
+    icon: "info"
   },
-  caution: {
-    bg: "bg-yellow-200",
-    icon: "thumbs-up",
+  warning: {
+    icon: "alert-triangle"
   },
   danger: {
-    bg: "bg-orange-700",
-    icon: "thumbs-up",
+    icon: "alert-triangle"
   },
-  tip: {
-    bg: "bg-purple-100",
-    icon: "thumbs-up",
-  },
+  upgrade: {
+    icon: "supercharge-filled"
+  }
 };
 
-const { type = "note" } = Astro.props;
+const {type = "info", title} = Astro.props;
 ---
 
 <aside
-  aria-label={type.toUpperCase()}
+  aria-label={title ?? type.toUpperCase()}
   class:list={[
-    "aside not-content px-6 py-8 rounded-2xl flex flex-col gap-4",
+    "kinde-note not-content px-6 py-8 rounded-2xl flex flex-col md:flex-row gap-4 md:gap-5 items-start",
     {
-      [noteData[type].bg]: true,
-    },
+      [`kinde-note--${type}`]: true
+    }
   ]}
 >
-  <div class="note-header flex items-center gap-4">
+  <div class="note-header flex items-center">
     <Icon name={noteData[type].icon} size={24} />
-    <div aria-hidden="true" class="font-medium text-base capitalize">{type}</div>
   </div>
-  <div class="note-body">
-    <slot />
+  <div
+    class:list={[
+      "flex flex-col",
+      {
+        ["gap-3"]: title
+      }
+    ]}
+  >
+    <div class="note-title text-lg font-medium">
+      {title ?? <div aria-hidden="true">{title}</div>}
+    </div>
+    <div class="note-body">
+      <slot />
+    </div>
   </div>
 </aside>
 
 <style>
   :global(.note-body .expressive-code) {
     @apply mt-4;
+  }
+
+  :global(.note-body > * + *) {
+    @apply mt-4;
+  }
+
+  .kinde-note--info {
+    @apply bg-kinde-blue-100 dark:bg-kinde-blue-900/40 text-kinde-blue-900 dark:text-kinde-blue-100;
+  }
+
+  .kinde-note--warning {
+    @apply bg-kinde-amber-100 dark:bg-kinde-amber-900/40 text-kinde-amber-900 dark:text-kinde-amber-100;
+  }
+
+  .kinde-note--danger {
+    @apply bg-kinde-red-100 dark:bg-kinde-red-900/40 text-kinde-red-900 dark:text-kinde-red-100;
+  }
+
+  .kinde-note--upgrade {
+    @apply bg-kinde-purple-100 dark:bg-kinde-purple-500/40 text-kinde-purple-500 dark:text-kinde-purple-100;
+  }
+
+  .kinde-note--info :global(code) {
+    @apply bg-kinde-blue-900/5 text-kinde-blue-900 border-none;
+  }
+
+  .kinde-note--warning :global(code) {
+    @apply bg-kinde-amber-900/5 text-kinde-amber-900 border-none;
+  }
+
+  .kinde-note--danger :global(code) {
+    @apply bg-kinde-red-900/5 text-kinde-red-900 border-none;
+  }
+
+  :global(.kinde-note--upgrade code) {
+    @apply bg-kinde-purple-500/5 text-kinde-purple-500 border-none dark:bg-kinde-purple-100;
   }
 </style>
