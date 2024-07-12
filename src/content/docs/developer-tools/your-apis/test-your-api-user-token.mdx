@@ -1,0 +1,94 @@
+---
+page_id: 5bde7fb5-2592-4acf-821d-af9c6942c4f7
+title: Get a user access token to test your APIs
+sidebar:
+  order: 1
+relatedArticles:
+  - cffc17b9-2d10-4f42-8c84-a12b263a6040
+  - b98cb579-f80c-4f17-92a6-059f976ae081
+app_context:
+  - m: settings
+    s: apis
+---
+
+This doc describes how to test user access tokens for your API connection, using Postman and Authorization code (with PKCE).
+
+You can use this process to request tokens for your own and third-party APIs, and to test custom scopes added to claims. Below are the steps to generate `id` and `access` tokens with Postman.
+
+For instruction on how to test M2M tokens, see XREF.
+
+## Before you begin
+
+### Register your API (recommended)
+
+If you use audiences in your application, we recommend you register your API with Kinde so that you can include `audience` in the token request.
+
+An `audience` defines the recipient of the token and ensures the token can only be used by the intended system. You can trust the token as is, but we would recommend you to use the API authentication using `audience`.
+
+If you haven’t already, [register your API with Kinde](/developer-tools/your-apis/register-manage-apis/) and set the audience.
+
+### Add custom scopes to the access token
+
+If you have the relevant Kinde plan, and your API is registered, you can add custom scopes to user access tokens for added API security. You might want to test these as part of this procedure.
+
+- [Secure your API with scopes](/developer-tools/your-apis/custom-api-scopes/#_top)
+- [Manage API scopes for users](/developer-tools/your-apis/user-api-scopes/)
+
+## Step 1: Add callback URLs to your application in Kinde
+
+1. In Kinde, go to **Settings > Applications**.
+2. Select **View details** on the tile for the application you’re testing.
+3. In the **Allowed callback URLs** section, add this Postman callback URL, `https://oauth.pstmn.io/v1/callback` as a separate entry on a new line.
+4. Select **Save**.
+
+## Step 2: Send request via Postman
+
+If you are using audiences in your application, we recommend you
+
+1. In Postman, create a new GET request.
+2. Go to the **Authorization** tab.
+3. In the **Type** field, select **OAuth 2.0**.
+4. Scroll down to the **Configure New Token** section and set the **Grant Type** as **Authorization Code (With PKCE)**.
+5. Select the **Authorize using browser** checkbox.
+6. Set the **Auth URL**. For example:
+
+   ```jsx
+   https://yourbusiness.kinde.com/oauth2/auth?prompt=login
+   ```
+
+   Where:
+
+   - `yourbusiness.kinde.com` is the domain
+   - `prompt=login` forces asking for user credentials every login to disable SSO.
+
+7. (If you’ve registered your API and use `audience` claims in your product) Add the `audience` key to the token request, with a value of `https://yourproduct.com/api`. Note that Kinde supports multiple audiences.
+
+   > ℹ️ **Older versions of Postman** Add the `audience` parameter to the request url, e.g.
+   > https://yourbusiness.kinde.com/oauth2/auth
+   > ?prompt=login
+   > **&audience=`https://yourproduct.com/api`**
+
+8. In the **Access Token URL** field enter your Kinde domain URL, e.g. `https://yourbusiness.kinde.com/oauth2/token`.
+9. In the **Client ID** field, add the **Client ID** listed in the application the API is authorized for. You can find this in Kinde by going to **Settings > Applications > View details > App keys** section.
+10. **Client Secret** can be left blank as it is not used for browser authentication flows and any flows that cannot securely store the secret.
+11. Set the **Code Challenge Method** to **SHA-256**.
+12. Leave the **Code verifier** field blank.
+13. Set the value of **Scope** to **openid email offline**.
+14. Enter a random value in the **State** field. It must be at least 8 characters long.
+15. Select **Get New Access Token**. This should be the result:
+    - The **ID token** contains an `aud` claim for two audiences, one for the application ID, one for the issuing party.
+    - The **Access token** contains the `aud` claim for the requested (intended) audience to authenticate the API.
+    - The `azp` claim represents the application `client_id` you are using to issue the token.
+16. The access token you received can now be used to test and secure your APIs.
+
+    ![Access token in Postman](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/1fc6f61c-a544-4cce-83c6-7d691f785700/public)
+
+## Step 3: Validate the token in your API
+
+Check that the token contains the required information and is valid for accessing your application or site. Test may vary depending on your framework, here’s a general topic for [verifying JWTs](/build/tokens/verifying-json-web-tokens/) and some [recommended libraries](https://openid.net/developers/jwt-jws-jwe-jwk-and-jwa-implementations/).
+
+Things to check, include:
+
+- Audience
+- Lifetime / validity
+- Scopes
