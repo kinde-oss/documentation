@@ -106,7 +106,7 @@ export default defineConfig({
       imports: [
         "./src/components/SDKSelector.astro",
         "./src/components/YoutubeVideo.astro",
-        "./src/components/Note.astro",
+        "./src/components/Aside.astro",
         "./src/components/FileTree.astro"
       ]
     })
