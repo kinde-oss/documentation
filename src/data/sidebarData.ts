@@ -7,6 +7,7 @@ const sidebarData = [
     description: "Essential information for using and connecting to Kinde",
     icon: "sparkle",
     collapsed: true,
+    cardLink: "/get-started/guides/first-things-first/",
     items: [
       {
         label: "Guides",
@@ -45,6 +46,7 @@ const sidebarData = [
     description: "Set up all the important features under the hood",
     icon: "build",
     collapsed: true,
+    cardLink: "/build/set-up-options/kinde-business-model/",
     items: [
       {
         label: "Set up options",
@@ -83,6 +85,7 @@ const sidebarData = [
     description: "Jump right in with our API-first developer tools",
     icon: "dev-tools",
     collapsed: true,
+    cardLink: "/developer-tools/about/our-sdks/",
     items: [
       {
         label: "Overview",
@@ -121,6 +124,7 @@ const sidebarData = [
     description: "Configure user sign up, sign in, and security verification",
     icon: "authentication",
     collapsed: true,
+    cardLink: "/authenticate/about-auth/about-authentication/",
     items: [
       {
         label: "About authentication",
@@ -164,6 +168,7 @@ const sidebarData = [
     description: "Build plans and pricing so that your users can pay you",
     icon: "billing",
     collapsed: true,
+    cardLink: "/billing/about-payments-and-plans/",
     items: [
       {
         label: "About payments and plans",
@@ -177,6 +182,7 @@ const sidebarData = [
     description: "Integrate your own brand elements for pages and screens",
     icon: "brand",
     collapsed: true,
+    cardLink: "/design/brand/apply-branding-for-an-organization/",
     items: [
       {
         label: "Your brand",
@@ -205,6 +211,7 @@ const sidebarData = [
     description: "Store and use custom data about users and organizations",
     collapsed: true,
     icon: "properties",
+    cardLink: "/properties/about-properties/",
     items: [
       {
         label: "About properties",
@@ -223,6 +230,7 @@ const sidebarData = [
     description: "Manage user profiles, including roles and permissions",
     icon: "profile",
     collapsed: true,
+    cardLink: "/manage-users/about/",
     items: [
       {
         label: "Overview",
@@ -256,6 +264,7 @@ const sidebarData = [
     description: "Take control of feature development and releases  ",
     icon: "releases",
     collapsed: true,
+    cardLink: "/releases/about/about-feature-flags/",
     items: [
       {
         label: "About",
@@ -279,6 +288,7 @@ const sidebarData = [
     description: "Create and manage external system connections to Kinde",
     icon: "webhooks",
     collapsed: true,
+    cardLink: "/integrate/connected-apps/add-connected-apps/",
     items: [
       {
         label: "Connected apps",
@@ -302,6 +312,7 @@ const sidebarData = [
     description: "Update account details, data, team, and business information",
     icon: "settings",
     collapsed: true,
+    cardLink: "/manage-your-account/profile-and-plan/view-kinde-plan/",
     items: [
       {
         label: "Profile and plan",
@@ -330,6 +341,7 @@ const sidebarData = [
     description: "Find out how we safeguard your security and data",
     icon: "trust",
     collapsed: true,
+    cardLink: "/trust-center/privacy-and-compliance/compliance/",
     items: [
       {
         label: "Privacy and compliance",
