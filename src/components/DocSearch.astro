@@ -4,8 +4,8 @@
   import("@docsearch/css/dist/style.css");
   import("@styles/vendors/algolia.css");
 
-  let docSearchButton: Element | null;
-  let previousFocusedElement: EventTarget | null = null;
+  let docSearchButton: HTMLElement | null;
+  let previousFocusedElement: HTMLElement | null = null;
 
   function initializeDocSearch() {
     import("@docsearch/js/dist/esm/index.js")
@@ -68,7 +68,7 @@
         }
 
         // Check if the currently focused element is an input, textarea, or has contenteditable='true'
-        let activeElement = document.activeElement;
+        let activeElement = document.activeElement as HTMLElement;
         let isEditable =
           activeElement?.tagName === "INPUT" ||
           activeElement?.tagName === "TEXTAREA" ||
@@ -85,8 +85,10 @@
     });
 
     document.addEventListener("focusin", function (event) {
-      if (!event.target.classList.contains("DocSearch-Input")) {
-        previousFocusedElement = event.target;
+      const targetEl = event.target as HTMLElement;
+
+      if (!targetEl.classList.contains("DocSearch-Input")) {
+        previousFocusedElement = event.target as HTMLElement;
       }
     });
   }
