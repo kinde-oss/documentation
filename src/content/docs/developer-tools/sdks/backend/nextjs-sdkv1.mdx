@@ -516,11 +516,11 @@ Note: the value of `post_login_redirect_url` should either be a url on the same 
 
 ## Working with preview URLs
 
-Our Kinde NextJS SDK currently requires that `KINDE_SITE_URL`, `KINDE_POST_LOGOUT_REDIRECT_URL`, and `KINDE_POST_LOGIN_REDIRECT_URL` are defined and also that the respective **callback URLs** and **logout redirect URLs** are added to your app in Kinde.
+Our Kinde NextJS SDK currently requires that these environment variables `KINDE_SITE_URL`, `KINDE_POST_LOGOUT_REDIRECT_URL`, and `KINDE_POST_LOGIN_REDIRECT_URL` are defined, and that the **callback URLs** and **logout redirect URLs** are added to your app in Kinde.
 
-Since Kinde [doesn’t allow wildcard URLs](/get-started/connect/callback-urls/#wildcards-in-urls) as a security measure, to be able to take advantage of Vercel’s dynamically generated preview URLs you need to follow the steps below:
+To add Vercel’s dynamically generated URLs you can either securely use our API to add them on the fly or you can use [wildcard URLs](/get-started/connect/callback-urls/#wildcards-in-callback-urls). It should be noted that whilst wildcards are more convenient it is not as secure as explicitly adding the url to the allowlist via API as we outline below.
 
-### 1. Add the following to your `next.config.js` :
+Add the following to your `next.config.js`.
 
 ```jsx
 /** @type {import('next').NextConfig} */
@@ -537,17 +537,22 @@ const nextConfig = {
 module.exports = nextConfig;
 ```
 
-This will make sure Vercel uses its generated preview URLs to populate those 3 Kinde variables. Just make sure to update the above to suit your application (e.g. “/dashboard” for KINDE_POST_LOGIN_REDIRECT_URL) and also that those variables are not set for the preview environment in your Vercel project, otherwise, they will get overridden.
+This ensures Vercel uses its generated preview URLs to populate the three Kinde variables.
 
-### 2. Add callback URLs and logout redirect URLs to Kinde dynamically:
+- Make sure the above values match your application (e.g. “/dashboard” for `KINDE_POST_LOGIN_REDIRECT_URL`)
+- Also make sure variables are not set for the preview environment in your Vercel project. If they are, they will be overridden by the new variables in the `next.config.js` file.
 
-We will create a script that will run every time a new preview is deployed by Vercel and will add the newly generated URL to Kinde.
+### Add callback URLs and logout redirect URLs to Kinde dynamically
 
-1. First, make sure the **Kinde Management API** is enabled for your NextJS app. In the Kinde dashboard, go to your application and click **APIs** on the left-side menu.
-2. Then, make the **Kinde Management API** active by toggling the switch on.
-3. Click **Save**.
-4. Now, in your application source code, create a folder at the top level called `scripts`.
-5. Within that folder, create a file called `add-urls-to-kinde.js` and add the following code:
+Create a script that will run each time a new preview is deployed by Vercel, which will add the newly generated URL to Kinde.
+
+1. Enable the **Kinde Management API** for your NextJS app.
+   1. In Kinde, go to **Settings > Applications** and open the **Details** of your application.
+   2. Select **APIs** in the left menu.
+   3. Switch on the **Kinde Management API** (if it is not on already).
+   4. Select **Save**.
+2. In your application source code, create a folder at the top level called `scripts`.
+3. Within that folder, create a file called `add-urls-to-kinde.js` and add the following code:
 
    ```jsx
    async function getAuthToken() {
@@ -652,7 +657,7 @@ We will create a script that will run every time a new preview is deployed by Ve
    })();
    ```
 
-6. Now, in your `package.json`, add a `postbuild` script that will run the `/scripts/add-urls-to-kinde.js` file after Vercel builds your app.
+4. In your `package.json`, add a `postbuild` script that will run the `/scripts/add-urls-to-kinde.js` file after Vercel builds your app.
 
    ```json
    "scripts": {
@@ -664,6 +669,4 @@ We will create a script that will run every time a new preview is deployed by Ve
    }
    ```
 
-7. After you commit these changes, the next deploy will add the newly created preview URLs to your Kinde application.
-
-If you need any assistance with getting Kinde connected reach out to us at [support@kinde.com](mailto:support@kinde.com).
+5. Commit these changes. The next deploy will add the newly created preview URLs to your Kinde application.
