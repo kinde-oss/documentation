@@ -36,7 +36,12 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { execSync } = require('child_process');
-            const result = execSync('node ./scripts/validate-links.js').toString();
+            let result;
+            try {
+              result = execSync('node ./scripts/validate-links.js').toString();
+            } catch (error) {
+              result = error.toString();
+            }
             const context = github.context;
             const pullRequestNumber = context.payload.pull_request.number;
 
