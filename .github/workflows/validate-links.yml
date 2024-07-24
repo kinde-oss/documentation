@@ -27,29 +27,25 @@ jobs:
 
       - name: Run link validation script
         id: validate
-        run: node ./scripts/validate-links.js
+        run: |
+          set -o pipefail
+          node ./scripts/validate-links.js 2>&1 | tee validate-links.log
 
-      - name: Post results as PR comment
+      - name: Annotate PR on error
         if: failure()
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { execSync } = require('child_process');
-            let result;
-            try {
-              result = execSync('node ./scripts/validate-links.js').toString();
-            } catch (error) {
-              result = error.toString();
-            }
-            const pullRequestNumber = context.payload.pull_request.number;
+            const fs = require('fs');
+            const log = fs.readFileSync('validate-links.log', 'utf8');
 
-            await github.rest.issues.createComment({
+            github.rest.issues.createComment({
               ...context.repo,
-              issue_number: pullRequestNumber,
+              issue_number: context.issue.number,
               body: `## ❌ Link Validation Failed\n\`\`\`\n${result}\n\`\`\``
             });
 
-      - name: Fail the job if duplicates are found
+      - name: Fail the job if broken links are found
         if: failure()
         run: exit 1
