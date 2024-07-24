@@ -15,11 +15,9 @@ function getRelativePath(filePath) {
 // Function to check for duplicate page_ids
 export function checkForDuplicatePageIds() {
   const logs = [];
-  logs.push("Starting duplicate page_id check...");
 
   // Use glob to find all MDX files
   const files = globSync(`${docsDirectory}/**/*.mdx`);
-  logs.push(`Total files checked: ${files.length}`);
 
   const pageIds = new Map();
   let duplicatesFound = false;
