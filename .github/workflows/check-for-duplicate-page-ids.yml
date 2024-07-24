@@ -1,4 +1,4 @@
-name: Validate Links
+name: Check for Duplicate Page IDs
 
 on:
   pull_request:
@@ -7,45 +7,41 @@ on:
       - beta
 
 jobs:
-  validate-links:
+  check-duplicates:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v2
         with:
-          node-version: "20.10.0"
+          node-version: "14"
 
       - name: Install dependencies
         run: npm install
 
-      - name: Build docs
-        run: npm run build
-
-      - name: Run link validation script
-        id: validate
+      - name: Run duplicate check script
+        id: check_duplicates
         run: |
           set -o pipefail
-          node ./scripts/validate-links.js 2>&1 | tee validate-links.log
+          node ./scripts/check-for-duplicate-page-ids.js 2>&1 | tee check-duplicates.log
 
       - name: Annotate PR on error
         if: failure()
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const log = fs.readFileSync('validate-links.log', 'utf8');
+            const log = fs.readFileSync('check-duplicates.log', 'utf8');
 
             github.rest.issues.createComment({
               ...context.repo,
               issue_number: context.issue.number,
-              body: `## ❌ Link Validation Failed\n\`\`\`\n${log}\n\`\`\``
+              body: `## ❌ Duplicate page_id(s) found:\n\`\`\`\n${log}\n\`\`\``,
             });
 
-      - name: Fail the job if broken links are found
+      - name: Fail the job if duplicates are found
         if: failure()
         run: exit 1
