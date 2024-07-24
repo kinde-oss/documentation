@@ -107,6 +107,7 @@ function main() {
     invalidLinks.forEach(({link, location}) => {
       console.log(chalk.red(`Link: ${link}, Found In: ${location}`));
     });
+    process.exit(1);
   } else {
     console.log(chalk.green("All internal links are valid."));
   }
