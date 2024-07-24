@@ -101,7 +101,6 @@ function main() {
 
   const invalidLinks = validateLinks(htmlFiles);
 
-  console.log(chalk.blue(`Total Unique Internal Links Found: ${allLinks.size}`));
   if (invalidLinks.length > 0) {
     console.log(chalk.red("Invalid Links:"));
     invalidLinks.forEach(({link, location}) => {
