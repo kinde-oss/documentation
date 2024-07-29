@@ -6,7 +6,6 @@ import icon from "astro-icon";
 import { defineConfig } from 'astro/config';
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSlug from "rehype-slug";
-import starlightLinksValidator from "starlight-links-validator";
 import { autolinkConfig } from "./plugins/rehype-autolink-config";
 import { rehypeExternalLinks } from "./plugins/rehype-external-links.mjs";
 import { rehypeTable } from "./plugins/rehype-table.mjs";
@@ -97,7 +96,6 @@ export default defineConfig({
       lastUpdated: false,
       titleDelimiter: "-",
       expressiveCode: expressiveCodeOptions
-      // plugins: [starlightLinksValidator({errorOnRelativeLinks: false, exclude: ["**/#_top", "/"]})]
     }),
     tailwind({
       applyBaseStyles: false
