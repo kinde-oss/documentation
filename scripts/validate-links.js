@@ -32,7 +32,7 @@ function extractInternalLinks(html) {
   const links = new Set();
   $("a[href]").each((_, element) => {
     const href = $(element).attr("href");
-    if (href.startsWith("/") || href.startsWith("./") || href.startsWith("../")) {
+    if (href && (href.startsWith("/") || href.startsWith("./") || href.startsWith("../"))) {
       links.add(href);
     }
   });
@@ -42,7 +42,12 @@ function extractInternalLinks(html) {
 // Function to check if an anchor exists within an HTML file
 function anchorExists(html, anchor) {
   const $ = cheerio.load(html);
-  return $(anchor).length > 0;
+  try {
+    return $(anchor).length > 0;
+  } catch (error) {
+    console.error(chalk.red(`Error parsing anchor: ${anchor} in file`));
+    return false;
+  }
 }
 
 // Function to validate links
@@ -57,11 +62,12 @@ function validateLinks(htmlFiles) {
       // For links with hash (Type 2)
       const [pathWithoutHash, hash] = link.split("#");
       const resolvedPath = path.join(distFolder, pathWithoutHash);
-      const ext = path.extname(resolvedPath);
+      const normalizedPath = path.normalize(resolvedPath);
+      const ext = path.extname(normalizedPath);
 
       if (ext === "") {
         // Type 1: Directory-based links
-        const indexPath = path.join(resolvedPath, "index.html");
+        const indexPath = path.join(normalizedPath, "index.html");
         if (!fs.existsSync(indexPath)) {
           invalidLinks.push({
             link,
@@ -75,7 +81,7 @@ function validateLinks(htmlFiles) {
         }
       } else {
         // Type 3: Direct file links (e.g., PDFs)
-        if (!fs.existsSync(resolvedPath)) {
+        if (!fs.existsSync(normalizedPath)) {
           invalidLinks.push({
             link,
             location: file.replace(distFolder, "").replace("/index.html", ".mdx")
