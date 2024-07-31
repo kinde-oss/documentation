@@ -39,8 +39,8 @@ jobs:
         run: |
           DEPLOY_OUTPUT=$(wrangler pages deploy dist --project-name=${{ secrets.CLOUDFLARE_PROJECT_NAME }} 2>&1)
           echo "$DEPLOY_OUTPUT"
-          # Sanitize the DEPLOY_OUTPUT by removing special characters
-          SANITIZED_OUTPUT=$(echo "$DEPLOY_OUTPUT" | tr -d '✨')
+          # Remove all special characters
+          SANITIZED_OUTPUT=$(echo "$DEPLOY_OUTPUT" | tr -d '[:cntrl:]' | tr -d '[:punct:]')
           PREVIEW_URL=$(echo "$SANITIZED_OUTPUT" | grep -oP 'https://[^ ]+\.pages\.dev')
           echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
           echo "deploy_output=$SANITIZED_OUTPUT" >> $GITHUB_OUTPUT
