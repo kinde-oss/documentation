@@ -1,4 +1,4 @@
-name: Generate Preview For Kinde Team
+name: Deploy Preview to Cloudflare Pages
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20.10.0"
+          node-version: "20.10.0" # Use the version you need
 
       - name: Install dependencies
         run: npm install
@@ -24,11 +24,13 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Deploy preview
-        uses: cloudflare/pages-action@v1
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
-          directory: ./dist
-          wranglerVersion: "3"
+      - name: Install wrangler
+        run: npm install -g @cloudflare/wrangler
+
+      - name: Configure wrangler
+        run: wrangler login
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Deploy to Cloudflare Pages
+        run: wrangler pages deploy dist --project-name=${{ secrets.CLOUDFLARE_PROJECT_NAME }}
