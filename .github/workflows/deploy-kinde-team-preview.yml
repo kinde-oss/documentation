@@ -39,9 +39,11 @@ jobs:
         run: |
           DEPLOY_OUTPUT=$(wrangler pages deploy dist --project-name=${{ secrets.CLOUDFLARE_PROJECT_NAME }} 2>&1)
           echo "$DEPLOY_OUTPUT"
-          PREVIEW_URL=$(echo "$DEPLOY_OUTPUT" | grep -oP 'https://[^ ]+\.pages\.dev')
+          # Sanitize the DEPLOY_OUTPUT by removing special characters
+          SANITIZED_OUTPUT=$(echo "$DEPLOY_OUTPUT" | tr -d '✨')
+          PREVIEW_URL=$(echo "$SANITIZED_OUTPUT" | grep -oP 'https://[^ ]+\.pages\.dev')
           echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
-          echo "deploy_output=$DEPLOY_OUTPUT" >> $GITHUB_OUTPUT
+          echo "deploy_output=$SANITIZED_OUTPUT" >> $GITHUB_OUTPUT
 
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
