@@ -26,7 +26,12 @@ jobs:
 
       - name: Get branch name
         id: get-branch
-        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
+        run: |
+          if [[ $GITHUB_HEAD_REF ]]; then
+            echo "BRANCH_NAME=$GITHUB_HEAD_REF" >> $GITHUB_ENV
+          else
+            echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
+          fi
 
       - name: Get commit information
         id: commit_info
