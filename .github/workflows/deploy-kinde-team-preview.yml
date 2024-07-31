@@ -1,0 +1,56 @@
+name: Deploy Preview to Cloudflare Pages
+
+on:
+  pull_request:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.10.0"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Install wrangler
+        run: npm install -g wrangler
+
+      - name: Get branch name
+        id: get-branch
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
+
+      - name: Get commit information
+        id: commit_info
+        run: |
+          echo "COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')" >> $GITHUB_ENV
+          echo "COMMIT_DATE=$(git log -1 --pretty=format:'%ad' --date=iso)" >> $GITHUB_ENV
+
+      - name: Deploy to Cloudflare Pages
+        id: wrangler_deploy
+        run: |
+          DEPLOY_OUTPUT=$(wrangler pages deploy dist --project-name=${{ secrets.CLOUDFLARE_PROJECT_NAME }} --branch=${{ env.BRANCH_NAME }} 2>&1)
+          echo "$DEPLOY_OUTPUT"
+          PREVIEW_URL=$(echo "$DEPLOY_OUTPUT" | grep -oP 'https://[^ ]+\.pages\.dev')
+          echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
+          echo "deploy_output=$DEPLOY_OUTPUT" >> $GITHUB_OUTPUT
+
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Log deployment information
+        run: |
+          echo "Branch Name: ${{ env.BRANCH_NAME }}"
+          echo "Author Name: ${{ env.COMMIT_AUTHOR }}"
+          echo "Commit Date: ${{ env.COMMIT_DATE }}"
+          echo "Preview URL: ${{ steps.wrangler_deploy.outputs.preview_url }}"
+          echo "Deploy Output: ${{ steps.wrangler_deploy.outputs.deploy_output }}"
