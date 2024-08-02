@@ -58,3 +58,64 @@ jobs:
           echo "Author Name: ${{ env.COMMIT_AUTHOR }}"
           echo "Commit Date: ${{ env.COMMIT_DATE }}"
           echo "Preview URL: ${{ steps.wrangler_deploy.outputs.preview_url }}"
+
+      - name: Send custom JSON data to Slack workflow
+        id: slack
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": "Test",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "New PR opened!"
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "By *${{ env.COMMIT_AUTHOR }}*\n${{github.event.pull_request.user.email}}"
+                  },
+                  "accessory": {
+                    "type": "image",
+                    "image_url": "${{github.event.pull_request.user.avatar_url}}",
+                    "alt_text": "alt text for image"
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "emoji": true
+                      },
+                      "url": "${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
+                    },
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": ":computer:  Preview URL",
+                        "emoji": true
+                      },
+                      "url": "${{ steps.wrangler_deploy.outputs.preview_url }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_KINDE_DOCS_PR_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
