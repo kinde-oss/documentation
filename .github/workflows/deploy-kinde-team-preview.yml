@@ -1,4 +1,4 @@
-name: Deploy Preview to Cloudflare Pages
+name: Deploy internal preview
 
 on:
   pull_request:
@@ -24,15 +24,6 @@ jobs:
       - name: Install wrangler
         run: npm install -g wrangler
 
-      - name: Get branch name
-        id: get-branch
-        run: |
-          if [[ $GITHUB_HEAD_REF ]]; then
-            echo "BRANCH_NAME=$GITHUB_HEAD_REF" >> $GITHUB_ENV
-          else
-            echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
-          fi
-
       - name: Get commit information
         id: commit_info
         run: |
@@ -54,12 +45,11 @@ jobs:
 
       - name: Log deployment information
         run: |
-          echo "Branch Name: ${{ env.BRANCH_NAME }}"
           echo "Author Name: ${{ env.COMMIT_AUTHOR }}"
           echo "Commit Date: ${{ env.COMMIT_DATE }}"
           echo "Preview URL: ${{ steps.wrangler_deploy.outputs.preview_url }}"
 
-      - name: Send custom JSON data to Slack workflow
+      - name: Send custom JSON data to Slack
         id: slack
         uses: slackapi/slack-github-action@v1.26.0
         with:
@@ -67,14 +57,11 @@ jobs:
             {
               "blocks": [
                 {
-                  "type": "section",
+                  "type": "header",
                   "text": {
-                    "type": "mrkdwn",
-                    "text": ":sparkle:  New pull request!"
+                    "type": "plain_text",
+                    "text": ":sparkle:  New PR  :sparkle:"
                   }
-                },
-                {
-                "type": "divider"
                 },
                 {
                   "type": "section",
@@ -89,32 +76,43 @@ jobs:
                   }
                 },
                 {
-                  "type": "divider"
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "-"
+                  }
                 },
                 {
-                  "type": "actions",
-                  "elements": [
-                    {
-                      "type": "button",
-                      "text": {
-                        "type": "plain_text",
-                        "emoji": true,
-                        "text": ":github:  View PR"
-                      },
-                      "value": "click_me_123",
-                      "url": "${{github.event.pull_request.html_url}}"
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Review this PR in Github"  
+                  },
+                  "accessory": {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "emoji": true,
+                      "text": ":github:  View PR"
                     },
-                    {
-                      "type": "button",
-                      "text": {
-                        "type": "plain_text",
-                        "emoji": true,
-                        "text": ":computer:  Preview URL"
-                      },
-                      "value": "click_me_123",
-                      "url": "${{steps.wrangler_deploy.outputs.preview_url}}"
-                    }
-                  ]
+                    "url": "${{github.event.pull_request.html_url}}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "See the preview for this branch"  
+                  },
+                  "accessory": {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "emoji": true,
+                      "text": ":computer:  Preview"
+                    },
+                    "url": "${{steps.wrangler_deploy.outputs.preview_url}}" 
+                  }
                 },
                 {
                   "type": "divider"
