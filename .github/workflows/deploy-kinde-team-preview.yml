@@ -42,7 +42,7 @@ jobs:
       - name: Deploy to Cloudflare Pages
         id: wrangler_deploy
         run: |
-          DEPLOY_OUTPUT=$(wrangler pages deploy dist --project-name=${{ secrets.CLOUDFLARE_PROJECT_NAME }} 2>&1)
+          DEPLOY_OUTPUT=$(wrangler pages deploy dist --project-name=kinde-docs-preview 2>&1)
           echo "$DEPLOY_OUTPUT"
           # Extract the preview URL directly
           PREVIEW_URL=$(echo "$DEPLOY_OUTPUT" | grep -o 'https://[^ ]\+\.pages\.dev')
@@ -70,22 +70,22 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "New PR opened!"
+                    "text": "New pull request:\n*<${{ github.event.pull_request.url}}|${{ github.event.pull_request.title}}>*"
                   }
                 },
                 {
-                  "type": "divider"
+                "type": "divider"
                 },
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "By *${{ env.COMMIT_AUTHOR }}*\n${{github.event.pull_request.user.email}}"
+                    "text": "*Changed files:*\n${{ github.event.pull_request.changed_files}}\n\n*Author:*\n${{github.event.pull_request.user.name}}\n${{github.event.pull_request.user.url}}\n`${{github.event.pull_request.author_association}}`"
                   },
                   "accessory": {
                     "type": "image",
                     "image_url": "${{github.event.pull_request.user.avatar_url}}",
-                    "alt_text": "alt text for image"
+                    "alt_text": "user github avatar"
                   }
                 },
                 {
@@ -98,20 +98,26 @@ jobs:
                       "type": "button",
                       "text": {
                         "type": "plain_text",
-                        "emoji": true
+                        "emoji": true,
+                        "text": ":github:  View PR"
                       },
-                      "url": "${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
+                      "value": "click_me_123",
+                      "url": "${{github.event.pull_request.url}}"
                     },
                     {
                       "type": "button",
                       "text": {
                         "type": "plain_text",
-                        "text": ":computer:  Preview URL",
-                        "emoji": true
+                        "emoji": true,
+                        "text": ":computer:  Preview URL"
                       },
-                      "url": "${{ steps.wrangler_deploy.outputs.preview_url }}"
+                      "value": "click_me_123",
+                      "url": "${{github.event}}"
                     }
                   ]
+                },
+                {
+                  "type": "divider"
                 }
               ]
             }
