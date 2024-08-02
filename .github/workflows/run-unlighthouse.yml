@@ -39,12 +39,12 @@ jobs:
           RAW_BEST_PRACTICES=$(jq '.summary.categories["best-practices"].score' ./.unlighthouse/ci-result.json)
           RAW_SEO=$(jq '.summary.categories.seo.score' ./.unlighthouse/ci-result.json)
 
-          # Convert to percentages
-          SCORE=$(echo "scale=2; ($RAW_SCORE) * 100" | bc)
-          PERFORMANCE=$(echo "scale=2; ($RAW_PERFORMANCE) * 100" | bc)
-          ACCESSIBILITY=$(echo "scale=2; ($RAW_ACCESSIBILITY) * 100" | bc)
-          BEST_PRACTICES=$(echo "scale=2; ($RAW_BEST_PRACTICES) * 100" | bc)
-          SEO=$(echo "scale=2; ($RAW_SEO) * 100" | bc)
+          # Convert to percentages and remove trailing zeros
+          SCORE=$(printf "%.0f" $(echo "($RAW_SCORE) * 100" | bc))
+          PERFORMANCE=$(printf "%.0f" $(echo "($RAW_PERFORMANCE) * 100" | bc))
+          ACCESSIBILITY=$(printf "%.0f" $(echo "($RAW_ACCESSIBILITY) * 100" | bc))
+          BEST_PRACTICES=$(printf "%.0f" $(echo "($RAW_BEST_PRACTICES) * 100" | bc))
+          SEO=$(printf "%.0f" $(echo "($RAW_SEO) * 100" | bc))
 
           # Print results
           echo "Overall Score: $SCORE%"
@@ -89,8 +89,7 @@ jobs:
                   "text": {
                     "type": "mrkdwn",
                     "text": "*Performance:*\n${{ env.PERFORMANCE }}\n\n*Accessibility:*\n${{env.ACCESSIBILITY}}\n\n*Best practices:*\n${{env.BEST_PRACTICES}}\n\n*SEO:*\n${{env.SEO}}"
-                  },
-                },
+                  }
                 },
                 {
                   "type": "divider"
