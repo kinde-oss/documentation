@@ -1,0 +1,68 @@
+name: Unlighthouse Build
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 22 * * 1"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.10.0"
+
+      - name: Install Unlighthouse
+        run: npm install -g unlighthouse
+
+      - name: Run Unlighthouse
+        run: unlighthouse-ci --site https://docs.kinde.com --sitemaps https://docs.kinde.com/sitemap-0.xml --build-static
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Calculate averages
+        id: calculate_averages
+        run: |
+          TOTAL_SCORE=$(jq '[.[].score] | add' ./.unlighthouse/ci-result.json)
+          TOTAL_PERFORMANCE=$(jq '[.[].performance] | add' ./.unlighthouse/ci-result.json)
+          TOTAL_ACCESSIBILITY=$(jq '[.[].accessibility] | add' ./.unlighthouse/ci-result.json)
+          TOTAL_BEST_PRACTICES=$(jq '[.[].best-practices] | add' ./.unlighthouse/ci-result.json)
+          TOTAL_SEO=$(jq '[.[].seo] | add' ./.unlighthouse/ci-result.json)
+          NUM_ITEMS=$(jq 'length' ./.unlighthouse/ci-result.json)
+
+          AVERAGE_SCORE=$(echo "scale=2; ($TOTAL_SCORE / $NUM_ITEMS) * 100" | bc)
+          AVERAGE_PERFORMANCE=$(echo "scale=2; ($TOTAL_PERFORMANCE / $NUM_ITEMS) * 100" | bc)
+          AVERAGE_ACCESSIBILITY=$(echo "scale=2; ($TOTAL_ACCESSIBILITY / $NUM_ITEMS) * 100" | bc)
+          AVERAGE_BEST_PRACTICES=$(echo "scale=2; ($TOTAL_BEST_PRACTICES / $NUM_ITEMS) * 100" | bc)
+          AVERAGE_SEO=$(echo "scale=2; ($TOTAL_SEO / $NUM_ITEMS) * 100" | bc)
+
+          echo "Average Score: $AVERAGE_SCORE%" > results.txt
+          echo "Average Performance: $AVERAGE_PERFORMANCE%" >> results.txt
+          echo "Average Accessibility: $AVERAGE_ACCESSIBILITY%" >> results.txt
+          echo "Average Best Practices: $AVERAGE_BEST_PRACTICES%" >> results.txt
+          echo "Average SEO: $AVERAGE_SEO%" >> results.txt
+
+          echo "AVERAGE_SCORE=$AVERAGE_SCORE" >> $GITHUB_ENV
+          echo "AVERAGE_PERFORMANCE=$AVERAGE_PERFORMANCE" >> $GITHUB_ENV
+          echo "AVERAGE_ACCESSIBILITY=$AVERAGE_ACCESSIBILITY" >> $GITHUB_ENV
+          echo "AVERAGE_BEST_PRACTICES=$AVERAGE_BEST_PRACTICES" >> $GITHUB_ENV
+          echo "AVERAGE_SEO=$AVERAGE_SEO" >> $GITHUB_ENV
+
+      - name: Install wrangler
+        run: npm install -g wrangler
+
+      - name: Deploy to Cloudflare Pages
+        id: wrangler_deploy
+        run: wrangler pages deploy ./.unlighthouse --project-name=kinde-docs-unlighthouse
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Print results
+        run: cat results.txt
