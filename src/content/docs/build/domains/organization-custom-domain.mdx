@@ -1,0 +1,99 @@
+---
+page_id: 309186eb-1d2a-45d0-9089-b516e65927f9
+title: Add a custom domain for an organization
+sidebar:
+  order: 3
+relatedArticles:
+  - 1dc6ae8d-b294-468c-a2ae-ceae7261decb
+  - b3081ca1-2aa1-45e3-a42f-5295aac49bc3
+---
+
+<Aside type="upgrade">
+
+This is an advanced org feature that is only available on the [Kinde Scale plan](https://kinde.com/pricing/). Charges apply for each organization that uses [advanced org features](/authenticate/custom-configurations/advanced-organization/).
+
+</Aside>
+
+When you add a custom domain to an organization, it sets the domain URL for authentication to the custom domain, instead of a Kinde domain address. For example `customdomain.com` instead of `org.business.kinde.com`.
+
+Kinde currently supports a single custom domain per organization.
+
+## Step 1: Add the custom domain to the organization
+
+1. In Kinde, go to **Organizations**.
+2. Browse or search for the organization.
+3. In the list, select the organization to open the **Details** page. 
+4. Select **Custom domain** in the menu.
+5. Select **Add custom domain** and enter the custom domain you want.
+6. Select **Save**. The DNS details are generated. Use them to add DNS records to your domain provider site.
+
+## Step 2: Add DNS records to your domain provider site
+
+Instructions will vary depending on your domain provider. Here’s the general process. 
+
+1. Sign in to your domain provider admin portal.
+2. Navigate to the page where you can add DNS records. 
+3. Use the details provided by Kinde to add CNAME DNS records.
+
+## Step 3: Monitor for verification and SSL certificate provisioning
+
+1. Open the individual organization record.
+2. Select **Custom domains**.
+3. The custom domain panel DNS records shows the current verification status. The verification process can take up to a couple of hours. When it completes, the verification statuses will change.
+    - Unverified
+    - Verification in progress
+    - Verified
+    - Verification failed
+    
+    Once record verification is complete, an SSL certificate can be provisioned. 
+    
+    If verification fails, check that your records are correct on your domain provider site and try again.
+    
+5. These are the SSL certificate provisioning statuses you might see:
+    - Unprovisioned
+    - Provisioning in progress
+    - Provisioned
+    - Provisioning failed
+    
+    Once successfully provisioned, your custom domain will then be used for this organization. 
+    
+
+## Troubleshoot custom domain issues
+
+If you encounter any errors, such as the verification taking too long, re-check the DNS records you created on your provider site, to ensure the details are correct.
+
+### Tips for the DNS set up
+
+When you create the DNS records be sure to match the format and details provided in Kinde. 
+
+For example, if your custom domain is `account.mydomain.com`, then:
+
+Host = `account`
+
+Record type = `CNAME`
+
+Value = `account.mydomain.com`
+
+TTL = Leave as default
+
+Routing policy = Leave as default
+
+### Using multi-level subdomains
+
+If you are using a multi-level subdomain, like `multi.subdomain.domain.com`, how you set up DNS records will depend on how your zones are set up. 
+
+The details provided in the admin console assumes the domain entered is adding a single level to your DNS zone, but if you are adding more than one level you’ll need to create others.
+
+So if your business is `blue.black.red.com`, you need to created a DNS entry for the custom domain `blue.back.red`, as well as an `_acme-challenge.blue.black.red` domain.
+
+## Remove a custom domain for an organization
+
+<Aside type="warning">
+
+If your users are already signing in through a custom domain, removing it can break their authentication experience.
+
+</Aside>
+
+1. Open the **Organization** record in Kinde.
+2. Select **Custom domain** in the menu.
+3. In the custom domain details area, select the three dots menu and then select **Remove custom domain**. Respond to the confirmation message.
