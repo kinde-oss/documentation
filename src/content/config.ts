@@ -5,7 +5,7 @@ export const collections = {
   docs: defineCollection({
     schema: docsSchema({
       extend: z.object({
-        page_id: z.string().uuid().optional(),
+        page_id: z.string().uuid(),
         relatedArticles: z.string().array().optional().nullable(),
         app_context: z.array(z.any()).optional(),
         social_sharing_image_url: z.string().optional()

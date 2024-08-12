@@ -53,7 +53,7 @@ export default defineConfig({
       description: "Our developer tools provide everything you need to get started with Kinde.",
       disable404Route: true,
       social: {
-        github: "https://github.com/kinde-oss/documentation" 
+        github: "https://github.com/kinde-oss" 
       },
       sidebar: sidebarConfig,
       customCss: [
@@ -92,8 +92,8 @@ export default defineConfig({
         maxHeadingLevel: 2
       },
       editLink: {
-        baseUrl: "https://github.com/kinde-oss/documentation/edit/beta",
-      },
+        baseUrl: "https://github.com/kinde-oss/documentation/edit/main",
+      }, // TODO: Make this live
       lastUpdated: false,
       titleDelimiter: "-",
       expressiveCode: expressiveCodeOptions
