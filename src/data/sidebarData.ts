@@ -1,4 +1,4 @@
-// This file has all the data for `Starlights` sidebar, but it contains some extra data
+// This file has all the data for `Starlight’s` sidebar, but it contains some extra data
 // we use to enrich and re-use somewhere else, like `icon` and `description`, used in the `Topics` component
 
 const sidebarData = [
