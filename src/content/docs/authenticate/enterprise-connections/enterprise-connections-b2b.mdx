@@ -1,0 +1,62 @@
+---
+page_id: 4a1dbecf-91b4-4328-8f78-fd66240eecb4
+title: Enterprise connections for B2B
+sidebar:
+  order: 3
+relatedArticles:
+  - 98f6868a-7871-4ece-ba9c-2a7b21d1b322
+  - e100d77b-530b-4327-8216-93c955657e0c
+  - cc242fb3-4b06-4842-97c8-dd58e87308df
+---
+
+<Aside type=”upgrade”>
+
+You need to be on a [Scale plan](https://kinde.com/pricing/) to get authentication control at the organization level.
+
+</Aside>
+
+Enterprise connections are common for B2B setups where each business customer is represented as an organization in Kinde, and that organization is linked to one or more connections. 
+
+There are a number of ways to manage auth at the organization level. This topic discusses access control for organizations with enterprise connections.
+
+</aside>
+
+## Restrict org access via connections
+
+When you [set custom authentication for an organization](/authenticate/manage-authentication/organization-auth-experience/), you can restrict access via specific enterprise connections.
+
+1. Open the relevant organization in Kinde and select **Authentication** in the menu. 
+2. Deselect all auth methods except the enterprise connection you want.
+3. Select **Save**.
+
+Here’s what happens:
+
+- When the `org_code` is passed to Kinde as part of the authentication url, the correct sign-in option is shown.
+- Users can only self-join the organization if they sign up via the enabled authentication connection.
+- Organization access is locked down to allow access based only on connection  - including switches between organizations.
+- If you are using home realm discovery, connections do not have to be enabled at the application level to support redirects to the correct IDP.
+
+This behaviour is domain-agnostic and is purely concerned with the connection being used.
+
+## Org provisioning and access via allowed domains
+
+To manage organization access, you can [set policies](/build/organizations/organization-access-policies/) that restrict access to a list of allowed domains. You can also enable just-in-time (JIT) provisioning via allowed domains.
+
+1. Open the relevant organization in Kinde and select **Policies** in the menu. 
+2. Select **Allow org members to be auto-added**. 
+3. Enter all the allowed domains in the **Allowed domains** list.
+4. Enable JIT provisioning for all new organization members by selecting **Auto-add users from allowed domains**. 
+5. Select **Save**.
+
+Here’s what happens:
+
+- When the `org_code` is passed to Kinde as part of the authentication url, the correct sign-in option is shown.
+- Kinde checks that users belong to one of the allowed domains before authorizing access.
+- The user joins the organization if the domain matches any of the allowed domains.
+- Because this check only happens during sign up, you can still separately add users with email domains which fall outside of this restriction. This can be useful if you wish to add contractors or auditors who may have email addresses not in the domain allowlist.
+
+<Aside>
+
+If both connection and domain restrictions are in place, both checks must be successful.
+
+</Aside>
