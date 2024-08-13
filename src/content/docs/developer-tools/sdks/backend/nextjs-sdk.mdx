@@ -1,6 +1,6 @@
 ---
 page_id: 7d311fcf-ca33-49ec-9286-419da4a91f41
-title: NextJS App Router SDK
+title: Next.js App Router SDK
 sidebar:
   order: 10
 relatedArticles:
@@ -12,16 +12,21 @@ head:
       content: "https://kinde.com/assets/images/open-graph/DOCS-SSI-SDK_NEXT.png"
 ---
 
-This SDK is for NextJS version 13+ and uses Server Side Components and App Router.
+This SDK is for Next.js version 13+ and uses Server Side Components and App Router.
 
 New to Kinde? [Get started here](/get-started/guides/first-things-first/)
 
-> 💡 If you’re using version 1 see [Next.js App Router V1](/developer-tools/sdks/backend/nextjs-sdkv1/)  
-> If you’re using the pages router see [NextJS Pages Router](/developer-tools/sdks/backend/nextjs-prev-sdk/)
+<Aside>
+
+If you’re using version 1 see [Next.js App Router V1](/developer-tools/sdks/backend/nextjs-sdkv1/)
+
+If you’re using the pages router see [Next.js Pages Router](/developer-tools/sdks/backend/nextjs-prev-sdk/)
+
+</Aside>
 
 ## Install for a new project
 
-The easiest way to get started is to use the [NextJS starter kit](https://github.com/kinde-starter-kits/kinde-nextjs-app-router-starter-kit), and [watch a demo video](https://www.youtube.com/watch?v=oq3o00E6Xys).
+The easiest way to get started is to use the [Next.js starter kit](https://github.com/kinde-starter-kits/kinde-nextjs-app-router-starter-kit), and [watch a demo video](https://www.youtube.com/watch?v=oq3o00E6Xys).
 
 ## **Install for an existing project**
 
@@ -132,243 +137,1082 @@ import {LogoutLink} from "@kinde-oss/kinde-auth-nextjs/components";
 <LogoutLink>Log out</LogoutLink>
 ```
 
-## Kinde Auth data
-
-### Server components - `getKindeServerSession`
+## Kinde Auth data - Server
 
 You can get an authorized user’s Kinde Auth data from any server component using the `getKindeServerSession` helper.
 
-Example:
+| Method                                          | Description                                           |
+| ----------------------------------------------- | ----------------------------------------------------- |
+| [`isAuthenticated`](#isauthenticated)           | Check if the user is authenticated                    |
+| [`getUser`](#getuser)                           | Get the current user's details                        |
+| [`getOrganization`](#getorganization)           | Get the current user's organization                   |
+| [`getUserOrganizations`](#getuserorganizations) | Get all the organizations the current user belongs to |
+| [`getPermission`](#getpermission)               | Check if the current user has a permission            |
+| [`getPermissions`](#getpermissions)             | Get the current user's permissions                    |
+| [`getFlag`](#getflag)                           | Get a feature flag                                    |
+| [`getBooleanFlag`](#getbooleanflag)             | Get a boolean feature flag                            |
+| [`getIntegerFlag`](#getintegerflag)             | Get an integer feature flag                           |
+| [`getStringFlag`](#getstringflag)               | Get a string feature flag                             |
+| [`refreshTokens`](#refreshtokens)               | Refresh tokens to get up-to-date Kinde data           |
+| [`getAccessToken`](#getaccesstoken)             | Get the decoded access token                          |
+| [`getAccessTokenRaw`](#getaccesstokenraw)       | Get the access token                                  |
+| [`getIdToken`](#getidtoken)                     | Get the decoded ID token                              |
+| [`getIdTokenRaw`](#getidtokenraw)               | Get the ID token                                      |
+| [`getClaim`](#getclaim)                         | Get a claim from either token                         |
+
+### `isAuthenticated`
+
+Check if the user is authenticated.
+
+#### Example
 
 ```jsx
 import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
-import Link from "next/link";
 
-export default async function Home() {
-  const {
-    getAccessToken,
-    getBooleanFlag,
-    getFlag,
-    getIdToken,
-    getIntegerFlag,
-    getOrganization,
-    getPermission,
-    getPermissions,
-    getRoles,
-    getStringFlag,
-    getUser,
-    getUserOrganizations,
-    isAuthenticated
-  } = getKindeServerSession();
-
-  console.log(await getAccessToken());
-  console.log(await getBooleanFlag("bflag", false));
-  console.log(await getFlag("flag", "x", "s"));
-  console.log(await getIntegerFlag("iflag", 99));
-  console.log(await getOrganization());
-  console.log(await getPermission("eat:chips"));
-  console.log(await getPermissions());
-  console.log(await getStringFlag("sflag", "test"));
-  console.log(await getUser());
-  console.log(await getUserOrganizations());
-  console.log(await isAuthenticated());
-  return (
-    <div className="container">
-      <div className="card hero">
-        <p className="text-display-1 hero-title">
-          Let’s start authenticating <br /> with KindeAuth
-        </p>
-        <p className="text-body-1 hero-tagline">Configure your app</p>
-
-        <Link
-          href="https://kinde.com/docs/sdks/nextjs-sdk"
-          target="_blank"
-          rel="noreferrer"
-          className="btn btn-light btn-big"
-        >
-          Go to docs
-        </Link>
-      </div>
-    </div>
-  );
-}
+const {isAuthenticated} = getKindeServerSession();
+const isUserAuthenticated = await isAuthenticated();
 ```
 
-Reference:
+#### Returns
 
 ```typescript
+true;
+```
+
+### `getUser`
+
+Get the logged in user's details.
+
+#### Example
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+
+const {getUser} = getKindeServerSession();
+const user = await getUser();
+
+console.log(user);
+```
+
+#### Returns
+
+```json
 {
-  getAccessToken: () => Promise<string>;
-  getBooleanFlag: (code: string, defaultValue: boolean) => Promise<boolean>;
-  getFlag: (code: string, defaultValue: any, flagType: any) =>
-    Promise<
-      | import("@kinde-oss/kinde-typescript-sdk").GetFlagType
-      | {
-          value: any;
-        }
-    >;
-  getIntegerFlag: (code: string, defaultValue: number) => Promise<number>;
-  getOrganization: () =>
-    Promise<{
-      orgCode: string;
-    }>;
-  getPermission: (name: any) =>
-    Promise<{
-      orgCode: string;
-      isGranted: boolean;
-    }>;
-  getPermissions: () =>
-    Promise<{
-      permissions: string[];
-      orgCode: string;
-    }>;
-  getRoles: () =>
-    Promise<
-      {
-        id: string;
-        key: string;
-        name: string;
-      }[]
-    >;
-  getStringFlag: (code: string, defaultValue: string) => Promise<string>;
-  getUser: () => Promise<any>;
-  getUserOrganizations: () =>
-    Promise<{
-      orgCodes: string[];
-    }>;
-  isAuthenticated: () => Promise<boolean>;
+  "id": "kp_123",
+  "email": "example@email.com",
+  "family_name": "Example",
+  "given_name": "User",
+  "picture": null,
+  "username": "ExampleUsername",
+  "phone_number": "1234567890",
+  "properties": {
+    "usr_city": "",
+    "usr_industry": "",
+    "usr_job_title": "",
+    "usr_middle_name": "",
+    "usr_postcode": "",
+    "usr_salutation": "",
+    "usr_state_region": "",
+    "usr_street_address": "",
+    "usr_street_address_2": ""
+  }
 }
 ```
 
-### Client components - `useKindeBrowserClient`
+### `getOrganization`
+
+Get the current user’s organization
+
+#### Example
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+
+const {getOrganization} = getKindeServerSession();
+const org = await getOrganization();
+
+console.log(org);
+```
+
+#### Returns
+
+```json
+{
+  "orgCode": "org_123",
+  "orgName": "Deafault Org",
+  "properties": {
+    "org_city": "",
+    "org_country": "",
+    "org_industry": "",
+    "org_postcode": "",
+    "org_state_region": "",
+    "org_street_address": "",
+    "org_street_address_2": ""
+  }
+}
+```
+
+### `getUserOrganizations`
+
+Get all the organizations the current user belongs to
+
+#### Example
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+
+const {getUserOrganizations} = getKindeServerSession();
+const userOrgs = await getUserOrganizations();
+
+console.log(userOrgs);
+```
+
+#### Returns
+
+```json
+{
+  "orgCodes": ["org_123", "org_456"],
+  "orgs": [
+    {
+      "code": "org_123",
+      "name": "Deafault Org"
+    },
+    {
+      "code": "org_456",
+      "name": "Another Org"
+    }
+  ]
+}
+```
+
+### `getPermission`
+
+Check if the current user has a permission.
+
+| Parameter | Type     | Description                  |
+| --------- | -------- | ---------------------------- |
+| code      | `string` | The permission code to check |
+
+#### Example
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+
+const {getPermission} = getKindeServerSession();
+const canEatTacos = await getPermission("eat:tacos");
+
+console.log(canEatTacos);
+```
+
+#### Returns
+
+```json
+{
+  "isGranted": true,
+  "orgCode": "org_123"
+}
+```
+
+### `getPermissions`
+
+Get the current user’s permissions.
+
+#### Example
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+
+const {getPermissions} = getKindeServerSession();
+const permissions = await getPermissions();
+
+console.log(permissions);
+```
+
+#### Returns
+
+```json
+{
+  "permissions": ["eat:tacos", "read:books"],
+  "orgCode": "org_123"
+}
+```
+
+### `getFlag`
+
+Get a feature flag
+
+| Parameter    | Type                              | Description                                        |
+| ------------ | --------------------------------- | -------------------------------------------------- |
+| code         | `string`                          | The flag code to check                             |
+| defaultValue | `boolean` \| `string` \| `number` | The default value to return if the flag is not set |
+| type         | `enum` (`b` \| `s` \| `i`)        | The type of the flag                               |
+
+#### Example
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+
+const {getFlag} = getKindeServerSession();
+const billingFlag = await getFlag("billing", false, "b");
+
+console.log(billingFlag);
+```
+
+#### Returns
+
+```json
+{
+  "code": "billing",
+  "type": "boolean",
+  "value": true,
+  "defaultValue": false,
+  "is_default": false
+}
+```
+
+### `getBooleanFlag`
+
+Get a boolean feature flag
+
+| Parameter    | Type      | Description                                        |
+| ------------ | --------- | -------------------------------------------------- |
+| code         | `string`  | The flag code to check                             |
+| defaultValue | `boolean` | The default value to return if the flag is not set |
+
+#### Example
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+
+const {getBooleanFlag} = getKindeServerSession();
+const billingFlag = await getBooleanFlag("billing", false);
+
+console.log(billingFlag);
+```
+
+#### Returns
+
+```json
+true;
+```
+
+### `getIntegerFlag`
+
+Get a boolean feature flag
+
+| Parameter    | Type      | Description                                        |
+| ------------ | --------- | -------------------------------------------------- |
+| code         | `string`  | The flag code to check                             |
+| defaultValue | `boolean` | The default value to return if the flag is not set |
+
+#### Example
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+
+const {getIntegerFlag} = getKindeServerSession();
+const billingVersion = await getIntegerFlag("billingVersion", 0);
+
+console.log(billingVersion);
+```
+
+#### Returns
+
+```json
+2
+```
+
+### `getStringFlag`
+
+Get a string feature flag
+
+| Parameter    | Type     | Description                                        |
+| ------------ | -------- | -------------------------------------------------- |
+| code         | `string` | The flag code to check                             |
+| defaultValue | `string` | The default value to return if the flag is not set |
+
+#### Example
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+
+const {getStringFlag} = getKindeServerSession();
+const theme = await getStringFlag("theme", "system");
+
+console.log(theme);
+```
+
+#### Returns
+
+```json
+"light"
+```
+
+### `refreshTokens`
+
+Refresh tokens to get up-to-date Kinde data
+
+#### Example
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+import {someUpdateFunction} from "@/app/actions";
+
+const {refreshTokens} = getKindeSeverSession();
+await someUpdateFunction({
+  param_1: "value_1",
+  param_2: "value_2"
+});
+await refreshTokens();
+```
+
+### `getAccessToken`
+
+Get the decoded access token
+
+#### Example
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+
+const {getAccessToken} = getKindeServerSession();
+const accessToken = await getAccessToken();
+
+console.log(accessToken);
+```
+
+#### Returns
+
+```json
+{
+  "aud": ["your-api"],
+  "azp": 1234567890,
+  "email": "example@email.com",
+  "exp": 1234567890,
+  "feature_flags": {
+    "isonboardingcomplete": {
+      "t": "b",
+      "v": false
+    }
+  },
+  "iat": 1234567890,
+  "iss": "https://your-kinde-subdomain.kinde.com",
+  "jti": "7802e2d2-asdf-431e-bc72-5ed95asdf475d",
+  "org_code": "org_123",
+  "org_name": "Default Org",
+  "organization_properties": {
+    "kp_org_city": {}
+  },
+  "permissions": ["create:template"],
+  "roles": [
+    {
+      "id": "018ee9aa-f92b-83fc-1d40-1234567890",
+      "key": "admin",
+      "name": "Admin"
+    }
+  ],
+  "scp": ["openid", "profile", "email", "offline"],
+  "sub": "kp_6123456789009876",
+  "user_properties": {
+    "kp_usr_city": {}
+  }
+}
+```
+
+### `getAccessTokenRaw`
+
+Get the access token
+
+#### Example
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+
+const {getAccessTokenRaw} = getKindeSeverSesion();
+const accessToken = await getAccessTokenRaw();
+
+console.log(accessToken);
+```
+
+#### Returns
+
+```json
+eyJhxxx.eyJhdxxx.A4djjxxx
+```
+
+### `getIdToken`
+
+Get the decoded ID token
+
+#### Example
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+
+const {getIdToken} = getKindeSeverSesion();
+const idToken = await getIdToken();
+
+console.log(idToken);
+```
+
+#### Returns
+
+```json
+{
+  "at_hash": "ZY6jx1SGjzgkHGJ_2Jabcd",
+  "aud": ["feb8e697b967466eacb96d26c5ca0e12"],
+  "auth_time": 1234567890,
+  "azp": "feb8e099xxx",
+  "email": "example@email.com",
+  "email_verified": true,
+  "exp": 123456789,
+  "ext_provider": {
+    "claims": {
+      "connection_id": "bcc486xxx",
+      "email": "example@email.com",
+      "family_name": "User",
+      "given_name": "Example",
+      "is_confirmed": true,
+      "picture": "https://lh3.googleusercontent.com/a/ACgxxx",
+      "profile": {
+        "email": "example@email.com",
+        "family_name": "User",
+        "given_name": "Example",
+        "id": "1234567890",
+        "name": "Example user",
+        "picture": "https://lh3.googleusercontent.com/a/ACgxxx",
+        "verified_email": true
+      }
+    },
+    "connection_id": "bccxxx",
+    "name": "Google"
+  },
+  "family_name": "User",
+  "given_name": "Example",
+  "iat": 1234567890,
+  "iss": "https://your-kinde-subdomain.kinde.com",
+  "jti": "e7e18303-0ea5-402d-932c-xxx",
+  "name": "Example user",
+  "org_codes": ["org_123"],
+  "organizations": [
+    {
+      "id": "org_123",
+      "name": "Default Organization"
+    }
+  ],
+  "picture": "https://lh3.googleusercontent.com/a/ACgxxx",
+  "rat": 1234567890,
+  "sub": "kp_1234567890",
+  "updated_at": 1234567890,
+  "user_properties": {
+    "kp_usr_city": {}
+  }
+}
+```
+
+### `getIdTokenRaw`
+
+Get the ID token
+
+#### Example
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+
+const {getIdTokenRaw} = getKindeSeverSesion();
+const idToken = await getIdTokenRaw();
+
+console.log(idToken);
+```
+
+#### Returns
+
+```json
+eyJhxxx.eyJhdxxx.A4djjxxx
+```
+
+### `getClaim`
+
+Get a claim from either token
+
+| Parameter | Type                                  | Description                     |
+| --------- | ------------------------------------- | ------------------------------- |
+| claim     | `string`                              | The claim key                   |
+| type      | `enum` (`access_token` \| `id_token`) | The token to get the claim from |
+
+#### Example
+
+```jsx
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
+
+const {getClaim} = getKindeSeverSesion();
+const username = await getClaim("preferred_username", "id_token");
+
+console.log(idToken);
+```
+
+#### Returns
+
+```json
+"exampleUsername"
+```
+
+## Kinde Auth data - Client
 
 You can get an authorized user’s Kinde Auth data from any client component using the `useKindeBrowser` helper.
 
-Example:
+| Variable / Method                                                                                                                    | Description                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| [`isAuthenticated`](#isauthenticated-1)                                                                                              | Get a feature flag                                    |
+| [`user`](#user--getuser) / [`getUser`](#user--getuser)                                                                               | The current in user's details                         |
+| [`organization`](#organization--getorganization) / [`getOrganization`](#organization--getorganization)                               | The current user’s organization                       |
+| [`userOrganizations`](#userorganizations--getuserorganizations) / [`getUserOrganizations`](#userorganizations--getuserorganizations) | All the organizations the current user belongs to     |
+| [`getPermission`](#getpermission-1)                                                                                                  | Check if the current user has a permission            |
+| [`permissions`](#permissions--getpermissions) / [`getPermissions`](#permissions--getpermissions)                                     | The current user’s permissions                        |
+| [`getFlag`](#getflag-1)                                                                                                              | Get the access token                                  |
+| [`getBooleanFlag`](#getbooleanflag-1)                                                                                                | Get the access token                                  |
+| [`getIntegerFlag`](#getintegerflag-1)                                                                                                | Get the access token                                  |
+| [`getStringFlag`](#getstringflag-1)                                                                                                  | Get the access token                                  |
+| [`refreshData`](#refreshdata)                                                                                                        | Refresh tokens to get up-to-date Kinde data           |
+| [`accessToken`](#accesstoken--getaccesstoken) / [`getAccessToken`](#accesstoken--getaccesstoken)                                     | Check if the user is authenticated                    |
+| [`accessTokenRaw`](#accesstokenraw--getaccesstokenraw) / [`getAccessTokenRaw`](#accesstokenraw--getaccesstokenraw)                   | Get the current user's details                        |
+| [`idToken`](#idtoken--getidtoken) / [`getIdToken`](#idtoken--getidtoken)                                                             | Get all the organizations the current user belongs to |
+| [`idTokenRaw`](#idtokenraw--getidtokenraw) / [`getIdTokenRaw`](#idtokenraw--getidtokenraw)                                           | Check if the current user has a permission            |
+| [`isLoading`](#isloading)                                                                                                            | Is Kinde data loading                                 |
+| [`error`](#error)                                                                                                                    | Error message if there is an error                    |
+
+**Tip**: Use `isLoading` to ensure the data is up to date. You can return a loading spinner or something similar if you want.
+
+### `isAuthenticated`
+
+Check if the user is authenticated.
+
+#### Example
+
+```jsx
+"use client";
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+
+const {isAuthenticated} = useKindeBrowserClient();
+console.log(isAuthenticated);
+```
+
+#### Returns
+
+```typescript
+true;
+```
+
+### `user` / `getUser`
+
+Get the logged in user's details.
+
+#### Example
 
 ```jsx
 "use client";
 
 import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
-import {LoginLink} from "@kinde-oss/kinde-auth-nextjs/components";
 
-export default function ClientPage() {
-  const {
-    permissions,
-    isLoading,
-    user,
-    accessToken,
-    organization,
-    userOrganizations,
-    getPermission,
-    getBooleanFlag,
-    getIntegerFlag,
-    getFlag,
-    getStringFlag,
-    getClaim,
-    getAccessToken,
-    getToken,
-    getIdToken,
-    getOrganization,
-    getPermissions,
-    getUserOrganizations
-  } = useKindeBrowserClient();
+const {user, getUser} = useKindeBrowserClient();
+const alsoUser = getUser();
 
-  console.log(getPermission("eat:chips"));
-  console.log(getBooleanFlag("flag", false));
-  console.log(getIntegerFlag("eat:chips", 1));
-  console.log(getStringFlag("eat:chips", "ds"));
-  console.log(getFlag("eat:chips", false, "b"));
+console.log(user);
+```
 
-  console.log("accessToken", accessToken);
-  console.log(getClaim("aud"));
-  if (isLoading) return <div>Loading...</div>;
+#### Returns
 
-  return (
-    <div className="pt-20">
-      {getPermission("eat:chips").isGranted && <h2>YOU CAN EAT CHIPS</h2>}
-      <LoginLink postLoginRedirectURL="/dashboard">Login</LoginLink>
-      <div className="mb-8">
-        <h4 className="text-2xl font-bold dark:text-white mb-2">User</h4>
-
-        <pre className="p-4 rounded bg-slate-950 text-green-300">
-          {JSON.stringify(user, null, 2)}
-        </pre>
-      </div>
-
-      <div className="mb-8">
-        <h4 className="text-2xl font-bold dark:text-white mb-2">Permissions</h4>
-
-        <pre className="p-4 rounded bg-slate-950 text-green-300">
-          {JSON.stringify(permissions, null, 2)}
-        </pre>
-      </div>
-
-      <div className="mb-8">
-        <h4 className="text-2xl font-bold dark:text-white mb-2">Organization</h4>
-
-        <pre className="p-4 rounded bg-slate-950 text-green-300">
-          {JSON.stringify(organization, null, 2)}
-        </pre>
-      </div>
-
-      <div className="mb-8">
-        <h4 className="text-2xl font-bold dark:text-white mb-2">User organizations</h4>
-
-        <pre className="p-4 rounded bg-slate-950 text-green-300">
-          {JSON.stringify(userOrganizations, null, 2)}
-        </pre>
-      </div>
-
-      <div className="mb-8">
-        <h4 className="text-2xl font-bold dark:text-white mb-2">Access token</h4>
-
-        <pre className="p-4 rounded bg-slate-950 text-green-300">
-          {JSON.stringify(accessToken, null, 2)}
-        </pre>
-      </div>
-    </div>
-  );
+```json
+{
+  "id": "kp_123",
+  "email": "example@email.com",
+  "family_name": "Example",
+  "given_name": "User",
+  "picture": null,
+  "username": "ExampleUsername",
+  "phone_number": "1234567890",
+  "properties": {
+    "usr_city": "",
+    "usr_industry": "",
+    "usr_job_title": "",
+    "usr_middle_name": "",
+    "usr_postcode": "",
+    "usr_salutation": "",
+    "usr_state_region": "",
+    "usr_street_address": "",
+    "usr_street_address_2": ""
+  }
 }
 ```
 
-Reference:
+### `organization` / `getOrganization`
 
-```typescript
-export type State = {
-  /**
-   * - Kinde access token
-   */
-  accessToken: string | null;
-  error?: string | null;
-  isAuthenticated: boolean | null;
-  isLoading: boolean | null;
-  /**
-   * - The organization that the current user is logged in to
-   */
-  organization: string | null;
-  /**
-   * - The current user's permissions
-   */
-  permissions: string[] | null;
-  /**
-   * - Kinde user
-   */
-  user: KindeUser | null;
-  /**
-   * - Organizations that the current user belongs to
-   */
-  userOrganizations: string[] | null;
-  getBooleanFlag: getBooleanFlag;
-  getClaim: getClaim;
-  getFlag: getFlag;
-  getIntegerFlag: getIntegerFlag;
-  getPermission: getPermission;
-  getStringFlag: getStringFlag;
-};
+Get the current user’s organization
+
+#### Example
+
+```jsx
+"use client";
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+
+const {organization, getOrganization} = useKindeBrowserClient();
+const org = getOrganization();
+
+console.log(organization, org);
 ```
 
-**Tip**: Use `isLoading` to ensure the data is up to date. You can return a loading spinner or something similar if you want.
+#### Returns
+
+```json
+{
+  "orgCode": "org_123",
+  "orgName": "Deafault Org",
+  "properties": {
+    "org_city": "",
+    "org_country": "",
+    "org_industry": "",
+    "org_postcode": "",
+    "org_state_region": "",
+    "org_street_address": "",
+    "org_street_address_2": ""
+  }
+}
+```
+
+### `userOrganizations` / `getUserOrganizations`
+
+Get all the organizations the current user belongs to
+
+#### Example
+
+```jsx
+"use client";
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+
+const {userOrganizations, getUserOrganizations} = useKindeBrowserClient();
+const userOrgs = getUserOrganizations();
+
+console.log(userOrganizations, userOrgs);
+```
+
+#### Returns
+
+```json
+{
+  "orgCodes": ["org_123", "org_456"],
+  "orgs": [
+    {
+      "code": "org_123",
+      "name": "Deafault Org"
+    },
+    {
+      "code": "org_456",
+      "name": "Another Org"
+    }
+  ]
+}
+```
+
+### `getPermission`
+
+Check if the current user has a permission.
+
+| Parameter | Type     | Description                  |
+| --------- | -------- | ---------------------------- |
+| code      | `string` | The permission code to check |
+
+#### Example
+
+```jsx
+"use client";
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+
+const {getPermission} = useKindeBrowserClient();
+const canEatTacos = getPermission("eat:tacos");
+
+console.log(canEatTacos);
+```
+
+#### Returns
+
+```json
+{
+  "isGranted": true,
+  "orgCode": "org_123"
+}
+```
+
+### `permissions` / `getPermissions`
+
+Get the current user’s permissions.
+
+#### Example
+
+```jsx
+"use client";
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+
+const {permissions, getPermissions} = useKindeBrowserClient();
+const perms = getPermissions();
+
+console.log(permissions, permis);
+```
+
+#### Returns
+
+```json
+{
+  "permissions": ["eat:tacos", "read:books"],
+  "orgCode": "org_123"
+}
+```
+
+### `getFlag`
+
+Get a feature flag
+
+| Parameter    | Type                              | Description                                        |
+| ------------ | --------------------------------- | -------------------------------------------------- |
+| code         | `string`                          | The flag code to check                             |
+| defaultValue | `boolean` \| `string` \| `number` | The default value to return if the flag is not set |
+| type         | `enum` (`b` \| `s` \| `i`)        | The type of the flag                               |
+
+#### Example
+
+```jsx
+"use client";
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+
+const {getFlag} = useKindeBrowserClient();
+const billingFlag = getFlag("billing", false, "b");
+
+console.log(billingFlag);
+```
+
+#### Returns
+
+```json
+{
+  "code": "billing",
+  "type": "boolean",
+  "value": true,
+  "defaultValue": false,
+  "is_default": false
+}
+```
+
+### `getBooleanFlag`
+
+Get a boolean feature flag
+
+| Parameter    | Type      | Description                                        |
+| ------------ | --------- | -------------------------------------------------- |
+| code         | `string`  | The flag code to check                             |
+| defaultValue | `boolean` | The default value to return if the flag is not set |
+
+#### Example
+
+```jsx
+"use client";
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+
+const {getBooleanFlag} = useKindeBrowserClient();
+const billingFlag = getBooleanFlag("billing", false);
+
+console.log(billingFlag);
+```
+
+#### Returns
+
+```json
+true;
+```
+
+### `getIntegerFlag`
+
+Get a boolean feature flag
+
+| Parameter    | Type      | Description                                        |
+| ------------ | --------- | -------------------------------------------------- |
+| code         | `string`  | The flag code to check                             |
+| defaultValue | `boolean` | The default value to return if the flag is not set |
+
+#### Example
+
+```jsx
+"use client";
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+
+const {getIntegerFlag} = useKindeBrowserClient();
+const billingVersion = getIntegerFlag("billingVersion", 0);
+
+console.log(billingVersion);
+```
+
+#### Returns
+
+```json
+2
+```
+
+### `getStringFlag`
+
+Get a string feature flag
+
+| Parameter    | Type     | Description                                        |
+| ------------ | -------- | -------------------------------------------------- |
+| code         | `string` | The flag code to check                             |
+| defaultValue | `string` | The default value to return if the flag is not set |
+
+#### Example
+
+```jsx
+"use client";
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+
+const {getStringFlag} = useKindeBrowserClient();
+const theme = getStringFlag("theme", "system");
+
+console.log(theme);
+```
+
+#### Returns
+
+```json
+"light"
+```
+
+### `refreshData`
+
+Refresh tokens to get up-to-date Kinde data
+
+#### Example
+
+```jsx
+"use client";
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+import {someUpdateFunction} from "@/app/actions";
+
+const {refreshData} = useKindeBrowserClient();
+
+await someUpdateFunction({
+  param_1: "value_1",
+  param_2: "value_2"
+});
+await refreshData();
+```
+
+### `accessToken` / `getAccessToken`
+
+Get the decoded access token
+
+#### Example
+
+```jsx
+"use client";
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+
+const {accessToken, getAccessToken} = useKindeBrowserClient();
+const aTok = getAccessToken();
+
+console.log(accessToken, aTok);
+```
+
+#### Returns
+
+```json
+{
+  "aud": ["your-api"],
+  "azp": 1234567890,
+  "email": "example@email.com",
+  "exp": 1234567890,
+  "feature_flags": {
+    "isonboardingcomplete": {
+      "t": "b",
+      "v": false
+    }
+  },
+  "iat": 1234567890,
+  "iss": "https://your-kinde-subdomain.kinde.com",
+  "jti": "7802e2d2-asdf-431e-bc72-5ed95asdf475d",
+  "org_code": "org_123",
+  "org_name": "Default Org",
+  "organization_properties": {
+    "kp_org_city": {}
+  },
+  "permissions": ["create:template"],
+  "roles": [
+    {
+      "id": "018ee9aa-f92b-83fc-1d40-1234567890",
+      "key": "admin",
+      "name": "Admin"
+    }
+  ],
+  "scp": ["openid", "profile", "email", "offline"],
+  "sub": "kp_6123456789009876",
+  "user_properties": {
+    "kp_usr_city": {}
+  }
+}
+```
+
+### `accessTokenRaw` / `getAccessTokenRaw`
+
+Get the access token
+
+#### Example
+
+```jsx
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+
+const {accessTokenRaw, getAccessTokenRaw} = useKindeBrowserClient();
+const aTokRaw = getAccessTokenRaw();
+
+console.log(accessTokenRaw, aTokRaw);
+```
+
+#### Returns
+
+```json
+eyJhxxx.eyJhdxxx.A4djjxxx
+```
+
+### `idToken` / `getIdToken`
+
+Get the decoded ID token
+
+#### Example
+
+```jsx
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+
+const {idToken, getIdToken} = useKindeBrowserClient();
+const idTok = getIdToken();
+
+console.log(idToken, idTok);
+```
+
+#### Returns
+
+```json
+{
+  "at_hash": "ZY6jx1SGjzgkHGJ_2Jabcd",
+  "aud": ["feb8e697b967466eacb96d26c5ca0e12"],
+  "auth_time": 1234567890,
+  "azp": "feb8e099xxx",
+  "email": "example@email.com",
+  "email_verified": true,
+  "exp": 123456789,
+  "ext_provider": {
+    "claims": {
+      "connection_id": "bcc486xxx",
+      "email": "example@email.com",
+      "family_name": "User",
+      "given_name": "Example",
+      "is_confirmed": true,
+      "picture": "https://lh3.googleusercontent.com/a/ACgxxx",
+      "profile": {
+        "email": "example@email.com",
+        "family_name": "User",
+        "given_name": "Example",
+        "id": "1234567890",
+        "name": "Example user",
+        "picture": "https://lh3.googleusercontent.com/a/ACgxxx",
+        "verified_email": true
+      }
+    },
+    "connection_id": "bccxxx",
+    "name": "Google"
+  },
+  "family_name": "User",
+  "given_name": "Example",
+  "iat": 1234567890,
+  "iss": "https://your-kinde-subdomain.kinde.com",
+  "jti": "e7e18303-0ea5-402d-932c-xxx",
+  "name": "Example user",
+  "org_codes": ["org_123"],
+  "organizations": [
+    {
+      "id": "org_123",
+      "name": "Default Organization"
+    }
+  ],
+  "picture": "https://lh3.googleusercontent.com/a/ACgxxx",
+  "rat": 1234567890,
+  "sub": "kp_1234567890",
+  "updated_at": 1234567890,
+  "user_properties": {
+    "kp_usr_city": {}
+  }
+}
+```
+
+### `idTokenRaw` / `getIdTokenRaw`
+
+Get the ID token
+
+#### Example
+
+```jsx
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+
+const {idTokenRaw, getIdTokenRaw} = useKindeBrowserClient();
+const idTokRaw = getIdTokenRaw();
+
+console.log(idTokenRaw, idTokRaw);
+```
+
+#### Returns
+
+```json
+eyJhxxx.eyJhdxxx.A4djjxxx
+```
+
+### `isLoading`
+
+Is Kinde data loading
+
+#### Example
+
+```jsx
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+
+const {user, isLoading} = useKindeBrowserClient();
+
+if (isLoading) return <div>Loading...</div>;
+
+return <div>Hello {user.given_name}</div>;
+```
+
+#### Returns
+
+```json
+true
+```
+
+### `error`
+
+Error message if there is an error
+
+#### Example
+
+```jsx
+import {useKindeBrowserClient} from "@kinde-oss/kinde-auth-nextjs";
+
+const {user, isLoading, error} = useKindeBrowserClient();
+
+if (isLoading) return <div>Loading...</div>;
+
+if (error) return <div>There was an error</div>;
+
+return <div>Hello {user.given_name}</div>;
+```
+
+#### Returns
+
+```json
+true
+```
 
 ## Protecting routes
 
@@ -459,7 +1303,11 @@ if (!(await isAuthenticated())) {
 
 You can also protect routes with Next.js middleware.
 
-> 💡 As of right now the middleware in the app router does not work when trying to redirect to `api/auth/login`. This is because of Next.js caching which causes issues during authentication.
+<Aside>
+
+As of right now the middleware in the app router does not work when trying to redirect to `api/auth/login`. This is because of Next.js caching which causes issues during authentication.
+
+</Aside>
 
 **Default page protection**
 
@@ -684,7 +1532,7 @@ If the URL you want to start the authentication flow from and the URL you want t
 
 ## Working with preview URLs
 
-Our Kinde NextJS SDK currently requires that these environment variables `KINDE_SITE_URL`, `KINDE_POST_LOGOUT_REDIRECT_URL`, and `KINDE_POST_LOGIN_REDIRECT_URL` are defined, and that the **callback URLs** and **logout redirect URLs** are added to your app in Kinde.
+Our Kinde Next.js SDK currently requires that these environment variables `KINDE_SITE_URL`, `KINDE_POST_LOGOUT_REDIRECT_URL`, and `KINDE_POST_LOGIN_REDIRECT_URL` are defined, and that the **callback URLs** and **logout redirect URLs** are added to your app in Kinde.
 
 To add Vercel’s dynamically generated URLs you can either securely use our API to add them on the fly or you can use [wildcard URLs](/get-started/connect/callback-urls/#wildcards-in-callback-urls). It should be noted that whilst wildcards are more convenient it is not as secure as explicitly adding the url to the allowlist via API as we outline below.
 
@@ -714,7 +1562,7 @@ This ensures Vercel uses its generated preview URLs to populate the three Kinde 
 
 Create a script that will run each time a new preview is deployed by Vercel, which will add the newly generated URL to Kinde.
 
-1. Enable the **Kinde Management API** for your NextJS app.
+1. Enable the **Kinde Management API** for your Next.js app.
    1. In Kinde, go to **Settings > Applications** and open the **Details** of your application.
    2. Select **APIs** in the left menu.
    3. Switch on the **Kinde Management API** (if it is not on already).

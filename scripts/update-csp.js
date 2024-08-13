@@ -1,12 +1,17 @@
-const fs = require("fs");
-const cheerio = require("cheerio");
-const crypto = require("crypto");
-const yaml = require("js-yaml");
-const path = require("path");
+import fs from "fs";
+import cheerio from "cheerio";
+import crypto from "crypto";
+import yaml from "js-yaml";
+import path from "path";
+import {fileURLToPath} from "url";
+
+// Resolve __dirname in ES module scope
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Directory and file paths
-const distPath = path.join(__dirname, "dist");
-const yamlPath = path.join(__dirname, "customHttp.yml");
+const distPath = path.join(__dirname, "../dist");
+const yamlPath = path.join(__dirname, "../customHttp.yml");
 
 // Set to store unique hashes
 const scriptSrcHashes = new Set();
@@ -82,8 +87,6 @@ function updateCSP(config) {
     `script-src ${Array.from(existingHashes).join(" ")}`
   );
 }
-
-
 
 // Main execution
 scanDirectory(distPath); // Fill scriptSrcHashes with hashes

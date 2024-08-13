@@ -1,28 +1,24 @@
-import type { APIRoute } from "astro";
-import { getCollection, getEntryBySlug } from "astro:content";
+import type {APIRoute} from "astro";
+import {getCollection, getEntryBySlug} from "astro:content";
 import fs from "fs/promises";
 import satori from "satori";
-import { html } from "satori-html";
+import {html} from "satori-html";
 import sharp from "sharp";
-import removeHTMLTags from "../../utils/removeHTMLTags";
+import removeHTMLTags from "../../utils/remove-html-tags";
 
 export async function getStaticPaths() {
   const posts = await getCollection("docs");
   return posts.map((post) => ({
-    params: { slug: post.slug },
-    props: post,
+    params: {slug: post.slug},
+    props: post
   }));
 }
 
-export const GET: APIRoute = async function get({ params }) {
-  const interData = await fs.readFile(
-    "./public/assets/fonts/inter/Inter-Medium.ttf",
-  );
+export const GET: APIRoute = async function get({params}) {
+  const interData = await fs.readFile("./public/assets/fonts/inter/Inter-Medium.ttf");
 
   const lockupImage = (
-    await fs.readFile(
-      "./public/assets/images/open-graph/kinde-docs-lockup-og.png",
-    )
+    await fs.readFile("./public/assets/images/open-graph/kinde-docs-lockup-og.png")
   ).toString("base64");
 
   const post = await getEntryBySlug("docs", params?.slug as string);
@@ -47,18 +43,16 @@ export const GET: APIRoute = async function get({ params }) {
       {
         name: "Inter",
         data: interData,
-        weight: 500,
-      },
-    ],
+        weight: 500
+      }
+    ]
   });
 
-  const png = await sharp(Buffer.from(svg))
-    .png({ quality: 100, force: true })
-    .toBuffer();
+  const png = await sharp(Buffer.from(svg)).png({quality: 100, force: true}).toBuffer();
 
   return new Response(png, {
     headers: {
-      "Content-Type": "image/png",
-    },
+      "Content-Type": "image/png"
+    }
   });
 };

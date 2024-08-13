@@ -6,6 +6,7 @@ sidebar:
 relatedArticles:
   - 1dc6ae8d-b294-468c-a2ae-ceae7261decb
   - b3081ca1-2aa1-45e3-a42f-5295aac49bc3
+  - 309186eb-1d2a-45d0-9089-b516e65927f9
 app_context:
   - m: design
   - m: settings
@@ -20,31 +21,55 @@ There are a few reasons you may wish to do this.
 - For Single Page Applications (SPAs) it means we can securely set a first party cookie meaning authentication state persists for full-page refreshes and new tabs.
 - If you also register the domain in the configuration for any social providers you are using, the social providers auth screen will be customized with your app details.
 
-We find most customers use `account` , `id` , or `auth` as their subdomain, i.e `account.mydomain.com`.
+<Aside title="When to still use the Kinde domain">
 
-> ℹ️ **When to still use the Kinde domain.** Even if you use custom domains, you need to use your Kinde domain for Kinde Management API access and machine-to-machine applications.
+Even if you use custom domains, you need to use your Kinde domain for Kinde Management API access and machine-to-machine applications.
+
+</Aside>
 
 ## Before you begin
 
-- Make sure your application is configured to use the custom domain. This includes updating the environment variables and any relevant configuration files. For example, the KINDE_ISSUER_URL needs to be updated to the custom domain. 
-- Ensure that the callback and logout redirect URLs in your Kinde settings are updated to use your custom domain. This can be done in the Kinde dashboard under Settings > Applications > [your app] > View details.
-## **Set up in Kinde**
+- Name your custom domain. It needs to include a subdomain for this procedure to work. Common subdomain names include `account` , `id` , or `auth`, e.g. `account.mydomain.com`.
+- Make sure your application is configured to use the exact custom domain. This includes updating the environment variables and any relevant configuration files. For example, the KINDE_ISSUER_URL needs to be updated to the custom domain.
+- Ensure that the callback and logout redirect URLs in your Kinde settings are updated with the custom domain. This can be done in the Kinde dashboard under Settings > Applications > [your app] > View details.
 
-Note that the verification process can take up to a few hours, depending on who your domain provider is. See [tips for the DNS set up](/build/domains/pointing-your-domain/#tips-for-the-dns-set-up) below.
+## Set up in Kinde
 
-1. Go to **Settings > Environment > Custom domain**. The **Custom domain** page opens.
-2. Enter your custom domain in the **Domain name** field. Be sure to include the subdomain, for example `account.mydomain.com`.
-3. Select **Get DNS** details. The DNS details appear.
-4. Go to your domain provider website and create CNAME DNS records using the DNS details. Apologies that we can’t offer instructions for all situations, as this will be different depending on your provider. But here are the setup steps for [Godaddy](https://au.godaddy.com/help/add-a-cname-record-19236), [Cloudflare](https://community.cloudflare.com/t/adding-dns-records/52718), and [NameCheap](https://www.namecheap.com/support/knowledgebase/article.aspx/9646/2237/how-to-create-a-cname-record-for-your-domain/).
+Note that the verification process can take anywhere from 5 minutes to a few hours, depending on who your domain provider is. See [tips for the DNS set up](/build/domains/pointing-your-domain/#tips-for-the-dns-set-up) below.
 
-   > ⚠️ Cloudflare users: DNS entries must be DNS-only, not proxied.
+1. Go to **Settings > Environment > Custom domain**.
+2. Select **Add custom domain**
+3. In the dialog, enter your custom domain. Be sure to include the subdomain, for example `account.mydomain.com`.
+4. Select **Save**. DNS details appear. You need to add these to your domain provider site.
 
-5. Once you have created the DNS entries, go back to Kinde and select **Verify**. The verification process can take up to a couple of hours. When it completes, the verification status will change and an SSL certificate will be provisioned. Your domain will then be used instead of Kinde’s. You will also receive an email notification when the process is complete.
-6. If you encounter any errors, such as the verification taking too long, re-check the DNS records you created on your provider site, to ensure the details are correct.
+## Add CNAME DNS records
 
-## Use your custom domain for social sign in
+1. Go to your domain provider website.
+2. Create CNAME DNS records using the DNS details generated above. 
 
-When you use social connections to authenticate users, you’ll also want to show your own domain name in the social provider sign in form instead of kinde.com.
+Apologies that we can’t offer instructions for all situations, as this will be different depending on your provider. But here are the setup steps for [Godaddy](https://au.godaddy.com/help/add-a-cname-record-19236), [Cloudflare](https://community.cloudflare.com/t/adding-dns-records/52718), and [NameCheap](https://www.namecheap.com/support/knowledgebase/article.aspx/9646/2237/how-to-create-a-cname-record-for-your-domain/).
+
+   <Aside type="warning">
+
+   Cloudflare users: DNS entries must be DNS-only, not proxied.
+
+   </Aside>
+
+## Check verification status in Kinde
+
+Once you have created the DNS entries, Kinde will start the verification process. This can take anywhere from a few minutes to a couple of hours. When it completes, the verification status will change to 'Provisioned' and an SSL certificate will be provisioned. 
+
+Your domain will then be used instead of Kinde’s. You will also receive an email notification when the process is complete.
+
+If you encounter any errors, such as the verification taking too long, re-check the DNS records you created on your provider site, to ensure the details are correct.
+
+## Update your code
+
+- Update your code to use the custom domain.
+
+## Add the custom domain to social sign in
+
+When you use social connections to authenticate users, you need to add the callback URL to the provider app so that the custom domain shows on the sign in form, instead of kinde.com.
 
 <img
   src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9247cb87-9e7a-4977-b3f5-6c8b52f64200/public"
@@ -56,11 +81,8 @@ When you use social connections to authenticate users, you’ll also want to sho
   decoding="async"
 />
 
-To achieve this, register your application with the provider and configure it in Kinde. See instructions for the [relevant social sign in](/authenticate/social-sign-in/add-social-sign-in/) for details.
-
-## **Set up in your app**
-
-Remember to also update your own code to use your custom domain, rather than the Kinde issued subdomain.
+If you haven't set this up, follow these instructions for the [relevant social provider](/authenticate/social-sign-in/add-social-sign-in/).
+If you already have social auth set up, make sure you add the custom domain callback (e.g. `account.mydomain.com/login/callback` as an authorized redirect URI in the provider app.
 
 ## Domains and auth end points
 

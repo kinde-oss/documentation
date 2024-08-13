@@ -23,6 +23,14 @@ export default {
     extend: {
       colors: {
         kinde: {
+          amber: {
+            100: "#FFF4DB",
+            900: "#95680E"
+          },
+          blue: {
+            100: "#EBF2FF",
+            900: "#002D80"
+          },
           grey: {
             50: "#F5F5F5",
             100: "#EBEBEB",
@@ -34,6 +42,14 @@ export default {
             700: "#4D4D4D",
             800: "#2B2B2B",
             900: "#0F0F0F"
+          },
+          purple: {
+            100: "#F4E5FF",
+            500: "#903DD1"
+          },
+          red: {
+            100: "#FFEBEB",
+            900: "#800000"
           }
         },
         // Your preferred accent color. Indigo is closest to Starlight’s defaults.
@@ -50,6 +66,19 @@ export default {
           "0 -.25rem .75rem #1214170d,0 .9375rem 1.5rem #12141712,0 .375rem .75rem #1214170f",
         "elevation-4":
           "0 .1875rem .375rem #12141714,0 .625rem 1.25rem #12141714,0 -.1875rem .75rem #1214170a"
+      },
+      keyframes: {
+        fadeIn: {
+          "0%": {
+            opacity: 0.000000001
+          },
+          "100%": {
+            opacity: 1
+          }
+        }
+      },
+      animation: {
+        "fade-in": "fadeIn 0.5s ease 0s forwards"
       }
     }
   },

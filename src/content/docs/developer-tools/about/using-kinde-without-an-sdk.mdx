@@ -60,6 +60,9 @@ Kinde supports all the standard OAuth 2 request parameters as well as a few addi
 
 Kinde also supports the PKCE extension, in which case the `code_challenge` and `code_challenge_method` parameters are also required. This is recommended for mobile apps and single page applications (SPAs).
 
+## Handling successful auth for desktop and mobile apps
+If you offer mobile and desktop apps, as well as access through a browser, you'll need to handle the post-authentication broser state. Rather than leaving a hannging screen, you can show users a success page. To do this, add the `is_use_auth_success_page` parameter to the authorization URL. See the [Request prameters](/developer-tools/about/using-kinde-without-an-sdk/#request-parameters) section below.
+
 ## Handling the callback
 
 As mentioned before when a user authenticates through Kinde, we will redirect them to the endpoint you defined in the previous step. As part of this redirect, Kinde provides an authorization `code` as a query parameter in the url.
@@ -70,19 +73,18 @@ Using the localhost example from before the url would look something like:
 http://localhost:3000/api/auth/kinde_callback
 ```
 
-You need to extract this authorization `code` parameter from the url and exchange it for an access token by making a POST request to the Kinde token endpoint `https://<your_kinde_subdomain>.kinde.com/oauth/token`.
+You need to extract this authorization `code` parameter from the url and exchange it for an access token by making a POST request to the Kinde token endpoint `https://<your_kinde_subdomain>.kinde.com/oauth2/token`.
 
 As well as the `code` you have received, this request should also include parameters such as the `client_id`,  `client_secret` \*\*,  `redirect_uri`, and `grant_type` (which should be set to `authorization_code`).
 
-Something like this:
+Make a POST request with the following payload:
 
 ```markdown
-https://<your_kinde_sudomain>.kinde.com/oauth2/token
-?client_id=<your_kinde_client_id>
+client_id=<your_kinde_client_id>
 &client_secret=<your_kinde_client_secret>
 &grant_type=authorization_code
 &redirect_uri=<your_app_redirect_url>
-&code=<CALLBACK_AUTHORIZATION_CODE>
+&code=<CALLBACK_AUTHORIZATION_CODE> 
 ```
 
 Make sure you replace the `<values>` with your own credentials.
@@ -166,6 +168,14 @@ Required: When using custom sign up and sign in pages
 ### `is_create_org`
 
 If an organization should be created along with the user.
+
+Type: `boolean`
+
+Required: No
+
+### `is_use_auth_success_page`
+
+Displays a sign-in success page following authentication. Recommended for browser authentication.
 
 Type: `boolean`
 

@@ -1,0 +1,117 @@
+name: Unlighthouse Build
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 22 * * 0"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.10.0"
+
+      - name: Install Unlighthouse dependencies
+        run: npm install -g @unlighthouse/cli puppeteer
+
+      - name: Run Unlighthouse and calculate scores
+        id: unlighthouse
+        run: |
+          # Define the site and sitemap URLs
+          SITE_URL="https://docs.kinde.com"
+          SITEMAP_URL="https://docs.kinde.com/sitemap-0.xml"
+
+          # Run Unlighthouse
+          echo "Running Unlighthouse..."
+          unlighthouse-ci --site $SITE_URL --sitemaps $SITEMAP_URL --build-static --reporter jsonExpanded
+
+          # Extract scores using jq
+          echo "Extracting scores..."
+          RAW_SCORE=$(jq '.summary.score' ./.unlighthouse/ci-result.json)
+          RAW_PERFORMANCE=$(jq '.summary.categories.performance.score' ./.unlighthouse/ci-result.json)
+          RAW_ACCESSIBILITY=$(jq '.summary.categories.accessibility.score' ./.unlighthouse/ci-result.json)
+          RAW_BEST_PRACTICES=$(jq '.summary.categories["best-practices"].score' ./.unlighthouse/ci-result.json)
+          RAW_SEO=$(jq '.summary.categories.seo.score' ./.unlighthouse/ci-result.json)
+
+          # Convert to percentages and remove trailing zeros
+          SCORE=$(printf "%.0f" $(echo "($RAW_SCORE) * 100" | bc))
+          PERFORMANCE=$(printf "%.0f" $(echo "($RAW_PERFORMANCE) * 100" | bc))
+          ACCESSIBILITY=$(printf "%.0f" $(echo "($RAW_ACCESSIBILITY) * 100" | bc))
+          BEST_PRACTICES=$(printf "%.0f" $(echo "($RAW_BEST_PRACTICES) * 100" | bc))
+          SEO=$(printf "%.0f" $(echo "($RAW_SEO) * 100" | bc))
+
+          # Print results
+          echo "Overall Score: $SCORE%"
+          echo "Performance: $PERFORMANCE%"
+          echo "Accessibility: $ACCESSIBILITY%"
+          echo "Best Practices: $BEST_PRACTICES%"
+          echo "SEO: $SEO%"
+
+          # Set environment variables
+          echo "SCORE=$SCORE" >> $GITHUB_ENV
+          echo "PERFORMANCE=$PERFORMANCE" >> $GITHUB_ENV
+          echo "ACCESSIBILITY=$ACCESSIBILITY" >> $GITHUB_ENV
+          echo "BEST_PRACTICES=$BEST_PRACTICES" >> $GITHUB_ENV
+          echo "SEO=$SEO" >> $GITHUB_ENV
+
+      - name: Install wrangler
+        run: npm install -g wrangler
+
+      - name: Deploy to Cloudflare Pages
+        id: wrangler_deploy
+        run: wrangler pages deploy ./.unlighthouse --project-name=kinde-docs-unlighthouse
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Send scores to Slack
+        id: slack
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": ":sparkle:  Docs Lighthouse report  :sparkle:"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Overall score:*\n${{ env.SCORE }}"
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "View the complete report"  
+                  },
+                  "accessory": {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "emoji": true,
+                      "text": ":computer:  View now"
+                    },
+                    "url": "https://kinde-docs-unlighthouse.pages.dev"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_KINDE_DOCS_PR_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

@@ -13,31 +13,36 @@ app_context:
   - m: register
 ---
 
-If you are currently using a different authentication tool to manage users, you can switch to Kinde pretty quickly. The method described here involves importing user details from CSV files into Kinde.
+If you are currently using a different authentication tool to manage users, you can switch to Kinde pretty quickly. The method described here involves importing user details from CSV files into Kinde. [Follow this other guide](/get-started/switch-to-kinde/auth0-to-kinde/) if you are switching from Auth0.
 
-Before you begin, [get a Kinde account](https://app.kinde.com/register) and [set it up](/get-started/guides/first-things-first/).
+If you’ve got a lot of users (your export file is over 5MB) or are concerned about file size limits, you can contact us to ensure the import goes smoothly.
+
+## Before you import users
+
+- [Create organizations in Kinde](/build/organizations/add-and-manage-organizations/) - only if you use this function to support multi-tenancy (for example, in a B2B structure) or if you manage separate user groups this way.
+- Add [roles](/manage-users/roles-and-permissions/user-roles/) and [permissions](/manage-users/roles-and-permissions/user-permissions/) in Kinde, if you intend to import these details with users.
+
+### Set up user authentication
+We recommend setting up user authentciation in Kinde before importing. For example, set up:
+
+- Passwords - switch this option on before importing user passwords
+- Passwordless - users will be sent a one-time code to sign in
+- Social sign-on - users can sign up and in using Google, Apple, etc.
+- Enterprise - SAML or Entra ID.
+
+**Note: Importing users from Azure** Set up the [MS Entra ID connection in Kinde](/authenticate/enterprise-connections/azure/) before you import your users. Then when you import, Kinde will match users to the relevant connection based on their email address.
+
+For more details, see [Authentication methods](/authenticate/authentication-methods/set-up-user-authentication/).
 
 ## Step 1: Prepare user data
 
-You can export user details and data fairly easily from most auth providers. However some companies, like Auth0, require you to separately request password details for users and this can take a little while. If you’re using your own auth system, prepare data as described below.
+You can export user details and data fairly easily from most auth providers. However, some providers require you to separately request password details for users and this can take a little while. If you’re using your own auth system, prepare data as described below.
 
 ### File format
 
-User data can only be imported from a CSV file. Depending on what you currently use for auth, you will need to export or prepare data in a CSV file. Note that if you use Auth0, user data comes in a CSV file and passwords are provided in a JSON file.
+User data can only be imported from a CSV file. Depending on what you currently use for auth, you will need to export or prepare data in a CSV file. 
 
-Kinde can import files up to 50MB.
-
-### Migrating from Auth0
-
-When you export user data from Auth0, export all the default fields.
-
-Note that if you want to bring passwords as well, you will need to request a special JSON file through the Auth0 support desk. This can take up to 2 weeks.
-
-### Migrating from Azure (now MS Entra ID)
-
-We recommend you set up the [Entra ID connection in Kinde](/authenticate/enterprise-connections/azure/) before you import your users.
-
-When you import user details from Azure they must include an Azure ID/Entra ID so Kinde can match them to the connection you set up.
+Kinde can import files up to 5MB. You may need to split the import into batches if you have a lot of users.
 
 ### Export data from other systems or your own system
 
@@ -48,7 +53,11 @@ When exporting data from another auth system or your own system, the CSV file yo
 - `email` - minimum required information
 - `external_organization_id` - Only required if you are importing roles and permissions
 
-> ℹ️ The more data that you include for import, the easier we can set up your users in Kinde. Kinde will not duplicate users with existing email addresses.
+<Aside>
+
+The more data that you include for import, the easier we can set up your users in Kinde. Kinde will not duplicate users with existing email addresses.
+
+</Aside>
 
 ### **Other user data**
 
@@ -62,12 +71,22 @@ When exporting data from another auth system or your own system, the CSV file yo
 - `permission_key` - the permissions key for the permission a user will be assigned (that is not included in their role). If the user is to be assigned more than one permission, use a comma separated list.
 - `external_organization_id` - the ID of the organizations you want the user to be imported into (if applicable). Only required if you are importing roles and permissions with user data. If the user belongs to more than one organization, use a comma separated list.
 
+<Aside>
+
+  Note that this is NOT the same as the **Organization code** in Kinde, which is a Kinde-supplied ID.
+
+</Aside>
+
 ### Password data (optional)
 
 - `hashed_password` - the user’s password encrypted using a hashing method or algorithm.
 - `hashing_method` - the name of the algorithm used to encrypt the user’s password. Currently **crypt**, **bcrypt**, **md5**, and **wordpress** are supported. [Contact us](https://kinde-21631392.hs-sites.com/en-au/feature-request) if you need a different method.
 
-  > 💡 **bcrypt $2b variant support:** Please note if you are importing bcrypt hashes with the $2b variant, Kinde will substitute this for the $2a variant. These are interchangeable as long as you were not running OpenBSD at the time the hashes were generated.
+    <Aside title="bcrypt $2b variant support:">
+
+  Please note if you are importing bcrypt hashes with the $2b variant, Kinde will substitute this for the $2a variant. These are interchangeable as long as you were not running OpenBSD at the time the hashes were generated.
+
+    </Aside>
 
 - `salt` - extra characters added to passwords to make them stronger
 - `salt_position` - position of salt in password string. Prefix (before) or suffix (after).
@@ -98,48 +117,38 @@ If you want your users to have an uninterrupted sign in experience as you change
 
 If you decide not to import passwords, however, it’s not a big deal. Users will be prompted to reset their password or sign in using whatever authentication methods you have chosen to set up in Kinde.
 
-## Step 2 (optional): Set up organizations
-
-If you require multi-tenanting for your users, for instance if you manage a B2B business, or require separated user groups, then you need to set up organizations in Kinde first.
-
-When you import your user records, you will need to include an **external_organization_id** column in the CSV, that matches the organization name in Kinde. To add a user to multiple organizations, separate the IDs with a comma.
-
-See [Add and manage organizations](/build/organizations/add-and-manage-organizations/).
-
-## Step 3: Set up user authentication
-
-Before you import your users, we recommend you set up the authentication method they will use when signing up or signing in. The following options are available:
-
-- Passwords - switch this option on before importing user passwords
-- Passwordless - users will be sent a one-time code to sign in
-- Social sign-on - users can sign up and in using Google, Apple, etc.
-- Enterprise - SAML or Entra ID.
-
-For more details, see [Authentication methods](/authenticate/authentication-methods/set-up-user-authentication/).
-
-## Step 4: Import users
+## Step 2: Import users
 
 Once you have your user details, you’re ready to import them.
 
 1. In Kinde, go to **Users**, then select **Import users**.
-2. Select the **Import users** tab and then select the option for your situation:
-   - Import from Auth0
-   - Import from a CSV
+2. Select the **Import users** tab and then select **Import from a CSV**
 3. Follow the on-screen prompts to upload the user data.
 4. If there are any errors with the import, you will be able to view them afterwards.
 5. Most import errors can be fixed by editing the CSV file and then re-importing into Kinde. Any records that have already been imported and have not been edited, will be ignored.
 
 For full instructions, see [Import or update users in bulk](/manage-users/add-and-edit/import-users-in-bulk/).
 
-## Communication to users
+## After the migration
 
-Kinde does not send any notifications or invitations to users when they are newly added to Kinde. The idea is that your users have a seamless experience that feels (almost) like it always has.
+### **Communication to users after import**
+
+Kinde does not send any notifications or invitations to users when they are added to Kinde via import. The idea is that your users have a seamless experience that feels (almost) like it always has in your app.
+
+Similarly, if you add users via API, Kinde does not send an email or notification to the user.
 
 If you’ve made changes to their sign in experience — for example adding multi-factor authentication — then consider contacting your users to let them know their sign in experience will be changed.
 
-## What users might notice
+### Additional consequences of migration
 
-Importing all your exisiting users and passwords should mean that your users won’t notice anything when they next sign in. This is the optimal experience. However:
+Importing all your existing users and passwords following the above process should mean that your users won’t notice anything when they next sign in. This is the optimal experience. However:
 
-- If a user changes their password after the user export and while the migration is in progress, they will be prompted to reset their password on the next sign in.
-- If you have set up a new authentication method as part of the user migration (for instance, going passwordless) your users will be prompted to use the new method on sign in.
+- If a user changes their password after the user export and while the migration is in progress, they will need to reset their password to sign in.
+- If you have set up a new authentication method as part of the user migration (for instance, going password-less) your users will be prompted to use the new method on sign in.
+- If you add or remove roles or permissions, users may gain/lose access to parts of your system.
+
+During and following the migration, we recommend checking for these issues.
+
+### There is no check for weak passwords
+
+When you import passwords, Kinde does not check for password strength. You’ll want to enforce your own password policies for users.

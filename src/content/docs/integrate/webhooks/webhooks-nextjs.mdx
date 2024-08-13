@@ -1,6 +1,6 @@
 ---
 page_id: 95bf5e04-3415-4dc8-9ff6-953171df3f8b
-title: Set up webhooks using NextJS
+title: Set up webhooks using Next.js
 sidebar:
   order: 3
 relatedArticles:
@@ -9,7 +9,7 @@ relatedArticles:
   - 7d311fcf-ca33-49ec-9286-419da4a91f41
 ---
 
-While webhooks will work with any NextJS setup, this guide uses [NextJS 14 with app router](/developer-tools/sdks/backend/nextjs-sdk/) and the `app` directory. You may need to alter some code samples if you have a different setup, but the core instructions remain the same.
+While webhooks will work with any Next.js setup, this guide uses [Next.js 14 with app router](/developer-tools/sdks/backend/nextjs-sdk/) and the `app` directory. You may need to alter some code samples if you have a different setup, but the core instructions remain the same.
 
 ## Set up local development
 
@@ -18,13 +18,13 @@ In order to use webhooks, you need a publicly available URL. To test locally you
 - [localtunnel](https://theboroer.github.io/localtunnel-www/) - fast and easy, we recommend using the `—subdomain` attribute to fix the issued subdomain.
 - [Ngrok](https://ngrok.com/) - for intermediate users, requires some dev experience to get set up.
 
-Each of these services expose a local port though a public URL that can be set as your web socket. Follow their instructions to run your local NextJS application and you will receive a URL that you need later in this guide.
+Each of these services expose a local port though a public URL that can be set as your web socket. Follow their instructions to run your local Next.js application and you will receive a URL that you need later in this guide.
 
 ## Create the Kinde webhook route
 
 Kinde sends webhooks as JWT’s to make them both easy and secure. In this example we will leverage 2 libraries to parse the JWT and verify the signature.
 
-1. Create the file `app/api/kinde-webhook/route.ts`. The `route.ts` file is a specific file convention in NextJS that marks the route as an API route, rather than a page.
+1. Create the file `app/api/kinde-webhook/route.ts`. The `route.ts` file is a specific file convention in Next.js that marks the route as an API route, rather than a page.
 
    ```jsx
    // app/api/kinde-webhook/route.ts
@@ -110,18 +110,26 @@ Kinde sends webhooks as JWT’s to make them both easy and secure. In this examp
 
    As per the sample above, the JWKs file is fetched from Kinde, the token is decoded, and the signature is compared against your keys file. This is how you know you can trust the request has come from Kinde.
 
-   > 💡 **Handling different event types**. In the example above, we used a switch statement. But you could also set up an endpoint per event type, group them into related endpoints, use a map, or any other method for splitting and managing the events.
+   <Aside title="Handling different event types">
 
-4. Start your server so it’s ready and listening out for the next step. With most NextJS applications, run `npm run dev` in the terminal.
+   In the example above, we used a switch statement. But you could also set up an endpoint per event type, group them into related endpoints, use a map, or any other method for splitting and managing the events.
+
+   </Aside>
+
+4. Start your server so it’s ready and listening out for the next step. With most Next.js applications, run `npm run dev` in the terminal.
 
 ## Set up the webhook in Kinde
 
 1. In the Kinde, go to **Settings > Environment > Webhooks**.
 2. Select **Add webhook**.
 3. Give the webhook a name and description.
-4. Enter the NextJS endpoint we set up earlier in your project. For example `<your_app_url>/api/kinde-webhook`. If you are using an external tool to test the endpoint locally, enter the endpoint URL specified in the tool.
+4. Enter the Next.js endpoint we set up earlier in your project. For example `<your_app_url>/api/kinde-webhook`. If you are using an external tool to test the endpoint locally, enter the endpoint URL specified in the tool.
 
-   > ⚠️ Make sure URLs match. Testing will fail if the endpoint URL in Kinde does not match the site URL where you are testing the webhook.
+   <Aside type="warning" title="Make sure URLs match">
+
+   Testing will fail if the endpoint URL in Kinde does not match the site URL where you are testing the webhook.
+
+   </Aside>
 
 5. Select **Add events.**
 6. In the dialog that opens, select the events you want. For example, user events, organization events, etc.

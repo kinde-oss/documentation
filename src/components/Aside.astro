@@ -1,0 +1,96 @@
+---
+import {Icon} from "astro-icon/components";
+
+interface Props {
+  type?: "info" | "warning" | "danger" | "upgrade";
+  title?: string;
+}
+
+const noteData = {
+  info: {
+    icon: "info"
+  },
+  warning: {
+    icon: "alert-triangle"
+  },
+  danger: {
+    icon: "alert-triangle"
+  },
+  upgrade: {
+    icon: "supercharge-filled"
+  }
+};
+
+const {type = "info", title} = Astro.props;
+---
+
+<aside
+  aria-label={title ?? type.toUpperCase()}
+  class:list={[
+    "c-aside not-content p-6 rounded-lg flex flex-col md:flex-row gap-4  items-start",
+    {
+      [`c-aside--${type}`]: true
+    }
+  ]}
+>
+  <div class="note-header flex items-center">
+    <Icon name={noteData[type].icon} size={24} />
+  </div>
+  <div
+    class:list={[
+      "flex flex-col",
+      {
+        ["gap-3"]: title
+      }
+    ]}
+  >
+    <div class="note-title text-base font-medium">
+      {title ?? <div aria-hidden="true">{title}</div>}
+    </div>
+    <div class="note-body">
+      <slot />
+    </div>
+  </div>
+</aside>
+
+<style>
+  :global(.note-body .expressive-code) {
+    @apply mt-4;
+  }
+
+  :global(.note-body > * + *) {
+    @apply mt-4;
+  }
+
+  .c-aside--info {
+    @apply bg-kinde-blue-100 dark:bg-kinde-blue-900/40 text-kinde-blue-900 dark:text-kinde-blue-100;
+  }
+
+  .c-aside--warning {
+    @apply bg-kinde-amber-100 dark:bg-kinde-amber-900/40 text-kinde-amber-900 dark:text-kinde-amber-100;
+  }
+
+  .c-aside--danger {
+    @apply bg-kinde-red-100 dark:bg-kinde-red-900/40 text-kinde-red-900 dark:text-kinde-red-100;
+  }
+
+  .c-aside--upgrade {
+    @apply bg-kinde-purple-100 dark:bg-kinde-purple-500/40 text-kinde-purple-500 dark:text-kinde-purple-100;
+  }
+
+  .c-aside--info :global(code) {
+    @apply bg-kinde-blue-900/5 text-kinde-blue-900 border-none;
+  }
+
+  .c-aside--warning :global(code) {
+    @apply bg-kinde-amber-900/5 text-kinde-amber-900 border-none;
+  }
+
+  .c-aside--danger :global(code) {
+    @apply bg-kinde-red-900/5 text-kinde-red-900 border-none;
+  }
+
+  :global(.c-aside--upgrade code) {
+    @apply bg-kinde-purple-500/5 text-kinde-purple-500 border-none dark:bg-kinde-purple-100;
+  }
+</style>
