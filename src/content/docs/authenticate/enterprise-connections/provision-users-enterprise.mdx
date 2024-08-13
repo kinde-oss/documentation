@@ -1,0 +1,89 @@
+---
+page_id: 2c58dabc-fe5c-4919-ade7-4caab8da47e8
+title: Provisioning users for enterprise connections
+sidebar:
+  order: 2
+relatedArticles:
+  - 98f6868a-7871-4ece-ba9c-2a7b21d1b322
+  - e100d77b-530b-4327-8216-93c955657e0c
+  - cc242fb3-4b06-4842-97c8-dd58e87308df
+---
+
+When you set up Kinde with enterprise authentication like SAML or Cloudflare, you’ll want to make sure that users are set up with the correct access and identity from day one. How you do this depends on how you ‘provision’ their enterprise user identity.
+
+Users in Kinde are able to have multiple identities to support all the ways they can sign in, such as via email, social sign-in, etc. However, users managed through enterprise connections can only have an enterprise identity.
+
+## Just-in-time (JIT) provisioning for user creation (recommended)
+
+JIT provisioning is the simplest way to add users to Kinde and allow them to authenticate. Rather than importing or pre-provisioning, your users are added to Kinde at the point of their first authentication. 
+
+To enable JIT provisioning, select the **Create a user record in Kinde** option when you set up your enterprise connection.
+
+![option for JIT in the enterprise connection screen](https://prod-files-secure.s3.us-west-2.amazonaws.com/6108d6df-5299-4335-974c-e148a51dfa48/ebc489c0-b718-493d-b5e8-bd49a07b8f01/Untitled.png)
+
+The first time the user authenticates, Kinde creates a new user record for them with the identity information passed from your IdP.
+
+## Pre-provision or pre-create users
+
+Sometimes, JIT provisioning is not the right path or may not be possible. For example:
+
+- The user already exists in Kinde and you now want them to connect via SSO.
+- You are importing users from another system and there is existing data related to the user you also wish to import.
+- You only want to add a sub-set of users from your directory.
+
+### Add users to Kinde
+
+In all these cases, the users must first exist in Kinde to implement enterprise SSO.
+
+You can add users to Kinde [via import](/manage-users/add-and-edit/import-users-in-bulk/) or [via API](https://kinde.com/api/docs/?http#create-user/). 
+
+All users must have an email address that matches their email with the IdP. This is not necessarily the email identity for sign in, it is purely for initial matching against the IDP provided email.
+
+<Aside>
+
+**Users who sign on through multiple enterprise connections.** It’s possible that you manage users who can sign in via multiple enterprise connections. In these cases, the user must have a separate profile for each enterprise connection.
+
+</Aside>
+
+### Provisioning method 1: Assign a connection identity to a user (recommended)
+
+This method of provisioning requires you to add the enterprise connection as part of the user’s identity in Kinde.
+
+**Add the enterprise connection identity via API**
+
+Send an UPDATE request to the [create identity](https://kinde.com/api/docs/?http#create-identity/) endpoint via the Kinde API: 
+
+`POST /api/v1/users/{user_id}/identities`
+
+```jsx
+need code snippet example
+```
+
+**Add the enterprise connection identity manually**
+
+1. Open a user’s profile and select **Add identity**.
+2. In the window that appears, select **Enterprise SSO** as the **Identity type**.
+3. Select the relevant **Enterprise connection** from the list.
+4. Enter the user’s email as it appears in the identity provider directory.
+5. Select **Save**. The user’s profile is updated to show only the enterprise connection identity.
+
+### Provisioning method 2: Set the connection to trust emails from the IDP
+
+A slightly less secure option is to set the enterprise connection to trust emails from your IdP. 
+
+This does save you adding and linking users as per method 1 above, but it also overrides any existing identity information in Kinde (such as email or phone number) with the connection data from the IdP.
+
+To employ this method, select the **Trust email addresses provided by this connection** option in the connection configuration. **Settings > Authentication > Enterprise connections > Configure.**
+
+![Screen shot of trust emails switch](https://prod-files-secure.s3.us-west-2.amazonaws.com/6108d6df-5299-4335-974c-e148a51dfa48/6c66b597-2c1c-49e3-9bc3-24b0e6526a1e/Untitled.png)
+
+When the user signs in with an SSO connection that provides an email that matches the pre-provisioned users email, we will automatically combine the users. Their original email identity will be removed and from this point on they can only authenticate via the SSO connection.
+
+## Troubleshoot SSO issues
+
+**We can’t find your account**
+
+If a user goes to sign in and encounters the ’We can’t find your account’ message, it could be for two reasons:
+
+1. The **Allow self-sign-up** function is disabled in the environment settings. See **Settings > Policies**. We are fixing the issue so that JIT provisioning overrides the setting, but you can switch it on to fix as well.
+2. Self-joining for the organization is switched off. This is the right behaviour if you don’t want users without the org_id to join the org, but the message is confusing. Switch this on via  **Organization > Policies**.
