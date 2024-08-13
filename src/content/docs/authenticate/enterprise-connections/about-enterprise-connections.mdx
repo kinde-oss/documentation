@@ -20,6 +20,7 @@ Kinde supports a number of enterprise connection types, including:
 - [Microsoft Entra ID](/authenticate/enterprise-connections/azure/) (was Azure AD) WS Federated or Open ID
 - [Google workspace](/authenticate/enterprise-connections/custom-saml-google-workspace/) (via SAML)
 - [Okta](/authenticate/enterprise-connections/okta-saml-connection/) (via SAML)
+- [Cloudflare](/authenticate/enterprise-connections/cloudflare-saml/) (via SAML)
 
 <Aside type="upgrade">
 
@@ -27,26 +28,32 @@ The number of enterprise connections you can have depends on your [Kinde plan](h
 
 </Aside>
 
-## Option to trust emails from providers
+## Provisioning for enterprise connections
 
-There's no guarantee that the email kept on file with an enterprise auth provider remains current. Because of this, Kinde gives you the option to 'trust' provider emails. For more information, see [User identity and verification](/authenticate/about-auth/identity-and-verification/).
+Kinde offer a number of provisioning options for enterprise connections, including **just in time (JIT)** provisioning and **pre-provisioning** options. 
 
-![image of switch](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/92f20fc4-7dcb-4ce1-9fb2-74b4db67e200/public)
+See [Provisioning users with enterprise connections](new topic)
 
-## Just-in-time provisioning
+## Enterprise connections for B2B businesses
 
-When a user tries to sign in using your SAML or Entra ID enterprise connection, and they do not exist, you can choose to add them automatically. Select this option when you configure the connection.
+Many businesses have businesses for customers (B2B), and use Kinde organizations to manage authentication and access. Kinde lets you set a number of enterprise authentication features at the organization level, see [Enterprise authentication for B2B](new topic).
 
-![image of switch](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/74717fdb-d6d2-4f0b-dcf6-2aef95cb7600/public)
+## Routing in enterprise connections
 
-## Extended attributes for MS Entra ID
+When users sign up via an enterprise connection with single-sign-on (SSO), they are routed to the identity provider (IdP) for identity verification. Here’s how this happens.
 
-You can include **Extended profiles** and **User groups** in authentication tokens for MS Entra ID connections. Select the relevant options when you configure the connection.
+### The sign in button on the auth page
 
-![Image of switch](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/bc92867f-2fc8-4676-2019-ce4b81783c00/public)
+When you set up an enterprise connection in Kinde, the SSO button on the authentication page gets linked to the IdP by default, similar to how you see a Google or Facebook sign-in option. 
 
-## MS Entra ID profile sync
+This is fine if you only have one connection, but is not ideal if you have multiple connections and you don’t want to show multiple SSO buttons to all users.
 
-When you configure the MS Entra ID connection, you can choose whether to sync user profiles each time a user signs in. This is a recommended way to keep user profiles up to date. If you choose this option, ensure that the global profile sync preference is also switched on in **Settings > Environment > Policies**.
+To avoid this, you can use home realm discovery (below). 
 
-![Image of switch](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/213ae1cc-98a7-4191-30df-6d2fde695500/public)
+### Home realm discovery
+
+Home realm discovery routes users based on their email domain. So when a users enter their email and selects the SSO button, they are routed to their IdP based on the email domain, to authenticate.
+
+For example if the user enters [chris@acme.com](mailto:chris@acme.com) Kinde checks which IdP uses the [**acme.com**](http://acme.com/) domain and sends Chris there to authenticate.
+
+This feature has nothing to do with security or access control and everything to do with routing. Do not confuse this feature with access restrictions for [domain allowlists](new topic).
