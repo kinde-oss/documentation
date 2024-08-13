@@ -23,7 +23,7 @@ const sdkList: SDK[] = [
     type: "Front end"
   },
   {
-    name: "NextJS",
+    name: "Next.js",
     link: "/developer-tools/sdks/backend/nextjs-sdk/",
     icon: "nextjs",
     iconWidth: "36",
