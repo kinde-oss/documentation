@@ -128,16 +128,18 @@ In this example we will redirect the user to sign in if there is no login data.
 
 ```typescript
 export const loader = async ({request}: LoaderFunctionArgs) => {
-  const {getUser} = await getKindeSession(request);
+  const {getUser, headers} = await getKindeSession(request);
   const user = await getUser();
 
   if (user === null) {
     throw redirect("/kinde-auth/login");
   }
 
-  return json({user});
+  return json({user}, {headers});
 };
 ```
+
+> ℹ️ Note that passing the headers through in the `json` response is required to ensure refresh tokens can be used in the background to keep the session alive.
 
 ### Return to a specific page after authentication
 
@@ -147,14 +149,14 @@ This can be achieved with the `returnTo` search parameter added to the login/reg
 
 ```typescript
 export const loader = async ({request}: LoaderFunctionArgs) => {
-  const {getUser} = await getKindeSession(request);
+  const {getUser, headers} = await getKindeSession(request);
   const user = await getUser();
 
   if (user === null) {
     throw redirect("/kinde-auth/login?returnTo=/protected-route");
   }
 
-  return json({user});
+  return json({user}, {headers});
 };
 ```
 
@@ -219,15 +221,34 @@ const {
 
 `getUserOrganizations()`: Retrieves a list of organizations the user belongs to. Returns an array of organization objects or an empty array on error.
 
+## Using refresh tokens
+
+Refresh tokens used to keep the user session alive. You can pass through the `headers` from `getKindeSession` through to the loader fetch response. Or you can use the `refreshTokens` function to refresh the user's access and refresh tokens manually.
+
+```typescript
+// Refresh tokens in the background
+export const loader = async ({request}: LoaderFunctionArgs) => {
+  const {headers} = await getKindeSession(request);
+  return json({paylod: "Refreshing tokens in the backgrounf"}, {headers});
+};
+
+// Refresh tokens manually
+export const action = ({request}: ActionFunctionArgs) => {
+  const {refreshTokens} = await getKindeSession(request);
+  const headers = refreshTokens();
+  return redirect("/profile", {headers});
+};
+```
+
 ## Get up-to-date Kinde data
 
 To get up-to-date Kinde data into your app you can use the `refreshTokens` function in an `action` function and then include the headers in the response.
 
 ```jsx
 export const action = ({request}: ActionFunctionArgs) => {
-		const {refreshTokens} = await getKindeSession(request);
-		const headers = refreshTokens();
-		return redirect('/profile', {headers});
+  const {refreshTokens} = await getKindeSession(request);
+  const headers = refreshTokens();
+  return redirect('/profile', {headers});
 }
 ```
 
