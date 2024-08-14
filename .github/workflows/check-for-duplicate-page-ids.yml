@@ -2,8 +2,11 @@ name: Check for Duplicate Page IDs
 
 on:
   pull_request:
-    branches:
-      - main
+
+# Automatically cancel in-progress actions on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request_target' && github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check-duplicates:
