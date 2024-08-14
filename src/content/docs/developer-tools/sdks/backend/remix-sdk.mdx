@@ -143,7 +143,7 @@ export const loader = async ({request}: LoaderFunctionArgs) => {
 
 ### Return to a specific page after authentication
 
-After a user has logged following a redirect from a protected route, we usually want to send the user back to the page they were trying to access prior to logging in.
+After a user has logged in following a redirect from a protected route, we usually want to send the user back to the page they were trying to access prior to logging in.
 
 This can be achieved with the `returnTo` search parameter added to the login/register url.
 
@@ -158,6 +158,25 @@ export const loader = async ({request}: LoaderFunctionArgs) => {
 
   return json({user}, {headers});
 };
+```
+
+### Call a function after authentication
+
+After a user has authenticated, you may want to call a function to update your database or perform some other action.
+
+This can be achieved by passing `onRedirectCallback` to the handleAuth function.
+
+```typescript
+import {handleAuth} from "@kinde-oss/kinde-remix-sdk";
+import {LoaderFunctionArgs} from "@remix-run/node";
+
+export async function loader({params, request}: LoaderFunctionArgs) {
+  return await handleAuth(request, params.index, {
+    onRedirectCallback({user}) {
+      console.log("This is called after the user is authenticated!", user);
+    }
+  });
+}
 ```
 
 ## Kinde session data - `getKindeSession()`
