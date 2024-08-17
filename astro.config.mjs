@@ -107,7 +107,10 @@ export default defineConfig({
         "./src/components/SDKSelector.astro",
         "./src/components/YoutubeVideo.astro",
         "./src/components/Aside.astro",
-        "./src/components/FileTree.astro"
+        "./src/components/FileTree.astro",
+        {
+          'starlight-package-managers': ['PackageManagers']
+        }
       ]
     }),
     mdx() // Typically, with Starlight we wouldn't need to add `mdx`, but the `astro-auto-import` was throwing warnings https://github.com/withastro/starlight/releases/tag/%40astrojs%2Fstarlight%400.23.0
