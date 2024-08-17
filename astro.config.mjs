@@ -16,9 +16,12 @@ import mdx from "@astrojs/mdx";
 const expressiveCodeOptions = {
   themes: ["min-dark", "material-theme-lighter"],
   styleOverrides: {
+    borderRadius: "0.5rem",
     frames: {
       shadowColor: "none",
-      tooltipSuccessBackground: "black"
+      tooltipSuccessBackground: "black",
+      inlineButtonBorder: "transparent"
+      
     }
   }
 };
