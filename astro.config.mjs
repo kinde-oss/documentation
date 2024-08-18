@@ -16,9 +16,12 @@ import mdx from "@astrojs/mdx";
 const expressiveCodeOptions = {
   themes: ["min-dark", "material-theme-lighter"],
   styleOverrides: {
+    borderRadius: "0.5rem",
     frames: {
       shadowColor: "none",
-      tooltipSuccessBackground: "black"
+      tooltipSuccessBackground: "black",
+      inlineButtonBorder: "transparent"
+      
     }
   }
 };
@@ -108,7 +111,10 @@ export default defineConfig({
         "./src/components/SDKSelector.astro",
         "./src/components/YoutubeVideo.astro",
         "./src/components/Aside.astro",
-        "./src/components/FileTree.astro"
+        "./src/components/FileTree.astro",
+        {
+          'starlight-package-managers': ['PackageManagers']
+        }
       ]
     }),
     mdx() // Typically, with Starlight we wouldn't need to add `mdx`, but the `astro-auto-import` was throwing warnings https://github.com/withastro/starlight/releases/tag/%40astrojs%2Fstarlight%400.23.0

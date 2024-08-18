@@ -20,11 +20,7 @@ The Remix SDK works with back end applications. Create one in Kinde. See [Add an
 
 ## Install the Kinde Remix SDK into your Remix project
 
-```shell
-npm i @kinde-oss/kinde-remix-sdk
-yarn add @kinde-oss/kinde-remix-sdk
-pnpm i @kinde-oss/kinde-remix-sdk
-```
+<PackageManagers pkg="@kinde-oss/kinde-remix-sdk" />
 
 ## **Set callback URLs**
 
@@ -128,34 +124,59 @@ In this example we will redirect the user to sign in if there is no login data.
 
 ```typescript
 export const loader = async ({request}: LoaderFunctionArgs) => {
-  const {getUser} = await getKindeSession(request);
+  const {getUser, headers} = await getKindeSession(request);
   const user = await getUser();
 
   if (user === null) {
     throw redirect("/kinde-auth/login");
   }
 
-  return json({user});
+  return json({user}, {headers});
 };
 ```
 
+<Aside>
+
+Note that passing the headers through in the `json` response is required to ensure refresh tokens can be used in the background to keep the session alive.
+
+</Aside>
+
 ### Return to a specific page after authentication
 
-After a user has logged following a redirect from a protected route, we usually want to send the user back to the page they were trying to access prior to logging in.
+After a user has logged in following a redirect from a protected route, we usually want to send the user back to the page they were trying to access prior to logging in.
 
 This can be achieved with the `returnTo` search parameter added to the login/register url.
 
 ```typescript
 export const loader = async ({request}: LoaderFunctionArgs) => {
-  const {getUser} = await getKindeSession(request);
+  const {getUser, headers} = await getKindeSession(request);
   const user = await getUser();
 
   if (user === null) {
     throw redirect("/kinde-auth/login?returnTo=/protected-route");
   }
 
-  return json({user});
+  return json({user}, {headers});
 };
+```
+
+### Call a function after authentication
+
+After a user has authenticated, you may want to call a function to update your database or perform some other action.
+
+This can be achieved by passing `onRedirectCallback` to the handleAuth function.
+
+```typescript
+import {handleAuth} from "@kinde-oss/kinde-remix-sdk";
+import {LoaderFunctionArgs} from "@remix-run/node";
+
+export async function loader({params, request}: LoaderFunctionArgs) {
+  return await handleAuth(request, params.index, {
+    onRedirectCallback({user}) {
+      console.log("This is called after the user is authenticated!", user);
+    }
+  });
+}
 ```
 
 ## Kinde session data - `getKindeSession()`
@@ -219,15 +240,34 @@ const {
 
 `getUserOrganizations()`: Retrieves a list of organizations the user belongs to. Returns an array of organization objects or an empty array on error.
 
+## Using refresh tokens
+
+Refresh tokens used to keep the user session alive. You can pass through the `headers` from `getKindeSession` through to the loader fetch response. Or you can use the `refreshTokens` function to refresh the user's access and refresh tokens manually.
+
+```typescript
+// Refresh tokens in the background
+export const loader = async ({request}: LoaderFunctionArgs) => {
+  const {headers} = await getKindeSession(request);
+  return json({paylod: "Refreshing tokens in the backgrounf"}, {headers});
+};
+
+// Refresh tokens manually
+export const action = ({request}: ActionFunctionArgs) => {
+  const {refreshTokens} = await getKindeSession(request);
+  const headers = refreshTokens();
+  return redirect("/profile", {headers});
+};
+```
+
 ## Get up-to-date Kinde data
 
 To get up-to-date Kinde data into your app you can use the `refreshTokens` function in an `action` function and then include the headers in the response.
 
 ```jsx
 export const action = ({request}: ActionFunctionArgs) => {
-		const {refreshTokens} = await getKindeSession(request);
-		const headers = refreshTokens();
-		return redirect('/profile', {headers});
+  const {refreshTokens} = await getKindeSession(request);
+  const headers = refreshTokens();
+  return redirect('/profile', {headers});
 }
 ```
 
