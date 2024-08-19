@@ -112,6 +112,7 @@ export default defineConfig({
         "./src/components/YoutubeVideo.astro",
         "./src/components/Aside.astro",
         "./src/components/FileTree.astro",
+        "./src/components/Divider.astro",
         {
           'starlight-package-managers': ['PackageManagers']
         }
