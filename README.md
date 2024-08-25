@@ -41,7 +41,7 @@ Join our community to connect with other Kinde users.
 
 Please review our [security policy](https://github.com/kinde-oss/documentation/security/policy) for more details.
 
-Also, you can read more about security in our [dedicated sectio](https://docs.kinde.com/trust-center/security/security-at-kinde/) in our docs.
+Also, you can read more about security in our [dedicated section](https://docs.kinde.com/trust-center/security/security-at-kinde/) in our docs.
 
 ## Next steps
 

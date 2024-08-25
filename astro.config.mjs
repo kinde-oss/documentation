@@ -40,7 +40,10 @@ export default defineConfig({
     "/developer-tools/kinde-api/protect-your-api/": "/developer-tools/your-apis/protect-your-api/",
     "/developer-tools/kinde-api/access-to-your-api/":
       "/developer-tools/your-apis/access-to-your-api/",
-    "/developer-tools/kinde-api/custom-api-scopes/": "/developer-tools/your-apis/custom-api-scopes/"
+    "/developer-tools/kinde-api/custom-api-scopes/":
+      "/developer-tools/your-apis/custom-api-scopes/",
+    "/developer-tools/kinde-api/register-an-api/":
+      "/developer-tools/your-apis/register-manage-apis/"
   },
   markdown: {
     rehypePlugins: [
@@ -114,7 +117,7 @@ export default defineConfig({
         "./src/components/FileTree.astro",
         "./src/components/Divider.astro",
         {
-          'starlight-package-managers': ['PackageManagers']
+          "starlight-package-managers": ["PackageManagers"]
         }
       ]
     }),
