@@ -97,9 +97,9 @@ export default defineConfig({
       tableOfContents: {
         maxHeadingLevel: 2
       },
-      editLink: {
-        baseUrl: "https://github.com/kinde-oss/documentation/edit/main",
-      }, // TODO: Make this live
+      // editLink: {
+      //   baseUrl: "https://github.com/kinde-oss/documentation/edit/main",
+      // }, // TODO: Make this live
       lastUpdated: false,
       titleDelimiter: "-",
       expressiveCode: expressiveCodeOptions
