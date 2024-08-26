@@ -1,0 +1,95 @@
+<div class="c-docsearch hidden" hidden></div>
+
+<script>
+  import("@docsearch/css/dist/style.css");
+  import("@styles/vendors/algolia.css");
+
+  let docSearchButton: HTMLElement | null;
+  let previousFocusedElement: HTMLElement | null = null;
+
+  function initializeDocSearch() {
+    import("@docsearch/js/dist/esm/index.js")
+      .then(({default: docsearch}) => {
+        docsearch({
+          container: ".c-docsearch",
+          appId: import.meta.env.PUBLIC_ALGOLIA_APP_ID,
+          indexName: import.meta.env.PUBLIC_ALGOLIA_INDEX_NAME,
+          apiKey: import.meta.env.PUBLIC_ALGOLIA_API_KEY,
+          placeholder: "Search docs",
+          transformItems: (items) => {
+            return items.map((item) => {
+              // We transform the absolute URL into a relative URL to
+              // work better on localhost, dev URLS.
+              const a = document.createElement("a");
+              a.href = item.url;
+              const hash = a.hash;
+
+              return {...item, url: `${a.pathname}${hash}`};
+            });
+          }
+        });
+      })
+      .then(() => {
+        docSearchButton = document.querySelector(".DocSearch-Button");
+        docSearchButton?.click();
+      })
+      .catch((error) => console.log(error));
+  }
+
+  const searchTriggers = document.querySelectorAll('[kui-trigger="search"]');
+
+  if (searchTriggers) {
+    searchTriggers.forEach((trigger) => {
+      trigger.addEventListener("click", () => {
+        if (!docSearchButton) {
+          initializeDocSearch();
+        } else {
+          docSearchButton.click();
+        }
+      });
+    });
+
+    document.addEventListener("keydown", function (event) {
+      let key = event.key.toLowerCase();
+
+      // If Escape key is pressed
+      if (key === "escape") {
+        // Return focus to the previously focused element, if it exists
+        if (previousFocusedElement) {
+          previousFocusedElement.focus();
+        }
+      }
+
+      // Check if '/' key is pressed or appropriate modifier key + k is pressed
+      if ((key === "/" && !event.shiftKey) || (key === "k" && (event.ctrlKey || event.metaKey))) {
+        // Prevent default behavior if the event isn't already being handled
+        if (event.defaultPrevented) {
+          return; // Do nothing if the event was already processed
+        }
+
+        // Check if the currently focused element is an input, textarea, or has contenteditable='true'
+        let activeElement = document.activeElement as HTMLElement;
+        let isEditable =
+          activeElement?.tagName === "INPUT" ||
+          activeElement?.tagName === "TEXTAREA" ||
+          activeElement?.isContentEditable;
+
+        if (!isEditable) {
+          if (!docSearchButton) {
+            initializeDocSearch();
+          } else {
+            docSearchButton.click();
+          }
+        }
+      }
+    });
+
+    document.addEventListener("focusin", function (event) {
+      const targetEl = event.target as HTMLElement;
+
+      if (!targetEl.classList.contains("DocSearch-Input")) {
+        previousFocusedElement = event.target as HTMLElement;
+      }
+    });
+  }
+</script>

@@ -1,0 +1,67 @@
+---
+export type RelatedArticle = {
+  title: string;
+  link: string;
+  order: number;
+  topic?: string;
+};
+
+export interface Props {
+  articles: RelatedArticle[];
+}
+
+const {articles} = Astro.props;
+---
+
+<div class="c-docs-resources">
+  {
+    articles && (
+      <div>
+        <h2 class="mb-4 text-2xl font-medium dark:text-white">Related articles</h2>
+        <ul class="c-docs-resources__related-articles">
+          {articles
+            .sort((a, b) => a.order - b.order)
+            .map((article) => (
+              <li class="c-docs-resources__related-articles-list-item">
+                <a
+                  class="absolute inset-0 flex h-full items-center no-underline transition duration-200 hover:no-underline hover:opacity-75"
+                  href={`/${article.link}/`}
+                >
+                  <article class="c-docs-resources__related-article">
+                    <h3 class="text-base font-medium text-kinde-grey-900 dark:text-white">
+                      {article.title}
+                    </h3>
+                    <p class="text-xs text-kinde-grey-600 dark:text-kinde-grey-300">
+                      {article.topic}
+                    </p>
+                  </article>
+                </a>
+              </li>
+            ))}
+        </ul>
+      </div>
+    )
+  }
+</div>
+
+<style>
+  .c-docs-resources {
+    @apply grid gap-2 my-4 py-8;
+  }
+
+  .c-docs-resources__related-articles {
+    @apply flex flex-col p-0 divide-y-[1px] divide-kinde-grey-100 dark:divide-kinde-grey-800;
+  }
+
+  .c-docs-resources__related-articles-list-item {
+    @apply py-10 relative flex flex-col justify-center;
+  }
+
+  .c-docs-resources__related-articles-list-item:not(:first-child) {
+    @apply border-t-kinde-grey-100;
+  }
+
+  .c-docs-resources__related-article {
+    @apply grid gap-1 w-full;
+  }
+</style>

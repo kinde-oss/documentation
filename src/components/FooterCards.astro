@@ -1,0 +1,76 @@
+---
+import {discordLink, roadmapLink, slackLink, supportLink} from "@data/links";
+import {Icon} from "astro-icon/components";
+
+export interface Props {
+  showOnlyTwoCards?: boolean;
+  variant?: "grey" | "white";
+}
+
+const {showOnlyTwoCards, variant = "grey"} = Astro.props;
+
+let data = [
+  {
+    icon: "team-four",
+    title: "Join the community",
+    description: "Get support from the Kinde team and expert users in the Kinde community",
+    ctaText: `Join via <a target='_blank' rel='noopener noreferrer' href='${slackLink}'>Slack</a> or <a href='${discordLink}' target='_blank' rel='noopener noreferrer'>Discord</a>`
+  },
+  {
+    icon: "help-circle",
+    title: "Contact support",
+    description: "Chat to support through the Kinde help widget, or send a question via email",
+    ctaText: `<a href='${supportLink}' target='_blank' rel='noopener noreferrer'>Send an email</a>`
+  },
+  {
+    icon: "journey",
+    title: "Follow the roadmap",
+    description:
+      "Subscribe to items on the Kinde roadmap and get notified when new features are released",
+    ctaText: `<a href='${roadmapLink}' target='_blank' rel='noopener noreferrer'>View roadmap</a>`
+  }
+];
+
+if (showOnlyTwoCards) {
+  data = data.splice(0, 2);
+}
+
+const colorOptions = {
+  grey: `bg-kinde-grey-50 dark:bg-kinde-grey-900`,
+  white: `bg-white dark:bg-black border-kinde-grey-200 dark:border-kinde-grey-700 border-[1px] `
+};
+---
+
+<section class="c-footer-cards not-content">
+  <h2 class="sr-only">Useful links</h2>
+  <ul
+    class:list={[
+      "grid grid-cols-1 gap-6 p-0 md:grid-cols-2",
+      [
+        {
+          ["lg:grid-cols-3"]: !showOnlyTwoCards
+        }
+      ]
+    ]}
+  >
+    {
+      data?.map((item) => (
+        <li
+          class:list={[
+            "flex flex-col gap-4 rounded-2xl p-12",
+            [
+              {
+                [colorOptions[variant]]: variant
+              }
+            ]
+          ]}
+        >
+          <Icon name={item.icon} size={32} />
+          <h3 class="text-2xl font-medium leading-[1.33] tracking-[-0.02em]">{item.title}</h3>
+          <p class="text-kinde-grey-800 dark:text-white">{item.description}</p>
+          <p class="mt-2 font-medium" set:html={item.ctaText} />
+        </li>
+      ))
+    }
+  </ul>
+</section>

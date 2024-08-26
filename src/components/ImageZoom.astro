@@ -1,0 +1,120 @@
+---
+export interface Props {
+  contentSelector?: string;
+}
+
+const {contentSelector = ".sl-markdown-content"} = Astro.props;
+---
+
+<dialog
+  class="c-image-zoom-dialog js-image-zoom-dialog fixed inset-0 m-0 h-full min-h-full min-w-full cursor-zoom-out bg-transparent p-0"
+>
+  <div
+    class="c-image-zoom-dialog__wrapper flex h-full w-full flex-col items-center justify-center p-5 md:p-10"
+  >
+    <header>
+      <button
+        autofocus
+        class="c-image-zoom-dialog__close-button js-image-zoom-dialog__close-button absolute right-5 top-5 z-10 rounded-xl border-none px-4 py-2 md:right-10 md:top-10 dark:bg-kinde-grey-900/75"
+        >Close</button
+      >
+    </header>
+    <div class="c-image-zoom-dialog__image-wrapper max-h-full max-w-[1440px]">
+      <img
+        class="c-image-zoom-dialog__zoomed-image js-image-zoom-dialog__zoomed-image mx-auto max-h-full max-w-full origin-center scale-90 opacity-0"
+      />
+    </div>
+  </div>
+</dialog>
+
+<style>
+  .c-image-zoom-dialog {
+    --anim-bg-color: rgba(225, 225, 225, 0.95);
+  }
+
+  :root[data-theme="dark"] .c-image-zoom-dialog {
+    --anim-bg-color: rgba(0, 0, 0, 0.75);
+  }
+
+  .c-image-zoom-dialog[open] .c-image-zoom-dialog__wrapper {
+    animation: showOverlay 0.3s ease forwards;
+  }
+
+  .c-image-zoom-dialog[open] .c-image-zoom-dialog__zoomed-image {
+    animation: showImage 0.55s cubic-bezier(0.23, 1, 0.32, 1) 0.2s forwards;
+  }
+
+  @keyframes showOverlay {
+    from {
+      background-color: rgba(225, 225, 225, 0);
+    }
+    to {
+      background-color: var(--anim-bg-color);
+      /* background-color: rgba(225, 225, 225, 0.95); */
+    }
+  }
+
+  @keyframes showImage {
+    from {
+      opacity: 0;
+      transform: translateY(3vh) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+</style>
+
+<script is:inline nonce="2726c7f26c" define:vars={{contentSelector}}>
+  (() => {
+    const parentSelector = document.querySelector(contentSelector);
+    const zoomableImages = parentSelector.querySelectorAll("img");
+    const zoomDialog = document.querySelector(".js-image-zoom-dialog");
+    const zoomedImage = document.querySelector(".js-image-zoom-dialog__zoomed-image");
+    const closeButton = document.querySelector(".js-image-zoom-dialog__close-button");
+
+    zoomableImages.forEach((img) => {
+      if (img.parentNode.tagName === "PICTURE") return;
+
+      img.style.borderRadius = ".25rem";
+
+      // Create 'button' to wrap the images
+      const imageButton = document.createElement("button");
+      imageButton.setAttribute("aria-label", "Zoom in image");
+      imageButton.style.borderRadius = ".5rem";
+      imageButton.style.overflow = "hidden";
+      imageButton.style.cursor = "zoom-in";
+      imageButton.style.padding = ".75rem";
+      imageButton.classList.add("bg-kinde-grey-50", "dark:bg-kinde-grey-800");
+
+      // imageButton.parentElement.style.padding = "1rem";
+
+      imageButton.addEventListener("click", () => {
+        zoomDialog.showModal();
+        zoomedImage.src = img.src;
+        closeButton.focus();
+      });
+
+      // Wrap image with the newly created 'button'
+      const parent = img.parentNode;
+
+      parent?.insertBefore(imageButton, img);
+      imageButton.appendChild(img);
+    });
+
+    // Add 2 ways of closing the dialog: by clicking the close button and the dialog itself.
+    closeButton.addEventListener("click", () => {
+      zoomDialog.close();
+    });
+
+    zoomDialog.addEventListener("click", () => {
+      zoomDialog.close();
+    });
+
+    // When the dialog closes, reset the image src.
+    zoomDialog.addEventListener("close", () => {
+      zoomedImage.src = "";
+    });
+  })();
+</script>

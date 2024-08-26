@@ -1,0 +1,172 @@
+---
+import {Icon} from "astro-icon/components";
+
+export interface Props {
+  id?: string;
+  isFullWidth?: boolean;
+  isLoading?: boolean;
+  isExternal?: boolean;
+  variant?: "secondary" | "uncontained" | "sdk";
+  isVisuallyHidden?: boolean;
+  isIconOnly?: boolean;
+  text?: string;
+  type?: "submit" | "button" | "reset";
+  url?: string;
+  value?: string;
+  kuiAttributes?: {};
+  plausibleEventName?: string;
+  plausibleEventPosition?: string;
+  plausibleEventURL?: string;
+  iconName?: string;
+  trailingIconName?: string;
+  class?: string;
+  attributes?: {};
+  alignment?: "left" | "center";
+  size?: "default" | "small";
+  additionalLabel?: string | null | undefined;
+}
+const {
+  id,
+  isFullWidth = false,
+  isLoading = false,
+  isExternal = false,
+  variant,
+  isVisuallyHidden = false,
+  isIconOnly = false,
+  text,
+  type = "submit",
+  url,
+  value,
+  kuiAttributes,
+  plausibleEventName,
+  plausibleEventPosition,
+  plausibleEventURL,
+  iconName,
+  trailingIconName,
+  attributes,
+  alignment = "center",
+  size = "default",
+  additionalLabel
+} = Astro.props;
+const Tag = url ? "a" : "button";
+---
+
+<Tag
+  {id}
+  type={url ? null : type}
+  class:list={[
+    "c-button",
+    {
+      [`c-button--${variant}`]: true,
+      "c-button--full-width": isFullWidth,
+      "h-hide-visually": isVisuallyHidden,
+      "is-loading": isLoading,
+      [`plausible-event-name=${plausibleEventName?.replaceAll(" ", "+")}`]: plausibleEventName,
+      [`plausible-event-position=${plausibleEventPosition?.replaceAll(" ", "+")}`]:
+        plausibleEventPosition,
+      [`plausible-event-url=${plausibleEventURL}`]: plausibleEventURL,
+      "c-button--is-icon-only": isIconOnly,
+      [`c-button--align-${alignment}`]: alignment,
+      [`c-button--small`]: size === "small"
+    }
+  ]}
+  href={url ? url : null}
+  value={url ? value : null}
+  target={url && isExternal ? "_blank" : null}
+  rel={url && isExternal ? "noopener noreferrer" : null}
+  {...kuiAttributes}
+  {...attributes}
+>
+  {
+    iconName && (
+      <Icon
+        name={iconName}
+        width={variant === "sdk" ? 32 : 20}
+        class={variant ? "invert-1" : "invert"}
+      />
+    )
+  }
+  <span class="c-button__inner">
+    <span class:list={["c-button__label", {"sr-only": isIconOnly}]}
+      >{text}
+      {additionalLabel && <span class="c-button__additional-label" set:html={additionalLabel} />}
+    </span>
+  </span>
+
+  {
+    trailingIconName && (
+      <Icon
+        name={trailingIconName}
+        width={trailingIconName === "arrow-up-right" ? 16 : trailingIconName === "caret" ? 8 : 20}
+      />
+    )
+  }
+</Tag>
+
+<style>
+  /**
+ * NOTE: To override the loader's colours, the base and modifier classes exist
+ * in the loader component so ensure any class name changes get reflected there.
+ */
+  .c-button {
+    @apply items-center rounded-lg gap-2 px-4 py-2 !no-underline bg-kinde-grey-900 text-white whitespace-nowrap font-medium min-h-12 border-[1px] border-kinde-grey-900 hover:bg-kinde-grey-700 focus:bg-kinde-grey-700 inline-flex relative disabled:bg-kinde-grey-100 disabled:text-kinde-grey-500 active:bg-kinde-grey-900 hover:!no-underline transition-colors duration-200 cursor-pointer dark:invert;
+  }
+
+  .c-button__inner {
+    @apply border-l-black hover:no-underline;
+  }
+
+  .c-button.is-loading {
+    @apply bg-kinde-grey-400 border-kinde-grey-400;
+  }
+
+  .c-button--small {
+    @apply text-sm rounded-md min-h-9 px-3 py-2 gap-1;
+  }
+
+  .c-button--secondary {
+    @apply bg-kinde-grey-50 text-kinde-grey-900 dark:text-white border-kinde-grey-50 hover:bg-kinde-grey-100 hover:border-kinde-grey-100 focus:border-kinde-grey-100 focus:bg-kinde-grey-100 active:bg-kinde-grey-200  active:border-kinde-grey-200 dark:bg-kinde-grey-900 dark:hover:bg-black dark:focus:bg-kinde-grey-800 dark:border-kinde-grey-800 dark:border-[1px] dark:hover:border-black;
+  }
+
+  .is-loading {
+    @apply bg-kinde-grey-50 border-kinde-grey-50;
+  }
+
+  .c-button--sdk {
+    @apply bg-kinde-grey-50 dark:bg-kinde-grey-900 border-kinde-grey-50 dark:border-kinde-grey-600 gap-4 hover:bg-white dark:hover:bg-kinde-grey-800 hover:border-white dark:hover:border-kinde-grey-500 dark:focus:border-kinde-grey-500 focus:border-white focus:bg-white dark:focus:bg-kinde-grey-800 active:bg-kinde-grey-200 text-kinde-grey-900 dark:text-white hover:ring-2 hover:ring-kinde-grey-900 focus:ring-kinde-grey-900 transition duration-200;
+  }
+
+  .c-button--uncontained {
+    @apply bg-transparent border-transparent hover:bg-kinde-grey-50 hover:border-kinde-grey-50 focus:border-kinde-grey-50 active:border-kinde-grey-100 focus:bg-kinde-grey-50 active:bg-kinde-grey-100 text-kinde-grey-900 dark:text-white dark:hover:bg-kinde-grey-900 dark:focus:bg-kinde-grey-900;
+  }
+
+  .c-button--sdk,
+  .c-button--secondary,
+  .c-button--uncontained {
+    @apply dark:invert-0;
+  }
+
+  .c-button--full-width {
+    @apply w-full justify-center;
+  }
+
+  .c-button--align-left {
+    @apply justify-start;
+  }
+
+  .c-button--is-icon-only {
+    @apply gap-0;
+  }
+
+  .c-button__inner {
+    @apply overflow-hidden text-ellipsis hover:no-underline;
+  }
+
+  .c-button--sdk .c-button__inner {
+    @apply border-l-[1px] border-l-kinde-grey-200 pl-4 hover:no-underline dark:border-l-kinde-grey-700;
+  }
+
+  .c-button__additional-label {
+    @apply ml-1 text-xs text-kinde-grey-600 dark:text-kinde-grey-50;
+  }
+</style>

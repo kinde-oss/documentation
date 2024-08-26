@@ -1,0 +1,118 @@
+---
+page_id: 98f6868a-7871-4ece-ba9c-2a7b21d1b322
+title: MS Entra ID (was Azure AD) enterprise auth
+sidebar:
+  order: 5
+relatedArticles:
+  - 556c9ce6-477b-4a31-9ce1-75f612eb3740
+  - e100d77b-530b-4327-8216-93c955657e0c
+  - 66b2a627-b24a-4ccf-a792-80a6a9fe35ef
+  - e89d246a-5cdf-4993-9cee-94b31ec27583
+app_context:
+  - m: settings
+    s: authentication
+---
+
+Kinde supports the use of Microsoft Entra ID (WS Federated and OpenID) as an enterprise-level authentication method. This service used to be Azure AD.
+
+If you are [importing users into Kinde](/manage-users/add-and-edit/import-users-in-bulk/), their Entra ID will be picked up and matched to the relevant connection based on their email address, for a seamless transition to Kinde.
+
+<Aside>
+
+**Microsoft Entra ID** is the new name for **Microsoft** **Azure AD**, which is Microsoft’s enterprise authentication service. This doc contains some mixed references as we update our Kinde interface for the change. [More information](https://learn.microsoft.com/en-gb/azure/active-directory/fundamentals/new-name).
+
+</Aside>
+
+## **Before you begin**
+
+- Your app needs to be [registered with the Microsoft identity platform](https://learn.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app).
+- We recommend you test connections in a non-production environment before activating in a live environment.
+
+## **Add and configure the connection in Kinde**
+
+### **Add the connection**
+
+1. In Kinde, go to **Settings > Environment > Authentication**.
+2. Scroll down to the **Enterprise Connections** section and select **Add connections**. The **Add connection** window opens.
+3. Select the connection type you want to add and then select **Save**. Currently we support WS Federated and OpenID types. The connection type is added.
+
+### **Configure the connection**
+
+1. On the tile for the new connection, select **Configure**.
+2. Enter a **Connection name.** Make this something you can easily identify, especially if you are adding multiple connections for different business customers.
+
+   <Aside type="warning">
+
+   If you plan to import users into Kinde, make sure the connection name matches the connection name in the Entra ID record.
+
+   </Aside>
+
+3. Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified. We recommend leaving this off for maximum security.
+4. Enter your **Microsoft Azure domain.**
+5. Enter the **Client ID** and **Client secret** as they appear in the MS Azure portal.
+6. Enter **Home realm domains**. This speeds up the sign in process for users of those domains.
+   Note that all home realm domains must be unique across all connections in an environment. For more information about how, see [Home realm domains or IdP discovery](/authenticate/enterprise-connections/home-realm-discovery/).
+7. If you want, select the **Use common endpoint** option. Recommended if you use multi-tenancy.
+8. Select extended attributes:
+
+   - **Extended profile** if you want to sync the additional information stored in a user’s Microsoft profile to their Kinde user profile.
+   - **Get user groups** if you want to sync user groups. Recommended if you manage permissions and access via user groups in Microsoft.
+
+    <Aside>
+
+   Extended attributes data is included in the `extra_claims` object of the access token.
+
+    </Aside>
+
+9. If you want, select **Sync user profiles and attributes on sign in**. Recommended to keep Kinde user profile data in sync with user profile data from Microsoft. If you choose this option, ensure that the global profile sync preference is also switched on in **Settings > Environment > Policies**.
+10. If you want to enable just-in-time (JIT) provisioning, select the **Create a user record in Kinde** option. This saves time adding users manually or via API later.
+11. Copy the **Callback URL**. You’ll need to enter this in your Microsoft app.
+12. In the **Applications** section, select the applications you want to activate the connection for.
+13. Select **Save**.
+
+## **Add the callback URL to MS Azure**
+
+1. Sign in to the **MS Azure Portal** ([https://portal.azure.com](https://portal.azure.com/)) using your Microsoft account.
+2. Select **Microsoft Entra ID** in the list of options.
+3. In the left menu, select **App Registrations**.
+4. If no applications are listed, select the **All applications** tab
+5. Select your application.
+6. Select the **Redirect URIs** links on the right.
+7. Select **Add URI**.
+8. In the relevant field, enter your callback URL (from Step 9 above)
+9. Select **Save**.
+
+Make sure you test each connection before enabling in production for your users.
+
+## Test the connection
+
+1. Go to your test application and attempt to sign in.
+2. If you left the **Home realm domains** field blank in Kinde, when you launch your application, you should see a button to sign in. Click it and go to step 4.
+3. If you completed the **Home realm domains** field, you should be redirected immediately to your IdP sign in screen.
+4. Enter your IdP details and complete any additional authentication required.
+
+## **Edit or disconnect a connection**
+
+1. In Kinde, go to **Settings > Environment > Authentication**.
+2. Scroll down to the **Enterprise Connections** section and select **Configure** on the connection you want to edit.
+3. In the connection details window, update the settings you want.
+4. In the **Applications** section, disconnect or reconnect your applications.
+5. Select **Save**.
+
+## Delete an enterprise connection
+
+<Aside type="danger">
+
+Before you delete a connection, make sure that there are no users relying on it for authentication. Once deleted, the sign in option becomes unavailable to users. This action can’t be reversed.
+
+</Aside>
+
+1. In Kinde, go to **Settings > Environment > Authentication**.
+2. Scroll down to the **Enterprise Connections** section and select the three dots on the tile for the connection, then select **Delete connection**.
+3. In the confirmation window, select **Delete connection**.
+
+## Sign out behaviour for user session
+
+If your users sign in via the Entra ID (formerly Azure AD) enterprise connection in Kinde, when they sign out, they are just signing out of Kinde. They are not fully being signed out of Entra ID.
+
+It also works this way for social connections, where a third party is the identity provider.

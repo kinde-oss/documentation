@@ -1,0 +1,37 @@
+---
+import type {Props} from "@astrojs/starlight/props";
+import Default from "@astrojs/starlight/components/Sidebar.astro";
+
+// Get the first part of the file path, i.e. "site/setup" would return "site"
+const firstPathSegment = Astro.props.slug.split("/")[0];
+
+function filterGroupsByHref(data, hrefStart) {
+  // Filter top-level groups based on a recursive search for matching hrefs
+  return data.filter((group) => containsHrefWithPrefix(group.entries, hrefStart));
+}
+
+function containsHrefWithPrefix(entries, hrefStart) {
+  // Recursively check each entry to find any href starting with hrefStart
+  for (const entry of entries) {
+    if (entry.type === "link" && entry.href.startsWith(hrefStart)) {
+      // Found a matching href
+      return true;
+    } else if (entry.type === "group" && entry.entries) {
+      // If it's a group, search its entries recursively
+      if (containsHrefWithPrefix(entry.entries, hrefStart)) {
+        return true;
+      }
+    }
+  }
+  // No matching href found in this path
+  return false;
+}
+
+// Example usage
+const hrefStart = "/get-started";
+const filteredGroups = filterGroupsByHref(Astro.props.sidebar, "/" + firstPathSegment);
+
+Astro.props.sidebar = filteredGroups;
+---
+
+<Default {...Astro.props}><slot /></Default>

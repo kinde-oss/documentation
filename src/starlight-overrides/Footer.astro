@@ -1,0 +1,87 @@
+---
+import Default from "@astrojs/starlight/components/Footer.astro";
+import type {Props} from "@astrojs/starlight/props";
+import ArticleFeedback from "@components/ArticleFeedback.astro";
+import DocSearch from "@components/DocSearch.astro";
+import FooterCards from "@components/FooterCards.astro";
+import ImageZoom from "@components/ImageZoom.astro";
+import RelatedArticles, {type RelatedArticle} from "@components/RelatedArticles.astro";
+import {getCollection} from "astro:content";
+const {entry} = Astro.props;
+
+let relatedArticles: RelatedArticle[] = [];
+
+function findLabelByHref(entries: any, href: string) {
+  let result = null;
+
+  function search(entries: any, href: any) {
+    for (const entry of entries) {
+      if (entry.type === "group") {
+        const found = search(entry.entries, href);
+        if (found) {
+          // If the target is found in a deeper level, return the label of the current group
+          return entry.label;
+        }
+      } else if (entry.type === "link" && entry.href === href) {
+        // If the target is found, return true to signal the calling context
+        return true;
+      }
+    }
+    // Return null if nothing is found at the current level
+    return null;
+  }
+
+  // Start the recursive search from the root entries
+  result = search(entries, href);
+
+  return result;
+}
+
+if (entry.data.relatedArticles) {
+  for (const articleId of entry.data?.relatedArticles) {
+    await getCollection("docs", (entry) => {
+      if (articleId === entry.data.page_id) {
+        relatedArticles.push({
+          title: entry.data.title,
+          link: entry.slug,
+          order: entry.data.sidebar.order as number,
+          topic: findLabelByHref(Astro.props.sidebar, "/" + entry.slug + "/")
+        });
+      }
+    });
+  }
+}
+---
+
+{
+  entry.data.template == "doc" && (
+    <>
+      <section>
+        <ArticleFeedback />
+        {entry.data.relatedArticles && <RelatedArticles articles={relatedArticles} />}
+      </section>
+      <Default {...Astro.props}>
+        <slot />
+      </Default>
+      <FooterCards showOnlyTwoCards />
+      <ImageZoom />
+    </>
+  )
+}
+
+<script>
+  (() => {
+    // When you ommit either `width` or `height` when using `astro-icon`, the package adds the missing attribute with `em` values — this can cause some weird issues, so we're detecting when that's the case and completely remove the auto generated attribute.
+    const allAstroIcons = document.querySelectorAll("[data-icon]");
+    allAstroIcons.forEach((icon) => {
+      if (icon?.getAttribute("width")?.includes("em")) {
+        icon.removeAttribute("width");
+      }
+      if (icon?.getAttribute("height")?.includes("em")) {
+        icon.removeAttribute("height");
+      }
+    });
+  })();
+</script>
+
+<DocSearch />

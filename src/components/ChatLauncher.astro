@@ -1,0 +1,87 @@
+---
+import {Icon} from "astro-icon/components";
+export interface Props {
+  variant?: "intercom" | "help-widget" | "link";
+}
+
+const {variant = "intercom"} = Astro.props;
+---
+
+<a
+  class:list={[
+    "c-chat-launcher not-content items-center bg-kinde-grey-900  rounded-full bottom-5 text-white flex w-[60px] justify-center fixed right-5 z-[1]",
+    {
+      ["c-chat-launcher--help-widget"]: variant === "help-widget"
+    }
+  ]}
+  kui-chat-launcher="true"
+  href="https://chat.kinde.com"
+  target="_blank"
+  rel="noopener noreferrer"
+>
+  {
+    variant === "intercom" && (
+      <>
+        <span class="h-hide-visually">Talk to us</span>
+        <span class="c-chat-launcher__icon-container">
+          <Icon name="intercom" size={28} />
+        </span>
+      </>
+    )
+  }
+
+  {
+    variant === "help-widget" && (
+      <span class="c-chat-launcher--help-widget__inner-wrapper pointer-events-none inline-flex w-[274px] items-center justify-center">
+        <div class="flex items-center gap-2">
+          <Icon name="kinde-talk-2" size={24} />
+          <span class="c-chat-launcher--help-widget__label font-medium text-white">
+            Chat with support now
+          </span>
+        </div>
+      </span>
+    )
+  }
+
+  {variant === "link" && <span class="kinde-subhead-2">Chat with support now</span>}
+</a>
+
+<script is:inline>
+  const DOM = {
+    trigger: document.querySelector('[kui-chat-launcher="true"]')
+  };
+  const openChatPopup = (e) => {
+    e.preventDefault();
+    let windowObjectReference;
+    /* if the pointer to the window object in memory does not exist
+        or if such pointer exists but the window was closed */
+    if (windowObjectReference == null || windowObjectReference.closed) {
+      windowObjectReference = window.open(
+        e.target,
+        "kindeChatPopup",
+        "width=350,height=600,status=1"
+      );
+      /* then create it. The new window will be created and
+            will be brought on top of any other window. */
+    } else {
+      windowObjectReference.focus();
+      /* else the window reference must exist and the window
+            is not closed; therefore, we can bring it back on top of any other
+            window with the focus() method. There would be no need to re-create
+            the window or to reload the referenced resource. */
+    }
+  };
+  DOM.trigger.addEventListener("click", openChatPopup);
+</script>
+<style>
+  .c-chat-launcher {
+    &:focus {
+      box-shadow: $token-color-base-grey-900 0 0 0 5px inset;
+      outline: currentColor none medium;
+    }
+  }
+
+  .c-chat-launcher--help-widget {
+    @apply no-underline bottom-0 h-12 !rounded-lg !w-full left-0 !relative right-0 z-0 focus:no-underline hover:no-underline !top-0 dark:border-kinde-grey-800 dark:border-[1px] dark:hover:bg-black dark:hover:border-black;
+  }
+</style>

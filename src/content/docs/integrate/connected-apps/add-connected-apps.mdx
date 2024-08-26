@@ -1,0 +1,128 @@
+---
+page_id: 4cf32822-c02b-41d1-9396-f292bdbe5577
+title: Add connected apps
+sidebar:
+  order: 1
+relatedArticles:
+  - 6bf993fc-a195-4836-8eaf-133812be8876
+  - 601dd8c5-6ee1-474f-ad36-201e65280462
+app_context:
+  - m: settings
+    s: connected_apps
+---
+
+Connected apps let your users access third party tools and services through Kinde. When you add a connection, you’ll need to define which features (or scopes) that you want to be made available.
+
+To get the connection up and running, you’ll need to do some steps in Kinde and some in the app you are connecting.
+
+## **Before you add a connected app**
+
+- Set up a [machine to machine application](/developer-tools/kinde-api/add-a-m2m-application-for-api-access/)
+- Ensure you have at least one [end-user created](/manage-users/add-and-edit/add-and-edit-users/)
+
+## **Step 1: Add the connected app in Kinde**
+
+1. In Kinde, go to **Settings > Connected apps**.
+2. Select **Connect an app**. A dialog opens.
+3. Select the connected app you want from the available apps.
+4. Select **Save**. The app will appear in the list of your connected apps.
+5. Select **Configure** on the tile and copy the **Provider to Kinde** callback URL.
+6. Next: Set up the app. See instructions for setting up apps below.
+
+## **Step 2: Set up the app you want to connect**
+
+- [Google Drive](/integrate/connected-apps/google-drive-connected-app/)
+- [GitHub](/integrate/connected-apps/github-connected-app/)
+- [GitLab](/integrate/connected-apps/gitlab-connected-app/)
+- [Patreon](/integrate/connected-apps/patreon-connected-app/)
+
+## **Step 3: Configure the connected app in Kinde**
+
+To complete this procedure, you need to have set up the app. See relevant instructions below.
+
+1. In Kinde, go to **Settings > Connected apps**.
+2. On the app tile, select **Configure**.
+3. On the Details tab:
+   1. Enter a name.
+   2. Enter the **Client ID** and **Client secret** from the app, e.g. Google Drive.
+   3. Enter a reference key that will be used in your app’s code.
+   4. Enter the callback URL for your app.
+   5. Select **Save**.
+4. In the **Permissions** tab, select the permissions (scopes) that you want to access via the connection.
+5. Select **Save**. The next time a user signs in, they will be prompted to allow the above permissions.
+
+## **Step 4: Get an access token via the Kinde Management API**
+
+This final step needs to be performed in your own app, using that app’s language. The steps below simulate the process in Postman.
+
+1. Get the user ID of one of your users by calling the following API in Postman: `https://yourdomain.kinde.com/api/v1/users`. In the below example, the `id` of the only user in the business is `kp:xxxxx...`
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4226353f-43a6-4fbd-381c-5f6817e32800/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+    Note: The user’s endpoint is a Kinde management API endpoint, therefore you will need a token to call this API.
+
+2. Using Postman, call the auth url endpoint to get a URL that will allow you to connect, e.g. to Google. The URL is: `https://<KINDE_URL>/api/v1/connected_apps/auth_url?key_code_ref=<KEY>&user_id=<USER_ID>`
+3. Replace:
+
+   - `<KINDE_URL>` with your Kinde business url, e.g. `mybiz.kinde.com`
+   - `<KEY>` with the unique key you gave your connected app
+   - `<USER_ID>` with the user id you got in step 1
+
+   Note: The `auth_url` endpoint is a Kinde management API endpoint, therefore you will need a token to call this API.
+
+   You will get back a URL and session_id in the response if the call was successful:
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/040b6860-0774-4128-fbb9-95dd24774300/public"
+  alt="Getting session_id in Postman"
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+4. Copy the URL from the call to `url` and paste it in a browser’s address bar. This should redirect you to get authenticated.
+5. Authorize the requested scopes for the application. You will be redirected to the URL defined in the `Kinde to application` .
+6. Use Postman to call the `connected_apps/token` API to get an access token that has been granted the scopes you have defined previously. The URL is: `https://<KINDE_URL>/api/v1/connected_apps/token?session_id=<SESSION_ID>`
+7. Replace:
+
+   - `<KINDE_URL>` with your Kinde business url, e.g. `mybiz.kinde.com`
+   - `<SESSION_ID>` with the session_id that was returned when calling the `auth_url` endpoint
+
+   Note: The `connected_apps/token` endpoint is a Kinde management API endpoint, therefore you will need a token.
+
+   You will get an access token back from the call. This token can be used to call the connected services.
+
+8. You’re ready to use the connection. Below is an example API call to Google Drive.
+
+### **Example connected app access - Google Drive**
+
+1. In your code or using Postman, call the Google Drive API to list files. The URL is `https://www.googleapis.com/drive/v3/files` .
+2. You will need to use the access token you obtained earlier, and pass it as a bearer token in the Authorization header. Here’s what the call and return looks like.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c76b98f4-828e-4147-4ff1-32fa489e1400/public"
+  alt="Calling Google Drive API in Postman"
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+## **Disconnect a connected app**
+
+You can disconnect a connected app from Kinde, however this does not revoke permissions. To revoke permissions you need to call the `/connected apps/revoke` endpoint.
+
+1. Go to **Settings > Connected Apps**.
+2. Select the three dots menu on the tile for the connected app, then select **Disconnect**. A confirmation window pops up.
+3. Select **Disconnect**.

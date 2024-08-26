@@ -1,0 +1,52 @@
+---
+export interface Props {
+  value: string;
+  removeTopPadding?: boolean;
+}
+
+const { value, removeTopPadding = false } = Astro.props;
+---
+
+<button
+  id={`tab-${value}`}
+  type="button"
+  role="tab"
+  aria-selected="false"
+  aria-controls={`tab-content-${value}`}
+  tabindex="-1"
+  class={`c-tab ${removeTopPadding ? "pt-0" : ""}`}
+>
+  <span class="focus">
+    <slot />
+  </span>
+</button>
+
+<style>
+  .c-tab[role="tab"] {
+    @apply items-center border-0 text-kinde-grey-900 cursor-pointer flex text-sm md:text-base justify-center max-w-full overflow-hidden py-3 px-0 relative text-start bg-white dark:bg-transparent dark:text-white;
+  }
+
+  .c-tab[role="tab"]:not(:last-child) {
+    @apply mr-6;
+  }
+
+  .c-tab[role="tab"][aria-selected="true"] {
+    @apply border-0 font-medium;
+  }
+
+  .c-tab[role="tab"][aria-selected="false"] {
+    @apply text-kinde-grey-600 dark:text-kinde-grey-300 font-normal;
+  }
+
+  .c-tab[role="tab"][aria-selected="true"]{
+    @apply after:absolute after:bottom-0 after:content-[""] after:h-[2px] after:w-full after:bg-kinde-grey-900; 
+  }
+
+  :root[data-theme="dark"] .c-tab[role="tab"][aria-selected="true"] {
+    @apply after:bg-white;
+  }
+
+  .c-tab[role="tab"] .focus {
+    @apply hover:text-kinde-grey-900 dark:hover:text-white;
+  }
+</style>

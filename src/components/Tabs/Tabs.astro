@@ -1,0 +1,114 @@
+---
+export interface Props {
+    id: string;
+}
+
+const {id} = Astro.props;
+---
+
+<div {id} class="c-tabs">
+    <slot />
+</div>
+
+<script nonce="2726c7f26c" is:inline define:vars={{id}}>
+    // This is a based on this example: https://www.w3.org/WAI/ARIA/apg/patterns/tabs/examples/tabs-automatic/
+
+    const SetupTabs = (groupNode) => {
+        let tablistNode = groupNode;
+        let tabs = [];
+        let firstTab = null;
+        let lastTab = null;
+        let tabpanels = [];
+
+        const setSelectedTab = (currentTab, setFocus = true) => {
+            tabs.forEach((tab, i) => {
+                if (currentTab === tab) {
+                    tab.setAttribute("aria-selected", "true");
+                    tab.removeAttribute("tabindex");
+                    tabpanels[i].classList.remove("is-hidden");
+                    if (setFocus) {
+                        tab.focus();
+                    }
+                } else {
+                    tab.setAttribute("aria-selected", "false");
+                    tab.tabIndex = -1;
+                    tabpanels[i].classList.add("is-hidden");
+                }
+            });
+        };
+
+        const setSelectedToPreviousTab = (currentTab) => {
+            const index =
+                currentTab === firstTab ? tabs.indexOf(lastTab) : tabs.indexOf(currentTab) - 1;
+            setSelectedTab(tabs[index]);
+        };
+
+        const setSelectedToNextTab = (currentTab) => {
+            const index =
+                currentTab === lastTab ? tabs.indexOf(firstTab) : tabs.indexOf(currentTab) + 1;
+            setSelectedTab(tabs[index]);
+        };
+
+        const onKeydown = (event) => {
+            const tgt = event.currentTarget;
+            let flag = false;
+
+            switch (event.key) {
+                case "ArrowLeft":
+                    setSelectedToPreviousTab(tgt);
+                    flag = true;
+                    break;
+                case "ArrowRight":
+                    setSelectedToNextTab(tgt);
+                    flag = true;
+                    break;
+                case "Home":
+                    setSelectedTab(firstTab);
+                    flag = true;
+                    break;
+                case "End":
+                    setSelectedTab(lastTab);
+                    flag = true;
+                    break;
+                default:
+                    break;
+            }
+
+            if (flag) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+        };
+
+        const onClick = (event) => {
+            setSelectedTab(event.currentTarget);
+        };
+
+        tabs = Array.from(tablistNode.querySelectorAll("[role=tab]"));
+
+        tabs.forEach((tab, i) => {
+            const tabpanel = document.getElementById(tab.getAttribute("aria-controls"));
+
+            tab.tabIndex = -1;
+            tab.setAttribute("aria-selected", "false");
+            tabpanels.push(tabpanel);
+
+            tab.addEventListener("keydown", onKeydown);
+            tab.addEventListener("click", onClick);
+
+            if (!firstTab) {
+                firstTab = tab;
+            }
+            lastTab = tab;
+        });
+
+        setSelectedTab(firstTab, false);
+    };
+
+    (() => {
+        const tablists = document.querySelectorAll(`#${id} .c-tablist[role=tablist]`);
+        tablists.forEach((tablist) => {
+            SetupTabs(tablist);
+        });
+    })();
+</script>

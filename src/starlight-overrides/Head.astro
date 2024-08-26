@@ -1,0 +1,26 @@
+---
+import Default from "@astrojs/starlight/components/Head.astro";
+import type {Props} from "@astrojs/starlight/props";
+
+const hasCustomOGImage = Astro.props.entry.data.head.find((t) =>
+  t.attrs.property === "og:image" ? true : false
+);
+---
+
+{
+  import.meta.env.PUBLIC_IS_ANALYTICS_ENABLED === "true" && (
+    <script data-domain="kinde.com" src="https://kinde.com/js/script.tagged-events.js" defer />
+  )
+}
+
+<Default {...Astro.props}>
+  <slot />
+</Default>
+
+{!hasCustomOGImage && <meta property="og:image" content={`${Astro.url.href}og-image.png`} />}
+
+<link
+  rel="preconnect"
+  href=`https://${import.meta.env.PUBLIC_ALGOLIA_APP_ID}-dsn.algolia.net`
+  crossorigin
+/>

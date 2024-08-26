@@ -1,0 +1,142 @@
+---
+page_id: b17ef65e-5153-4764-b699-0e618337d697
+title: Apple social sign in
+sidebar:
+  order: 3
+---
+
+You can enable users to sign up and sign in using their Apple credentials.
+
+<Aside type="warning" title="Note:">
+
+Apple limits the information it passes when users sign up this way. Avatars and profile pictures do not flow through to the auth experience in Kinde.
+
+</Aside>
+
+## **What you need**
+
+- An [Apple Developer account](https://developer.apple.com/) including a subscription to the Apple developer program
+- Your Kinde callback URL (see below)
+- Some developer know-how
+
+## **Copy the callback URL from Kinde**
+
+1. In Kinde, go to **Settings** > **Authentication**.
+2. If you have not yet added the Apple connection, select **Add connection**, select **Apple**, then **Save**.
+3. On the **Apple auth** tile in the **Social authentication** section, select **Configure**.
+4. In the **Callback URL** section:
+   1. If you use Kinde’s domain as your default, copy the **Kinde domain** URL.
+   2. If you use custom domains, select the **Use custom domain instead** switch. 
+   3. If you have only one custom domain, copy the **Custom domain** URL. If you have custom domains for multiple organizations, select each one from the list and copy the callbacks for each. You need to enter all custom domain callbacks in the provider app.
+5. Use the copied Callback URLs to set up the app, see below.
+
+## **Configure sign in for your app**
+
+<Aside>
+
+The following procedures refer to several types of IDs including App ID and Services ID. Take care to follow the steps exactly, to avoid errors.
+
+</Aside>
+
+### **Set up your app**
+
+1. In your Apple developer account, go to **Identifiers**.
+2. Select the plus (+) icon next to **Identifiers**.
+3. Select **App IDs**, then select **Continue**.
+4. Select **App**, then select **Continue.**
+5. Enter a description and Bundle ID.
+6. In the **Capabilites** list, select **Sign in with Apple**.
+7. Select **Register**.
+
+### **Register** **services**
+
+1. Select the plus icon (+) next to **Identifiers**.
+2. Select **Services ID**, then select **Continue.**
+3. Enter a description and identifier (make a note of this because it will be used as the Client ID).
+4. Select **Register.**
+
+### **Configure domains**
+
+1. Click on the newly created service to edit.
+2. Check the box to enable **Sign In with Apple** and click **Configure.**
+3. In the **Domains and Subdomains** field, enter your Kinde URL, e.g. `yourdomain.kinde.com` (excluding the https:// protocol)
+4. In the **Return URLs** field, enter your Kinde callback URL or custom domain callback URL, e.g. `https://yourdomain.kinde.com/login/callback`. 
+5. Add additional entries for all your organization custom domain callbacks, e.g. `account.customdomainone.com/login/callback`, `account.customdomaintwo.com/login/callback`, etc. 
+6. Select **Next**, then select **Done.**
+7. In the **Edit your Services ID Configuration** window, select **Continue**, then select **Save.**
+
+### **Set up keys**
+
+1. Select **Keys** in the left hand menu and click the plus icon (+) next to the page title.
+2. Enter a **Key Name**.
+3. Select **Sign In with Apple** and next to this option, select **Configure**.
+4. Select your app from the Primary App ID field, then select **Save.**
+5. Select **Continue** then select **Register.**
+6. Download your key as per the screen instructions. You will need this to generate the client secret.
+7. When you have downloaded the key, select **Done**.
+
+### **Generate the client secret**
+
+There are several ways to generate the client secret. An example is provided below.
+
+_**Example using Ruby**_
+
+You can use open source libraries for creating and signing JWT tokens for your client secret (see [JWT.io](https://jwt.io/)). The below steps provide an example of accomplishing this using Ruby.
+
+1. Install jwt using the following command: `gem install jwt`.
+2. Create a file titled `client_secret.rb` and replace the empty values in your script as follows:
+
+   - `key_file` is the p8 file containing your private key that you downloaded.
+   - `team_id` can be found in the top right of your apple developer account under your name.
+   - `client_id` is the identifier used for the service.
+   - `key_id` was provided on the key creation screen.
+
+     ```ruby
+     require 'jwt'
+     key_file = 'key.txt'
+     team_id = ''
+     client_id = ''
+     key_id = ''
+
+     ecdsa_key = OpenSSL::PKey::EC.new IO.read key_file
+     headers = {
+      'kid' => key_id
+     }
+
+     claims = {
+      'iss' => team_id,
+      'iat' => Time.now.to_i,
+      # Note that this is the maximum exp value of 6 months
+      'exp' => Time.now.to_i + 86400*180,
+      'aud' => 'https://appleid.apple.com',
+      'sub' => client_id,
+     }
+
+     token = JWT.encode claims, ecdsa_key, 'ES256', headers
+     puts token
+     ```
+
+3. Run the script with ruby `client_secret.rb` and copy the generated `client_secret`.
+4. Add these credentials into Kinde.
+
+## **Add credentials to Kinde**
+
+1. In Kinde, go to **Settings** > **Authentication**.
+2. On the Apple tile, select **Configure**.
+3. Paste the **Client ID** (Service ID) and **Client secret** (Private key) into the relevant fields.
+4. Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified. We recommend leaving this off for maximum security.
+5. Select which apps will use Apple sign in.
+6. Select **Save**. Users will now see Apple as an option to sign up and sign in to your product.
+
+## **Renew Apple token periodically**
+
+To continue to enable users to sign in with Apple, you will need to periodically renew the Apple token by generating a new client secret. Usually every six months. To do this, repeat the procedures from **Set up keys** to **Add credentials to Kinde**, above.
+
+## **Third party references for this article**
+
+We do our best to test all our procedures, but sometimes third party companies change things without us knowing. Here’s the sources we used to create this article.
+
+- [Validating “Sign in with Apple” Authorization Code](https://p.agnihotry.com/post/validating_sign_in_with_apple_authorization_code/)
+- [Configuring your environment for Sign in with Apple](https://developer.apple.com/documentation/sign_in_with_apple/configuring_your_environment_for_sign_in_with_apple)
+- [Sign in with Apple REST API](https://developer.apple.com/documentation/sign_in_with_apple/sign_in_with_apple_rest_api)
+- [Apple Developer Center](https://developer.apple.com/)

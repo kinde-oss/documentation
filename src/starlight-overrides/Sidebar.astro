@@ -1,0 +1,34 @@
+---
+import type {Props} from "@astrojs/starlight/props";
+import Default from "@astrojs/starlight/components/Sidebar.astro";
+
+import sdkList from "@data/sdkList";
+
+// Get community SDKs from the SDK list and order them alphabetically
+const communitySDKs = sdkList
+  .filter((sdk) => sdk.isCommunity)
+  .sort((a, b) => (a.name < b.name ? -1 : 1));
+
+// Add community SDKs to the bottom of each of the SDK types list (Back end, Front end, Native)
+Astro.props?.sidebar
+  ?.find((group) => group?.label === "SDKs and APIs" && group.type === "group")
+  // @ts-ignore
+  ?.entries?.map((sdkType: any) => {
+    communitySDKs.forEach((sdk) => {
+      if (sdk.type.toLocaleLowerCase().includes(sdkType.label.split(" ")[0].toLowerCase())) {
+        sdkType.entries.push({
+          type: "link",
+          label: sdk.name,
+          href: sdk.link,
+          attrs: {
+            target: "_blank",
+            rel: "noopener noreferrer",
+            class: "community-sdk"
+          }
+        });
+      }
+    });
+  });
+---
+
+<Default {...Astro.props}><slot /></Default>

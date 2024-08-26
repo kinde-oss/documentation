@@ -1,0 +1,750 @@
+---
+page_id: c258cef9-0ca5-4d46-a61c-3f2831cda4fd
+title: Android SDK
+sidebar:
+  order: 17
+head:
+  - tag: meta
+    attrs:
+      property: "og:image"
+      content: "https://kinde.com/assets/images/open-graph/DOCS-SSI-SDK_Android.png"
+---
+
+The Kinde Android SDK allows developers to quickly and securely integrate a new or existing application into the Kinde platform.
+
+You can also view the [Android docs](https://github.com/kinde-oss/kinde-sdk-android) and [Android starter kit](https://github.com/kinde-starter-kits/android-starter-kit) in GitHub.
+
+## Register for Kinde
+
+If you don’t already have a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). Registering gives you a Kinde domain to get started, e.g. `https://yourapp.kinde.com`.
+
+## Install
+
+KindeSDK is available through [Maven](https://search.maven.org/). To install it, simply add the following line to your `build.gradle`:
+
+```kotlin
+...
+
+implementation "com.kinde:android-sdk:<sdk_version>"
+
+...
+```
+
+You should also include Retrofit and the GSON converter as dependencies:
+
+```kotlin
+implementation "com.squareup.retrofit2:retrofit:<retrofit_version>"
+implementation "com.squareup.retrofit2:converter-gson:<retrofit_version>"
+```
+
+## Configure Kinde
+
+### Set callback URLs
+
+1. In Kinde, go to **Settings > Applications > [Your app] > View details**.
+2. Add your callback URLs in the relevant fields. For example:
+   - Allowed callback URLs (also known as redirect URIs): `{your_url_scheme}://<your_kinde_host>//kinde_callback` - for example `myapp://myhost.kinde.com//kinde_callback`
+   - Allowed logout redirect URLs: `{your_url_scheme}://<your_kinde_host>//kinde_logoutcallback` - for example `myapp://myhost.kinde.com//kinde_logoutcallback`
+3. Select **Save**.
+
+### Add environments
+
+If you would like to use our Environments feature as part of your development process, you will need to create them within your Kinde account. In this case you would use the Environment subdomain in the code block above.
+
+## **Configure your app**
+
+### Environment variables
+
+The SDK reads configuration from `meta-data`, so you should add `meta-data` to the `<application>` section of your `AndroidManifest.xml`.
+
+You can find these variables in Kinde. Go to **Settings > Applications > [Your app] > View details**. Then scroll to the **App keys** section.
+
+- `au.kinde.domain:` - your Kinde domain
+- `au.kinde.clientId`
+
+```xml
+...
+<application ...>
+...
+	<meta-data
+		android:name="au.kinde.domain"
+		android:value="your_kinde_url" />
+
+	<meta-data
+		android:name="au.kinde.clientId"
+		android:value="your_kinde_client_id" />
+...
+</application>
+...
+```
+
+Configuration example:
+
+```xml
+...
+<application ...>
+...
+	<meta-data
+		android:name="au.kinde.domain"
+		android:value="app.kinde.com" />
+
+	<meta-data
+		android:name="au.kinde.clientId"
+		android:value="test@live" />
+...
+</application>
+...
+```
+
+## Integrate with your app
+
+You'll need to import the SDK package in your Android app.
+
+```kotlin
+...
+import android.os.Handler
+import android.util.Log
+...
+
+class YourActivity : AppCompatActivity() {
+
+...
+private lateinit var sdk: KindeSDK
+...
+
+override fun onCreate(savedInstanceState: Bundle?) {
+...
+	sdk = KindeSDK(this, object : KindeSDK.SDKListener {
+
+		override fun onNewToken(token: String) {
+			// Need to implement
+		}
+
+		override fun onLogout() {
+			// Need to implement
+		}
+
+		override fun onException(exception: Exception) {
+			Handler(Looper.getMainLooper()).post {
+				Log.e("Kinde", "Something wrong init KindeSDK: " + exception.message)
+			}
+		}
+	})
+...
+}
+```
+
+## Login / Register
+
+The Kinde client provides methods for a simple login / register flow. Add buttons in your view as follows:
+
+```kotlin
+...
+findViewById<View>(R.id.b_sign_in).setOnClickListener {
+	sdk.login(GrantType.PKCE)
+}
+
+findViewById<View>(R.id.b_sign_up).setOnClickListener {
+	sdk.register(GrantType.PKCE)
+}
+...
+```
+
+### Handle redirect
+
+Once your user is redirected back to your site from Kinde, it means you’ve logged in successfully. You will need to implement the `onNewToken` function from the SDK.
+
+```kotlin
+...
+sdk = KindeSDK(this, object : KindeSDK.SDKListener {
+	override fun onNewToken(token: String) {
+	// Need to implement
+	}
+...
+}
+```
+
+## Logout
+
+This is implemented in much the same way as logging in or registering. The Kinde SPA client comes with a logout method.
+
+```kotlin
+findViewById<View>(R.id.b_sign_out).setOnClickListener {
+	sdk.logout()
+}
+```
+
+## Get user information
+
+To access the user information, call the `getUserDetails` method.
+
+```kotlin
+sdk.getUserDetails().let {
+	Log.i("Kinde", it.givenName + " " + it.familyName)
+}
+```
+
+### View users in Kinde
+
+In Kinde, go to **Users** to view all users and subscribers.
+
+## User Permissions
+
+Once a user has been verified, your application will be returned the JWT token with an array of permissions for that user. You will need to configure your application to read permissions and unlock the respective functions.
+
+[Set roles and permissions](/manage-users/roles-and-permissions/apply-roles-and-permissions-to-users/) at the Business level in Kinde. Here’s an example of permissions.
+
+```kotlin
+String[] permissions = {
+	"create:todos",
+	"update:todos",
+	"read:todos",
+	"delete:todos",
+	"create:tasks",
+	"update:tasks",
+	"read:tasks",
+	"delete:tasks",
+}
+```
+
+We provide helper functions to more easily access permissions:
+
+```kotlin
+sdk.getPermission("create:todos")
+// {orgCode: "org_b235c067b7e4", isGranted: true}
+
+sdk.getPermissions()
+// {orgCode: "org_b235c067b7e4", permissions: [ "create:users", "view:users" ]}
+```
+
+A practical example in code might look something like:
+
+```kotlin
+if(sdk.getPermission("create:todos").isGranted) {
+		// create new a todo
+}
+```
+
+## Audience
+
+An `audience` is the intended recipient of an access token - for example the API for your application. The audience argument can be passed to the Kinde client to request an audience to be added to the provided token.
+
+The audience of a token is the intended recipient of the token.
+
+```xml
+<meta-data android:name="au.kinde.audience" android:value="example@example" />
+```
+
+For details on how to connect, see [Register an API](/developer-tools/your-apis/register-manage-apis/).
+
+## Overriding scope
+
+By default the `KindeSDK` requests the following scopes:
+
+- `profile`
+- `email`
+- `offline`
+- `openid`
+
+You can override this by passing scope into the `KindeSDK`.
+
+```kotlin
+sdk = KindeSDK(
+        ...
+        scopes = listOf("openid", "offline", "email", "profile"),
+        ...
+    )
+```
+
+## Getting claims
+
+We have provided a helper to grab any claim from your id or access tokens. The helper defaults to access tokens:
+
+```kotlin
+sdk.getClaim("aud")
+// ["api.yourapp.com"]
+
+sdk.getClaim("given_name", TokenType.ID_TOKEN)
+// "David"
+```
+
+## Feature flags
+
+We have provided a helper to grab any feature flag from `access_token`.
+
+```kotlin
+...
+import au.kinde.sdk.model.FlagType
+...
+
+sdk.getFlag("theme");
+// returns
+{
+    "code": "theme",
+    "type": "String",
+    "value": "pink",
+    "isDefault": true // whether the fallback value had to be used
+}
+
+// Another usage case
+sdk.getFlag("is_dark_mode");
+// returns
+{
+    "code": "is_dark_mode",
+    "type": "Boolean",
+    "value": true,
+    "isDefault": false
+}
+
+// This flag does not exist - default value provided
+sdk.getFlag("create_competition", false);
+// returns
+{
+    "code": "create_competition",
+    "type": "Boolean",
+    "value": false,
+    "isDefault": true // because fallback value had to be used
+}
+
+// The flag type was provided as string, but it is an integer
+sdk.getFlag("competitions_limit", 3, FlagType.String);
+// should error out - Flag "competitions_limit" is type integer - requested type string
+
+
+// This flag does not exist, and no default value provided
+sdk.getFlag("new_feature");
+// should error out - This flag was not found, and no default value has been provided
+```
+
+We also provide wrapper functions which should leverage `getFlag` above.
+
+**Get boolean flags**
+
+```kotlin
+sdk.getBooleanFlag("is_dark_mode");
+// true
+
+sdk.getBooleanFlag("is_dark_mode", false);
+// true
+
+sdk.getBooleanFlag("new_feature", false);
+// false (flag does not exist so falls back to default)
+
+sdk.getBooleanFlag("new_feature");
+// Error - flag does not exist and no default provided
+
+sdk.getBooleanFlag("theme", false);
+// Error - Flag "theme" is of type string not boolean
+```
+
+**Get string flags**
+
+```kotlin
+sdk.getStringFlag("theme");
+// "pink"
+
+sdk.getStringFlag("theme", "blue");
+// "pink"
+
+sdk.getStringFlag("cta_color", "blue");
+// "blue" (flag does not exist so falls back to default)
+
+sdk.getStringFlag("cta_color");
+// Error - flag does not exist and no default provided
+
+sdk.getStringFlag("is_dark_mode", false);
+// Error - Flag "is_dark_mode" is of type boolean not string
+```
+
+**Get integer flags**
+
+```kotlin
+sdk.getIntegerFlag("competitions_limit");
+// 5
+
+sdk.getIntegerFlag("competitions_limit", 3);
+// 5
+
+sdk.getIntegerFlag("team_count", 2);
+// 2 (flag does not exist so falls back to default)
+
+sdk.getIntegerFlag("team_count");
+// Error - flag does not exist and no default provided
+
+sdk.getIntegerFlag("is_dark_mode", false);
+// Error - Flag "is_dark_mode" is of type boolean not integer
+```
+
+## Organizations
+
+### Create an organization
+
+To have a new organization created within your application, you will need to run a similar function to below:
+
+```kotlin
+...
+findViewById<View>(R.id.create_org).setOnClickListener {
+	sdk.createOrg(orgName = "Your Organization")
+}
+...
+```
+
+### Sign up and sign in to organizations
+
+Kinde has a unique code for every organization. You’ll have to pass this code through when you register a new user or sign into a particular organization. Example function below:
+
+```kotlin
+findViewById<View>(R.id.b_sign_in).setOnClickListener {
+	sdk.login(GrantType.PKCE, orgCode = "your_org_code")
+}
+
+findViewById<View>(R.id.b_sign_up).setOnClickListener {
+	sdk.register(GrantType.PKCE, orgCode = "your_org_code")
+}
+```
+
+Following authentication, Kinde provides a json web token (jwt) to your application. Along with the standard information, we also include the `org_code` and the permissions for that organization. This is important as a user can belong to multiple organizations and have different permissions for each.
+
+Example of a returned token:
+
+```kotlin
+{
+   "aud": [],
+   "exp": 1658475930,
+   "iat": 1658472329,
+   "iss": "https://your_subdomain.kinde.com",
+   "jti": "123457890",
+   "org_code": "org_1234",
+   "permissions": ["read:todos", "create:todos"],
+   "scp": [
+		   "openid",
+		   "profile",
+		   "email",
+		   "offline"
+   ],
+   "sub": "kp:123457890"
+}
+```
+
+The `id_token` will also contain an array of organizations that a user belongs to. This is useful if you wanted to build out an organization switcher, for example.
+
+```json
+{
+		...
+		"org_codes": ["org_1234", "org_4567"],
+		...
+};
+```
+
+There are two helper functions you can use to extract information:
+
+```kotlin
+sdk.getOrganization()
+// {'orgCode': 'org_1234'}
+
+sdk.getUserOrganizations()
+// {'orgCodes': ['org_1234', 'org_abcd']}
+```
+
+For more information about how organizations work in Kinde, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
+
+### Token storage
+
+Once the user has successfully authenticated, you'll have a JWT and possibly a refresh token that should be stored securely.
+
+## SDK API reference
+
+### `activity`
+
+Activity of the application.
+
+Type: `AppCompatActivity`
+
+Required: Yes
+
+### `loginRedirect`
+
+The URL that the user will be returned to after authentication.
+
+Type: `string`
+
+Required: Yes
+
+### `logoutRedirect`
+
+Where the user will be redirected when they sign out.
+
+Type: `string`
+
+Required: Yes
+
+### `scopes`
+
+Type: `List<String>`
+
+Is required: No
+
+Default:
+
+```kotlin
+listOf("openid", "offline", "email", "profile")
+```
+
+### `SDKListener`
+
+The listener that receives callbacks from the SDK.
+
+Type:
+
+```kotlin
+SDKListener { fun onNewToken(token: String) fun onLogout() fun onException(exception: Exception) }
+```
+
+Required: Yes
+
+## KindeSDK methods
+
+### `login`
+
+Starts the authorization flow.
+
+Arguments:
+
+```kotlin
+grantType: GrantType?, orgCode: String? // GrantType { PKCE, NONE }
+```
+
+Usage:
+
+```kotlin
+sdk.login(GrantType.PKCE)orsdk.login(GrantType.PKCE, orgCode = "your_org_code")
+```
+
+### `register`
+
+Starts the registration flow.
+
+Arguments:
+
+```kotlin
+grantType: GrantType?, orgCode: String?
+```
+
+Usage:
+
+```kotlin
+sdk.register(GrantType.PKCE)orsdk.register(GrantType.PKCE, orgCode = "your_org_code")
+```
+
+### `createOrg`
+
+Starts the registration flow and creates a new organization in your business.
+
+Arguments:
+
+```kotlin
+grantType: GrantType?, orgCode: String?
+```
+
+Usage:
+
+```kotlin
+sdk.createOrg(orgName =”Your Organization”)orsdk.register(GrantType.PKCE, orgName =”Your Organization”)
+```
+
+### `logout`
+
+Logs the user out of Kinde.
+
+Usage: `sdk.logout()`
+
+### `isAuthenticated`
+
+Checks that access token is present.
+
+Usage: `sdk.isAuthenticated()`
+
+Sample output: `true` or `false`
+
+### `getUserDetails`
+
+Gets user details from an access or ID token.
+
+Usage: `sdk.getUserDetails()`
+
+Sample output:
+
+```kotlin
+{
+	givenName: "Dave";
+	id: "abcdef";
+	familyName: "Smith";
+	email: "dave@smith.com"
+}
+```
+
+### `getClaim`
+
+Gets a claim from an access or ID token.
+
+Arguments:
+
+```kotlin
+claim: String, tokenType: TokenType // TokenType { ID_TOKEN, ACCESS_TOKEN}
+```
+
+Usage:
+
+```kotlin
+sdk.getClaim('given_name', TokenType.ID_TOKEN);
+```
+
+Sample output: `"David"`
+
+### `getPermission`
+
+Returns the state of a given permission.
+
+Usage:
+
+```kotlin
+sdk.getPermission("read:todos")
+```
+
+Sample output:
+
+```kotlin
+{
+	orgCode: "org_1234",
+	isGranted: true
+}
+```
+
+### `getPermissions`
+
+Returns all permissions for the current user for the organization they are logged into.
+
+Arguments: `permission: String`
+
+Usage: `sdk.getPermissions()`
+
+Sample output:
+
+```kotlin
+{
+	orgCode: "org_1234",
+	permissions: [
+		"create:todos",
+		"update:todos",
+		"read:todos",
+		"create:todos",
+		"update:todos",
+		"read:todos"
+	]
+}
+```
+
+### `getUserOrganizations`
+
+Gets an array of all organizations the user has access to.
+
+Usage: `sdk.getUserOrganizations()`
+
+Sample output:
+
+```kotlin
+{
+	orgCodes: [
+		"org_1234",
+		"org_5678",
+		"org1_234",
+		"org_5678"
+	]
+}
+```
+
+### `getOrganization`
+
+Get details for the organization your user is signed into.
+
+Usage: `sdk.getOrganization()`
+
+Sample output:
+
+```kotlin
+{orgCode: "org_1234"}
+```
+
+### `getFlag`
+
+Gets a feature flag from an access token.
+
+Arguments:
+
+```kotlin
+code: String, defaultValue: Any? = null; flagType: FlagType? = null // FlagType { String, Integer, Boolean }
+```
+
+Usage: `sdk.getFlag("theme");`
+
+Sample output:
+
+```kotlin
+{"code": "theme", "type": "string", "value": "pink","is_default": False}
+```
+
+### `getBooleanFlag`
+
+Gets a boolean feature flag from an access token
+
+Arguments:
+
+```kotlin
+code: String; defaultValue: Boolean? = null
+```
+
+Usage:
+
+```kotlin
+sdk.getBooleanFlag(”is_dark_mode”);
+```
+
+Sample output: `true` or `false`
+
+### `getStringFlag`
+
+Gets a string feature flag from an access token
+
+Arguments:
+
+```kotlin
+code: String; defaultValue: String? = null
+```
+
+Usage:
+
+```kotlin
+sdk.getStringFlag("theme");
+```
+
+Sample output: `“pink”`
+
+### `getIntegerFlag`
+
+Gets a integer feature flag from an access token
+
+Arguments:
+
+```kotlin
+code: String; defaultValue: Int? = null
+```
+
+Usage:
+
+```kotlin
+sdk.getIntegerFlag("competitions_limit");
+```
+
+Sample output: `5`
+
+If you need help getting Kinde connected, contact us at [support@kinde.com](mailto:support@kinde.com).

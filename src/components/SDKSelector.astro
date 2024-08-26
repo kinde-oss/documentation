@@ -1,0 +1,124 @@
+---
+import Button from "@components/Button.astro";
+import {Tab, Tabs, TabsContent, TabsList} from "@components/Tabs";
+import sdkList from "@data/sdkList";
+
+export interface Props {
+  id: string;
+  fixedHeight?: boolean;
+}
+
+const {id, fixedHeight = false} = Astro.props;
+
+const allSDKs = sdkList?.sort((a, b) =>
+  a?.name?.toLocaleLowerCase() < b?.name?.toLocaleLowerCase() ? -1 : 1
+);
+
+const uniqueSDKCategories = [...new Set(allSDKs.map((item) => item.type))];
+uniqueSDKCategories.splice(0, 0, "All");
+
+if (!id) {
+  throw new Error(`\n\n\n 🥲  <SDKSelector /> needs an unique "id" prop. Consider using an UUID`);
+}
+---
+
+{
+  id && (
+    <div class="c-sdk-selector not-content">
+      <Tabs {id}>
+        <TabsList isSticky={false} removeBorder>
+          {uniqueSDKCategories?.sort()?.map((tab) => (
+            <Tab value={id + "-" + tab.replaceAll(" ", "-").toLocaleLowerCase()} removeTopPadding>
+              {tab} {tab === "All" && <span class="hidden md:inline"> SDKs</span>}
+            </Tab>
+          ))}
+        </TabsList>
+        {uniqueSDKCategories?.map((tab) => (
+          <TabsContent value={id + "-" + tab.replaceAll(" ", "-").toLocaleLowerCase()}>
+            <div
+              class={`c-sdk-selector__grid ${
+                fixedHeight ? "c-sdk-selector__grid--fixed-height" : ""
+              }`}
+            >
+              {tab === "All" ? (
+                <>
+                  {sdkList?.map((sdk) => (
+                    <Button
+                      text={sdk?.name}
+                      iconName={sdk?.icon}
+                      variant="sdk"
+                      url={sdk?.link}
+                      additionalLabel={sdk?.isCommunity ? "(Community)" : null}
+                      isExternal={sdk?.isCommunity}
+                    />
+                  ))}
+                </>
+              ) : (
+                <>
+                  {sdkList
+                    ?.filter((sdk) => sdk?.type === tab)
+                    ?.map((sdk) => (
+                      <Button
+                        text={sdk?.name}
+                        iconName={sdk?.icon}
+                        variant="sdk"
+                        url={sdk?.link}
+                        additionalLabel={sdk?.isCommunity ? "(Community)" : null}
+                        isExternal={sdk?.isCommunity}
+                      />
+                    ))}
+                </>
+              )}
+            </div>
+          </TabsContent>
+        ))}
+      </Tabs>
+      <div class="c-sdk-selector__no-sdk">
+        <div class="text-left font-medium">Can’t find what you need?</div>
+        <div class="c-sdk-selector__no-sdk-btn-wrapper">
+          <Button
+            text="Start without an SDK"
+            variant="secondary"
+            url="/developer-tools/about/using-kinde-without-an-sdk/"
+          />
+          <Button
+            text="Request other SDK"
+            variant="uncontained"
+            url="https://kinde-21631392.hs-sites.com/en-au/feature-request"
+            isExternal
+            trailingIconName="arrow-up-right"
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+<style>
+  .c-sdk-selector {
+    @apply relative block;
+  }
+
+  .c-sdk-selector__grid {
+    @apply flex gap-4 flex-wrap mt-4 md:mt-12;
+  }
+
+  .c-sdk-selector__grid--fixed-height {
+    @apply max-h-[175px] overflow-y-auto overscroll-y-contain pb-5;
+
+    -webkit-mask: linear-gradient(0deg, transparent, white 25%);
+    mask: linear-gradient(0deg, transparent, white 25%);
+  }
+
+  :global(#tab-megamenu-sdk-tabs-all .focus) {
+    @apply after:content-["test"];
+  }
+
+  .c-sdk-selector__no-sdk {
+    @apply flex flex-col gap-6 mt-14;
+  }
+
+  .c-sdk-selector__no-sdk-btn-wrapper {
+    @apply flex gap-4 flex-col md:flex-row;
+  }
+</style>

@@ -1,0 +1,826 @@
+---
+page_id: e2c64f9a-ba25-4c9e-879e-58e90d2c32ee
+title: NodeJS SDK
+sidebar:
+  order: 13
+head:
+  - tag: meta
+    attrs:
+      property: "og:image"
+      content: "https://kinde.com/assets/images/open-graph/DOCS-SSI-SDK_NodeJS.png"
+---
+
+Kinde’s NodeJS SDK helps developers integrate a new or an existing NodeJS application to the Kinde platform.
+
+You can view the [NodeJS docs](https://github.com/kinde-oss/kinde-nodejs-sdk) and [NodeJS starter kit](https://github.com/kinde-starter-kits/kinde-nodejs-starter-kit) in GitHub.
+
+## Requirements
+
+- Node version 18.x.x or newer.
+- If you haven’t got a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). Registering gives you a Kinde domain, which you need to get started, e.g. `yourapp.kinde.com`.
+
+## Install
+
+<PackageManagers pkg="@kinde-oss/kinde-nodejs-sdk" />
+
+## Configure Kinde
+
+### Set callback URLs
+
+1. In Kinde, go to **Settings > Applications > [Your app] > View details**.
+2. Add your callback URLs in the relevant fields. For example:
+
+   - Allowed callback URLs (also known as redirect URIs):
+     `https://<your_app_domain>/callback` e.g: `http://localhost:3000/callback`
+   - Allowed logout redirect URLs:
+
+     `https://<your_app_domain>` e.g:`http://localhost:3000`
+
+3. Select **Save**.
+
+### Add environments
+
+Kinde comes with a production environment, but you can set up other environments if you want to. Each environment has a unique subdomain so be sure to use the correct one in the **Configure your app section** which follows.
+
+## Configure your app
+
+**Environment variables**
+
+Put these variables in your `.env` file. You can find these variables on your **Settings > Applications > [Your app] > View details** page.
+
+- `KINDE_DOMAIN` - your Kinde domain
+- `KINDE_CLIENT_ID` - your Kinde client ID
+- `KINDE_CLIENT_SECRET` - your Kinde client secret
+- `KINDE_REDIRECT_URL` - your callback url to redirect to after authentication. Make sure this URL is under your **Allowed callback URLs**.
+- `KINDE_POST_LOGOUT_REDIRECT_URL` - where you want users to be redirected to after logging out. Make sure this URL is under your **Allowed logout redirect URLs**.
+
+Below is an example of a `.env` file
+
+```bash
+KINDE_DOMAIN=https://<your_kinde_subdomain>.kinde.com
+KINDE_CLIENT_ID=<your_kinde_client_id>
+KINDE_CLIENT_SECRET=<your_kinde_client_secret>
+KINDE_REDIRECT_URI=http://localhost:3000/callback
+KINDE_LOGOUT_REDIRECT_URI=http://localhost:3000
+```
+
+## Integrate with your app
+
+Create a new `KindeClient` instance before you initialize your app.
+
+```jsx
+require("dotenv").config();
+
+const {KindeClient, GrantType} = require("@kinde-oss/kinde-nodejs-sdk");
+
+const options = {
+  domain: process.env.KINDE_DOMAIN,
+  clientId: process.env.KINDE_CLIENT_ID,
+  clientSecret: process.env.KINDE_CLIENT_SECRET,
+  redirectUri: process.env.KINDE_REDIRECT_URI,
+  logoutRedirectUri: process.env.KINDE_LOGOUT_REDIRECT_URI,
+  grantType: GrantType.PKCE
+};
+
+const kindeClient = new KindeClient(options);
+```
+
+## Sign in and sign up
+
+To incorporate the login and register features, you'll have to create routes for `/login` and `/register`. Additionally, you should implement the `login`/`register` methods in the middleware.
+
+```jsx
+app.get("/login", kindeClient.login(), (req, res) => {
+  return res.redirect("/");
+});
+
+app.get("/register", kindeClient.register(), (req, res) => {
+  return res.redirect("/");
+});
+```
+
+Add links in your HTML as follows:
+
+```html
+<a href="/login">Sign in</a> <a href="/register">Sign up</a>
+```
+
+## **Manage redirects**
+
+You will also need to route `/callback`. When the user is redirected back to your site from Kinde, it will trigger a call to the callback URL defined in the variable `KINDE_REDIRECT_URL`.
+
+```jsx
+app.get("/callback", kindeClient.callback(), (req, res) => {
+  return res.redirect("/");
+});
+```
+
+## Logout
+
+The Kinde SDK comes with a logout method.
+
+```jsx
+app.get("/logout", client.logout());
+```
+
+Add links in your HTML as follows:
+
+```html
+<a href="/logout">Log out</a>
+```
+
+## Check if user authenticated
+
+We’ve provided a helper to get a boolean value to check if a user is signed in. This verifies that the access token is still valid.
+
+```jsx
+const isAuthenticated = await kindeClient.isAuthenticated(req); // Boolean: true or false
+
+if (isAuthenticated) {
+  // Need to implement, e.g: call an api, etc...
+} else {
+  // Need to implement, e.g: redirect user to sign in, etc..
+}
+```
+
+## View user profile
+
+You need to have already authenticated before you call the API, otherwise an error will occur.
+
+To access the user information, use the `getUserDetails` helper function:
+
+```jsx
+kindeClient.getUserDetails(req);
+// returns
+{
+	"given_name":"Dave",
+	"id":"kp_12345678910",
+	"family_name":"Smith",
+	"email":"dave@smith.com",
+	"picture": "https://link_to_avatar_url.kinde.com"
+}
+```
+
+## **View users in Kinde**
+
+If you navigate to the “**Users**” page within Kinde you will see your newly registered user there.
+
+## Audience
+
+An `audience` is the intended recipient of an access token - for example the API for your application. The audience argument can be passed to the Kinde client to request an audience be added to the provided token.
+
+The audience of a token is the intended recipient of the token.
+
+```jsx
+const options = {
+  ...
+	// rest options
+	...,
+  audience: 'api.yourapp.com',
+};
+
+const kindeClient = new KindeClient(options);
+```
+
+For details on how to connect, see [Register an API](/developer-tools/your-apis/register-manage-apis/)
+
+## Overriding scope
+
+By default the `KindeSDK` requests the following scopes:
+
+- profile
+- email
+- offline
+- openid
+
+You can override this by passing scopes into the `KindeSDK`.
+
+```jsx
+const options = {
+  ...
+	// rest options
+	...,
+  scope: 'openid profile email offline',
+};
+
+const kindeClient = new KindeClient(options);
+```
+
+## Organizations
+
+### Create an organization
+
+To have a new organization created within your application, you will need to set up the following route
+
+```jsx
+...
+app.get('/createOrg', kindeClient.createOrg(), (req, res) => {
+  // do something in next step
+  return res.redirect('/');
+});
+...
+```
+
+You can also pass `org_name` as part of the query string as per the following HTML:
+
+```html
+<a href="/createOrg?org_name=<your_org_name>">Create Org</a>
+```
+
+### Sign up and sign in to organizations
+
+The Kinde client provides methods for you easily sign up and sign in users into organizations. You can add links in your HTML as follows:
+
+```html
+<a href="/login?org_code=<your_org_code>">Sign into an org</a>
+<a href="/register?org_code=<your_org_code>">Sign up to an org</a>
+```
+
+Following authentication, Kinde provides a json web token (jwt) to your application. Along with the standard information we also include the `org_code` and the permissions for that organization (this is important as a user can belong to multiple organizations and have different permissions for each).
+
+Example of a returned token:
+
+```json
+{
+  "aud": [],
+  "exp": 1658475930,
+  "iat": 1658472329,
+  "iss": "https://your_subdomain.kinde.com",
+  "jti": "123457890",
+  "org_code": "org_1234",
+  "permissions": ["read:todos", "create:todos"],
+  "scp": ["openid", "profile", "email", "offline"],
+  "sub": "kp:123457890"
+}
+```
+
+The `id_token` will also contain an array of organizations that a user belongs to - this is useful if you wanted to build out an organization switcher for example.
+
+```json
+[
+		...
+		"org_codes": ["org_1234", "org_4567"]
+		...
+];
+```
+
+There are two helper functions you can use to extract information:
+
+```jsx
+kindeClient.getOrganization(req);
+// { orgCode: 'org_1234' }
+
+kindeClient.getUserOrganizations(req);
+// { orgCodes: ['org_1234', 'org_abcd'] }
+```
+
+For more information about how organizations work in Kinde, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
+
+## User permissions
+
+Once a user has been verified, your product/application will return the JWT token with an array of permissions for that user. You will need to configure your product/application to read permissions and unlock the respective functions.
+
+[Set permissions](/manage-users/roles-and-permissions/user-permissions/) in your Kinde account. Here’s an example set of permissions.
+
+```jsx
+const permissions = [
+  "create:todos",
+  "update:todos",
+  "read:todos",
+  "delete:todos",
+  "create:tasks",
+  "update:tasks",
+  "read:tasks",
+  "delete:tasks"
+];
+```
+
+We provide helper functions to more easily access the permissions claim:
+
+```jsx
+kindeClient.getPermission(req, "create:todos");
+// { orgCode: 'org_1234', isGranted: true }
+
+kindeClient.getPermissions(req);
+// { orgCode: 'org_1234', permissions: ['create:todos', 'update:todos', 'read:todos'] }
+```
+
+A practical example in code might look something like:
+
+```jsx
+if (kindeClient.getPermission(req, "create:todos")["isGranted"]) {
+  // create new a todo
+}
+```
+
+## Getting claims
+
+We have provided a helper to grab any claim from your id or access tokens. The helper defaults to access tokens:
+
+```jsx
+kindeClient.getClaim(req, "aud");
+// ['api.yourapp.com']
+
+kindeClient.getClaim(req, "given_name", "id_token");
+// 'David'
+```
+
+## Feature flags
+
+We have provided a helper to grab any feature flag from `access_token`:
+
+```jsx
+/**
+ * Get a flag from the feature_flags claim of the access_token.
+ * @param {Object} request - Request object
+ * @param {String} code - The name of the flag.
+ * @param {Object} [defaultValue] - A fallback value if the flag isn't found.
+ * @param {'s'|'b'|'i'|undefined} [flagType] - The data type of the flag (integer / boolean / string).
+ * @return {Object} Flag details.
+ */
+kindeClient.getFlag(req, code, {defaultValue}, flagType);
+
+/* Example usage */
+
+kindeClient.getFlag(req, "theme");
+/*{
+//   "code": "theme",
+//   "type": "string",
+//   "value": "pink",
+//   "is_default": false // whether the fallback value had to be used
+}*/
+
+kindeClient.getFlag(req, "create_competition", {defaultValue: false});
+/*{
+      "code": "create_competition",
+      "value": false,
+      "is_default": true // because fallback value had to be used
+}*/
+```
+
+We also require wrapper functions by type which should leverage `getFlag` above.
+
+### **Get boolean flags**
+
+```jsx
+/**
+ * Get a boolean flag from the feature_flags claim of the access_token.
+ * @param {Object} request - Request object
+ * @param {String} code - The name of the flag.
+ * @param {Boolean} [defaultValue] - A fallback value if the flag isn't found.
+ * @return {Boolean}
+ */
+kindeClient.getBooleanFlag(req, code, defaultValue);
+
+/* Example usage */
+kindeClient.getBooleanFlag(req, "is_dark_mode");
+// true
+
+kindeClient.getBooleanFlag(req, "is_dark_mode", false);
+// true
+
+kindeClient.getBooleanFlag(req, "new_feature");
+// Error - flag does not exist and no default provided
+
+kindeClient.getBooleanFlag(req, "new_feature", false);
+// false (flag does not exist so falls back to default)
+
+kindeClient.getBooleanFlag(req, "theme", "blue");
+// Error - Flag "theme" is of type string not boolean
+```
+
+### **Get string flags**
+
+```jsx
+/**
+ * Get a string flag from the feature_flags claim of the access_token.
+ * @param {Object} request - Request object
+ * @param {String} code - The name of the flag.
+ * @param {String} [defaultValue] - A fallback value if the flag isn't found.
+ * @return {String}
+ */
+kindeClient.getStringFlag(req, code, defaultValue);
+
+/* Example usage */
+kindeClient.getStringFlag(req, "theme");
+// pink
+
+kindeClient.getStringFlag(req, "theme", "black");
+// true
+
+kindeClient.getStringFlag(req, "cta_color");
+// Error - flag does not exist and no default provided
+
+kindeClient.getStringFlag(req, "cta_color", "blue");
+// blue (flag does not exist so falls back to default)
+
+kindeClient.getStringFlag(req, "is_dark_mode", false);
+// Error - Flag "is_dark_mode" is of type boolean not string
+```
+
+### **Get integer flags**
+
+```jsx
+/**
+ * Get an integer flag from the feature_flags claim of the access_token.
+ * @param {Object} request - Request object
+ * @param {String} code - The name of the flag.
+ * @param {Integer} [defaultValue] - A fallback value if the flag isn't found.
+ * @return {Integer}
+ */
+kindeClient.getIntegerFlag(req, code, defaultValue);
+
+/* Example usage */
+kindeClient.getIntegerFlag(req, "competitions_limit");
+// 5
+
+kindeClient.getIntegerFlag(req, "competitions_limit", 3);
+// 5
+
+kinde_client.getIntegerFlag("team_count");
+// Error - flag does not exist and no default provided
+
+kindeClient.getIntegerFlag(req, "team_count", 2);
+// false (flag does not exist so falls back to default)
+
+kindeClient.getIntegerFlag(req, "is_dark_mode", false);
+// Error - Flag "is_dark_mode" is of type boolean not integer
+```
+
+## Token storage
+
+After the user has successfully logged in, you will have a JSON Web Token (JWT) and a refresh token securely stored. You can retrieve an access token by utilizing the `getToken` method.
+
+```jsx
+const access_token = await kindeClient.getToken(req);
+console.log("access_token", accessToken);
+```
+
+## Kinde Management API
+
+You need to enable the application’s access to the Kinde Management API. You can do this in Kinde by going to **Settings > APIs > Kinde Management API** and then toggling on your Next.js application under the **Applications** tab.
+
+To use our management API please see [@kinde/management-api-js](https://github.com/kinde-oss/management-api-js)
+
+## **SDK API reference**
+
+### `domain`
+
+Either your Kinde instance url or your custom domain. e.g. `https://yourapp.kinde.com`
+
+Type: `string`
+
+Required: Yes
+
+### `clientId`
+
+The unique ID of your application in Kinde.
+
+Type: `string`
+
+Required: Yes
+
+### `clientSecret`
+
+A unique secret code/key of your application in Kinde.
+
+Type: `string`
+
+Required: Yes
+
+### `redirectUri`
+
+The URL that the user will be returned to after authentication.
+
+Type: `string`
+
+Required: Yes
+
+### `logoutRedirectUri`
+
+Where your user will be redirected to when they sign out.
+
+Type: `string`
+
+Required: Yes
+
+### `grantType`
+
+Define the grant type when using the SDK.
+
+Type: `string`
+
+Required: Yes
+
+### `audience`
+
+The audience claim for the JWT.
+
+Type: `string`
+
+Required: No
+
+### `scope`
+
+The scopes to be requested from Kinde: `openid` `profile` `email` `offline`.
+
+Type: `string`
+
+Required: No
+
+## **KindeSDK methods**
+
+### `login`
+
+Constructs a redirect URL and sends the user to Kinde to sign in.
+
+Usage:
+
+```jsx
+kindeClient.login();
+```
+
+### `register`
+
+Constructs a redirect URL and sends the user to Kinde to sign up.
+
+Usage:
+
+```jsx
+kindeClient.register();
+```
+
+### `logout`
+
+Logs the user out of Kinde.
+
+Usage:
+
+```jsx
+kindeClient.logout();
+```
+
+### `callback`
+
+Callback middleware function for Kinde OAuth 2.0 flow.
+
+Usage:
+
+```jsx
+kindeClient.callback();
+```
+
+### `isAuthenticated`
+
+Check if the user is authenticated.
+
+Arguments:
+
+```jsx
+request - object (Request object)
+```
+
+Usage:
+
+```jsx
+await kindeClient.isAuthenticated(req);
+```
+
+Output: `true` or `false`
+
+### `createOrg`
+
+Constructs redirect url and sends user to Kinde to sign up and create a new org for your business.
+
+Arguments:
+
+```jsx
+org_name?: string
+```
+
+Usage:
+
+```jsx
+kindeClient.createOrg();
+```
+
+### `getClaim`
+
+Gets a claim from an access or ID token.
+
+Arguments:
+
+```jsx
+request - object (Request object), claim: string, tokenKey?: string
+```
+
+Usage:
+
+```jsx
+kindeClient.getClaim(req, "given_name", "id_token");
+```
+
+Output: `'David'`
+
+### `getPermission`
+
+Returns the state of a given permission.
+
+Arguments: `key`: `string`
+
+Usage:
+
+```jsx
+kindeClient.getPermission(req, "read:todos");
+```
+
+Output sample:
+
+```jsx
+{
+	orgCode : 'org_1234', isGranted : true
+}
+```
+
+### `getPermissions`
+
+Returns all permissions for the current user for the organization they are logged into.
+
+Arguments:
+
+```jsx
+request - object (Request object)
+```
+
+Usage:
+
+```jsx
+kindeClient.getPermissions(req);
+```
+
+Sample output:
+
+```jsx
+{
+	orgCode : 'org_1234',
+	permissions : ['create:todos', 'update:todos', 'read:todos']
+}
+```
+
+### `getOrganization`
+
+Get details for the organization your user is logged into.
+
+Arguments:
+
+```jsx
+request - object (Request object)
+```
+
+Usage:
+
+```jsx
+kindeClient.getOrganization(req);
+```
+
+Sample output:
+
+```jsx
+{
+  orgCode: "org_1234";
+}
+```
+
+### `getUserDetails`
+
+Returns the profile for the current user.
+
+Arguments:
+
+```jsx
+request - object (Request object)
+```
+
+Usage:
+
+```jsx
+kindeClient.getUserDetails(req);
+```
+
+Sample output:
+
+```jsx
+{
+	given_name: 'Dave',
+	id: 'abcdef',
+	family_name : 'Smith',
+	email : 'mailto:dave@smith.com'
+}
+```
+
+### `getUserOrganizations`
+
+Gets an array of all organizations the user has access to.
+
+Arguments:
+
+```jsx
+request - object (Request object)
+```
+
+Usage:
+
+```jsx
+kindeClient.getUserOrganizations(req);
+```
+
+Sample output:
+
+```jsx
+{
+  orgCodes: ["org_7052552de68", "org_5a5c29381327"];
+}
+```
+
+### `getFlag`
+
+Get a flag from the feature_flags claim of the `access_token`.
+
+Arguments:
+
+```jsx
+request - object (Request object) code - string, defaultValue - object, flagType - string
+```
+
+Usage:
+
+```jsx
+kindeClient.getFlag(req, "theme");
+```
+
+Sample output:
+
+```jsx
+{
+	"code": "theme",
+	"type": "string",
+	"value": "pink",
+	"is_default": false
+}
+```
+
+### `getBooleanFlag`
+
+Get a boolean flag from the `feature_flags` claim of the access token.
+
+Arguments:
+
+```jsx
+request - object (Request object) code - string, defaultValue - object,
+```
+
+Usage:
+
+```jsx
+kindeClient.getBooleanFlag(req, "is_dark_mode");
+```
+
+Sample output: `true`
+
+### `getStringFlag`
+
+Get a string flag from the `feature_flags` claim of the access token.
+
+Arguments:
+
+```jsx
+request - object (Request object) code - string, defaultValue - object,
+```
+
+Usage:
+
+```jsx
+kindeClient.getStringFlag(req, "theme");
+```
+
+Sample output: `pink`
+
+### `getIntegerFlag`
+
+Get an integer flag from the `feature_flags` claim of the access token.
+
+Arguments:
+
+```jsx
+request - object (Request object) code - string, defaultValue - object,
+```
+
+Usage:
+
+```jsx
+kindeClient.getIntegerFlag(req, "team_count");
+```
+
+Sample output: `2`
+
+If you need help connecting to Kinde, please contact us at [support@kinde.com](mailto:support@kinde.com).

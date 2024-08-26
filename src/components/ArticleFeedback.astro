@@ -1,0 +1,65 @@
+---
+import {Icon} from "astro-icon/components";
+
+const currentPage = Astro.url.pathname;
+---
+
+<aside class="c-article-feedback" aria-labelledby="c-article-feedback__message">
+  <h2>
+    <span
+      aria-live="polite"
+      aria-atomic="true"
+      id="c-article-feedback__message"
+      class="js-article-feedback__message c-article-feedback__message">Was this page helpful?</span
+    >
+  </h2>
+  <div class="js-article-feedback__buttons-wrapper c-article-feedback__buttons-wrapper">
+    <button
+      class={`js-article-feedback__button c-article-feedback__button plausible-event-name=Docs+positive+feedback plausible-event-url=${currentPage}`}
+    >
+      <span class="sr-only">Yes</span>
+      <Icon name="thumbs-up" size={24} role="none" aria-hidden="true" is:inline />
+    </button>
+    <button
+      class={`js-article-feedback__button c-article-feedback__button plausible-event-name=Docs+negative+feedback plausible-event-url=${currentPage}`}
+    >
+      <span class="sr-only">No</span>
+      <Icon name="thumbs-down" size={24} role="none" aria-hidden="true" is:inline />
+    </button>
+  </div>
+</aside>
+
+<style>
+  .c-article-feedback {
+    @apply items-center flex gap-4 py-6 h-24;
+  }
+
+  .c-article-feedback h2 {
+    @apply text-base font-medium;
+  }
+
+  .c-article-feedback__buttons-wrapper {
+    @apply flex gap-2;
+  }
+
+  .c-article-feedback__button {
+    @apply bg-kinde-grey-50 size-12 grid place-items-center cursor-pointer rounded-md hover:bg-kinde-grey-100 duration-200;
+  }
+</style>
+
+<script>
+  (() => {
+    const messageLabel = document.querySelector(".js-article-feedback__message") as HTMLElement;
+    const buttonsContainer = document.querySelector(
+      ".js-article-feedback__buttons-wrapper"
+    ) as HTMLElement;
+    const buttons = document.querySelectorAll(".js-article-feedback__button");
+
+    buttons.forEach((button) =>
+      button.addEventListener("click", () => {
+        buttonsContainer.classList.add("hidden");
+        messageLabel.textContent = "Thanks for your feedback!";
+      })
+    );
+  })();
+</script>
