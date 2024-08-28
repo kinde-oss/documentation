@@ -89,16 +89,25 @@ if (entry.data.relatedArticles) {
 <script is:inline>
   // This will make sure the current page link in the right sidebar will be in view even when the navigation started via a search result link or a referrer other than the docs. It will also ensure that the main topic details element is open.
 
-  const currentLinkMainTopicDetailsEl = document.querySelector(
-    '#starlight__sidebar details:has(a[aria-current="page"])'
-  );
-  const currentPageLink = document.querySelector('#starlight__sidebar a[aria-current="page"]');
+  const isReferredFromAlgolia = window.location.href.includes("?s");
+  const isReferredFromInternalLink = document.referrer.includes(window.location.origin);
 
-  if (currentPageLink) {
-    currentLinkMainTopicDetailsEl.setAttribute("open", "true");
-    currentPageLink.scrollIntoView({
-      behavior: "instant",
-      block: "nearest"
-    });
+  console.log(isReferredFromAlgolia, isReferredFromInternalLink);
+
+  if (isReferredFromAlgolia || !isReferredFromInternalLink) {
+    console.log("Do the thing");
+
+    const currentLinkMainTopicDetailsEl = document.querySelector(
+      '#starlight__sidebar details:has(a[aria-current="page"])'
+    );
+    const currentPageLink = document.querySelector('#starlight__sidebar a[aria-current="page"]');
+
+    if (currentPageLink) {
+      currentLinkMainTopicDetailsEl.setAttribute("open", "true");
+      currentPageLink.scrollIntoView({
+        behavior: "instant",
+        block: "center"
+      });
+    }
   }
 </script>
