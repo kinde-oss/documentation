@@ -1704,6 +1704,49 @@ To check your configuration, the SDK exposes an endpoint with your settings.
 }
 ```
 
+## State not found error
+
+### Solution
+
+1. Confirm that the domain you start the auth flow from is different from the domain you are redirected to after the auth flow is complete. If this is not the case, see the explanation.
+2. Dynamically set the KINDE_SITE_URL and `KINDE_POST_LOGIN_REDIRECT_URL` when working with vercel preview domains.
+   If you are using Vercel, you can set the `KINDE_SITE_URL` and `KINDE_POST_LOGIN_REDIRECT_URL` dynamically.
+
+```jsx title="next.config.js"
+const nextConfig = {
+  env: {
+    KINDE_SITE_URL: process.env.KINDE_SITE_URL ?? `https://${process.env.VERCEL_URL}`,
+    KINDE_POST_LOGOUT_REDIRECT_URL:
+      process.env.KINDE_POST_LOGOUT_REDIRECT_URL ?? `https://${process.env.VERCEL_URL}`,
+    KINDE_POST_LOGIN_REDIRECT_URL:
+      process.env.KINDE_POST_LOGIN_REDIRECT_URL ?? `https://${process.env.VERCEL_URL}/dashboard`
+  }
+};
+
+module.exports = nextConfig;
+```
+
+### Explanation
+
+The `State not found error` in production is usually a result of a mismatch between a few variables.
+
+- `KINDE_SITE_URL` and/or `KINDE_POST_LOGIN_REDIRECT_URL`
+- The domain you are on e.g. `your-app-projects.vercel.app`
+- Callback URL set on the Kinde dashboard
+
+If you set `KINDE_SITE_URL=https:// your-app-projects.vercel.app` and `KINDE_POST_LOGIN_REDIRECT_URL=https:// your-app-projects.vercel.app/dashboard`.
+And you also set your Callback URL to be `your-app-\*.vercel.app/api/auth/kinde_callback`. You should be able to click login and complete the auth flow.
+
+However if you start the auth flow from a Vercel preview domain `your-app-PREVIEW-projects.vercel.app` and complete the auth flow, you will be redirected to `your-app-projects.vercel.app/api/auth/kinde_callback` which is **NOT** the same as the domain you started the auth flow on.
+
+The error happens because when you start the auth flow, a `state` cookie is set which needs to be checked against when you return back to your app. In this case, you are **NOT** being redirect to the app you started the flow on, but rather another domain where the app is running which does not have the `state` cookie.
+Since there is a `state` cookie mismatch, the auth flow is aborted for security reasons.
+
+The reason why you are redirected to the wrong domain because is likely because your `KINDE_POST_LOGIN_REDIRECT_URL` environment variable is static and is set for all your deployments/domains.
+
+You should set the `KINDE_POST_LOGIN_REDIRECT_URL` dynamically based on the domain you initiating the auth flow from.
+
+
 ## Debug mode
 
 In debug mode you will see more logs in your console that may help with debugging.
