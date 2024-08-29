@@ -8,11 +8,23 @@ relatedArticles:
   - 162a0888-6b7f-439e-9ba2-7b2c491fc95b
 ---
 
-Here’s some of the practices, standards, and methods we use to keep your data, and user’s data secure.
+Here’s some of the practices, standards, and methods we use to keep your data, and user’s data secure. 
 
 ## Auth pages require known origins in the callback URL
 
 To help prevent [XSS attacks](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html), all authentication pages require a [callback URL](/get-started/connect/callback-urls/) to be set in Kinde. Authentication does not work correctly without them. Our application will check the callback URLs and parse out the domain for an origin check.
+
+## Bot detection
+
+Native bot detection is on the roadmap, which will allow customers to bring their own Cloudflare integration key to apply bot detection and protections directly to their Kinde hosted auth pages. This will allow customers to adjust the level of protection based on their own risk profile. Please see our [roadmap](https://updates.kinde.com/board) for updates.
+
+To protect against bot driven volumetric attacks, we use AWS WAF to block traffic that matches OWASP threat rules, known malicious IP addresses, and AWS managed rules. 
+
+Alternatively, customers can implement bot detection and CAPTCHA if your DNS is hosted via Cloudflare. Kinde's hosted pages, with a custom domain, can be proxied through Cloudflare to incorporate their advanced web attack protection features, including bot detection and Cloudflare's Turnstile (Cloudflare's equivalent to CAPTCHA). Please see [Proxy your Kinde auth pages through Cloudflare](/authenticate/custom-configurations/proxy-your-kinde-auth-pages-through-cloudflare) for more information.
+
+## Credential stuffing protection
+
+Kinde protects from credential stuffing attacks with a combination of techniques. To protect against volumetric attacks, we use AWS WAF to block traffic that matches OWASP threat rules and also use our own application throttling. To protect against password brute forcing, we will automatically lock out accounts after 5 consecutive failed attempts of the password or passwordless code (OTP, password, or multi-factor authentication) for a short period of time. Admins can manually unlock accounts if necessary. Bot detection (see previous section) can be used to provide additional protection.
 
 ## CSRF protections via `state` parameter
 
@@ -35,13 +47,13 @@ Kinde provides a baseline password protection policy for any customer who wants 
 
 Note that Kinde recommends, where possible, not using passwords for authentication and instead using [passwordless](/authenticate/about-auth/authentication-methods/#passwordless) or [social](/authenticate/social-sign-in/add-social-sign-in/) integrations. If using passwords for authentication, we recommend adding [multi-factor authentication](/authenticate/multi-factor-auth/about-multi-factor-authentication/) as an option for users.
 
-## Outage mitigation via rate limits and throttles
+## Denial of service mitigation via rate limits and throttles
 
 Kinde has implemented an application level rate limit and throttle. This helps protect our shared infrastructure and our customers from excessive network traffic that could lead to an outage. Our rate limits are tuned based on the type of traffic, such as API, admin pages, or general auth usage, and will limit the number of connections from an IP in a short space of time. This generally covers all interactions for our service.
 
-## Fingerprinting prevents session highjacking
+## Device fingerprinting prevents session highjacking
 
-Kinde implements a method of fingerprinting during the authentication flow to block the transfer of sessions between different browsers that could lead to [session highjacking](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html).
+Kinde implements a method of device fingerprinting during the authentication flow to block the transfer of sessions between different browsers or devices that could lead to [session highjacking](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html).
 
 ## Enforcement of TLS version and ciphers
 
@@ -66,6 +78,6 @@ Kinde uses various techniques to help prevent the execution of unknown third par
 
 Kinde’s server rendered application encodes output by default, which prevents most opportunities to inject HTML. The Content Security Policy configured across our webpages prevents the execution of inline and third party scripts.
 
-## We have a WAF
+## Blocking malicious traffic with our WAF
 
-Kinde was implemented a web access firewall ([WAF](https://cheatsheetseries.owasp.org/cheatsheets/Secure_Cloud_Architecture_Cheat_Sheet.html#web-application-firewall)) across all of our public-facing websites and API endpoints. This blocks known malicious traffic patterns and high threat IP addresses.
+Kinde has implemented a web application firewall ([WAF](https://cheatsheetseries.owasp.org/cheatsheets/Secure_Cloud_Architecture_Cheat_Sheet.html#web-application-firewall)) across all of our public-facing websites and API endpoints. We use AWS WAF to block traffic that matches OWASP threat rules, known malicious IP addresses, and AWS managed rules. 
