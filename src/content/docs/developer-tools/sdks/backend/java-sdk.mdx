@@ -693,22 +693,104 @@ KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
 List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
-List<String> organisations = new ArrayList<String>();
 tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{token.getClaim("key");});
 ```
 
 The API on the token provides the getClaim method which takes a key name that identifies the claim in the token and returns the json object it refers to.
 
 ### `getPermission`
+Kinde provides the permissions on the access token. Getting access to these values can be performed either by interrogating the access token or through the use of the J2EE architecture.
+
+#### Get Permissions from the token `getPermissions`
 The permissions are available from the token 
 
-### `getPermissions`
+```java
+KindeClient kindeClient = KindeClientBuilder
+        .builder()
+        .build();
+List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+List<String> permissions = new ArrayList<String>();
+tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{permissions.addAll(token.getPermissions());});
+```
+
+#### Get Permissions from the J2EE context
+If the j2ee KindeLoginFilter is configured in the web application, then the request roles can be used to get the user permissions.
+```java
+request.isUserInRole("role_name");
+```
 
 ### `getOrganization`
+The organisation can be retrieved from the access token.
+
+```java
+KindeClient kindeClient = KindeClientBuilder
+        .builder()
+        .build();
+List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+List<String> organisations = new ArrayList<String>();
+tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{permissions.addAll(token.getOrganisations());});
+```
 
 ### `getUserDetails`
+The user details are available either via the AccessToken or via the OAuth2 user info endpoint.
+
+#### Using the Token API
+```java
+KindeClient kindeClient = KindeClientBuilder
+        .builder()
+        .build();
+List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+List<String> organisations = new ArrayList<String>();
+tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{
+        // retrieve user information
+        // username
+        // permissions
+        // claims
+        // feature flags
+        );});
+```
+
+#### User profile
+If this is not sufficient the OAuth2 user info endpoint can be invoked. This can be done using a Access Token or just after code auth. The following scopes will have to used on the client, `openid, profile, email`.
+
+##### Using the code created client
+```java
+KindeClientSession kindeClientSession = kindeClient.initClientSession(code, authorizationUrl);
+UserInfo userInfo = kindeClientSession.retrieveUserInfo();
+assertNotNull(userInfo);
+assertNotNull(userInfo.getEmail());
+assertNotNull(userInfo.getSubject());
+assertNotNull(userInfo.getId());
+assertNotNull(userInfo.getPicture());
+assertNotNull(userInfo.getGivenName());
+assertNotNull(userInfo.getFamilyName());
+```
+
+##### Using a token created client
+```java
+KindeClientSession kindeClientSession = kindeClient2.initClientSession(accessToken);
+UserInfo userInfo = kindeClientSession.retrieveUserInfo();
+assertNotNull(userInfo);
+assertNotNull(userInfo.getEmail());
+assertNotNull(userInfo.getSubject());
+assertNotNull(userInfo.getId());
+assertNotNull(userInfo.getPicture());
+assertNotNull(userInfo.getGivenName());
+assertNotNull(userInfo.getFamilyName());
+```
 
 ### `getUserOrganizations`
+
+The organisation can be retrieved from the access token.
+
+```java
+KindeClient kindeClient = KindeClientBuilder
+        .builder()
+        .build();
+List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+List<String> organisations = new ArrayList<String>();
+tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{permissions.addAll(token.getOrganisations());});
+```
 
 ### `getFlag`
 
