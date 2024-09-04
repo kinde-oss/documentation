@@ -135,7 +135,7 @@ KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
 KindeClientSession kindeClientSession = kindeClient.clientSession();
-List<KindeToken> tokens = kindeClientSession.retrieveTokens();
+KindeTokens tokens = kindeClientSession.retrieveTokens();
         
 ```
 
@@ -197,7 +197,7 @@ The token request looks like the following.
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
-List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
 ```
 # Kinde-J2EE API
 
@@ -445,9 +445,9 @@ The user permissions are available in two different ways. One is from the IDToke
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
-List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
 List<String> permissions = new ArrayList<String>();
-tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{permissions.addAll(token.getPermissions());});
+permissions.addAll(tokens.getAccessToken().getPermissions());
 
 ```
 
@@ -484,9 +484,9 @@ The organisations for a user can be retrieved from the ID token.
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
-List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
 List<String> organisations = new ArrayList<String>();
-tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{organisations.addAll(token.getOrganisations());});
+organisations.addAll(tokens.getAccessToken().getOrganisations());
 
 // do something with the organisations
 
@@ -668,7 +668,7 @@ To complete authentication of a user and retrieve their tokens do the following.
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
-List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
 ```
 
 Retrieve a client session for the application and then retrieve the tokens for that client.
@@ -676,7 +676,7 @@ Retrieve a client session for the application and then retrieve the tokens for t
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
-List<KindeToken> tokens = kindeClient.getKindeClient().clientSession().retrieveTokens();
+KindeTokens tokens = kindeClient.getKindeClient().clientSession().retrieveTokens();
 ```
 
 ### `createOrg`
@@ -702,8 +702,8 @@ Claims are available from the tokens.
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
-List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
-tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{token.getClaim("key");});
+KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+tokens.getAccessToken().getClaim("key");
 ```
 
 The API on the token provides the getClaim method which takes a key name that identifies the claim in the token and returns the json object it refers to.
@@ -718,9 +718,9 @@ The permissions are available from the token
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
-List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
 List<String> permissions = new ArrayList<String>();
-tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{permissions.addAll(token.getPermissions());});
+permissions.addAll(tokens.getAccessToken().getPermissions());
 ```
 
 #### Get Permissions from the J2EE context
@@ -736,9 +736,9 @@ The organisation can be retrieved from the access token.
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
-List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
 List<String> organisations = new ArrayList<String>();
-tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{permissions.addAll(token.getOrganisations());});
+permissions.addAll(tokens.getAccessToken().getOrganisations());
 ```
 
 ### `getUserDetails`
@@ -749,15 +749,13 @@ The user details are available either via the AccessToken or via the OAuth2 user
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
-List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
-List<String> organisations = new ArrayList<String>();
-tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{
+KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+tokens.getAccessToken()...
         // retrieve user information
         // username
         // permissions
         // claims
         // feature flags
-        );});
 ```
 
 #### User profile
@@ -797,9 +795,9 @@ The organisation can be retrieved from the access token.
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
-List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
 List<String> organisations = new ArrayList<String>();
-tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{permissions.addAll(token.getOrganisations());});
+organisations.addAll(tokens.getAccessToken.getOrganisations());
 ```
 
 ### `getFlags`
@@ -809,10 +807,8 @@ The flags can be retrieve from the token. Once you have are reference to the Acc
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
-List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
-tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{
-        token.getFlags();
-});
+KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+tokens.getAccessToken().getFlags();
 ```
 
 
@@ -823,10 +819,8 @@ This method returns a boolean value of the internal flag value.
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
-List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
-tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{
-        token.getBooleanFlag(key);
-});
+KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+tokens.getAccessToken().getBooleanFlag(key);
 ```
 
 
@@ -835,10 +829,8 @@ tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
-List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
-tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{
-        token.getStringFlag(key);
-});
+KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+tokens.getAccessToken().getStringFlag(key);
 ```
 
 
@@ -848,10 +840,8 @@ The method returns the value for the key in type integer.
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
-List<KindeToken> tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
-tokens.stream().filter(token->token instanceof AccessToken).forEach(token->{
-        token.getIntegerFlag(key);
-});
+KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
+tokens.getAccessToken().getIntegerFlag(key);
 ```
 
 If you need help connecting to Kinde, please contact us at [support@kinde.com](mailto:support@kinde.com).
