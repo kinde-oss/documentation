@@ -77,20 +77,27 @@ repositories {
 ### Library Usage
 
 #### Setup the following environment variables
+
 The following basic environmental variables are required at a mimimum for connecting to Kinde. This will enable the development of a M2M client service.
+
 ```shell
 export KINDE_DOMAIN=https://<replace>.kinde.com # This is the domain you setup at kinde
 export KINDE_CLIENT_ID=<replace> # the id for the client connecting to Kinde
 export KINDE_CLIENT_SECRET=<replace> # the secret used to authenticate the client against Kinde
 ```
+
 If a user login is to be validated against Kinde a redirect uri must be provided.
+
 ```shell
 export KINDE_REDIRECT_URI=http://localhost:8080/kinde-j2ee-app/login
 ```
+
 The redirect URI/URL used post successfull login. It is the URL that the PKCE client CODE will be set to. A query parameter of ?code='value' must be processed
 
 #### Setup .env environmental files.
+
 The Kinde library supports .env files. The must be located in the directory from which the application is executed.
+
 ```shell
 KINDE_DOMAIN=https://<replace>.kinde.com
 KINDE_CLIENT_ID=<replace>
@@ -99,23 +106,33 @@ KINDE_REDIRECT_URI=http://localhost:8080/kinde-j2ee-app/login
 ```
 
 #### Server Example
+
 In order to make a M2M server token request onto Kinde first setup the appropriate environmental variables
+
 ##### By shell export
+
 Run these exports before running your service.
+
 ```shell
 export KINDE_DOMAIN=https://<replace>.kinde.com # This is the domain you setup at kinde
 export KINDE_CLIENT_ID=<replace> # the id for the client connecting to Kinde
 export KINDE_CLIENT_SECRET=<replace> # the secret used to authenticate the client against Kinde
 ```
+
 ##### By .env file config
+
 Place this .env file in the directory from which you run your service.
+
 ```shell
 KINDE_DOMAIN=https://<replace>.kinde.com
 KINDE_CLIENT_ID=<replace>
 KINDE_CLIENT_SECRET=<replace>
 ```
+
 ##### Programmatic configuration
+
 If you want to pass in configuration programmatically the KindeClientBuilder supports this use the following approach.
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
@@ -126,29 +143,37 @@ KindeClient kindeClient = KindeClientBuilder
 ```
 
 ##### Java Code to retrieve a M2M token.
+
 The example below details how to implement a server level token request. This is needed for M2M communication and authorization.
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
 KindeClientSession kindeClientSession = kindeClient.clientSession();
 KindeTokens tokens = kindeClientSession.retrieveTokens();
-        
+
 ```
 
 ### User Code Authorization Example (PKCE)
-Inorder to authenticate a user on a client the appropriate configuration must be in place.
+
+In order to authenticate a user on a client the appropriate configuration must be in place.
 
 ##### By shell export
+
 Run these exports before running your service.
+
 ```shell
 export KINDE_DOMAIN=https://<replace>.kinde.com # This is the domain you setup at kinde
 export KINDE_CLIENT_ID=<replace> # the id for the client connecting to Kinde
 export KINDE_CLIENT_SECRET=<replace> # the secret used to authenticate the client against Kinde
 export KINDE_REDIRECT_URI=openid # the open id
 ```
+
 ##### By .env file config
+
 Place this .env file in the directory from which you run your service.
+
 ```shell
 KINDE_DOMAIN=https://<replace>.kinde.com
 KINDE_CLIENT_ID=<replace>
@@ -156,8 +181,11 @@ KINDE_CLIENT_SECRET=<replace>
 KINDE_REDIRECT_URI=<replace>
 KINDE_SCOPES=openid
 ```
+
 ##### Programmatic configuration
+
 If you want to pass in configuration programmatically the KindeClientBuilder supports this use the following approach.
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
@@ -170,7 +198,9 @@ KindeClient kindeClient = KindeClientBuilder
 ```
 
 ##### Java code to generate the redirect URL
+
 Before the PKCE code can be processed a user must be direct to Kinde to login. The client library can generate this URL as follows
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
@@ -178,34 +208,43 @@ KindeClient kindeClient = KindeClientBuilder
 KindeClientSession kindeClientSession = kindeClient.clientSession();
 AuthorizationUrl authorizationURL = kindeClientSession.authorizationUrl();
 ```
-The AuthorizationUrl contains the url and CodeVerify information. If using a code grant the code verify needs to be stored for the redirct call. This can be done using the J2EE session. Here is an example
+
+The AuthorizationUrl contains the url and CodeVerify information. If using a code grant the code verify needs to be stored for the redirect call. This can be done using the J2EE session. Here is an example
+
 ```java
 req.getSession().setAttribute("AuthorizationUrl",authorizationUrl);
 resp.sendRedirect(authorizationUrl.getUrl().toString());
 ```
 
 ##### Code to request tokens upon redirect
+
 If it is a code auth then the AuthorizationUrl needs to be retrieved.
+
 ```java
 AuthorizationUrl authorizationUrl = (AuthorizationUrl)req.getSession().getAttribute("AuthorizationUrl");
 ```
+
 The token request looks like the following.
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
 KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
 ```
+
 # Kinde-J2EE API
 
 ## Development
 
 This is the Kinde J2EE Library, and contains the core components needed to manage a client connection to the Kinde from a J2EE servlet container.
 
-## Project Dependancies
+## Project Dependencies
 
 ### Maven
-In order to use this SDK include following POM dependancy.
+
+In order to use this SDK include following POM dependency.
+
 ```xml
     <dependency>
       <groupId>com.kinde</groupId>
@@ -213,13 +252,17 @@ In order to use this SDK include following POM dependancy.
       <version>2.0.0</version>
     </dependency>
 ```
+
 ### Gradle
-In order to use the SDK with a Gradle build process please use the following dependancy.
+
+In order to use the SDK with a Gradle build process please use the following dependency.
+
 ```groovy
     configuration('com.kinde:kinde-j2ee:2.0.0')
 ```
 
 ## Project Configuration
+
 The web.xml file needs to be configured to utilize these servlets.
 
 ```xml
@@ -263,18 +306,22 @@ The web.xml file needs to be configured to utilize these servlets.
     </filter-mapping>
 </web-app>
 ```
+
 ## J2EE Servlets and Filters
+
 The above project configuration sets up an example web.xml, using the Kinde-J2EE servlets and filters. These are all you need to secure a j2ee project and can be used with Spring Boot or Quarkus:
+
 1. KindeLoginServlet: The servlet responsible for managing a login. It manages the re-direct to the Kinde Domain and and in the example above is setup to run from /login with the J2EE context.
 2. KindeRegisterServlet: This servlet is responsible for triggering the registration flow. It redirects to the configured Kinde Domain and provides Kinde with the flags to indicate this is a user registration flow.
 3. KindeLogoutServlet: This servlet is responsible for triggering the logout flow, and for removing from the application any active session for the user.
-4. KindeLoginFilter: This is a J2EE filter and acts as a gateway to the private section of your site. It will deny users access to anything its scope covers unless they have succesfully authenticated. It also sets up roles or permissions for the logged in user.
-
+4. KindeLoginFilter: This is a J2EE filter and acts as a gateway to the private section of your site. It will deny users access to anything its scope covers unless they have successfully authenticated. It also sets up roles or permissions for the logged in user.
 
 ## Environmental Configuration
+
 Configuration can either be performed by exports or through a .env file
 
 ### Shell
+
 ```shell
 export KINDE_DOMAIN=https://<replace>.kinde.com # This is the domain you setup at kinde
 export KINDE_CLIENT_ID=<replace> # the id for the client connecting to Kinde
@@ -283,7 +330,9 @@ export KINDE_REDIRECT_URI=http://localhost:8080/kinde-j2ee-app/login
 ```
 
 ### .env
+
 The Kinde library supports .env files. The must be located in the directory from which the application is executed.
+
 ```shell
 KINDE_DOMAIN=https://<replace>.kinde.com
 KINDE_CLIENT_ID=<replace>
@@ -291,36 +340,35 @@ KINDE_CLIENT_SECRET=<replace>
 KINDE_REDIRECT_URI=http://localhost:8080/kinde-j2ee-app/login
 ```
 
-
-
 # Kinde-Management API
 
-The Management API provides a means to access the Kinde Management endpoints. This enables the development of features to control an application or organisations permissions via bespoke code and features rather than through the admin interface.
+The Management API provides a means to access the Kinde Management endpoints. This enables the development of features to control an application or organizations permissions via bespoke code and features rather than through the admin interface.
+
 ## Development
 
 This is the Kinde Management Library, which contains the components needed to access the Kinde Management API. It includes an OpenAPI-generated stub and a `KindeAdminSession` tool that instantiates the `ApiClient` using OIDC details.
 
-## Project Dependancies
+## Project Dependencies
 
 ### Maven
 
 To use this SDK, include the following dependency in your `pom.xml`:
 
-   ```xml
-   <dependency>
-      <groupId>com.kinde</groupId>
-      <artifactId>kinde-management</artifactId>
-      <version>2.0.0</version>
-   </dependency>
-   ```
+```xml
+<dependency>
+   <groupId>com.kinde</groupId>
+   <artifactId>kinde-management</artifactId>
+   <version>2.0.0</version>
+</dependency>
+```
 
 ### Gradle
 
 For Gradle, add the following dependency to your build file:
 
-   ```groovy
-   implementation('com.kinde:kinde-management:2.0.0')
-   ```
+```groovy
+implementation('com.kinde:kinde-management:2.0.0')
+```
 
 ## Building the SDK from Source
 
@@ -351,7 +399,9 @@ Maven will automatically download the dependency from your local repository and 
 ### Library Usage
 
 #### Setup the following environment variables
+
 The following basic environmental variables are required at a mimimum for connecting to the Kinde Management API.
+
 ```shell
 export KINDE_DOMAIN=https://<replace>.kinde.com # This is the domain you setup at kinde
 export KINDE_CLIENT_ID=<replace> # the id for the client connecting to Kinde
@@ -359,8 +409,11 @@ export KINDE_CLIENT_SECRET=<replace> # the secret used to authenticate the clien
 export KINDE_SCOPES=openid # the scope as we are using an OpenID connection
 export KINDE_AUDIENCE=https://<replace>.kinde.com/api # the audience we need access to
 ```
+
 #### Setup .env environmental files.
+
 The Kinde library supports .env files. The must be located in the directory from which the application is executed.
+
 ```shell
 KINDE_DOMAIN=https://burntjam.kinde.com
 KINDE_CLIENT_ID=<replace>
@@ -370,7 +423,9 @@ KINDE_AUDIENCE=https://<replace>.kinde.com/api
 ```
 
 ##### Programmatic configuration
+
 If you want to pass in configuration programmatically the KindeClientBuilder supports this use the following approach.
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
@@ -383,7 +438,9 @@ KindeClient kindeClient = KindeClientBuilder
 ```
 
 ##### Java Code to get an ApiClient
+
 This example gets an ApiClient instance and then creates an ApplicationApi instance using the ApiClient.
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
@@ -393,8 +450,8 @@ ApiClient apiClient = kindeAdminSession.initClient();
 ApplicationsApi applicationsApi = new ApplicationsApi(apiClient);
 ```
 
-
 # Kinde API
+
 Kinde API is provided via the Kinde-Management library. It provides access to to the Management functions Kinde Exposes.
 
 ## Test sign up
@@ -402,7 +459,9 @@ Kinde API is provided via the Kinde-Management library. It provides access to to
 Register your first user by signing up yourself. You’ll see your newly registered user on the **Users** page in Kinde.
 
 ## Get user information
-It iw possible to retrieve the user information using an AccessToken. In the example below an access token is passed to init a client session.
+
+It is possible to retrieve the user information using an AccessToken. In the example below an access token is passed to init a client session.
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
@@ -412,6 +471,7 @@ UserInfo userInfo = kindeClientSession.retrieveUserInfo();
 ```
 
 Retrieve the user details for the code that has been authenticated.
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
@@ -421,21 +481,23 @@ UserInfo userInfo = kindeClientSession.retrieveUserInfo();
 ```
 
 ### User profile
+
 The UserInfo object retrieved above contains the following member variables.
 
-| Variables   | Description                                 |
---------------|---------------------------------------------|
-| userInfo    | The nimbus user object for more information |
-| subject     | The subject of the user object              |
-| id          | The id of the user on Kinde                 |
-| givenName   | The given or first name of the user         |
-| familyName  | The family or surname of the user on Kinde  |
-| email       | The email address of the user on Kinde      |
-| picture     | The picture of the user on Kinde            |
+| Variables  | Description                                 |
+| ---------- | ------------------------------------------- |
+| userInfo   | The nimbus user object for more information |
+| subject    | The subject of the user object              |
+| id         | The id of the user on Kinde                 |
+| givenName  | The given or first name of the user         |
+| familyName | The family or surname of the user on Kinde  |
+| email      | The email address of the user on Kinde      |
+| picture    | The picture of the user on Kinde            |
 
 ### User Permissions
 
 #### Token permissions
+
 The user permissions are available in two different ways. One is from the IDToken as a claim, the other is via the Management API.
 
 ```java
@@ -448,8 +510,8 @@ permissions.addAll(tokens.getAccessToken().getPermissions());
 
 ```
 
-
 #### Management API
+
 The permissions are up to you to define in the Kinde admin portal. The code below provides an example on how to retrieve the permissions from the portal using the management API.
 
 ```java
@@ -469,27 +531,29 @@ organisationApi.getOrganizationUserPermissions(orgCode, userId, expand)
 #### J2EE
 
 If the KindeLoginFilter is configured it is possible to use the j2ee methods to determine if a user is in a role or not.
+
 ```java
 req.isUserInRole(role);
 ```
 
-
 ## Organizations
-The organisations for a user can be retrieved from the ID token.
+
+The organizations for a user can be retrieved from the ID token.
 
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
 KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
-List<String> organisations = new ArrayList<String>();
-organisations.addAll(tokens.getAccessToken().getOrganisations());
+List<String> organizations = new ArrayList<String>();
+organizations.addAll(tokens.getAccessToken().getOrganizations());
 
-// do something with the organisations
+// do something with the organizations
 
 ```
 
 ### Create an organization
+
 Using the OrganisationApi provided by Kinde-Management it is possible to create a new organisation.
 
 ```java
@@ -506,7 +570,6 @@ OrganisationApi organisationApi = new OrganisationApi(apiClient);
 organisationApi.createOrganization(new CreateOrganizationRequest().name("test"));
 ```
 
-
 ## Scopes
 
 ### Default scopes
@@ -520,12 +583,9 @@ By default, Kinde requests the following scopes:
 
 ### Getting claims
 
-
 ## Feature flags
 
-
 ## Token storage in the authentication state
-
 
 ## API reference - Types
 
@@ -612,7 +672,9 @@ Required: No
 ## API reference - Kinde methods
 
 ### `login`
+
 The login process generates an authorization url. This can be used by the browser to initiate the login on Kinde, and once completed the user will be re-directed back.
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
@@ -621,14 +683,16 @@ KindeClientSession kindeClientSession = kindeClient.getKindeClient().clientSessi
 AuthorizationUrl authorizationURL = kindeClientSession.login();
 ```
 
-Sending the redirect response using the 
+Sending the redirect response using the
+
 ```java
 resp.sendRedirect(authorizationUrl.getUrl().toString());
 ```
 
-
 ### `register`
+
 The register process generates an authorization url. This url can be used to redirect the user to Kinde to register and then get redirected back to complete the PKCE login.
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
@@ -637,14 +701,16 @@ KindeClientSession kindeClientSession = kindeClient.getKindeClient().clientSessi
 AuthorizationUrl authorizationURL = kindeClientSession.register();
 ```
 
-Sending the redirect response using the 
+Sending the redirect response using the
+
 ```java
 resp.sendRedirect(authorizationUrl.getUrl().toString());
 ```
 
-
 ### `logout`
+
 The register process generates an authorization url. This can be used by the browser to initiate the login.
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
@@ -653,12 +719,14 @@ KindeClientSession kindeClientSession = kindeClient.getKindeClient().clientSessi
 AuthorizationUrl authorizationURL = kindeClientSession.logout();
 ```
 
-Sending the redirect response using the 
+Sending the redirect response using the
+
 ```java
 resp.sendRedirect(authorizationUrl.getUrl().toString());
 ```
 
 ### `getToken`
+
 To complete authentication of a user and retrieve their tokens do the following.
 
 ```java
@@ -669,6 +737,7 @@ KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authori
 ```
 
 Retrieve a client session for the application and then retrieve the tokens for that client.
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
@@ -677,7 +746,9 @@ KindeTokens tokens = kindeClient.getKindeClient().clientSession().retrieveTokens
 ```
 
 ### `createOrg`
+
 The register process generates an authorization url. This url can be used to redirect the user to Kinde to register and then get redirected back to complete the PKCE login.
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
@@ -686,13 +757,14 @@ KindeClientSession kindeClientSession = kindeClient.getKindeClient().clientSessi
 AuthorizationUrl authorizationURL = kindeClientSession.createOrg("Org Value");
 ```
 
-Sending the redirect response using the 
+Sending the redirect response using the
+
 ```java
 resp.sendRedirect(authorizationUrl.getUrl().toString());
 ```
 
-
 ### `getClaim`
+
 Claims are available from the tokens.
 
 ```java
@@ -706,10 +778,12 @@ tokens.getAccessToken().getClaim("key");
 The API on the token provides the getClaim method which takes a key name that identifies the claim in the token and returns the json object it refers to.
 
 ### `getPermission`
+
 Kinde provides the permissions on the access token. Getting access to these values can be performed either by interrogating the access token or through the use of the J2EE architecture.
 
 #### Get Permissions from the token `getPermissions`
-The permissions are available from the token 
+
+The permissions are available from the token
 
 ```java
 KindeClient kindeClient = KindeClientBuilder
@@ -721,12 +795,15 @@ permissions.addAll(tokens.getAccessToken().getPermissions());
 ```
 
 #### Get Permissions from the J2EE context
+
 If the j2ee KindeLoginFilter is configured in the web application, then the request roles can be used to get the user permissions.
+
 ```java
 request.isUserInRole("role_name");
 ```
 
 ### `getOrganization`
+
 The organisation can be retrieved from the access token.
 
 ```java
@@ -734,14 +811,16 @@ KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
 KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
-List<String> organisations = new ArrayList<String>();
-permissions.addAll(tokens.getAccessToken().getOrganisations());
+List<String> organizations = new ArrayList<String>();
+permissions.addAll(tokens.getAccessToken().getOrganizations());
 ```
 
 ### `getUserDetails`
+
 The user details are available either via the AccessToken or via the OAuth2 user info endpoint.
 
 #### Using the Token API
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
@@ -756,9 +835,11 @@ tokens.getAccessToken()...
 ```
 
 #### User profile
+
 If this is not sufficient the OAuth2 user info endpoint can be invoked. This can be done using a Access Token or just after code auth. The following scopes will have to used on the client, `openid, profile, email`.
 
 ##### Using the code created client
+
 ```java
 KindeClientSession kindeClientSession = kindeClient.initClientSession(code, authorizationUrl);
 UserInfo userInfo = kindeClientSession.retrieveUserInfo();
@@ -772,6 +853,7 @@ assertNotNull(userInfo.getFamilyName());
 ```
 
 ##### Using a token created client
+
 ```java
 KindeClientSession kindeClientSession = kindeClient2.initClientSession(accessToken);
 UserInfo userInfo = kindeClientSession.retrieveUserInfo();
@@ -793,11 +875,12 @@ KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
 KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
-List<String> organisations = new ArrayList<String>();
-organisations.addAll(tokens.getAccessToken.getOrganisations());
+List<String> organizations = new ArrayList<String>();
+organizations.addAll(tokens.getAccessToken.getOrganizations());
 ```
 
 ### `getFlags`
+
 The flags can be retrieve from the token. Once you have are reference to the AccessToken the getFlag method can be called. This method returns a `Map<String,Object>`
 
 ```java
@@ -808,8 +891,8 @@ KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authori
 tokens.getAccessToken().getFlags();
 ```
 
-
 ### `getBooleanFlag`
+
 This method returns a boolean value of the internal flag value.
 
 ```java
@@ -820,8 +903,8 @@ KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authori
 tokens.getAccessToken().getBooleanFlag(key);
 ```
 
-
 ### `getStringFlag`
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
@@ -830,9 +913,10 @@ KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authori
 tokens.getAccessToken().getStringFlag(key);
 ```
 
-
 ### `getIntegerFlag`
+
 The method returns the value for the key in type integer.
+
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
