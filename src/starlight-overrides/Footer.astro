@@ -107,3 +107,45 @@ if (entry.data.relatedArticles) {
     }
   }
 </script>
+
+<script is:inline>
+  // This will ensure we don't loose utm tags when navigating between our sites and hs meetings
+  const searchParams = new URLSearchParams(window.location.search);
+
+  // List of domains we want to transfer the utm tags to
+  const domainsToDecorate = [
+    window.location.origin,
+    "https://kinde.com",
+    "https://app.kinde.com",
+    "https://meetings.hubspot.com"
+  ];
+  // We are specific about what tags we need to track. Any tags not included here will be ignored.
+  const queryParams = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"];
+
+  const appendQueryParams = (url, collectedQueryParams) => {
+    const delimeter = url.indexOf("?") === -1 ? "?" : "&";
+    return url + delimeter + collectedQueryParams.join("&");
+  };
+
+  // Collect all valid query params
+  const collectedQueryParams = queryParams.reduce((collectedParams, paramName) => {
+    const paramValue = searchParams.get(paramName);
+    if (paramValue) {
+      collectedParams.push(paramName + "=" + paramValue);
+    }
+    return collectedParams;
+  }, []);
+
+  // If we have valid query params collected, then get all the links that include our domains to decorate
+  if (collectedQueryParams.length) {
+    const links = document.querySelectorAll("a");
+
+    links.forEach((link) => {
+      domainsToDecorate.forEach((domain) => {
+        if (link.href.indexOf(domain) > -1 && link.href.indexOf("#") === -1) {
+          link.href = appendQueryParams(link.href, collectedQueryParams);
+        }
+      });
+    });
+  }
+</script>
