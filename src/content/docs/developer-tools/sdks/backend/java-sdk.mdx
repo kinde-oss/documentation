@@ -77,7 +77,7 @@ repositories {
   }
 ```
 
-### Library Usage
+### Kinde Core End user Usage
 
 #### Setup the following environment variables
 
@@ -108,11 +108,11 @@ KINDE_CLIENT_SECRET=<replace>
 KINDE_REDIRECT_URI=http://localhost:8080/kinde-j2ee-app/login
 ```
 
-#### Server Example
+### Kinde Core Server Example
 
 In order to make a M2M server token request onto Kinde first setup the appropriate environmental variables
 
-##### By shell export
+#### By shell export
 
 Run these exports before running your service.
 
@@ -122,7 +122,7 @@ export KINDE_CLIENT_ID=<replace> # the id for the client connecting to Kinde
 export KINDE_CLIENT_SECRET=<replace> # the secret used to authenticate the client against Kinde
 ```
 
-##### By .env file config
+#### By .env file config
 
 Place this .env file in the directory from which you run your service.
 
@@ -132,7 +132,7 @@ KINDE_CLIENT_ID=<replace>
 KINDE_CLIENT_SECRET=<replace>
 ```
 
-##### Programmatic configuration
+#### Programmatic configuration
 
 If you want to pass in configuration programmatically the KindeClientBuilder supports this use the following approach.
 
@@ -145,7 +145,7 @@ KindeClient kindeClient = KindeClientBuilder
         .build();
 ```
 
-##### Java Code to retrieve a M2M token.
+#### Java Code to retrieve a M2M token.
 
 The example below details how to implement a server level token request. This is needed for M2M communication and authorization.
 
@@ -162,7 +162,7 @@ KindeTokens tokens = kindeClientSession.retrieveTokens();
 
 In order to authenticate a user on a client the appropriate configuration must be in place.
 
-##### By shell export
+#### By shell export
 
 Run these exports before running your service.
 
@@ -173,7 +173,7 @@ export KINDE_CLIENT_SECRET=<replace> # the secret used to authenticate the clien
 export KINDE_REDIRECT_URI=openid # the open id
 ```
 
-##### By .env file config
+#### By .env file config
 
 Place this .env file in the directory from which you run your service.
 
@@ -185,7 +185,7 @@ KINDE_REDIRECT_URI=<replace>
 KINDE_SCOPES=openid
 ```
 
-##### Programmatic configuration
+#### Programmatic configuration
 
 If you want to pass in configuration programmatically the KindeClientBuilder supports this use the following approach.
 
@@ -200,7 +200,7 @@ KindeClient kindeClient = KindeClientBuilder
         .build();
 ```
 
-##### Java code to generate the redirect URL
+#### Java code to generate the redirect URL
 
 Before the PKCE code can be processed a user must be direct to Kinde to login. The client library can generate this URL as follows
 
@@ -219,7 +219,7 @@ req.getSession().setAttribute("AuthorizationUrl",authorizationUrl);
 resp.sendRedirect(authorizationUrl.getUrl().toString());
 ```
 
-##### Code to request tokens upon redirect
+#### Code to request tokens upon redirect
 
 If it is a code auth then the AuthorizationUrl needs to be retrieved.
 
@@ -273,94 +273,7 @@ The UserInfo object retrieved above contains the following member variables.
 | picture    | The picture of the user on Kinde            |
 
 
-### Scopes
-
-- profile
-- email
-- offline
-- openid
-
-### `host`
-
-Either your Kinde instance URL or your custom domain. e.g. `https://yourapp.kinde.com/`
-
-Type: string
-
-Required: yes
-
-### `redirectUri`
-
-The URL that the user will be returned to after authentication.
-
-Type: string
-
-Required: yes
-
-### `clientId`
-
-The unique ID of your application. Get this from the Application details section in Kinde.
-
-Type: string
-
-Required: yes
-
-### `clientSecret`
-
-The unique client secret of your Kinde application. Get this from the Application details section in Kinde.
-
-Type: string
-
-Required: Not required if you use OAuth PKCE
-
-### `grantType`
-
-The grantType for Kinde Authorization varies for each OAuth 2 flow. You can use:
-
-- Authorization code: GrantType._AUTHORIZATION_CODE_.getValue(): Intended for confidential clients, e.g. web-servers.
-- Authorization code with PKCE: GrantType._PKCE_.getValue(): Extension for public clients, e.g. single page web applications and mobile applications, and confidential clients, e.g. web-servers. Note that the `code_challenge` and `code_challenge_method` parameters are also required for this grant type.
-- Client credentials flow: GrantType._CLIENT_CREDENTIALS_.getValue(): Intended for confidential clients where machine-to-machine communication is required.
-
-Type: string
-
-Required: yes
-
-### `logoutRedirectUri`
-
-Where your user will be redirected when they sign out.
-
-Type: string
-
-Required: yes
-
-### `scope`
-
-The scopes to be requested from Kinde.
-
-Type: string
-
-Required: No
-
-Default: openid profile email offline
-
-### `additionalParameters`
-
-Additional parameters that will be passed in the authorization request.
-
-Type: Map\<String, Object>
-
-Required: No
-
-Default: new Hashmap\<>()
-
-### `additionalParameters - audience`
-
-The audience claim for the JWT.
-
-Type: string
-
-Required: No
-
-### API reference - Kinde methods
+### API reference - for the Kinde Core
 
 #### `login`
 
@@ -416,7 +329,7 @@ Sending the redirect response using the
 resp.sendRedirect(authorizationUrl.getUrl().toString());
 ```
 
-#### `getToken`
+#### `getToken`  
 
 To complete authentication of a user and retrieve their tokens do the following.
 
@@ -436,7 +349,7 @@ KindeClient kindeClient = KindeClientBuilder
 KindeTokens tokens = kindeClient.getKindeClient().clientSession().retrieveTokens();
 ```
 
-#### `createOrg`
+#### `createOrg` authentication flow
 
 The register process generates an authorization url. This url can be used to redirect the user to Kinde to register and then get redirected back to complete the PKCE login.
 
