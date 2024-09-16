@@ -93,6 +93,11 @@ const sidebarData = [
         collapsed: false
       },
       {
+        label: "Special guides",
+        autogenerate: {directory: "developer-tools/guides"},
+        collapsed: false
+      },
+      {
         label: "Front end SDKs",
         autogenerate: {directory: "developer-tools/sdks/frontend"},
         collapsed: false
