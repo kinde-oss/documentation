@@ -542,11 +542,18 @@ This ensures Vercel uses its generated preview URLs to populate the three Kinde 
 
 Create a script that will run each time a new preview is deployed by Vercel, which will add the newly generated URL to Kinde.
 
-1. Enable the **Kinde Management API** for your Next.js app.
-   1. In Kinde, go to **Settings > Applications** and open the **Details** of your application.
-   2. Select **APIs** in the left menu.
-   3. Switch on the **Kinde Management API** (if it is not on already).
-   4. Select **Save**.
+It is important to note that for this part you will need to create a [machine to machine (M2M)](http://localhost:4321/developer-tools/kinde-api/add-a-m2m-application-for-api-access/) application in Kinde to interface with the [Kinde Management API](https://kinde.com/api/docs/#kinde-management-api).
+
+1. Create a **Machine to machine (M2M)** app.
+   1. In Kinde, go to **Settings > Applications** and click on **Add application**.
+   2. Give your application a name and select **Machine to machine (M2M)**.
+   3. Select **Save**.
+   4. On the next screen, take note of the **Client ID** and **Client secret** values and add them to your `.env.local` file as `KINDE_M2M_CLIENT_ID` and `KINDE_M2M_CLIENT_SECRET`.
+   5. On the same screen, click on **APIs** on the left menu.
+   6. Authorize your M2M application to access the Kinde Management API by selecting the three dots (`...`) and clicking **Authorize application**.
+   7. Once the application is authorized, select the three dots (`...`) again and this time select **Manage scopes**.
+   8. Since we will be adding callback and redirect URLs dynamically via the Kinde Management API, you will need to toggle the switch for `create:application_redirect_uris` and `create:application_logout_uris`.
+   9. Select **Save**.
 2. In your application source code, create a folder at the top level called `scripts`.
 3. Within that folder, create a file called `add-urls-to-kinde.js` and add the following code:
 
@@ -560,8 +567,8 @@ Create a script that will run each time a new preview is deployed by Vercel, whi
            Accept: "application/json"
          },
          body: new URLSearchParams({
-           client_id: process.env.KINDE_CLIENT_ID,
-           client_secret: process.env.KINDE_CLIENT_SECRET,
+           client_id: process.env.KINDE_M2M_CLIENT_ID,
+           client_secret: process.env.KINDE_M2M_CLIENT_SECRET,
            grant_type: "client_credentials",
            audience: `${process.env.KINDE_ISSUER_URL}/api`
          })
