@@ -137,6 +137,11 @@ const sidebarData = [
         collapsed: false
       },
       {
+        label: "Authentication guides",
+        autogenerate: {directory: "authenticate/auth-guides"},
+        collapsed: false
+      },
+      {
         label: "Authentication methods",
         autogenerate: {directory: "authenticate/authentication-methods"},
         collapsed: false
