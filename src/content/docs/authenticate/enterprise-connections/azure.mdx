@@ -54,11 +54,9 @@ If you are [importing users into Kinde](/manage-users/add-and-edit/import-users
 6. Enter **Home realm domains**. This speeds up the sign in process for users of those domains.
    Note that all home realm domains must be unique across all connections in an environment. For more information about how, see [Home realm domains or IdP discovery](/authenticate/enterprise-connections/home-realm-discovery/).
 7. If you want, select the **Use common endpoint** option. Recommended if you use multi-tenancy.
-8. Select extended attributes:
-
-   - **Extended profile** if you want to sync the additional information stored in a user’s Microsoft profile to their Kinde user profile.
-   - **Get user groups** if you want to sync user groups. Recommended if you manage permissions and access via user groups in Microsoft.
-
+8. Select **Extended profile** if you want to sync the additional information stored in a user’s Microsoft profile to their Kinde user profile.
+9. If you want to sync user groups, select **Get user groups**. Recommended if you manage permissions and access via user groups in Microsoft. You also need to do some additional setup, see below.
+  
     <Aside>
 
    Extended attributes data is included in the `extra_claims` object of the access token.
@@ -71,17 +69,42 @@ If you are [importing users into Kinde](/manage-users/add-and-edit/import-users
 12. In the **Applications** section, select the applications you want to activate the connection for.
 13. Select **Save**.
 
+## (Optional) Sync groups across to Kinde
+
+### Configure MS Entra app
+
+1. Open your application in the [MS Azure Portal](https://portal.azure.com/).
+2. Go to **Token configuration** in the left menu. 
+3. Select **Add groups claim**.
+4. In the window that appears, select the groups to be included in tokens.
+
+![image of edit groups claim screen](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/fed278be-bdcd-43b6-7130-8c866928b700/public)
+
+5. If you want, customize the token properties by type.
+6. Save your changes.
+
+For reference, see this Microsoft doc about [configuring optional claims](https://learn.microsoft.com/en-us/entra/identity-platform/optional-claims?tabs=appui/) 
+
+### Configure in Kinde
+
+1. Open your application in Kinde.
+2. Go to **Tokens**.
+3. Scroll to **Token customization** and select **Configure** on the **ID tokens** tile.
+4. Switch on **Social identity** as an additional claim.
+5. Select **Save**.
+
+### Access group info in tokens
+
+- ID token - `ext_provider > claims > profile > groups`
+- Access token - `ext_groups`
+
 ## **Add the callback URL to MS Azure**
 
-1. Sign in to the **MS Azure Portal** ([https://portal.azure.com](https://portal.azure.com/)) using your Microsoft account.
-2. Select **Microsoft Entra ID** in the list of options.
-3. In the left menu, select **App Registrations**.
-4. If no applications are listed, select the **All applications** tab
-5. Select your application.
-6. Select the **Redirect URIs** links on the right.
-7. Select **Add URI**.
-8. In the relevant field, enter your callback URL (from Step 9 above)
-9. Select **Save**.
+1. Open your application in the [MS Azure Portal](https://portal.azure.com/).
+3. Select the **Redirect URIs** links on the right.
+4. Select **Add URI**.
+5. In the relevant field, enter your callback URL (from Step 9 above)
+6. Select **Save**.
 
 Make sure you test each connection before enabling in production for your users.
 
