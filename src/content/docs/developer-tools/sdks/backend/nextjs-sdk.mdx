@@ -1558,120 +1558,56 @@ Create a script that will run each time a new preview is deployed by Vercel, whi
 
 It is important to note that for this part you will need to create a [machine to machine (M2M)](http://localhost:4321/developer-tools/kinde-api/add-a-m2m-application-for-api-access/) application in Kinde to interface with the [Kinde Management API](https://kinde.com/api/docs/#kinde-management-api).
 
-1. Create a **Machine to machine (M2M)** app.
-   1. In Kinde, go to **Settings > Applications** and click on **Add application**.
-   2. Give your application a name and select **Machine to machine (M2M)**.
-   3. Select **Save**.
-   4. On the next screen, take note of the **Client ID** and **Client secret** values and add them to your `.env.local` file as `KINDE_M2M_CLIENT_ID` and `KINDE_M2M_CLIENT_SECRET`.
-   5. On the same screen, click on **APIs** on the left menu.
-   6. Authorize your M2M application to access the Kinde Management API by selecting the three dots (`...`) and clicking **Authorize application**.
-   7. Once the application is authorized, select the three dots (`...`) again and this time select **Manage scopes**.
-   8. Since we will be adding callback and redirect URLs dynamically via the Kinde Management API, you will need to toggle the switch for `create:application_redirect_uris` and `create:application_logout_uris`.
-   9. Select **Save**.
+1. Setup the the Kinde Management API please see [@kinde/management-api-js](https://github.com/kinde-oss/management-api-js)
 2. In your application source code, create a folder at the top level called `scripts`.
-3. Within that folder, create a file called `add-urls-to-kinde.js` and add the following code:
+3. Within that folder, create a file called `add-urls-to-kinde.mjs` and add the following code:
 
    ```jsx
-   async function getAuthToken() {
-     try {
-       const response = await fetch(`${process.env.KINDE_ISSUER_URL}/oauth2/token`, {
-         method: "POST",
-         headers: {
-           "Content-Type": "application/x-www-form-urlencoded",
-           Accept: "application/json"
-         },
-         body: new URLSearchParams({
-           client_id: process.env.KINDE_M2M_CLIENT_ID,
-           client_secret: process.env.KINDE_M2M_CLIENT_SECRET,
-           grant_type: "client_credentials",
-           audience: `${process.env.KINDE_ISSUER_URL}/api`
-         })
-       });
+   import { init, Callbacks } from '@kinde/management-api-js'
 
-       if (!response.ok) {
-         throw new Error(`Failed to get auth token: ${response.statusText}`);
-       }
+async function addLogoutUrlToKinde() {
+  try {
+    await Callbacks.addLogoutRedirectUrLs({
+      appId: process.env.KINDE_CLIENT_ID,
+      requestBody: {
+        urls: [`https://${process.env.VERCEL_URL}`]
+      }
+    })
+    console.log(`SUCCESS: Logout URL added to Kinde: ${process.env.VERCEL_URL}`)
+  } catch (error) {
+    console.error('Failed to add logout URL to Kinde', error)
+    throw error
+  }
+}
 
-       const data = await response.json();
-       return data.access_token;
-     } catch (error) {
-       console.error("Error getting auth token:", error);
-       throw error;
-     }
-   }
+async function addCallbackUrlToKinde() {
+  try {
+    await Callbacks.addRedirectCallbackUrLs({
+      appId: process.env.KINDE_CLIENT_ID,
+      requestBody: {
+        urls: [`https://${process.env.VERCEL_URL}/api/auth/kinde_callback`]
+      }
+    })
 
-   async function addLogoutUrlToKinde(token) {
-     try {
-       const response = await fetch(
-         `${process.env.KINDE_ISSUER_URL}/api/v1/applications/${process.env.KINDE_CLIENT_ID}/auth_logout_urls`,
-         {
-           method: "POST",
-           headers: {
-             Authorization: `Bearer ${token}`,
-             Accept: "application/json",
-             "Content-Type": "application/json"
-           },
-           body: JSON.stringify({
-             urls: [`https://${process.env.VERCEL_URL}`]
-           })
-         }
-       );
+    console.log(`SUCCESS: Callback URL added to Kinde: ${process.env.VERCEL_URL}/api/auth/kinde_callback`)
+  } catch (error) {
+    console.error('Failed to add callback URL to Kinde', error)
+    throw error
+  }
+}
 
-       if (!response.ok) {
-         throw new Error(`Failed to add logout URL to Kinde: ${response.statusText}`);
-       }
+;(async () => {
+  if (process.env.VERCEL == 1) {
+    try {
+      init()
+      await addCallbackUrlToKinde()
+      await addLogoutUrlToKinde()
+    } catch (error) {
+      console.error('Script failed:', error)
+    }
+  }
+})()
 
-       const responseData = await response.json();
-       console.log(`SUCCESS: Logout URL added to Kinde: ${process.env.VERCEL_URL}`, responseData);
-     } catch (error) {
-       console.error("Failed to add logout URL to Kinde", error);
-       throw error;
-     }
-   }
-
-   async function addCallbackUrlToKinde(token) {
-     try {
-       const response = await fetch(
-         `${process.env.KINDE_ISSUER_URL}/api/v1/applications/${process.env.KINDE_CLIENT_ID}/auth_redirect_urls`,
-         {
-           method: "POST",
-           headers: {
-             Authorization: `Bearer ${token}`,
-             Accept: "application/json",
-             "Content-Type": "application/json"
-           },
-           body: JSON.stringify({
-             urls: [`https://${process.env.VERCEL_URL}/api/auth/kinde_callback`]
-           })
-         }
-       );
-
-       if (!response.ok) {
-         throw new Error(`Failed to add callback URL to Kinde: ${response.statusText}`);
-       }
-
-       const responseData = await response.json();
-       console.log(
-         `SUCCESS: Callback URL added to Kinde: ${process.env.VERCEL_URL}/api/auth/kinde_callback`,
-         responseData
-       );
-     } catch (error) {
-       console.error("Failed to add callback URL to Kinde", error);
-       throw error;
-     }
-   }
-
-   (async () => {
-     if (process.env.VERCEL == 1) {
-       try {
-         const authToken = await getAuthToken();
-         await addCallbackUrlToKinde(authToken);
-         await addLogoutUrlToKinde(authToken);
-       } catch (error) {
-         console.error("Script failed:", error);
-       }
-     }
-   })();
    ```
 
 4. In your `package.json`, add a `postbuild` script that will run the `/scripts/add-urls-to-kinde.js` file after Vercel builds your app.
