@@ -12,127 +12,34 @@ app_context:
     s: applications
 ---
 
-To securely connect to Kinde’s API, you need to obtain an access token. You also need to have:
+Here's the process for connecting to the Kinde Management API.
 
-- a [machine to machine application](/developer-tools/kinde-api/add-a-m2m-application-for-api-access/) with all relevant Kinde API scopes selected.
-- have your application details, Client ID and Client secret on hand.
+## Step 1: Add a machine to machine application
 
-This document describes:
+1. Go to **Settings > Applications**.
+2. Select **Add Application**.
+3. In the dialog that opens, give the application a name, and select **Machine to Machine** as the **Application type**.
+4. Select **Save**. App keys - including Domain details, Client ID and Client Secret - are issued for the application. 
+5. Copy the app keys. You need these details to test or initiate access requests from your application or service to Kinde's API. See [below](/developer-tools/kinde-api/get-access-token-for-connecting-securely-to-kindes-api/#Step-3:-get-an-access-token).
 
-- how to get the token using [Postman](https://www.postman.com/) - an API platform - but you can follow similar steps in your own app environment.
-- how to get the token using a Node.js fetch example.
+## Step 2: Authorize the M2M application and select scopes
 
-See our [other SDK frameworks](/developer-tools/about/our-sdks/) for additional guidance.
+We recommend adding as few scopes as you need, to maintain API security. Learn more about [scopes](
 
-You can also watch a video about connecting and testing the API connection on our YouTube channel [here](https://www.youtube.com/watch?v=xJCj0IeoB5g).
+1. Select **View details** on the M2M application you just created. 
+2. On the left, select **APIs**.
+3. Select the three dots next to the Kinde management API, then choose **Authorize application**.
+4. Select the three dots next to the Kinde management API, then choose **Manage scopes**. 
+5. Select the scopes you want to include in the token. For maximum security only enable the minimum scopes you require. 
+6. Select **Save**.
 
-## Get the access token (Postman example)
+## Step 3: Test the access token request
 
-We recommend you do this in a non-production environment first.
+- Get access token using Postman
+- Test endpoints using Postman
+- Call the Kinde API Node.js (example)
 
-If you decide to use Postman, we recommended that you set up a Postman **environment.**
+## Video demo: Setting up and testing the API connection
 
-1. Add your Kinde machine to machine [application keys](/get-started/connect/getting-app-keys/) as environment variables.
+Watch a video about connecting and testing the API connection on our YouTube channel [here](https://www.youtube.com/watch?v=xJCj0IeoB5g).
 
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/69800dc4-2d22-468c-4300-71e4b4ee8b00/public"
-  alt="Adding environment variables in Postman"
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
-
-2. Go to **Collections**. Create a new collection called **Kinde**.
-3. In the three dots menu next to the new **Kinde** folder, select **Add request**.
-
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ececdf0a-452f-49bc-6a96-f5343d8a8d00/public"
-  alt="Adding a request in Postman"
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
-
-4. Go to the **Authorization** section and set the **Type** to **OAuth 2.0** and set the **Header Prefix** to **Bearer**.
-5. In the **Configure New Token > Configuration options** section, set the **Grant Type** to **Client Credentials**. 
-6. Enter the **Access Token URL** using the domain variable you created above. For example, `{{business_domain}}/oauth2/token`. Note that even if you use a custom domain, the access token URL should still use your `https://<your_subdomain>.kinde.com` domain.
-
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8149baf6-e3b7-406d-7447-390fe4bc2100/public"
-  alt="Entering the access token URL"
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
-
-7. Enter the **Client ID** and **Client Secret** using the environment variables you created earlier or by copying them from the Kinde application.
-8. Set the **audience** to `{{business_domain}}/api`. To do this:
-   - Scroll down click **Advanced**. In the **Token request** section, select the `audience` key and enter the above URL in the **Value** field. Ensure it is being sent in the `body` of the request
-
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f2c9f0dc-ef24-40e4-dae9-2d1fd6731b00/public"
-  alt=""
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
-
-9. Go to the **Headers** tab.
-
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/92102061-66fb-48f8-f94a-f048b80a3f00/public"
-  alt="Setting the Content-Type value in Postman"
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
-
-10. Select **Accept** and ensure the value is `application/json`.
-11. In the **Authorization** section, select **Get New Access Token**. You should see a confirmation message.
-12. Select **Proceed**.
-
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b736bc91-3f30-4d48-62c6-37f131e88300/public"
-  alt="Access Token in Postman"
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
-
-13. Select **Use Token**. You should now have the access token for making requests to the Kinde management API. See the [Kinde API documentation](https://kinde.com/api/docs/#kinde-management-api) for all the available end points.
-14. Next (optional): [Test the connection to Kinde’s API](/developer-tools/kinde-api/test-the-connection-to-kindes-api/).
-
-## Get the access token (Node.js fetch example)
-
-Use the following, but replace `<your_domain>`, `<client_id>` and `<client_secret>` with your own details.
-
-```jsx
-	fetch(`${<your_domain>}.kinde.com/oauth2/token`, {
-			method: "POST",
-			headers: {
-				"content-type": "application/x-www-form-urlencoded",
-			},
-			body: new URLSearchParams({
-				audience: "<auth_domain>/api",
-				grant_type: "client_credentials",
-				client_id: <client_id>,
-				client_secret: <client_secret>,
-			}),
-	})
-```
-
-See our [other SDK frameworks](/developer-tools/about/our-sdks/) for additional code snippets.
-
-Next (optional): [Test the connection to Kinde’s API](/developer-tools/kinde-api/test-the-connection-to-kindes-api/).
