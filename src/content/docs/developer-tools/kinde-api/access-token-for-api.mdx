@@ -27,22 +27,83 @@ To ask Kinde for an access token for calling the management API, perform a POST 
 
 The payload should look as follows:
 
-```jsx
+<Tabs>
 
+  <TabItem label="cURL">
+
+```shellscript
 curl --request POST \
   --url 'https://<your_subdomain>.kinde.com/oauth2/token' \
   --header 'content-type: application/x-www-form-urlencoded' \
   --data grant_type=client_credentials \
   --data 'client_id=<your_m2m_client_id>' \
-  --data 'client_secret=<your_m2m_client_secret> \
-  --data 'audience=https://<your_subdomain>}.kinde.com/api'
-
+  --data 'client_secret=<your_m2m_client_secret>' \
+  --data 'audience=https://<your_subdomain>.kinde.com/api'
 ```
 
-You can call the token endpoint in the backend language of your choice, for example in NodeJS this would look like:
+  </TabItem>
 
-```jsx
+  <TabItem label="C#">
 
+```c#
+var client = new RestClient("https://<your_subdomain>.kinde.com/oauth2/token");
+var request = new RestRequest(Method.POST);
+request.AddHeader("content-type", "application/x-www-form-urlencoded");
+request.AddParameter("application/x-www-form-urlencoded", "grant_type=client_credentials&client_id=<your_m2m_client_id>&client_secret=<your_m2m_client_secret>&audience=https%3A%2F%2F<your_subdomain>.kinde.com%2Fapi", ParameterType.RequestBody);
+IRestResponse response = client.Execute(request);
+```
+
+  </TabItem>
+
+  <TabItem label="Go">
+
+```go
+package main
+
+import (
+	"fmt"
+	"strings"
+	"net/http"
+	"io/ioutil"
+)
+
+func main() {
+
+	url := "https://<your_subdomain>.kinde.com/oauth2/token"
+
+	payload := strings.NewReader("grant_type=client_credentials&client_id=<your_m2m_client_id>&client_secret=<your_m2m_client_secret>&audience=https%3A%2F%2F<your_subdomain>.kinde.com%2Fapi")
+
+	req, _ := http.NewRequest("POST", url, payload)
+
+	req.Header.Add("content-type", "application/x-www-form-urlencoded")
+
+	res, _ := http.DefaultClient.Do(req)
+
+	defer res.Body.Close()
+	body, _ := ioutil.ReadAll(res.Body)
+
+	fmt.Println(res)
+	fmt.Println(string(body))
+
+}
+```
+
+  </TabItem>
+
+  <TabItem label="Java">
+
+```java
+HttpResponse<String> response = Unirest.post("https://<your_subdomain>.kinde.com/oauth2/token")
+  .header("content-type", "application/x-www-form-urlencoded")
+  .body("grant_type=client_credentials&client_id=<your_m2m_client_id>&client_secret=<your_m2m_client_secret>&audience=https%3A%2F%2F<your_subdomain>.kinde.com%2Fapi")
+  .asString();
+```
+
+  </TabItem>
+
+  <TabItem label="Node.JS">
+
+```js
 fetch(`https://<your_subdomain>.kinde.com/oauth2/token`, {
 	method: "POST",
 	headers: {
@@ -55,8 +116,158 @@ fetch(`https://<your_subdomain>.kinde.com/oauth2/token`, {
 		client_secret: <your_m2m_client_secret>
 	})
 });
-
 ```
+
+  </TabItem>
+
+  <TabItem label="Obj-C">
+
+```objc
+#import <Foundation/Foundation.h>
+
+NSDictionary *headers = @{ @"content-type": @"application/x-www-form-urlencoded" };
+
+NSMutableData *postData = [[NSMutableData alloc] initWithData:[@"grant_type=client_credentials" dataUsingEncoding:NSUTF8StringEncoding]];
+[postData appendData:[@"&client_id=<your_m2m_client_id>" dataUsingEncoding:NSUTF8StringEncoding]];
+[postData appendData:[@"&client_secret={yourClientSecret}" dataUsingEncoding:NSUTF8StringEncoding]];
+[postData appendData:[@"&audience=https://{yourDomain}/api/v2/" dataUsingEncoding:NSUTF8StringEncoding]];
+
+NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://<your_subdomain>.kinde.com/oauth2/token"]
+                                                       cachePolicy:NSURLRequestUseProtocolCachePolicy
+                                                   timeoutInterval:10.0];
+[request setHTTPMethod:@"POST"];
+[request setAllHTTPHeaderFields:headers];
+[request setHTTPBody:postData];
+
+NSURLSession *session = [NSURLSession sharedSession];
+NSURLSessionDataTask *dataTask = [session dataTaskWithRequest:request
+                                            completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+                                                if (error) {
+                                                    NSLog(@"%@", error);
+                                                } else {
+                                                    NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) response;
+                                                    NSLog(@"%@", httpResponse);
+                                                }
+                                            }];
+[dataTask resume];
+```
+
+  </TabItem>
+
+    <TabItem label="PHP">
+
+```php
+$curl = curl_init();
+
+curl_setopt_array($curl, [
+  CURLOPT_URL => "https://<your_subdomain>.kinde.com/oauth2/token",
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_ENCODING => "",
+  CURLOPT_MAXREDIRS => 10,
+  CURLOPT_TIMEOUT => 30,
+  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+  CURLOPT_CUSTOMREQUEST => "POST",
+  CURLOPT_POSTFIELDS => "grant_type=client_credentials&client_id=<your_m2m_client_id>&client_secret=<your_m2m_client_secret>&audience=https%3A%2F%2F<your_subdomain>.kinde.com%2Fapi",
+  CURLOPT_HTTPHEADER => [
+    "content-type: application/x-www-form-urlencoded"
+  ],
+]);
+
+$response = curl_exec($curl);
+$err = curl_error($curl);
+
+curl_close($curl);
+
+if ($err) {
+  echo "cURL Error #:" . $err;
+} else {
+  echo $response;
+}
+```
+
+    </TabItem>
+
+    <TabItem label="Python">
+
+```python
+import http.client
+
+conn = http.client.HTTPSConnection("")
+
+payload = "grant_type=client_credentials&client_id=<your_m2m_client_id>&client_secret=<your_m2m_client_secret>&audience=https%3A%2F%2F<your_subdomain>.kinde.com%2Fapi"
+
+headers = { 'content-type': "application/x-www-form-urlencoded" }
+
+conn.request("POST", "https://<your_subdomain>.kinde.com/oauth2/token", payload, headers)
+
+res = conn.getresponse()
+data = res.read()
+
+print(data.decode("utf-8"))
+```
+
+    </TabItem>
+
+     <TabItem label="Ruby">
+
+```ruby
+require 'uri'
+require 'net/http'
+require 'openssl'
+
+url = URI("https://<your_subdomain>.kinde.com/oauth2/token")
+
+http = Net::HTTP.new(url.host, url.port)
+http.use_ssl = true
+http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+request = Net::HTTP::Post.new(url)
+request["content-type"] = 'application/x-www-form-urlencoded'
+request.body = "grant_type=client_credentials&client_id=<your_m2m_client_id>&client_secret=<your_m2m_client_secret>&audience=https%3A%2F%2F<your_subdomain>.kinde.com%2Fapi"
+
+response = http.request(request)
+puts response.read_body
+```
+
+    </TabItem>
+
+    <TabItem label="Swift">
+
+```swift
+import Foundation
+
+let headers = ["content-type": "application/x-www-form-urlencoded"]
+
+let postData = NSMutableData(data: "grant_type=client_credentials".data(using: String.Encoding.utf8)!)
+postData.append("&client_id=<your_m2m_client_id>".data(using: String.Encoding.utf8)!)
+postData.append("&client_secret={yourClientSecret}".data(using: String.Encoding.utf8)!)
+postData.append("&audience=https://{yourDomain}/api/v2/".data(using: String.Encoding.utf8)!)
+
+let request = NSMutableURLRequest(url: NSURL(string: "https://<your_subdomain>.kinde.com/oauth2/token")! as URL,
+                                        cachePolicy: .useProtocolCachePolicy,
+                                    timeoutInterval: 10.0)
+request.httpMethod = "POST"
+request.allHTTPHeaderFields = headers
+request.httpBody = postData as Data
+
+let session = URLSession.shared
+let dataTask = session.dataTask(with: request as URLRequest, completionHandler: { (data, response, error) -> Void in
+  if (error != nil) {
+    print(error)
+  } else {
+    let httpResponse = response as? HTTPURLResponse
+    print(httpResponse)
+  }
+})
+
+dataTask.resume()
+```
+
+    </TabItem>
+
+</Tabs>
+
+Make sure to replace `<your_subdomain>`, `<your_m2m_client_id>` and `<your_m2m_client_secret>` with your own details.
 
 The response will contain a signed JWT containing claims including the scopes the token is allowed to access and the expiry time. Here is an example token:
 
@@ -80,16 +291,242 @@ The response will contain a signed JWT containing claims including the scopes th
 ```
 
 ## Use the access token
+
 To use this token, include it in the Authorization header of your request. For example to get all users you would call:
 
-```jsx
+<Tabs>
 
+  <TabItem label="cURL">
+
+```shellscript
 curl --request GET \
   --url 'https://<your_subdomain>.kinde.com/api/v1/users' \
   --header 'authorization: Bearer <m2m_access_token>' \
   --header 'content-type: application/json'
-
 ```
+
+  </TabItem>
+
+  <TabItem label="C#">
+
+```c#
+var client = new RestClient("https://<your_subdomain>.kinde.com/api/v1/users");
+var request = new RestRequest(Method.GET);
+request.AddHeader("content-type", "application/json");
+request.AddHeader("authorization", "Bearer <m2m_access_token>");
+IRestResponse response = client.Execute(request);
+```
+
+  </TabItem>
+
+  <TabItem label="Go">
+
+```go
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"io/ioutil"
+)
+
+func main() {
+
+	url := "https://<your_subdomain>.kinde.com/api/v1/users"
+
+	req, _ := http.NewRequest("GET", url, nil)
+
+	req.Header.Add("content-type", "application/json")
+	req.Header.Add("authorization", "Bearer <m2m_access_token>")
+
+	res, _ := http.DefaultClient.Do(req)
+
+	defer res.Body.Close()
+	body, _ := ioutil.ReadAll(res.Body)
+
+	fmt.Println(res)
+	fmt.Println(string(body))
+
+}
+```
+
+  </TabItem>
+
+  <TabItem label="Java">
+
+```java
+HttpResponse<String> response = Unirest.get("https://<your_subdomain>.kinde.com/api/v1/users")
+  .header("content-type", "application/json")
+  .header("authorization", "Bearer <m2m_access_token>")
+  .asString();
+```
+
+  </TabItem>
+
+  <TabItem label="Node.JS">
+
+```js
+var axios = require("axios").default;
+
+var options = {
+  method: "GET",
+  url: "https://<your_subdomain>.kinde.com/api/v1/users",
+  headers: {"content-type": "application/json", authorization: "Bearer <m2m_access_token>"}
+};
+
+axios
+  .request(options)
+  .then(function (response) {
+    console.log(response.data);
+  })
+  .catch(function (error) {
+    console.error(error);
+  });
+```
+
+  </TabItem>
+
+  <TabItem label="Obj-C">
+
+```objc
+#import <Foundation/Foundation.h>
+
+NSDictionary *headers = @{ @"content-type": @"application/json",
+                           @"authorization": @"Bearer <m2m_access_token>" };
+
+NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://<your_subdomain>.kinde.com/api/v1/users"]
+                                                       cachePolicy:NSURLRequestUseProtocolCachePolicy
+                                                   timeoutInterval:10.0];
+[request setHTTPMethod:@"GET"];
+[request setAllHTTPHeaderFields:headers];
+
+NSURLSession *session = [NSURLSession sharedSession];
+NSURLSessionDataTask *dataTask = [session dataTaskWithRequest:request
+                                            completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+                                                if (error) {
+                                                    NSLog(@"%@", error);
+                                                } else {
+                                                    NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) response;
+                                                    NSLog(@"%@", httpResponse);
+                                                }
+                                            }];
+[dataTask resume];
+```
+
+  </TabItem>
+
+    <TabItem label="PHP">
+
+```php
+$curl = curl_init();
+
+curl_setopt_array($curl, [
+  CURLOPT_URL => "https://<your_subdomain>.kinde.com/api/v1/users",
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_ENCODING => "",
+  CURLOPT_MAXREDIRS => 10,
+  CURLOPT_TIMEOUT => 30,
+  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+  CURLOPT_CUSTOMREQUEST => "GET",
+  CURLOPT_HTTPHEADER => [
+    "authorization: Bearer <m2m_access_token>",
+    "content-type: application/json"
+  ],
+]);
+
+$response = curl_exec($curl);
+$err = curl_error($curl);
+
+curl_close($curl);
+
+if ($err) {
+  echo "cURL Error #:" . $err;
+} else {
+  echo $response;
+}
+```
+
+    </TabItem>
+
+    <TabItem label="Python">
+
+```python
+import http.client
+
+conn = http.client.HTTPSConnection("")
+
+headers = {
+    'content-type': "application/json",
+    'authorization': "Bearer <m2m_access_token>"
+    }
+
+conn.request("GET", "/{yourDomain}/api/v2/clients", headers=headers)
+
+res = conn.getresponse()
+data = res.read()
+
+print(data.decode("utf-8"))
+```
+
+    </TabItem>
+
+     <TabItem label="Ruby">
+
+```ruby
+require 'uri'
+require 'net/http'
+require 'openssl'
+
+url = URI("https://<your_subdomain>.kinde.com/api/v1/users")
+
+http = Net::HTTP.new(url.host, url.port)
+http.use_ssl = true
+http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+request = Net::HTTP::Get.new(url)
+request["content-type"] = 'application/json'
+request["authorization"] = 'Bearer <m2m_access_token>'
+
+response = http.request(request)
+puts response.read_body
+```
+
+    </TabItem>
+
+    <TabItem label="Swift">
+
+```swift
+import Foundation
+
+let headers = [
+  "content-type": "application/json",
+  "authorization": "Bearer <m2m_access_token>"
+]
+
+let request = NSMutableURLRequest(url: NSURL(string: "https://<your_subdomain>.kinde.com/api/v1/users")! as URL,
+                                        cachePolicy: .useProtocolCachePolicy,
+                                    timeoutInterval: 10.0)
+request.httpMethod = "GET"
+request.allHTTPHeaderFields = headers
+
+let session = URLSession.shared
+let dataTask = session.dataTask(with: request as URLRequest, completionHandler: { (data, response, error) -> Void in
+  if (error != nil) {
+    print(error)
+  } else {
+    let httpResponse = response as? HTTPURLResponse
+    print(httpResponse)
+  }
+})
+
+dataTask.resume()
+```
+
+    </TabItem>
+
+</Tabs>
+
+Make sure to replace `<your_subdomain>` with your Kinde subdomain and `<m2m_access_token>` with the token received in the previous step.
 
 ## Use the Kinde Management API JS SDK
 
@@ -129,7 +566,6 @@ Here’s an example in Postman, using the `users listing` endpoint.
 />
 
 4. Repeat from step 2 for any other [Kinde API endpoints](https://kinde.com/api/docs/#kinde-management-api) you want to test.
-
 
 ## Get the access token (Postman example)
 
