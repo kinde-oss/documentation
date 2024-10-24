@@ -13,9 +13,124 @@ app_context:
     s: applications
 ---
 
-To securely connect to Kinde’s API, you need to obtain an access token. Once you have completed the [connection steps](/developer-tools/kinde-api/connect-to-kinde-api/), you're ready to make an access token request.
+Follow this process to call the Kinde Management API.
 
-## Get the access token (Postman)
+## Prerequisites
+
+[Create and authorize an M2M application for the Kinde management API](/developer-tools/kinde-api/connect-to-kinde-api/).
+
+## Get access tokens
+
+To call the Kinde Management API endpoints you need to authenticate with an access token. These tokens are JSON Web Tokens (JWTs) which contain specific permissions known as scopes.
+
+To ask Kinde for an access token for calling the management API, perform a POST request to the https://<your_subdomain>.kinde.com/oauth2/token endpoint, using the credentials of the Machine-to-Machine application you created in the prerequisite step.
+
+The payload should look as follows:
+
+```jsx
+
+curl --request POST \
+  --url 'https://<your_subdomain>.kinde.com/oauth2/token' \
+  --header 'content-type: application/x-www-form-urlencoded' \
+  --data grant_type=client_credentials \
+  --data 'client_id=<your_m2m_client_id>' \
+  --data 'client_secret=<your_m2m_client_secret> \
+  --data 'audience=https://<your_subdomain>}.kinde.com/api'
+
+```
+You can call the token endpoint in the backend language of your choice, for example in NodeJS this would look like:
+
+```jsx
+
+fetch(`https://<your_subdomain>.kinde.com/oauth2/token`, {
+	method: "POST",
+	headers: {
+		"content-type": "application/x-www-form-urlencoded",
+	},
+	body: new URLSearchParams({
+		audience: "https://<your_subdomain>.kinde.com/api",
+		grant_type: "client_credentials",
+		client_id: <your_m2m_client_id>,
+		client_secret: <your_m2m_client_secret>
+	})
+});
+
+```
+
+The response will contain a signed JWT containing claims including the scopes the token is allowed to access and the expiry time. Here is an example token:
+
+```jwt
+
+{
+  "aud": [
+    "https://example.kinde.com/api"
+  ],
+  "azp": "bd69bb9fe5db44a38b6b2dacd1f4b451",
+  "exp": 1729812040,
+  "gty": [
+    "client_credentials"
+  ],
+  "iat": 1729725640,
+  "iss": "https://example.kinde.com",
+  "jti": "6f091ebe-44ba-4afc-bd2f-05fcccafc89e",
+  "scope": "read:users update:users",
+}
+
+```
+
+## Use the access token
+To use this token, include it in the Authorization header of your request. For example to get all users you would call:
+
+```jsx
+
+curl --request GET \
+  --url 'https://<your_subdomain>.kinde.com/api/v1/users' \
+  --header 'authorization: Bearer <m2m_access_token>' \
+  --header 'content-type: application/json'
+
+```
+
+## Use the Kinde Management API JS SDK
+
+As an alternative to making HTTP calls, you can also use the Kinde Management API JS SDK.
+
+You can use it to automatically obtain tokens for, and interact with the Kinde management API.
+
+## Test the API endpoints
+
+You can test your API access by sending a `GET` request to any Kinde API endpoint. See the [Kinde Management API library](https://kinde.com/api/docs/#kinde-management-api) for options.
+
+Here’s an example in Postman, using the `users listing` endpoint.
+
+1. Create a new GET request.
+2. Enter a URL that contains the `/users` endpoint, e.g. `https://<domain>.kinde.com/api/v1/users` .
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/44dd0ac2-b96e-4a91-79dd-4a9f9dda2000/public"
+  alt="Entering a Request URL in Postman"
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+3. Send the request. It should return your users in the body section. If it does, the connection is successful.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8f4aae17-6f38-43e4-9bf7-55ac0bf2d300/public"
+  alt="Response body in Postman"
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+4. Repeat from step 2 for any other [Kinde API endpoints](https://kinde.com/api/docs/#kinde-management-api) you want to test.
+
+
+## Get the access token (Postman example)
 
 We recommend you do this in a non-production environment first.
 
@@ -103,7 +218,7 @@ If you decide to use Postman, we recommended that you set up a Postman environme
 13. Select **Use Token**. You should now have the access token for making requests to the Kinde management API. See the [Kinde API documentation](https://kinde.com/api/docs/#kinde-management-api) for all the available end points.
 14. Next (optional): [Test the connection to Kinde’s API](/developer-tools/kinde-api/troubleshoot-kinde-api/).
 
-## Get the access token (Node.js fetch)
+## Get the access token (Node.js fetch example)
 
 Use the following, but replace `<your_domain>`, `<client_id>` and `<client_secret>` with your own details.
 
@@ -123,36 +238,3 @@ Use the following, but replace `<your_domain>`, `<client_id>` and `<client_secre
 ```
 
 See our [other SDK frameworks](/developer-tools/about/our-sdks/) for additional code snippets.
-
-## Test the various endpoints
-
-You can test the API connection by sending a `GET` request to any Kinde API endpoint. See the [Kinde Management API library](https://kinde.com/api/docs/#kinde-management-api) for options.
-
-Here’s an example in Postman, using the `users listing` endpoint.
-
-1. Create a new GET request.
-2. Enter a URL that contains the `/users` endpoint, e.g. `https://<domain>.kinde.com/api/v1/users` .
-
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/44dd0ac2-b96e-4a91-79dd-4a9f9dda2000/public"
-  alt="Entering a Request URL in Postman"
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
-
-3. Send the request. It should return your users in the body section. If it does, the connection is successful.
-
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8f4aae17-6f38-43e4-9bf7-55ac0bf2d300/public"
-  alt="Response body in Postman"
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
-
-4. Repeat from step 2 for any other [Kinde API endpoints](https://kinde.com/api/docs/#kinde-management-api) you want to test.
