@@ -124,6 +124,9 @@ export default defineConfig({
         "./src/components/Divider.astro",
         {
           "starlight-package-managers": ["PackageManagers"]
+        },
+        {
+          "@astrojs/starlight/components": ["Tabs", "TabItem"]
         }
       ]
     }),
