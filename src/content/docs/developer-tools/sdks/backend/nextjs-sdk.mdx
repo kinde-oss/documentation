@@ -76,6 +76,51 @@ This will handle Kinde Auth endpoints in your Next.js app.
 
 **Important!** Our SDK relies on this file existing in this location specified above.
 
+## **Set up the Kinde Auth Provider**
+
+Wrap your app in the Kinde Auth Provider. This will give you access to the Kinde Auth data in your app and will ensure that the tokens are refreshed when needed.
+
+Create a file `AuthProvider.tsx` in your app directory.
+
+```jsx
+// AuthProvider.tsx
+
+"use client";
+import {KindeProvider} from "@kinde-oss/kinde-auth-nextjs";
+
+export const AuthProvider = ({children}) => {
+  return <KindeProvider>{children}</KindeProvider>;
+};
+```
+
+Then wrap your app in the `AuthProvider` component.
+
+```jsx
+// layout.tsx
+...
+import {AuthProvider} from './AuthProvider';
+
+export const metadata = {
+  title: 'Kinde Auth',
+  description: 'Kinde with NextJS App Router'
+};
+
+export default async function RootLayout({
+  children
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <AuthProvider>
+      <html lang="en">
+        // Your app code here
+      </html>
+    </AuthProvider>
+  );
+}
+
+```
+
 ## Authentication
 
 ### Sign up and sign in
