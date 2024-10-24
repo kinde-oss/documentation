@@ -59,7 +59,7 @@ export default defineConfig({
       description: "Our developer tools provide everything you need to get started with Kinde.",
       disable404Route: true,
       social: {
-        github: "https://github.com/kinde-oss" 
+        github: "https://github.com/kinde-oss"
       },
       sidebar: sidebarConfig,
       customCss: [
@@ -98,8 +98,8 @@ export default defineConfig({
         maxHeadingLevel: 2
       },
       editLink: {
-        baseUrl: "https://github.com/kinde-oss/documentation/edit/main",
-      }, 
+        baseUrl: "https://github.com/kinde-oss/documentation/edit/main"
+      },
       lastUpdated: false,
       titleDelimiter: "-",
       expressiveCode: expressiveCodeOptions
@@ -118,6 +118,9 @@ export default defineConfig({
         "./src/components/Divider.astro",
         {
           "starlight-package-managers": ["PackageManagers"]
+        },
+        {
+          "@astrojs/starlight/components": ["Tabs", "TabItem"]
         }
       ]
     }),
