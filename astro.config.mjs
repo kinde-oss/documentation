@@ -43,7 +43,13 @@ export default defineConfig({
     "/developer-tools/kinde-api/custom-api-scopes/":
       "/developer-tools/your-apis/custom-api-scopes/",
     "/developer-tools/kinde-api/register-an-api/":
-      "/developer-tools/your-apis/register-manage-apis/"
+      "/developer-tools/your-apis/register-manage-apis/",
+    "/developer-tools/kinde-api/add-a-m2m-application-for-api-access/":
+      "/developer-tools/kinde-api/about-m2m-scopes/",
+    "/developer-tools/kinde-api/get-access-token-for-connecting-securely-to-kindes-api/":
+      "/developer-tools/kinde-api/connect-to-kinde-api",
+    "/developer-tools/kinde-api/test-the-connection-to-kindes-api/":
+      "/developer-tools/kinde-api/troubleshoot-kinde-api/"
   },
   markdown: {
     rehypePlugins: [
