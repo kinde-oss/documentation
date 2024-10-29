@@ -53,9 +53,7 @@ Kinde comes with a production environment, but you can set up other environments
 
 ## Integrate with your app
 
-The `@kinde-oss/kinde-typescript-sdk` package is intended to work on both `Browser` and `NodeJS` environments, consequently for both environments the SDK provides different clients, we provide examples below to demonstrate this.
-
-First step is to configure and create a client. The following settings are needed depend on which authentication flow you are using.
+First step is to configure and create a client. The following settings are needed depending on which authentication flow you are using.
 
 You can find these values on your **Settings > Applications > [Your app] > View details** page.
 
@@ -64,8 +62,6 @@ You can find these values on your **Settings > Applications > [Your app] > View
 - `clientSecret` - your Kinde client secret
 - `redirectURL` - your callback url to redirect to after authentication. Make sure this URL is under your **Allowed callback URLs**.
 - `logoutRedirectURL` - where you want users to be redirected to after logging out. Make sure this URL is under your **Allowed logout redirect URLs**.
-
-### NodeJS
 
 ```typescript
 import {createKindeServerClient, GrantType} from "@kinde-oss/kinde-typescript-sdk";
@@ -88,22 +84,7 @@ const kindeApiClient = createKindeServerClient(GrantType.CLIENT_CREDENTIALS, {
 });
 ```
 
-### Browser
-
-```typescript
-import {createKindeBrowserClient} from "@kinde-oss/kinde-typescript-sdk";
-
-const kindeClient = createKindeBrowserClient({
-  authDomain: "https://<your_kinde_subdomain>.kinde.com",
-  clientId: "<your_kinde_client_id>",
-  logoutRedirectURL: "http://localhost:3000",
-  redirectURL: "http://localhost:3000"
-});
-```
-
 ## Log in and register
-
-### **NodeJS**
 
 To incorporate the login and register features, you'll need to redirect to Kinde for authentication. One way to do this is to create routes for `/login` and `/register`.
 
@@ -158,35 +139,7 @@ The appropriate session store for your application will depend on your applicati
 
 Commonly, the session manager will be a wrapper around an existing session management library - often provided by a web framework, or a third party library.
 
-### **Browser**
-
-Kinde provides methods for easily implementing a login / register flow.
-
-As an example you can add buttons as follows:
-
-```html
-<button onclick="handleLogin()">Sign in</button> <button onclick="handleRegister()">Sign up</button>
-```
-
-Next, define new functions that correspond to each button in your JavaScript or TypeScript file.
-
-```typescript
-async function handleLogin() {
-  const url = await kindeClient.login();
-  // Redirect
-  window.location.href = url.toString();
-}
-
-async function handleRegister() {
-  const url = await kindeClient.register();
-  // Redirect
-  window.location.href = url.toString();
-}
-```
-
 ## **Manage redirects**
-
-### **NodeJS**
 
 You will also need to route `/callback`. When the user is redirected back to your site from Kinde, it will trigger a call to the callback URL defined in the `redirectURL` client option.
 
@@ -198,26 +151,9 @@ app.get("/callback", async (req, res) => {
 });
 ```
 
-### **Browser**
-
-To handle this, you will have to invoke the `handleRedirectToApp` function.
-
-```typescript
-async function handleRedirect() {
-  try {
-    await kindeClient.handleRedirectToApp(new URL(window.location.toString()));
-    // Redirect to Home page, etc...
-  } catch (error) {
-    console.error("ERROR handleRedirect", error);
-  }
-}
-```
-
 ## Logout
 
 The Kinde SDK comes with a logout method.
-
-### **NodeJS**
 
 ```typescript
 app.get("/logout", async (req, res) => {
@@ -230,40 +166,12 @@ app.get("/logout", async (req, res) => {
 <a href="/logout">Log out</a>
 ```
 
-### **Browser**
-
-```typescript
-async function handleLogout() {
-  const url = await kindeClient.logout();
-  // Redirect
-  window.location.href = url.toString();
-}
-```
-
-```html
-<button onclick="handleLogout()">Log out</button>
-```
-
 ## Check if user is authenticated
 
 We’ve provided a helper to get a boolean value to check if a user is signed in by verifying that the access token is still valid. The `isAuthenticated` function is only available for authentication code and PKCE flows.
 
-### **NodeJS**
-
 ```typescript
 const isAuthenticated = await kindeClient.isAuthenticated(sessionManager); // Boolean: true or false
-if (isAuthenticated) {
-  // Need to implement, e.g: call an api, etc...
-} else {
-  // Need to implement, e.g: redirect user to sign in, etc..
-}
-```
-
-### **Browser**
-
-```typescript
-const isAuthenticated = await kindeClient.isAuthenticated(); // Boolean: true or false
-
 if (isAuthenticated) {
   // Need to implement, e.g: call an api, etc...
 } else {
@@ -277,24 +185,8 @@ You need to have already authenticated before you call the API, otherwise an err
 
 To access the user information, use the `getUserProfile` helper function:
 
-### **NodeJS**
-
 ```typescript
 const profile = await kindeClient.getUserProfile(sessionManager);
-// returns
-{
-  "given_name":"Dave",
-	"id":"kp_12345678910",
-	"family_name":"Smith",
-	"email":"dave@smith.com",
-	"picture": "https://link_to_avatar_url.kinde.com"
-}
-```
-
-### **Browser**
-
-```typescript
-const profile = await kindeClient.getUserProfile();
 // returns
 {
   "given_name":"Dave",
@@ -313,8 +205,6 @@ Go to the **Users** page in Kinde to see your newly registered user.
 
 An `audience` is the intended recipient of an access token - for example the API for your application. The audience argument can be passed to the Kinde client to request an audience be added to the provided token.
 
-### **NodeJS**
-
 ```typescript
 const clientOptions = {
 	...,
@@ -326,33 +216,16 @@ const kindeClient = createKindeServerClient(
 );
 ```
 
-### **Browser**
-
-```typescript
-const clientOptions = {
-	...,
-  audience: 'api.yourapp.com',
-};
-
-const kindeClient = createKindeBrowserClient(
-  clientOptions
-)
-```
-
-For details on how to connect, see [Register an API](/developer-tools/your-apis/register-manage-apis/)
-
 ## Overriding scope
 
-By default the `KindeSDK` requests the following scopes:
+By default the Kinde SDK requests the following scopes:
 
 - `profile`
 - `email`
 - `offline`
 - `openid`
 
-You can override this by passing scopes into the `KindeSDK`
-
-### **NodeJS**
+You can override this by passing scopes into the Kinde SDK
 
 ```typescript
 const clientOptions = {
@@ -363,19 +236,6 @@ const clientOptions = {
 const kindeClient = createKindeServerClient(
   GrantType.AUTHORIZATION_CODE, clientOptions
 );
-```
-
-### **Browser**
-
-```typescript
-const clientOptions = {
-  ...,
-  scope: 'openid profile email offline',
-};
-
-const kindeClient = createKindeBrowserClient(
-  clientOptions
-)
 ```
 
 ## Organizations
@@ -383,8 +243,6 @@ const kindeClient = createKindeBrowserClient(
 ### Create an organization
 
 To have a new organization created within your application during registration, you can create a route as follows:
-
-**NodeJS**
 
 ```typescript
 app.get("/createOrg", async (req, res) => {
@@ -394,34 +252,15 @@ app.get("/createOrg", async (req, res) => {
 });
 ```
 
-**Browser**
-
-```typescript
-const handleCreateOrg = async (org_name: string) => {
-  const url = await kindeClient.createOrg({org_name});
-  window.location.href = url.toString();
-};
-```
-
 You can also pass `org_name` as part of the query string as per the following HTML:
-
-**NodeJS**
 
 ```html
 <a href="/createOrg?org_name=<your_org_name>">Create Org</a>
 ```
 
-**Browser**
-
-```html
-<button onclick="handleCreateOrg('your_org_name')">Create Org</button>
-```
-
 ### Log in and register to organizations
 
 The Kinde client provides methods for you to easily log in and register users into existing organizations.
-
-**NodeJS**
 
 Update the routes to accept an `org_code` parameter and pass it to the SDK:
 
@@ -431,24 +270,7 @@ const loginUrl = await kindeClient.login(sessionManager, {org_code: "org_1234"})
 const registerUrl = await kindeClient.register(sessionManager, {org_code: "org_1234"});
 ```
 
-**Browser**
-
-```typescript
-// HTML
-<button onclick="handleLoginIntoOrganization('org_1234')">Sign in</button>
-<button onclick="handleRegisterIntoOrganization('org_1234')">Sign up</button>
-
-// JS/TS file
-async function handleLoginIntoOrganization(org_code){
-	await kindeClient.login({org_code});
-}
-
-async function handleRegisterIntoOrganization(org_code){
-	await kindeClient.register({org_code});
-}
-```
-
-Following authentication, Kinde provides a json web token (jwt) to your application. Along with the standard information we also include the `org_code` and the permissions for that organization (this is important as a user can belong to multiple organizations and have different permissions for each).
+Following authentication, Kinde provides a JSON web token (JWT) to your application. Along with the standard information we also include the `org_code` and the permissions for that organization (this is important as a user can belong to multiple organizations and have different permissions for each).
 
 Example of a returned token:
 
@@ -478,20 +300,10 @@ The `id_token` will also contain an array of organizations that a user belongs t
 
 There are two helper functions you can use to extract information:
 
-**NodeJS**
-
 ```typescript
 const org = await kindeClient.getOrganization(sessionManager); // { orgCode: 'org_1234' }
 
 const orgs = await kindeClient.getUserOrganizations(sessionManager); // { orgCodes: ['org_1234', 'org_abcd'] }
-```
-
-**Browser**
-
-```typescript
-const org = await kindeClient.getOrganization(); // { orgCode: 'org_1234' }
-
-const orgs = await kindeClient.getUserOrganizations(); // { orgCodes: ['org_1234', 'org_abcd'] }
 ```
 
 ## User permissions
@@ -515,25 +327,13 @@ const permissions = [
 
 We provide helper functions to more easily access the permissions claim:
 
-**NodeJS**
-
 ```typescript
 const permission = await kindeClient.getPermission(sessionManager, "create:todos"); // { orgCode: 'org_1234', isGranted: true }
 
 const permissions = await kindeClient.getPermissions(sessionManager); // { orgCode: 'org_1234', permissions: ['create:todos', 'update:todos', 'read:todos'] }
 ```
 
-**Browser**
-
-```typescript
-const permission = await kindeClient.getPermission("create:todos"); // { orgCode: 'org_1234', isGranted: true }
-
-const permissions = await kindeClient.getPermissions(); // { orgCode: 'org_1234', permissions: ['create:todos', 'update:todos', 'read:todos'] }
-```
-
 A practical example in code might look something like:
-
-**NodeJS**
 
 ```typescript
 const permission = await kindeClient.getPermission(sessionManager, "create:todos");
@@ -542,20 +342,9 @@ if (permission.isGranted) {
 }
 ```
 
-**Browser**
-
-```typescript
-const permission = await kindeClient.getPermission("create:todos");
-if (permission.isGranted) {
-    ...
-}
-```
-
 ## Getting claims
 
 We have provided a helper to grab any claim from your id or access tokens. The helper defaults to access tokens:
-
-### NodeJS
 
 ```typescript
 client.getClaim(sessionManager, "aud"); // { name: "aud", value: ["local-testing@kinde.com"] }
@@ -567,23 +356,9 @@ client.getClaim(sessionManager, "email", "id_token"); // { name: "email", value:
 client.getClaimValue(sessionManager, "email", "id_token"); // "first.last@test.com"
 ```
 
-### Browser
-
-```typescript
-client.getClaim("aud"); // { name: "aud", value: ["local-testing@kinde.com"] }
-
-client.getClaimValue("aud"); // ["local-testing@kinde.com"]
-
-client.getClaim("email", "id_token"); // { name: "email", value: "first.last@test.com" }
-
-client.getClaimValue("email", "id_token"); // "first.last@test.com"
-```
-
 ## Feature Flags
 
 We have provided a helper to return any features flag from the access token:
-
-### **NodeJS**
 
 ```typescript
 client.getFeatureFlag(sessionManager, 'theme')
@@ -612,41 +387,9 @@ client.getFeatureFlag(sessionManager, 'theme', 'default-theme', 'b')
 // Error: "Flag theme is of type string, expected type is boolean
 ```
 
-### **Browser**
-
-```typescript
-client.getFeatureFlag('theme')
-// returns
-{
-	"is_default": false
-  "value": "pink",
-  "code": "theme",
-  "type": "string",
-}
-
-client.getFeatureFlag('no-feature-flag')
-// returns
-// Error: "Flag no-feature-flag was not found, and no default value has been provided"
-
-
-client.getFeatureFlag('no-feature-flag', 'default-value')
-// returns
-{
-	"is_default": true
-	"code": "no-feature-flag",
-	"value": "default-value",
-}
-
-client.getFeatureFlag('theme', 'default-theme', 'b')
-// returns
-// Error: "Flag theme is of type string, expected type is boolean
-```
-
 We also require wrapper functions by type which should leverage `getFlag` above.
 
 ### **Get boolean flags**
-
-**NodeJS**
 
 ```typescript
 /**
@@ -674,37 +417,7 @@ kindeClient.getBooleanFlag(sessionManager, "theme", "blue");
 // Error - Flag "theme" is of type string not boolean
 ```
 
-**Browser**
-
-```typescript
-/**
- * Get a boolean flag from the feature_flags claim of the access_token.
- * @param {Object} request - Request object
- * @param {String} code - The name of the flag.
- * @param {Boolean} [defaultValue] - A fallback value if the flag isn't found.
- * @return {Boolean}
- */
-kindeClient.getBooleanFlag(code, defaultValue);
-
-kindeClient.getBooleanFlag("is_dark_mode");
-// true
-
-kindeClient.getBooleanFlag("is_dark_mode", false);
-// true
-
-kindeClient.getBooleanFlag("new_feature");
-// Error - flag does not exist and no default provided
-
-kindeClient.getBooleanFlag("new_feature", false);
-// false (flag does not exist so falls back to default)
-
-kindeClient.getBooleanFlag("theme", "blue");
-// Error - Flag "theme" is of type string not boolean
-```
-
 ### **Get string flags**
-
-**NodeJS**
 
 ```typescript
 /**
@@ -733,38 +446,7 @@ kindeClient.getStringFlag(sessionManager, "is_dark_mode", false);
 // Error - Flag "is_dark_mode" is of type boolean not string
 ```
 
-**Browser**
-
-```typescript
-/**
- * Get a string flag from the feature_flags claim of the access_token.
- * @param {Object} request - Request object
- * @param {String} code - The name of the flag.
- * @param {String} [defaultValue] - A fallback value if the flag isn't found.
- * @return {String}
- */
-kindeClient.getStringFlag(code, defaultValue);
-
-/* Example usage */
-kindeClient.getStringFlag("theme");
-// pink
-
-kindeClient.getStringFlag("theme", "black");
-// true
-
-kindeClient.getStringFlag("cta_color");
-// Error - flag does not exist and no default provided
-
-kindeClient.getStringFlag("cta_color", "blue");
-// blue (flag does not exist so falls back to default)
-
-kindeClient.getStringFlag("is_dark_mode", false);
-// Error - Flag "is_dark_mode" is of type boolean not str
-```
-
 ### **Get integer flags**
-
-**NodeJS**
 
 ```typescript
 /**
@@ -792,49 +474,12 @@ kindeClient.getIntegerFlag(sessionManager, "is_dark_mode", false);
 // Error - Flag "is_dark_mode" is of type boolean not integer
 ```
 
-**Browser**
-
-```typescript
-/**
- * Get an integer flag from the feature_flags claim of the access_token.
- * @param {Object} request - Request object
- * @param {String} code - The name of the flag.
- * @param {Integer} [defaultValue] - A fallback value if the flag isn't found.
- * @return {Integer}
- */
-kindeClient.getIntegerFlag(code, defaultValue);
-
-kindeClient.getIntegerFlag("competitions_limit");
-// 5
-
-kindeClient.getIntegerFlag("competitions_limit", 3);
-// 5
-
-kindeClient.getIntegerFlag("team_count");
-// Error - flag does not exist and no default provided
-
-kindeClient.getIntegerFlag("team_count", 2);
-// false (flag does not exist so falls back to default)
-
-kindeClient.getIntegerFlag("is_dark_mode", false);
-// Error - Flag "is_dark_mode" is of type boolean not integer
-```
-
 ## Token storage
 
 After the user has successfully logged in, you will have a JSON Web Token (JWT) and a refresh token securely stored. You can retrieve an access token by utilizing the `getToken` method.
 
-### NodeJS
-
 ```typescript
-// NodeJS
 const accessToken = await kindeClient.getToken(sessionManager);
-```
-
-### Browser
-
-```typescript
-const accessToken = await kindeClient.getToken();
 ```
 
 ## **Kinde Management API**
@@ -933,7 +578,7 @@ Type: `string`
 
 Required: No
 
-## **KindeSDK methods - NodeJS**
+## **Kinde SDK methods**
 
 ### `login`
 
@@ -1343,341 +988,6 @@ Usage:
 
 ```typescript
 kindeClient.getIntegerFlag(sessionManager, "team_count");
-```
-
-Sample output: `2`
-
-## **KindeSDK methods - Browser**
-
-### `login`
-
-Constructs a redirect URL and sends the user to Kinde to sign in.
-
-Usage:
-
-```typescript
-kindeClient.login();
-```
-
-### `register`
-
-Constructs a redirect URL and sends the user to Kinde to sign up.
-
-Usage:
-
-```typescript
-kindeClient.register();
-```
-
-### `logout`
-
-Logs the user out of Kinde.
-
-Usage:
-
-```typescript
-kindeClient.logout();
-```
-
-### `handleRedirectToApp`
-
-Callback middleware function for Kinde OAuth 2.0 flow.
-
-Arguments: `url:URL`
-
-Usage:
-
-```typescript
-kindeClient.handleRedirectToApp(url);
-```
-
-### `isAuthenticated`
-
-Check if the user is authenticated.
-
-Usage:
-
-```typescript
-kindeClient.isAuthenticated();
-```
-
-Output: `true` or `false`
-
-### `createOrg`
-
-Constructs redirect url and sends user to Kinde to sign up and create a new org for your business.
-
-Arguments:
-
-```typescript
-options?: CreateOrgURLOptions {
-   org_name?: string;
-   org_code?: string;
-   state?: string;
-}
-```
-
-Usage:
-
-```typescript
-kindeClient.createOrg({
-  org_name: "org_1234"
-});
-```
-
-### `getClaim`
-
-Extract the provided claim from the provided token type in the current session, the returned object includes the provided claim.
-
-Arguments:
-
-```typescript
-claim: string, 
-tokenKey?: ClaimTokenType 'access_token' | 'id_token’
-```
-
-Usage:
-
-```typescript
-kindeClient.getClaim("given_name", "id_token");
-```
-
-### `getClaimValue`
-
-Extract the provided claim from the provided token type in the current session.
-
-Arguments:
-
-```typescript
-claim: string, 
-tokenKey?: ClaimTokenType 'access_token' | 'id_token’
-```
-
-Usage:
-
-```typescript
-client.getClaimValue("given_name");
-```
-
-Output: `'David'`
-
-### `getPermission`
-
-Returns the state of a given permission.
-
-Arguments:
-
-```typescript
-key: string;
-```
-
-Usage:
-
-```typescript
-kindeClient.getPermission("read:todos");
-```
-
-Output sample:
-
-```json
-{
-  "orgCode": "org_1234",
-  "isGranted": true
-}
-```
-
-### `getPermissions`
-
-Returns all permissions for the current user for the organization they are logged into.
-
-Usage:
-
-```typescript
-kindeClient.getPermissions();
-```
-
-Sample output:
-
-```json
-{
-  "orgCode": "org_1234",
-  "permissions": ["create:todos", "update:todos", "read:todos"]
-}
-```
-
-### `getOrganization`
-
-Get details for the organization your user is logged into.
-
-Arguments:
-
-```typescript
-key: string;
-```
-
-Usage:
-
-```typescript
-kindeClient.getOrganization();
-```
-
-Sample output:
-
-```json
-{"orgCode": "org_1234"}
-```
-
-### `getUserOrganizations`
-
-Gets an array of all organizations the user has access to.
-
-Usage:
-
-```typescript
-kindeClient.getUserOrganizations();
-```
-
-Sample output:
-
-```json
-{"orgCodes": ["org_7052552de68", "org_5a5c29381327"]}
-```
-
-### `getUser`
-
-Extracts the user details from the ID token obtained post authentication.
-
-Usage:
-
-```typescript
-kindeClient.getUser();
-```
-
-### `getToken`
-
-Gets an array of all organizations the user has access to.
-
-Usage:
-
-```typescript
-kindeClient.getToken();
-```
-
-### `getUserProfile`
-
-Extracts makes use of the `getToken` method above to fetch user details.
-
-Usage:
-
-```typescript
-kindeClient.getUserProfile();
-```
-
-Sample output:
-
-```json
-{
-  "given_name": "Dave",
-  "id": "abcdef",
-  "family_name": "Smith",
-  "email": "mailto:dave@smith.com"
-}
-```
-
-### `getFlag`
-
-Get a flag from the feature_flags claim of the `access_token`.
-
-Arguments:
-
-```typescript
-code : string
-defaultValue? :  FlagType[keyof FlagType
-flagType? : keyof FlagType
-
-interface FlagType {
-    s: string;
-    b: boolean;
-    i: number;
-}
-interface GetFlagType {
-    type?: 'string' | 'boolean' | 'number';
-    value: FlagType[keyof FlagType];
-    is_default: boolean;
-    code: string;
-}
-```
-
-Usage:
-
-```typescript
-kindeClient.getFlag("theme");
-```
-
-Sample output:
-
-```json
-{
-  "code": "theme",
-  "type": "string",
-  "value": "pink",
-  "is_default": false
-}
-```
-
-### `getBooleanFlag`
-
-Get a boolean flag from the `feature_flags` claim of the access token.
-
-Arguments:
-
-```typescript
-code : string
-defaultValue? :  boolean
-```
-
-Usage:
-
-```typescript
-kindeClient.getBooleanFlag("is_dark_mode");
-```
-
-Sample output: `true`
-
-### `getStringFlag`
-
-Get a string flag from the `feature_flags` claim of the access token.
-
-Arguments:
-
-```typescript
-code : string
-defaultValue? :  string
-```
-
-Usage:
-
-```typescript
-kindeClient.getStringFlag("theme");
-```
-
-Sample output: `pink`
-
-### `getIntegerFlag`
-
-Get an integer flag from the `feature_flags` claim of the access token.
-
-Arguments:
-
-```typescript
-code : string
-defaultValue? :  number
-```
-
-Usage:
-
-```typescript
-kindeClient.getIntegerFlag("team_count");
 ```
 
 Sample output: `2`
