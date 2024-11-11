@@ -6,7 +6,7 @@ on:
 # Automatically cancel in-progress actions on the same branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request_target' && github.head_ref || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   validate-links:
@@ -25,6 +25,10 @@ jobs:
         run: npm install
 
       - name: Build docs
+        env:
+          PUBLIC_KINDE_MANAGEMENT_API_SPEC_URL: ${{secrets.PUBLIC_KINDE_MANAGEMENT_API_SPEC_URL}}
+          PUBLIC_KINDE_FRONTEND_API_SPEC_URL: ${{secrets.PUBLIC_KINDE_FRONTEND_API_SPEC_URL}}
+          PUBLIC_KINDE_PROXY_URL: ${{secrets.PUBLIC_KINDE_PROXY_URL}}
         run: npm run build
 
       - name: Run link validation script
