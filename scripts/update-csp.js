@@ -16,7 +16,7 @@ const yamlPath = path.join(__dirname, "../customHttp.yml");
 // Set to store unique hashes
 const scriptSrcHashes = new Set();
 
-const predefinedScriptSrcItems = ["'self'", "widgets.kinde.com", "kinde.com"];
+const predefinedScriptSrcItems = ["'self'", "widgets.kinde.com", "kinde.com", "https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.23.5/dist/browser/standalone.min.js"];
 
 function hashScriptContent(content) {
   return crypto.createHash("sha256").update(content, "utf-8").digest("base64");
