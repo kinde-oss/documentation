@@ -35,12 +35,15 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
 
   // Wait for subdomain input to be ready, then focus and select text on focus, making it easier for users to enter their Kinde subdomain
   waitForElement("#variable-subdomain", (inputElement: HTMLInputElement) => {
+
     inputElement.addEventListener("focus", () => {
       inputElement.select();
     });
+
     inputElement.addEventListener("mouseup", (e) => {
       e.preventDefault();
     });
+
   });
 
   waitForElement('.authentication-content label', (element: HTMLLabelElement) => {
@@ -59,6 +62,7 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
   })
 
   waitForElement(".introduction-card", (parentEl: HTMLDivElement) => {
+
     const subdomainInputElement = parentEl.querySelector(
       "input#variable-subdomain"
     ) as HTMLInputElement;
@@ -88,6 +92,7 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
     });
 
     tokenInputElement.dispatchEvent(new Event("input"));
+
   });
 
   // Detect when api client overlay is up, so we can add a class to the body and then control body overflow, header z-index and position (from fixed to static)
@@ -112,6 +117,17 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
 </script>
 
 <style is:inline>
+
+  :root {
+    --kinde-header-height: 72px;
+    --spacer: 16px;
+  } 
+
+  html,
+  body {
+    background-color: transparent;
+  }
+
   body.api-client-drawer-open {
     overflow: hidden;
   }
@@ -123,15 +139,6 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
 
   body.api-client-drawer-open .main-frame {
     padding-top: 0;
-  }
-
-  :root {
-    --kinde-header-height: 72px;
-  }
-
-  html,
-  body {
-    background-color: transparent;
   }
 
   main .content-panel {
@@ -180,25 +187,16 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
     animation: pulse 1.2s linear infinite;
   }
 
+  .sidebar-pages {
+    max-height: calc(100vh - (var(--kinde-header-height) + var(--spacer)));
+  }
+
   .sidebar-heading-type {
     font-weight: normal !important;
   }
 
   .sidebar-heading-link-title {
     line-height: 1.5rem !important;
-  }
-
-  @keyframes pulse {
-    50% {
-      /* background-color: var(--scalar-background-2) !important; */
-      background-color: hsl(42.81deg 100% 65.1% / 12%);
-      outline: 1px solid var(--scalar-color-orange);
-    }
-    0%,
-    100% {
-      background-color: hsl(42.81deg 100% 65.1% / 3%);
-      outline: 1px solid var(--scalar-color-yellow);
-    }
   }
 
   h1.section-header.tight {
@@ -250,17 +248,6 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
     padding-block-end: 18px !important;
   }
 
-  @media (min-width: 1001px) {
-    .kinde-header {
-      background-color: rgba(255, 255, 255, 0.7);
-      backdrop-filter: blur(20px);
-    }
-
-    .dark-mode .kinde-header {
-      background-color: rgba(0, 0, 0, 0.2);
-    }
-  }
-
   div#description\/intro {
     position: absolute;
     width: 1px;
@@ -276,7 +263,7 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
 
   div#description\/prerequisites {
     margin-block: 24px;
-    scroll-margin-top: calc(var(--kinde-header-height) + 16px);
+    scroll-margin-top: calc(var(--kinde-header-height) + var(--spacer));
   }
 
   div#description\/prerequisites .markdown h2 {
@@ -305,7 +292,6 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
     margin: 0 !important;
     font-family: var(--scalar-font-code) !important;
     background-color: var(--scalar-color-1) !important;
-    /* box-shadow: 0 0 0 1px var(--scalar-border-color) !important; */
     box-shadow: none !important;
     font-size: var(--scalar-micro) !important;
     border-radius: 0.3em !important;
@@ -340,9 +326,33 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
     }
   }
 
+  @media (min-width: 1001px) {
+    .kinde-header {
+      background-color: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(20px);
+    }
+
+    .dark-mode .kinde-header {
+      background-color: rgba(0, 0, 0, 0.2);
+    }
+  }
+
   @media (min-width: 1540px) {
     .api-client-drawer {
       width: calc(100vw - 120px) !important;
     }
   }
+
+  @keyframes pulse {
+    50% {
+      background-color: hsl(42.81deg 100% 65.1% / 12%);
+      outline: 1px solid var(--scalar-color-orange);
+    }
+    0%,
+    100% {
+      background-color: hsl(42.81deg 100% 65.1% / 3%);
+      outline: 1px solid var(--scalar-color-yellow);
+    }
+  }
+
 </style>
