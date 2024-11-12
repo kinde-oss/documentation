@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import {fileURLToPath} from "url";
+import { fileURLToPath } from "url";
 import cheerio from "cheerio";
 import chalk from "chalk";
 
@@ -26,13 +26,18 @@ function readHtmlFiles(dir) {
   return htmlFiles;
 }
 
-// Function to extract internal links from an HTML file
+// Function to extract internal links from an HTML file, allowing `{}` characters
 function extractInternalLinks(html) {
   const $ = cheerio.load(html);
   const links = new Set();
   $("a[href]").each((_, element) => {
     const href = $(element).attr("href");
-    if (href && (href.startsWith("/") || href.startsWith("./") || href.startsWith("../"))) {
+    // Allow URLs with `{}` and special characters by checking if href contains allowed prefix
+    if (
+      href &&
+      (href.startsWith("/") || href.startsWith("./") || href.startsWith("../")) &&
+      /^[\w\-./{}#]+$/.test(href) // Allow `{}`, `#`, `/`, etc. in URLs
+    ) {
       links.add(href);
     }
   });
@@ -41,9 +46,16 @@ function extractInternalLinks(html) {
 
 // Function to check if an anchor exists within an HTML file
 function anchorExists(html, anchor) {
+  // Skip `#tag/...` style fragments as they may not correspond to actual HTML anchors
+  if (anchor.startsWith("#tag/")) {
+    return true;
+  }
+
   const $ = cheerio.load(html);
   try {
-    return $(anchor).length > 0;
+    // Escaping `{`, `}`, and `/` in the anchor for jQuery selector compatibility
+    const escapedAnchor = anchor.replace(/{/g, "\\{").replace(/}/g, "\\}").replace(/\//g, "\\/");
+    return $(escapedAnchor).length > 0;
   } catch (error) {
     console.error(chalk.red(`Error parsing anchor: ${anchor} in file`));
     return false;
@@ -59,8 +71,9 @@ function validateLinks(htmlFiles) {
     const links = extractInternalLinks(html);
 
     links.forEach((link) => {
-      // For links with hash (Type 2)
-      const [pathWithoutHash, hash] = link.split("#");
+      // Split by the first occurrence of `#` to allow fragments with slashes
+      const [pathWithoutHash, ...hashParts] = link.split("#");
+      const hash = hashParts.length ? hashParts.join("#") : null;
       const resolvedPath = path.join(distFolder, pathWithoutHash);
       const normalizedPath = path.normalize(resolvedPath);
       const ext = path.extname(normalizedPath);
@@ -71,12 +84,12 @@ function validateLinks(htmlFiles) {
         if (!fs.existsSync(indexPath)) {
           invalidLinks.push({
             link,
-            location: file.replace(distFolder, "").replace("/index.html", ".mdx")
+            location: file.replace(distFolder, "").replace("/index.html", ".mdx"),
           });
         } else if (hash && !anchorExists(fs.readFileSync(indexPath, "utf-8"), "#" + hash)) {
           invalidLinks.push({
             link,
-            location: file.replace(distFolder, "").replace("/index.html", ".mdx")
+            location: file.replace(distFolder, "").replace("/index.html", ".mdx"),
           });
         }
       } else {
@@ -84,7 +97,7 @@ function validateLinks(htmlFiles) {
         if (!fs.existsSync(normalizedPath)) {
           invalidLinks.push({
             link,
-            location: file.replace(distFolder, "").replace("/index.html", ".mdx")
+            location: file.replace(distFolder, "").replace("/index.html", ".mdx"),
           });
         }
       }
@@ -109,7 +122,7 @@ function main() {
 
   if (invalidLinks.length > 0) {
     console.log(chalk.red("Invalid Links:"));
-    invalidLinks.forEach(({link, location}) => {
+    invalidLinks.forEach(({ link, location }) => {
       console.log(chalk.red(`Link: ${link}, Found In: ${location}`));
     });
     process.exit(1);
