@@ -20,22 +20,8 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
 <script>
   import waitForElement from "@utils/waitForElement";
 
-  // Function to update the URL based on input changes
-  function updateURL(subdomain: string, token: string) {
-    // Get the current URL
-    const url = new URL(window.location.href as any);
-
-    // Set the new values for 'subdomain' and 'token'
-    url.searchParams.set("subdomain", subdomain);
-    url.searchParams.set("token", token);
-
-    // Update the URL in the browser without reloading the page
-    window.history.replaceState({}, "", url);
-  }
-
   // Wait for subdomain input to be ready, then focus and select text on focus, making it easier for users to enter their Kinde subdomain
   waitForElement("#variable-subdomain", (inputElement: HTMLInputElement) => {
-
     inputElement.addEventListener("focus", () => {
       inputElement.select();
     });
@@ -43,11 +29,9 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
     inputElement.addEventListener("mouseup", (e) => {
       e.preventDefault();
     });
-
   });
 
   waitForElement('.authentication-content label', (element: HTMLLabelElement) => {
-
     if (window.location.pathname.includes('management')) {
       element.textContent = "M2M Token"
     }
@@ -56,43 +40,71 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
       element.textContent = "User access token"
     }
 
-    const authenticationLabel = document.querySelector('.security-scheme-label') as HTMLDivElement;
+    const authenticationLabel = document.querySelector('.security-scheme-label')  as HTMLDivElement;
 
-    authenticationLabel.textContent = "Authentication"
+    if (authenticationLabel) {
+      authenticationLabel.textContent = "Authentication";
+    }
   })
 
-  waitForElement(".introduction-card", (parentEl: HTMLDivElement) => {
+  function updateURL(urlParams: URLSearchParams) {
+    // update url params
+    const newUrl = urlParams.toString() ? window.location.pathname + '?' + urlParams.toString() : window.location.pathname;
+    history.replaceState(null, '', newUrl);
 
+    // clean potential links
+    const links = document.querySelectorAll('a');
+    links.forEach(link => {
+        const url = new URL(link.href, window.location.origin);
+        url.searchParams.delete('token');
+        url.searchParams.delete('subdomain');
+        link.href = url.toString();
+    });
+  }
+
+  waitForElement(".introduction-card", (parentEl: HTMLDivElement) => {
     const subdomainInputElement = parentEl.querySelector(
       "input#variable-subdomain"
     ) as HTMLInputElement;
     const tokenInputElement = parentEl.querySelector(
       ".authentication-content input"
     ) as HTMLInputElement;
-    const urlParams = new URL(window.location.href);
-    const subdomain = urlParams.searchParams.get("subdomain");
-    const token = urlParams.searchParams.get("token");
+    const urlParams = new URLSearchParams(window.location.search);
+    
 
-    subdomainInputElement.value = subdomain as string;
+    // Check for "token" in URL params
+    if (urlParams.has('token')) {
+        const token = urlParams.get('token');
+        tokenInputElement.value = token as string;
+        tokenInputElement.dispatchEvent(new Event("input"));
+        urlParams.delete('token');
+        // updateURL(urlParams);
+    }
 
-    subdomainInputElement.addEventListener("input", (event: Event) => {
-      const subdomain = (event.target as HTMLInputElement).value;
-      const token = tokenInputElement.value;
-      updateURL(subdomain, token);
+    // Check for "subdomain" in URL params
+    if (urlParams.has('subdomain')) {
+        const subdomain = urlParams.get('subdomain');
+        sessionStorage.setItem('subdomain', subdomain as string);
+        subdomainInputElement.value = subdomain as string;
+        subdomainInputElement.dispatchEvent(new Event("input"));
+        urlParams.delete('subdomain');
+        // updateURL(urlParams);
+    } else {
+        // Populate subdomainInputElement from sessionStorage if it exists
+        const savedSubdomain = sessionStorage.getItem('subdomain');
+        if (savedSubdomain) {
+            subdomainInputElement.value = savedSubdomain;
+            subdomainInputElement.dispatchEvent(new Event("input"));
+        }
+    }
+
+    updateURL(urlParams);
+
+    // Update sessionStorage on subdomain input change
+    subdomainInputElement.addEventListener('input', (event) => {
+        const subdomain = (event.target as HTMLInputElement).value;
+        sessionStorage.setItem('subdomain', subdomain);
     });
-
-    subdomainInputElement.dispatchEvent(new Event("input"));
-
-    tokenInputElement.value = token as string;
-
-    tokenInputElement.addEventListener("input", (event) => {
-      const subdomain = subdomainInputElement.value;
-      const token = (event.target as HTMLInputElement).value;
-      updateURL(subdomain, token);
-    });
-
-    tokenInputElement.dispatchEvent(new Event("input"));
-
   });
 
   // Detect when api client overlay is up, so we can add a class to the body and then control body overflow, header z-index and position (from fixed to static)
@@ -117,7 +129,6 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
 </script>
 
 <style is:inline>
-
   :root {
     --kinde-header-height: 72px;
     --spacer: 16px;
@@ -176,6 +187,14 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
     inset-inline: 0;
     z-index: 10;
     overflow: hidden;
+  }
+
+  .scalar-api-reference a {
+    text-decoration: none;
+  }
+
+  a.base-url {
+    pointer-events: none;
   }
 
   .input:has(input#variable-subdomain:placeholder-shown),
