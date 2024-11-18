@@ -62,6 +62,17 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
     });
   }
 
+  function checkSubdomain(subdomainElement: HTMLInputElement) {
+
+    const parentEl = subdomainElement.parentElement as HTMLElement;
+
+    if (subdomainElement.value === "your_kinde_subdomain" || subdomainElement.value.trim() === "") {
+      parentEl.style.animation = `pulse 1s linear infinite`;
+    } else {
+      parentEl.style.animation = `none`;
+    }
+  }
+
   waitForElement(".introduction-card", (parentEl: HTMLDivElement) => {
     const subdomainInputElement = parentEl.querySelector(
       "input#variable-subdomain"
@@ -98,12 +109,14 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
         }
     }
 
+    checkSubdomain(subdomainInputElement);
     updateURL(urlParams);
 
     // Update sessionStorage on subdomain input change
     subdomainInputElement.addEventListener('input', (event) => {
         const subdomain = (event.target as HTMLInputElement).value;
         sessionStorage.setItem('subdomain', subdomain);
+        checkSubdomain(subdomainInputElement)
     });
   });
 
@@ -197,7 +210,6 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
     pointer-events: none;
   }
 
-  .input:has(input#variable-subdomain:placeholder-shown),
   .authentication-content .card-form-input:has(input:placeholder-shown) {
     animation: pulse 1.2s linear infinite;
   }
