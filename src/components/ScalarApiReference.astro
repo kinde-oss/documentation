@@ -51,15 +51,6 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
     // update url params
     const newUrl = urlParams.toString() ? window.location.pathname + '?' + urlParams.toString() : window.location.pathname;
     history.replaceState(null, '', newUrl);
-
-    // clean potential links
-    const links = document.querySelectorAll('a');
-    links.forEach(link => {
-        const url = new URL(link.href, window.location.origin);
-        url.searchParams.delete('token');
-        url.searchParams.delete('subdomain');
-        link.href = url.toString();
-    });
   }
 
   function checkSubdomain(subdomainElement: HTMLInputElement) {
@@ -89,7 +80,6 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
         tokenInputElement.value = token as string;
         tokenInputElement.dispatchEvent(new Event("input"));
         urlParams.delete('token');
-        // updateURL(urlParams);
     }
 
     // Check for "subdomain" in URL params
@@ -99,7 +89,6 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
         subdomainInputElement.value = subdomain as string;
         subdomainInputElement.dispatchEvent(new Event("input"));
         urlParams.delete('subdomain');
-        // updateURL(urlParams);
     } else {
         // Populate subdomainInputElement from sessionStorage if it exists
         const savedSubdomain = sessionStorage.getItem('subdomain');
