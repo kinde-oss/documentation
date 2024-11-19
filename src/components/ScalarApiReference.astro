@@ -51,6 +51,15 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
     // update url params
     const newUrl = urlParams.toString() ? window.location.pathname + '?' + urlParams.toString() : window.location.pathname;
     history.replaceState(null, '', newUrl);
+
+    // remove params from links
+    const links: NodeListOf<HTMLAnchorElement> = document.querySelectorAll('.sidebar-group a');
+    links.forEach((link) => {
+        const url = new URL(link.href, window.location.origin);
+        url.searchParams.delete('token');
+        url.searchParams.delete('subdomain');
+        link.href = url.toString();
+    });
   }
 
   function checkSubdomain(subdomainElement: HTMLInputElement) {
