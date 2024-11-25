@@ -65,6 +65,21 @@ import {Icon} from "astro-icon/components";
     picker.setAttribute("aria-expanded", "false");
   }
 
+  function setThemeColor(color) {
+    // Select the theme-color meta tag
+    let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    
+    // If it doesn't exist, create it
+    if (!metaThemeColor) {
+        metaThemeColor = document.createElement('meta');
+        metaThemeColor.name = "theme-color";
+        document.head.appendChild(metaThemeColor);
+    }
+    
+    // Update the content attribute to the desired color
+    metaThemeColor.setAttribute('content', color);
+}
+
   function applyTheme(theme) {
     document.body.classList.remove("dark-mode");
     document.body.classList.remove("light-mode");
@@ -75,9 +90,11 @@ import {Icon} from "astro-icon/components";
     if (theme === "light") {
       document.documentElement.setAttribute("data-theme", "light");
       document.body.classList.add("light-mode");
+      setThemeColor('#ffffff');
     } else if (theme === "dark") {
       document.documentElement.setAttribute("data-theme", "dark");
       document.body.classList.add("dark-mode");
+      setThemeColor('#000000');
     } else {
       systemThemeUpdate();
     }
@@ -108,11 +125,13 @@ import {Icon} from "astro-icon/components";
       document.documentElement.setAttribute("data-theme", "dark");
 
       document.body.classList.add("dark-mode");
+      setThemeColor('#000000');
       localStorage.setItem("isDark", true);
     } else {
       document.documentElement.setAttribute("data-theme", "light");
 
       document.body.classList.add("light-mode");
+      setThemeColor('#ffffff');
       localStorage.removeItem("isDark");
     }
   }
