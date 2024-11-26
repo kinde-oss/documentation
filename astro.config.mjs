@@ -77,12 +77,7 @@ export default defineConfig({
       pagefind: false,
       head: [
         {
-          tag: "link",
-          attrs: {
-            rel: "icon",
-            href: "/favicon.png",
-            sizes: "any"
-          }
+          tag: "link"
         }
       ],
       components: {
