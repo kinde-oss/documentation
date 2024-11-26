@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import cheerio from "cheerio";
+import * as cheerio from "cheerio";
 import chalk from "chalk";
 
 // Helper to get __dirname in ES modules

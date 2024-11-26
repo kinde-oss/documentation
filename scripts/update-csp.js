@@ -1,5 +1,5 @@
 import fs from "fs";
-import cheerio from "cheerio";
+import * as cheerio from "cheerio";
 import crypto from "crypto";
 import yaml from "js-yaml";
 import path from "path";
