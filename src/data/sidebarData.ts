@@ -74,6 +74,11 @@ const sidebarData = [
         collapsed: false
       },
       {
+        label: "Env variables",
+        autogenerate: {directory: "build/env-variables"},
+        collapsed: false
+      },
+      {
         label: "Domain management",
         autogenerate: {directory: "build/domains"},
         collapsed: false
