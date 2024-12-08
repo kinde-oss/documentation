@@ -2,7 +2,6 @@ name: CI Workflow
 
 on:
   pull_request:
-  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request_target' && github.head_ref || github.ref }}
@@ -20,19 +19,8 @@ jobs:
         with:
           node-version: "20.10.0"
 
-      - name: Cache dependencies
-        id: cache-node-modules
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
       - name: Install dependencies
         run: npm ci
-        # Use the cache only if it is restored
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
 
       - name: Build docs
         id: build
@@ -49,20 +37,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20.10.0"
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Validate links
+      - name: Run link validation script
         id: validate
         run: |
           set -o pipefail
@@ -93,19 +68,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20.10.0"
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
 
       - name: Run duplicate check script
         id: check_duplicates
