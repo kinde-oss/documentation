@@ -1,5 +1,5 @@
 import type {APIRoute} from "astro";
-import {getCollection, getEntryBySlug} from "astro:content";
+import {getCollection, getEntry} from "astro:content";
 import fs from "fs/promises";
 import satori from "satori";
 import {html} from "satori-html";
@@ -21,7 +21,7 @@ export const GET: APIRoute = async function get({params}) {
     await fs.readFile("./public/assets/images/open-graph/kinde-docs-lockup-og.png")
   ).toString("base64");
 
-  const post = await getEntryBySlug("docs", params?.slug as string);
+  const post = await getEntry("docs", params?.slug as string);
 
   const markup = html`<div
     style="background: #f5f5f5; width: 100%; height: 100%; flex: 1;display: flex; align-items:flex-start; justify-content:flex-start; flex-direction: column; padding: 80px; gap: 160px"
