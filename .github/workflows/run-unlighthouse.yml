@@ -65,10 +65,12 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy ./.unlighthouse --project-name=kinde-docs-unlighthouse --branch=main
           
-      - name: print deployment-url
+      - name: print and set deployment-url env
         env:
           DEPLOYMENT_URL: ${{ steps.wrangler_deploy.outputs.deployment-url }}
-        run: echo $DEPLOYMENT_URL
+        run: | 
+          echo $DEPLOYMENT_URL
+          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_ENV
 
       - name: Send scores to Slack
         id: slack
@@ -107,7 +109,7 @@ jobs:
                       "emoji": true,
                       "text": ":computer:  View now"
                     },
-                    "url": ${{ steps.wrangler_deploy.outputs.deployment-url }}
+                    "url": ${{ env.DEPLOYMENT_URL }}
                   }
                 }
               ]
