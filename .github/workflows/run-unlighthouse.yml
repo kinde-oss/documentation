@@ -5,18 +5,10 @@ on:
   schedule:
     - cron: "0 22 * * 0"
 
-# Automatically cancel in-progress actions on the same branch
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request_target' && github.head_ref || github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  build-and-deploy:
+  deploy-unlighthouse:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -65,15 +57,17 @@ jobs:
           echo "BEST_PRACTICES=$BEST_PRACTICES" >> $GITHUB_ENV
           echo "SEO=$SEO" >> $GITHUB_ENV
 
-      - name: Install wrangler
-        run: npm install -g wrangler
-
       - name: Deploy to Cloudflare Pages
         id: wrangler_deploy
-        run: wrangler pages deploy ./.unlighthouse --project-name=kinde-docs-unlighthouse --branch=main
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: pages deploy ./.unlighthouse --project-name=kinde-docs-unlighthouse --branch=main
+          
+      - name: print deployment-url
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DEPLOYMENT_URL: ${{ steps.wrangler_deploy.outputs.deployment-url }}
+        run: echo $DEPLOYMENT_URL
 
       - name: Send scores to Slack
         id: slack
@@ -112,7 +106,7 @@ jobs:
                       "emoji": true,
                       "text": ":computer:  View now"
                     },
-                    "url": "https://kinde-docs-unlighthouse.pages.dev"
+                    "url": ${{ steps.wrangler_deploy.outputs.deployment-url }}
                   }
                 }
               ]
