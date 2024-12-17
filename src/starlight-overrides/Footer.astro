@@ -1,12 +1,12 @@
 ---
 import Default from "@astrojs/starlight/components/Footer.astro";
-import type {Props} from "@astrojs/starlight/props";
+import type { Props } from "@astrojs/starlight/props";
 import ArticleFeedback from "@components/ArticleFeedback.astro";
-import DocSearch from "@components/DocSearch.astro";
 import FooterCards from "@components/FooterCards.astro";
 import ImageZoom from "@components/ImageZoom.astro";
-import RelatedArticles, {type RelatedArticle} from "@components/RelatedArticles.astro";
-import {getCollection} from "astro:content";
+import Inkeep from "@components/Inkeep.astro";
+import RelatedArticles, { type RelatedArticle } from "@components/RelatedArticles.astro";
+import { getCollection } from "astro:content";
 const {entry} = Astro.props;
 
 let relatedArticles: RelatedArticle[] = [];
@@ -69,15 +69,13 @@ if (entry.data.relatedArticles) {
   )
 }
 
-<DocSearch />
+<Inkeep />
 
 <script is:inline>
   // This will make sure the current page link in the right sidebar will be in view even when the navigation started via a search result link or a referrer other than the docs. It will also ensure that the main topic details element is open.
-
-  const isReferredFromAlgolia = window.location.href.includes("?r=search");
   const isReferredFromInternalLink = document.referrer.includes(window.location.origin);
 
-  if (isReferredFromAlgolia || !isReferredFromInternalLink) {
+  if (!isReferredFromInternalLink) {
     const currentLinkMainTopicDetailsEl = document.querySelector(
       '#starlight__sidebar details:has(a[aria-current="page"])'
     );
