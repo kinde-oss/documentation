@@ -80,16 +80,22 @@ The more data that you include for import, the easier we can set up your users i
 ### Password data (optional)
 
 - `hashed_password` - the user’s password encrypted using a hashing method or algorithm.
-- `hashing_method` - the name of the algorithm used to encrypt the user’s password. Currently **crypt**, **bcrypt**, **md5**, and **wordpress** are supported. [Contact us](https://kinde-21631392.hs-sites.com/en-au/feature-request) if you need a different method.
+- `hashing_method` - the name of the algorithm used to encrypt the user’s password. Currently **crypt**, **bcrypt**, **sha256**, **md5**, and **wordpress** are supported. [Contact us](https://kinde-21631392.hs-sites.com/en-au/feature-request) if you need a different method.
+- `salt` - extra characters added to passwords to make them stronger
+- `salt_position` - position of salt in password string. E.g. prefix (before) or suffix (after).
+- `salt_format` - format of the salt, e.g. hex, string, etc.
 
-    <Aside title="bcrypt $2b variant support:">
+<Aside title="bcrypt $2b variant support:">
 
   Please note if you are importing bcrypt hashes with the $2b variant, Kinde will substitute this for the $2a variant. These are interchangeable as long as you were not running OpenBSD at the time the hashes were generated.
 
-    </Aside>
+  </Aside>
 
-- `salt` - extra characters added to passwords to make them stronger
-- `salt_position` - position of salt in password string. Prefix (before) or suffix (after).
+  <Aside title="sha256 support:">
+
+  Provide the hash in hex format. Import the salt using the `salt` column. For the `salt_format`, specify how the salt should be interpreted: e.g. **hex** for a hex-encoded string (68656c6c6f for hello). By default, the salt is treated as a plain string, and escape sequences (like \n or \v) are treated as literal characters.
+
+  </Aside>
 
   | Hashing method | Salt     | Salt position             |
   | -------------- | -------- | ------------------------- |
@@ -97,6 +103,7 @@ The more data that you include for import, the easier we can set up your users i
   | bcrypt         |          |                           |
   | crypt          | Optional |                           |
   | wordpress      | Optional |                           |
+  | sha256         | Optional | required if salt included |
 
 ### Example CSV
 
