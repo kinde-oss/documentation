@@ -58,9 +58,9 @@
           aiChatSettings: {
               chatSubjectName: "Kinde",
               botAvatarSrcUrl:
-                  "https://storage.googleapis.com/organization-image-assets/kinde-botAvatarSrcUrl-1720166731622.png",
+                  "/bot-avatar-light.png",
               botAvatarDarkSrcUrl:
-                  "https://storage.googleapis.com/organization-image-assets/kinde-botAvatarDarkSrcUrl-1720676197273.png",
+                  "/bot-avatar-dark.png",
               getHelpCallToActions: [
                   {
                       name: "Slack",
@@ -99,16 +99,17 @@
   inkeepTriggers.forEach((trigger) => trigger.addEventListener("click", handleOpen));
 
   function initializeInkeep() {
-      import("@inkeep/uikit-js/dist/embed.js")
+      import("@inkeep/uikit-js")
           .then((lib) => {
-              inkeepWidget = lib.Inkeep(config.properties.baseSettings).embed(config as any); //
+              inkeepWidget = lib.Inkeep(config.properties.baseSettings).embed(config as any);
 
               document.body.classList.add("inkeep-active");
           })
           .then(() => {
               const theme = document.documentElement.getAttribute("data-theme");
 
-              inkeepWidget.render({
+              setTimeout(() => {
+                inkeepWidget.render({
                   ...config,
                   isOpen: true,
                   baseSettings: {
@@ -117,6 +118,8 @@
                       }
                   }
               });
+              }, 50);
+              
           })
           .catch((error) => console.log(error));
   }
@@ -135,10 +138,3 @@
       }
   });
 </script>
-
-
-<style is:inline>
-  [data-theme="dark"] .ikp-modal__container {
-  filter: invert(0);
-}
-</style>
