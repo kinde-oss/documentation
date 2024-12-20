@@ -1453,12 +1453,23 @@ if (!(await isAuthenticated())) {
 
 ## Refreshing Kinde data
 
-Kinde data can be updated via the UI or with the Management API. To have these updates be reflected in your app, you will need to get the most up-to-date Kinde data and then refresh the tokens in your session.
+Our middleware will automatically refresh the tokens in your session in the background. 
 
-To get the most up-to-date Kinde data in your session, use the `refreshTokens` helper function.
+Sometimes, you may want to refresh these tokens yourself. An example of this is when you update Kinde data via the UI or with the Management API. 
 
-```jsx
-const {refreshTokens} = getKindeServerSession();
+To have these updates immediately reflected in your app, you will need to get the most up-to-date Kinde data and then refresh the tokens in your session.
+
+To get the most up-to-date Kinde data in your session, use the `refreshTokens` helper function provided by `getKindeServerSession`.
+
+<Aside>
+
+**Important!** Due to limitations in Next.js, this will only work in a route handler or server action.
+
+</Aside>
+
+```tsx
+'use server'
+const { refreshTokens } = getKindeServerSession();
 
 const handleRefresh = async () => {
 	await refreshTokens();
