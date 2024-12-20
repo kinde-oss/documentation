@@ -1,0 +1,144 @@
+<script>
+  // Get the button element
+  const inkeepTriggers = document.querySelectorAll("[kui-trigger='search']");
+
+  // Create a new div element to hold the Inkeep modal and set its id and position
+  const inkeepDiv = document.createElement("div");
+  inkeepDiv.id = "inkeepModal";
+  inkeepDiv.style.position = "absolute";
+  document.body.appendChild(inkeepDiv);
+
+  const handleClose = () => {
+      inkeepWidget.render({
+          ...config,
+          isOpen: false,
+          baseSettings: undefined
+      });
+  };
+
+  const handleOpen = () => {
+      const theme = document.documentElement.getAttribute("data-theme");
+      const isInkeepActive = document.body.classList.contains("inkeep-active");
+
+      if (isInkeepActive) {
+          inkeepWidget.render({
+              ...config,
+              isOpen: true,
+              baseSettings: {
+                  colorMode: {
+                      forcedColorMode: theme
+                  }
+              }
+          });
+      } else {
+          initializeInkeep();
+      }
+  };
+
+  const config = {
+      componentType: "CustomTrigger", // required
+      targetElement: inkeepDiv, // required
+      properties: {
+          isOpen: false, // required
+          onClose: handleClose, // required
+          onOpen: undefined,
+          baseSettings: {
+              apiKey: import.meta.env.PUBLIC_INKEEP_API_KEY!, // required
+              integrationId: import.meta.env.PUBLIC_INKEEP_INTEGRATION_ID!, // required
+              organizationId: import.meta.env.PUBLIC_INKEEP_ORGANIZATION_ID!, // required
+              primaryBrandColor: "#0f0f0f",
+              organizationDisplayName: "Kinde",
+              colorMode: {
+                  enableSystem: true
+              },
+              theme: {
+                  stylesheetUrls: ["/vendors/inkeep.css"]
+              }
+          },
+          aiChatSettings: {
+              chatSubjectName: "Kinde",
+              botAvatarSrcUrl:
+                  "https://storage.googleapis.com/organization-image-assets/kinde-botAvatarSrcUrl-1720166731622.png",
+              botAvatarDarkSrcUrl:
+                  "https://storage.googleapis.com/organization-image-assets/kinde-botAvatarDarkSrcUrl-1720676197273.png",
+              getHelpCallToActions: [
+                  {
+                      name: "Slack",
+                      url: "https://join.slack.com/t/thekindecommunity/shared_invite/zt-2k5i0aeet-d6Z_2qYphcNCpj0bFa4oCg",
+                      icon: {
+                          builtIn: "FaSlack"
+                      }
+                  },
+                  {
+                      name: "Discord",
+                      url: "https://discord.gg/wHX6j7wG5d",
+                      icon: {
+                          builtIn: "FaDiscord"
+                      }
+                  },
+                  {
+                      name: "Github",
+                      url: "https://github.com/kinde-oss",
+                      icon: {
+                          builtIn: "FaGithub"
+                      }
+                  }
+              ],
+              quickQuestions: [
+                  "Where do I set up my authentication methods?",
+                  "How can I be notified when certain events happen?",
+                  "What's the quickest way to get started with Kinde?"
+              ]
+          }
+      }
+  };
+
+  // Embed the widget using the `Inkeep.embed()` function.
+  let inkeepWidget: any;
+  // Add event listener to open the Inkeep modal when the button is clicked
+  inkeepTriggers.forEach((trigger) => trigger.addEventListener("click", handleOpen));
+
+  function initializeInkeep() {
+      import("@inkeep/uikit-js/dist/embed.js")
+          .then((lib) => {
+              inkeepWidget = lib.Inkeep(config.properties.baseSettings).embed(config as any); //
+
+              document.body.classList.add("inkeep-active");
+          })
+          .then(() => {
+              const theme = document.documentElement.getAttribute("data-theme");
+
+              inkeepWidget.render({
+                  ...config,
+                  isOpen: true,
+                  baseSettings: {
+                      colorMode: {
+                          forcedColorMode: theme
+                      }
+                  }
+              });
+          })
+          .catch((error) => console.log(error));
+  }
+
+  document.addEventListener("keydown", function (event) {
+      // Check if the `/` key is pressed
+      if (event.key === "/" && !event.metaKey && !event.ctrlKey) {
+          event.preventDefault();
+          handleOpen();
+      }
+
+      // Check if Cmd (Meta) + K or Ctrl + K is pressed
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+          event.preventDefault();
+          handleOpen();
+      }
+  });
+</script>
+
+
+<style is:inline>
+  [data-theme="dark"] .ikp-modal__container {
+  filter: invert(0);
+}
+</style>
