@@ -9,7 +9,7 @@ import removeHTMLTags from "../../utils/remove-html-tags";
 export async function getStaticPaths() {
   const posts = await getCollection("docs");
   return posts.map((post) => ({
-    params: {slug: post.slug},
+    params: {slug: post.id},
     props: post
   }));
 }
