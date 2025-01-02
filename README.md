@@ -12,7 +12,7 @@
 
 This is the repo for our documentation site at [docs.kinde.com](https://docs.kinde.com).
 
-## Want to contribute?
+## Want to contribute? 
 
 We welcome everyone who wants to help improve the [Kinde](https://kinde.com) documentation. Have a fix or contribution?
 
