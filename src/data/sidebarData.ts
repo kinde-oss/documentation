@@ -200,28 +200,28 @@ const sidebarData = [
     cardLink: "/design/brand/apply-branding-for-an-organization/",
     items: [
       {
-        label: "Your brand",
+        label: "Brand",
         autogenerate: {directory: "design/brand"},
         collapsed: false
       },
       {
-        label: "Pages",
+        label: "Page layout",
         autogenerate: {directory: "design/pages"},
         collapsed: false
       },
       {
-        label: "Content customization",
+        label: "Content",
         autogenerate: {directory: "design/content-customization"},
-        collapsed: false
-      },
-      {
-        label: "Forms",
-        autogenerate: {directory: "design/forms"},
         collapsed: false
       },
       {
         label: "Emails",
         autogenerate: {directory: "design/emails"},
+        collapsed: false
+      },
+      {
+        label: "Forms",
+        autogenerate: {directory: "design/forms"},
         collapsed: false
       }
     ]
