@@ -194,29 +194,34 @@ const sidebarData = [
   },
   {
     label: "Design",
-    description: "Integrate your own brand elements for pages and screens",
+    description: "Integrate your brand, and update content for pages and screens",
     icon: "brand",
     collapsed: true,
     cardLink: "/design/brand/apply-branding-for-an-organization/",
     items: [
       {
-        label: "Your brand",
+        label: "Brand",
         autogenerate: {directory: "design/brand"},
         collapsed: false
       },
       {
-        label: "Pages",
+        label: "Page layout",
         autogenerate: {directory: "design/pages"},
         collapsed: false
       },
       {
-        label: "Forms",
-        autogenerate: {directory: "design/forms"},
+        label: "Content",
+        autogenerate: {directory: "design/content-customization"},
         collapsed: false
       },
       {
         label: "Emails",
         autogenerate: {directory: "design/emails"},
+        collapsed: false
+      },
+      {
+        label: "Forms",
+        autogenerate: {directory: "design/forms"},
         collapsed: false
       }
     ]
