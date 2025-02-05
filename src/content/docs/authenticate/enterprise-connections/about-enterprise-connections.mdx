@@ -41,20 +41,32 @@ Many businesses have businesses for customers (B2B), and use Kinde organizations
 
 ## Routing in enterprise connections
 
-When users sign up via an enterprise connection with single-sign-on (SSO), they are routed to the identity provider (IdP) for identity verification. Here’s how this happens.
-
-### The sign in button on the auth page
-
-When you set up an enterprise connection in Kinde, the SSO button on the authentication page gets linked to the IdP by default, similar to how you see a Google or Facebook sign-in option.
-
-This is fine if you only have one connection, but is not ideal if you have multiple connections and you don’t want to show multiple SSO buttons to all users.
-
-To avoid this, you can use home realm discovery (below).
+When users sign up via an enterprise connection with single-sign-on (SSO), they are routed to the identity provider (IdP) for identity verification. This happens when they select the SSO button on the home screen. You can set up a more seamless routing option using home realm discovery.
 
 ### Home realm discovery
 
-Home realm discovery routes users based on their email domain. So when a users enter their email and selects the SSO button, they are routed to their IdP based on the email domain, to authenticate. For example if the user enters [chris@acme.com](mailto:chris@acme.com) Kinde checks which IdP uses the [**acme.com**](http://acme.com/) domain and sends Chris there to authenticate.
+Home realm discovery routes users based on their email domain. So when a user enters their email and selects the continue button, they are routed to their IdP based on the email domain, to authenticate. For example if the user enters [chris@acme.com](mailto:chris@acme.com) Kinde checks which IdP uses the [**acme.com**](http://acme.com/) domain and silently verifies his identity. He only signs in once.
 
-Note that this feature has nothing to do with security or access control and everything to do with routing. Do not confuse this feature with access restrictions for [domain allowlists](/authenticate/enterprise-connections/enterprise-connections-b2b/#restrict-org-access-via-connections).
+Note that this feature has nothing to do with security or access control and everything to do with routing. Not to be confused with setting access restrictions for [domain allowlists](/authenticate/enterprise-connections/enterprise-connections-b2b/#restrict-org-access-via-connections).
 
 Learn more about [home realm discovery](/authenticate/enterprise-connections/home-realm-discovery/).
+
+## Show or hide the SSO sign-in button on the auth page
+
+When you set up enterprise auth in Kinde, an SSO button appears on the authentication page which is linked to the IdP by default. Users can select this as a sign up method, similar to how they might select a Google or Facebook sign-in option. For a more seamless experience, you can hide the SSO button by entering a home realm domain for the connection (more info above). Users will be routed silently via their IdP when they enter their credentials.
+
+If you have multiple enterprise auth methods (E.g. SAML and Entra ID), you may not want to show multiple SSO buttons. Here's the options for showing and hiding, depending how many enterprise auth methods you add:
+
+### (Option 1) Hide all SSO buttons
+
+If you configure home realm discovery in each enterprise auth method, all SSO buttons will be hidden by default. The user enters their credentials and they are silently authenticated against the relevant IdP based on email domain.
+
+### (Option 2) Show a universal SSO button for all
+
+If you would prefer users explicitly choose to sign in with SSO, you can add a universal button to the sign in screen. 
+
+1. Go to **Settings > Applications > Your application**.
+2. On the **Details** page scroll down to the **Authentication experience** section. 
+3. Switch on **Always show sign-in button**.
+
+Users click the universal button, enter their credentials, and get routed silently to the IdP for verification. 
