@@ -76,6 +76,143 @@ This will handle Kinde Auth endpoints in your Next.js app.
 
 **Important!** Our SDK relies on this file existing in this location specified above.
 
+## **Customising Kinde Auth API paths**
+
+The default path for the Kinde Auth API is `/api/auth`. If your Next.js application uses a custom base path for your API, you can override this setting by setting the following variable in your `.env` file:
+
+```bash
+KINDE_AUTH_API_PATH="/my/custom/path"
+```
+
+You can also customise the Kinde Auth API sub-paths by setting the following variables in your `.env` file:
+
+- `KINDE_AUTH_LOGIN_ROUTE` - defaults to `login`
+- `KINDE_AUTH_LOGOUT_ROUTE` - defaults to `logout`
+- `KINDE_AUTH_REGISTER_ROUTE` - defaults to `register`
+- `KINDE_AUTH_CREATEORG_ROUTE` - defaults to `create_org`
+- `KINDE_AUTH_HEALTH_ROUTE` - defaults to `health`
+- `KINDE_AUTH_SETUP_ROUTE` - defaults to `setup`
+
+#### **Example**
+
+Given the following `.env` file:
+
+```bash
+KINDE_AUTH_API_PATH="/my/custom/path"
+KINDE_AUTH_LOGIN_ROUTE="app_login"
+```
+
+The Kinde login route for your application will be `/my/custom/path/app_login`.
+
+## **Set up middleware**
+
+Middleware is used to protect routes in your Next.js app, and is a requirement for a seamless authentication experience.
+
+We provide a `withAuth` helper that will protect routes covered by the matcher. If the user is not authenticated then they are redirected to login and once they have logged in they will be redirected back to the protected page which they should now have access to.
+
+We require this middleware to run on all routes beside Next.js internals and static files. The provided matcher will do this for you.
+
+This means that by default, all routes will be protected. You must opt-out public routes - see [opting routes out of middleware protection](#opting-routes-out-of-middleware-protection) for more information.
+
+<Aside>
+
+Want to learn more about middleware? Check out the [Next.js middleware docs](https://nextjs.org/docs/app/building-your-application/routing/middleware).
+
+</Aside>
+
+#### **Middleware configuration**
+
+Create a `middleware.ts` file in your project's root directory and add the following code:
+```ts
+import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
+
+export default function middleware(req) {
+  return withAuth(req);
+}
+
+export const config = {
+  matcher: [
+    // Run on everything but Next internals and static files
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+  ]
+};
+```
+
+#### **Route protection with callback function after authorization**
+
+You can use the `withAuth` helper as shown below with a `middleware` callback function which has access to the `req.kindeAuth` object that exposes the token and user data.
+
+```ts
+import {withAuth} from "@kinde-oss/kinde-auth-nextjs/middleware";
+
+export default withAuth(async function middleware(req) {
+  console.log("look at me", req.kindeAuth);
+});
+
+export const config = {
+  matcher: [
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+  ]
+};
+```
+
+#### **Opting routes out of middleware protection**
+
+As the middleware matcher is set to protect all routes, you can opt routes out of middleware protection by adding them to the `publicPaths` array.
+
+```ts
+import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
+
+export default withAuth(
+  async function middleware(req) {
+  },
+  {
+    // Middleware still runs on all routes, but doesn't protect the blog route
+    publicPaths: ["/blog"],
+  }
+);
+
+export const config = {
+  matcher: [
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+  ],
+}
+```
+
+#### **Additional middleware options**
+
+There are options that can be passed into the middleware function to configure its functionality.
+
+- `isReturnToCurrentPage` - redirect the user back to the page they were trying to access
+- `loginPage` - define the path of the login page (where the users are redirected to when not authenticated)
+- `publicPaths` - define the public paths
+- `isAuthorized` - define the criteria for authorization
+
+```ts
+import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
+
+export default withAuth(
+  async function middleware(req) {
+    console.log("look at me", req.kindeAuth);
+  },
+  {
+    isReturnToCurrentPage: true,
+    loginPage: "/login",
+    publicPaths: ["/public", '/more'],
+    isAuthorized: ({token}) => {
+      // The user will be considered authorized if they have the permission 'eat:chips'
+      return token.permissions.includes("eat:chips");
+    }
+  }
+);
+
+export const config = {
+  matcher: [
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+  ],
+}
+```
+
 ## **Set up the Kinde Auth Provider**
 
 Wrap your app in the Kinde Auth Provider. This will give you access to the Kinde Auth data in your app and will ensure that the tokens are refreshed when needed.
@@ -1340,87 +1477,29 @@ if (!(await isAuthenticated())) {
 }
 ```
 
-### Protect routes using middleware
 
-You can also protect routes with Next.js middleware.
-
-<Aside>
-
-As of right now the middleware in the app router does not work when trying to redirect to `api/auth/login`. This is because of Next.js caching which causes issues during authentication.
-
-</Aside>
-
-**Default page protection**
-
-We provide a `withAuth` helper that will protect routes covered by the matcher. If the user is not authenticated then they are redirected to login and once they have logged in they will be redirected back to the protected page which they should now have access to.
-
-```jsx
-import {withAuth} from "@kinde-oss/kinde-auth-nextjs/middleware";
-export default function middleware(req) {
-  return withAuth(req);
-}
-export const config = {
-  matcher: ["/admin"]
-};
-```
-
-**Page protection with callback function after authorization**
-
-You can use the `withAuth` helper as shown below with a `middleware` callback function which has access to the `req.kindeAuth` object that exposes the token and user data.
-
-```typescript
-import {withAuth} from "@kinde-oss/kinde-auth-nextjs/middleware";
-
-export default withAuth(async function middleware(req) {
-  console.log("look at me", req.kindeAuth);
-});
-
-export const config = {
-  matcher: ["/admin"]
-};
-```
-
-**Middleware options**
-
-There are options that can be passed into the middleware function to configure its functionality.
-
-- `isReturnToCurrentPage` - redirect the user back to the page they were trying to access
-- `loginPage` - define the path of the login page (where the users are redirected to when not authenticated)
-- `publicPaths` - define the public paths
-- `isAuthorized` - define the criteria for authorization
-
-```typescript
-import {withAuth} from "@kinde-oss/kinde-auth-nextjs/middleware";
-export default withAuth(
-  async function middleware(req) {
-    console.log("look at me", req.kindeAuth);
-  },
-  {
-    isReturnToCurrentPage: true,
-    loginPage: "/login",
-    publicPaths: ["/public", '/more'],
-    isAuthorized: ({token}) => {
-      // The user will be considered authorized if they have the permission 'eat:chips'
-      return token.permissions.includes("eat:chips");
-    }
-  }
-);
-
-export const config = {
-  matcher: ["/admin"]
-};
-```
 
 ## Refreshing Kinde data
 
-Kinde data can be updated via the UI or with the Management API. To have these updates be reflected in your app, you will need to get the most up-to-date Kinde data and then refresh the tokens in your session.
+Our middleware will automatically refresh the tokens in your session in the background. 
 
-To get the most up-to-date Kinde data in your session, use the `refreshTokens` helper function.
+Sometimes, you may want to refresh these tokens yourself. An example of this is when you update Kinde data via the UI or with the Management API. 
 
-```jsx
-const {refreshTokens} = getKindeServerSession();
+To have these updates immediately reflected in your app, you will need to get the most up-to-date Kinde data and then refresh the tokens in your session.
+
+To get the most up-to-date Kinde data in your session, use the `refreshTokens` helper function provided by `getKindeServerSession`.
+
+<Aside title="Important">
+
+Due to limitations in Next.js, this will only work in a route handler or server action.
+
+</Aside>
+
+```tsx
+'use server'
 
 const handleRefresh = async () => {
+  const { refreshTokens } = getKindeServerSession();
 	await refreshTokens();
 }
 
