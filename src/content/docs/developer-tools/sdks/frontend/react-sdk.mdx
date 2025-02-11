@@ -14,7 +14,7 @@ The Kinde React SDK allows developers to quickly and securely integrate a new or
 
 You can also view the [React docs](https://github.com/kinde-oss/kinde-auth-react) and [React starter kit](https://github.com/kinde-starter-kits/react-starter-kit) in GitHub.
 
-This SDK is optimized for React version 18.2.0.
+This SDK is optimized for React version 18+.
 
 ## **Register for Kinde**
 
@@ -33,7 +33,7 @@ Kinde uses a React Context Provider to maintain its internal state in your appli
 Import the Kinde Provider component and wrap your application in it.
 
 ```jsx
-import {KindeProvider} from "@kinde-oss/kinde-auth-react";
+import { KindeProvider } from "@kinde-oss/kinde-auth-react";
 const App = () => (
   <KindeProvider
     clientId="<your_kinde_client_id>"
@@ -63,68 +63,82 @@ Tip: Make sure there are no hidden spaces and remove any ‘/’ forward slashes
 
 If you would like to use different Environments as part of your development process, you will need to [add them within your Kinde business](/build/environments/environments/) first. You will also need to add the Environment subdomain to the code block above.
 
-## Sign in and **sign up**
+## Sign in and sign up
 
-Kinde provides a React hook for an easy to implement login / register flow.
+Kinde provides a `useKindeAuth` hook with the methods `login` and `register` method to start the flow and also `LoginLink` and `RegisterLink` components
 
 Use the button examples below to redirect your users to Kinde, where they authenticate before being redirected back to your site.
 
 ```jsx
-import {useKindeAuth} from '@kinde-oss/kinde-auth-react';
-...
-const { login, register } = useKindeAuth();
-...
-<button onClick={register} type="button">Sign up</button>
-<button onClick={login} type="button">Sign In</button>
-…
+import { LoginLink, RegisterLink } from '@kinde-oss/kinde-auth-react';
+
+<LoginLink>Sign in</LoginLink>
+<RegisterLink>Sign up</RegisterLink>
 ```
 
-### R**edirect after authentication**
+```jsx
+import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 
-Once your user is redirected back to your site from Kinde, you can set a callback to take place. The callback automatically passes in the user object and any application state you set prior to the redirect.
+const { login, register } = useKindeAuth();
+
+<button onClick={register} type="button">Sign up</button>
+<button onClick={login} type="button">Sign In</button>
+```
+
+### Callback Events
+
+To handle the result of auth there are three callback events. 
+
+- `onSuccess` - On Successful authentication, this includes the user authenticated along with the passed state
+- `onError` - When an error occors during authentication, this includes the error along with the passed state
 
 ```jsx
-onRedirectCallback={(user, app_state) => {
-	console.log({user, app_state});
+<KindeProvider
+    callbacks={
+        {
+          onSuccess: (user, state) => console.log("onSuccess", user, state),
+          onError: (error, state) => console.log("onError", error, state),
+        }
+      }
+  >
+    <Routes />
+  </KindeProvider>
 }}
 ```
 
 ### Passing additional params to the auth url
 
-Both the `login` and `register` methods accept and arbitrary `authUrlParams` object which will be passed to Kinde as part of the auth flow.
+Both the `login` and `register` methods accept all the extra authentication params that can be passed to Kinde as part of the auth flow.  All the params are also accepted as attributes to the `LoginLink` and `RegisterLink` components.
 
 Some things you may wish to pass are:
 
-- `login_hint` this allows you to ask Kinde to prepopulate a users email address on the sign-up and sign-in screens.
+- `loginHint` this allows you to ask Kinde to prepopulate a users email address on the sign-up and sign-in screens.
 - `lang` if you offer multi-language support Kinde will automatically figure out the best language for your user based on their browser. However, if you want to force a language and override the users preference, you can do so by passing this attribute.
 
-```jsx
-<button
-  onClick={() =>
+```javascript
     login({
-      authUrlParams: {
-        login_hint: "jenny@example.com",
-        lang: "ru"
-      }
+      loginHint: "jenny@example.com",
+      lang: "ru"
     })
-  }
-  type="button"
->
-  Sign In
-</button>
 ```
 
-### Signing **out**
+### Signing out
 
-This is implemented in much the same way as signing in or registering. The Kinde React hook comes with a logout method.
+Kinde provides a `useKindeAuth` hook with the method `logout` and component `LogoutLink` which can be used to end the current session.
 
 ```jsx
 const { logout } = useKindeAuth();
-...
+
 <button onClick={logout} type="button">Sign out</button>
 ```
 
-## **Test sign up**
+```jsx
+import { LogoutLink } from '@kinde-oss/kinde-auth-react';
+
+<LogoutLink>Sign out</LogoutLink>
+```
+
+## Test sign up
 
 Register your first user by signing up yourself. You’ll see your newly registered user on the **Users** page in Kinde.
 
@@ -133,9 +147,9 @@ Register your first user by signing up yourself. You’ll see your newly registe
 You can get an authorized user’s profile from any component using the Kinde React hook.
 
 ```jsx
-import {useKindeAuth} from "@kinde-oss/kinde-auth-react";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 const SayHello = () => {
-  const {user} = useKindeAuth();
+  const { user } = useKindeAuth();
   return <p>Hi {user.first_name}!</p>;
 };
 ```
@@ -143,38 +157,37 @@ const SayHello = () => {
 To be on the safe side we have also provided `isAuthenticated` and `isLoading` state to prevent rendering errors.
 
 ```jsx
-import {useKindeAuth} from "@kinde-oss/kinde-auth-react";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
 
 const UserProfile = () => {
-	const { user, isAuthenticated, isLoading } = useKindeAuth();
+  const { user, isAuthenticated, isLoading } = useKindeAuth();
 
-	if (isLoading) {
-		return <p>Loading</p>;
-	}
+  if (isLoading) {
+    return <p>Loading</p>;
+  }
 
-	return (
-		{
-			isAuthenticated ?
-				<div>
-					<h2>{user.first_name}</h2>
-					<p>{user.preferred_email}</p>
-				</div> :
-				<p>Please sign in or register!</p>
-		}
-	);
+  return ({
+    isAuthenticated ?
+      <div>
+	<h2>{user.first_name}</h2>
+	<p>{user.preferred_email}</p>
+      </div> 
+    :
+      <p>Please sign in or register!</p>
+  });
 };
 ```
 
-## **Call your API**
+## Call your API
 
 The `getToken` method lets you to securely call your API and pass the bearer token to validate that your user is authenticated.
 
 ```jsx
-const {getToken} = useKindeAuth();
+const { getAccessToken } = useKindeAuth();
 
 const fetchData = async () => {
   try {
-    const accessToken = await getToken();
+    const accessToken = await getAccessToken();
     const res = await fetch(`<your-api>`, {
       headers: {
         Authorization: `Bearer ${accessToken}`
@@ -188,9 +201,7 @@ const fetchData = async () => {
 };
 ```
 
-We recommend using our middleware on your back end to verify the token and protect endpoints. Our current implementation is Node/Express, but we’re working on more.
-
-You can also use any open source JWT verification library for your language of choice.
+We have a range of backend SDKs available to assist you in securing your back end application using this token, alternatively you can use any JWT validator and decoder to assit you here.
 
 ## **Audience**
 
@@ -200,8 +211,7 @@ The audience of a token is the intended recipient of the token.
 
 ```jsx
 <KindeProvider
-	audience="<your_api>"
-	...
+  audience="<your_api>"
 >
 ```
 
@@ -209,8 +219,7 @@ To request multiple audiences, pass them separated by white space.
 
 ```jsx
 <KindeProvider
-	audience="<your_api1> <your_api2>"
-	...
+  audience="<your_api1> <your_api2>"
 >
 ```
 
@@ -218,15 +227,14 @@ For details on how to connect, see [Register an API](/developer-tools/your-apis
 
 ## **Organizations**
 
-### **Create an organization**
+### Create an organization
 
 To create a new organization with the user registration, you can use the createOrg function to start the registration process:
 
 ```jsx
-import {useKindeAuth} from '@kinde-oss/kinde-auth-react';
-...
+import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
+
 const { createOrg } = useKindeAuth();
-...
 <button onClick={createOrg} type="button">Create Organization</button>
 ```
 
@@ -519,6 +527,42 @@ The trade off with this approach however is that if a page is refreshed or a new
 	...
 >
 ```
+
+## Migration from v4 to v5
+
+### login and register method params
+
+No longer need to use authUrlParams parameter, all url params are now passed at top level and are now camel case instead of snake case.
+
+e.g.
+
+```    
+login({
+  authUrlParams: {
+    login_hint: "jenny@example.com",
+    lang: "ru"
+  }
+})
+```
+becomes
+```    
+login({
+  loginHint: "jenny@example.com",
+  lang: "ru"
+})
+```
+
+### Callbacks
+
+`onRedirectCallback` has been removed in favour of a richer event system. 
+
+This has been replaced by `callbacks > onSuccess`
+
+### Accessing access token
+
+`getToken` has been replaced by `getAccessToken`
+
+See Callback
 
 ## **API References - KindeProvider**
 
