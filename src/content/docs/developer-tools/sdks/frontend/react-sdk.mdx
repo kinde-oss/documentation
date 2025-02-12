@@ -203,7 +203,7 @@ const fetchData = async () => {
 
 We have a range of backend SDKs available to assist you in securing your back end application using this token, alternatively you can use any JWT validator and decoder to assit you here.
 
-## **Audience**
+## Audience
 
 An `audience` is the intended recipient of an access token - for example the API for your application. The `audience` argument can be passed to the Kinde client to request an audience be added to the provided token.
 
@@ -225,28 +225,24 @@ To request multiple audiences, pass them separated by white space.
 
 For details on how to connect, see [Register an API](/developer-tools/your-apis/register-manage-apis/).
 
-## **Organizations**
+## Organizations
 
 ### Create an organization
 
 To create a new organization with the user registration, you can use the createOrg function to start the registration process:
 
 ```jsx
-import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
-
-const { createOrg } = useKindeAuth();
-<button onClick={createOrg} type="button">Create Organization</button>
+<LoginLink isCreateOrg={true}>Sign in</LoginLink>
+<button onClick={() => login({isCreateOrg: true})} type="button">Sign in</button>
 ```
 
-### **Sign up/sign in users to organizations**
+### Sign up/sign in users to organizations
 
 To sign up a user to a particular organization, you must pass the `org_code` from your Kinde account as the user is created. You can find the `org_code` on the **Details** page of each organization in Kinde.
 
-Here’s an example function for registering or signing in:
-
 ```jsx
-<button onClick={() => register({org_code: ‘org_1234’})} type="button">Register</button>
-<button onClick={() => login({org_code: ‘org_1234’})} type="button">Sign in</button>
+<LoginLink orgCode="org_1234">Sign in</LoginLink>
+<button onClick={() => login({orgCode: "org_1234"})} type="button">Sign in</button>
 ```
 
 Following authentication Kinde provides a json web token (jwt) to your application. Along with the standard information we also include the `org_code` and the `permissions` for that organization (this is important as a user can belong to multiple organizations and have different permissions for each). Example of a returned token:
@@ -267,7 +263,7 @@ Following authentication Kinde provides a json web token (jwt) to your applicati
 
 For more information about how organizations work in Kinde, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
 
-## **User Permissions**
+## User Permissions
 
 Once a user has been verified as signed in, your project/application will be returned in the JWT token with an array of permissions for that user. You need to configure your project to read permissions and unlock the respective functions.
 
@@ -291,10 +287,10 @@ We provide helper functions to more easily access permissions:
 ```jsx
 const {getPermission, getPermissions} = useKindeAuth();
 
-getPermission("create:todos");
-// {orgCode: "org_1234", isGranted: true}
+await getPermission("create:todos");
+// {permissionKey: "create:todos", orgCode: "org_1234", isGranted: true}
 
-getPermissions();
+await getPermissions();
 // {orgCode: "org_1234", permissions: ["create:todos", "update:todos", "read:todos"]}
 ```
 
@@ -302,7 +298,7 @@ A practical example in code might look something like:
 
 ```jsx
 {
-  getPermission("create:todos").isGranted ? <button>Create todo</button> : null;
+  (await getPermission("create:todos")).isGranted ? <button>Create todo</button> : null;
 }
 ```
 
@@ -332,29 +328,21 @@ feature_flags: {
 In order to minimize the payload in the token we have used single letter keys / values where possible. The single letters represent the following:
 
 `t` = `type`
-
 `v` = `value`
-
 `s` = `string`
-
 `b` = `boolean`
-
 `i` = `integer`
 
 We provide helper functions to more easily access feature flags:
 
 ```jsx
-/**
-  * Get a flag from the feature_flags claim of the access_token.
-  * @param {string} code - The name of the flag.
-  * @param {obj} [defaultValue] - A fallback value if the flag isn't found.
-  * @param {'s'|'b'|'i'|undefined} [flagType] - The data type of the flag (integer / boolean / string).
-  * @return {object} Flag details.
-*/
 const { getFlag } = useKindeAuth();
 
 /* Example usage */
-getFlag('theme');
+await getFlag('theme'); // string value
+await getFlag<boolean>('theme'); // boolean value
+await getFlag<number>('theme'); // numeric value
+
 /*{
 //   "code": "theme",
 //   "type": "string",
@@ -380,29 +368,6 @@ const {getFlag} = useKindeAuth();
 }
 ```
 
-We also require wrapper functions by type which should leverage `getFlag` above.
-
-Booleans:
-
-```jsx
-/**
- * Get a boolean flag from the feature_flags claim of the access_token.
- * @param {string} code - The name of the flag.
- * @param {bool} [defaultValue] - A fallback value if the flag isn't found.
- * @return {bool}
- */
-const {getBooleanFlag} = useKindeAuth();
-
-/* Example usage */
-getBooleanFlag("is_dark_mode");
-// true
-
-getBooleanFlag("is_dark_mode", false);
-// true
-
-getBooleanFlag("new_feature", false);
-// false (flag does not exist so falls back to default)
-```
 
 Strings and integers work in the same way as booleans above:
 
@@ -558,9 +523,17 @@ login({
 
 This has been replaced by `callbacks > onSuccess`
 
+### Create organisation
+
+`createOrg` method has been removed and replaced by using `isCreateOrg` on the login or register methods or Components
+
 ### Accessing access token
 
-`getToken` has been replaced by `getAccessToken`
+`getToken` has been replaced by `await getAccessToken`
+
+### Token helpers
+
+all token helpers are now async methods
 
 See Callback
 
