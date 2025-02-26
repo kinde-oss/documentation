@@ -239,7 +239,7 @@ const sidebarData = [
         collapsed: false
       },
       {
-        label: "Work with properties",
+        label: "Manage workflows",
         autogenerate: {directory: "workflows/manage-workflows"},
         collapsed: false
       }
