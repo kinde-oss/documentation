@@ -235,12 +235,12 @@ const sidebarData = [
     items: [
       {
         label: "About workflows",
-        autogenerate: {directory: "workflow/about-workflows"},
+        autogenerate: {directory: "workflows/about-workflows"},
         collapsed: false
       },
        {
         label: "Workflow examples",
-        autogenerate: {directory: "workflow/example-workflows"},
+        autogenerate: {directory: "workflows/example-workflows"},
         collapsed: false
       },
       {
