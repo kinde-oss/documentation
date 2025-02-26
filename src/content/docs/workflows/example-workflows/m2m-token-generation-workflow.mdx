@@ -1,0 +1,126 @@
+---
+page_id: 263176d3-d823-4bba-a95f-02f6df00bd10
+title: M2M token generation workflow
+sidebar:
+  order: 2
+relatedArticles:
+  - 
+  - 
+---
+
+
+
+Trigger: `m2m:token_generation`
+
+This trigger is fired when an M2M token is generated.
+
+**Note**: You cannot modify tokens when the Kinde management API has been requested as an audience.
+
+## Example use cases
+
+### Custom claims
+
+You may want to add additional custom claims to the M2M token before it is delivered to your product
+
+### Correlating an M2M application with an organization
+
+If you wish to use M2M applications similar to API keys to enable access to various endpoints and tie them to an organization this is a great way to do it. You can add the organization code as a custom property on the M2M application and then fetch any data you’d like and include it in the token.
+
+## Workflow code
+
+### The event object
+
+The main argument provided to your code is the Kinde workflow `event` object which has two keys `request` and `context`. This gives you access to the reason the workflow was triggered and also An example:
+
+```jsx
+{
+	"request": {
+		"auth": {
+			"audience": ["<EXAMPLE_API>"]
+		},
+		"ip": "192.168.0.1"
+	},
+	"context": {
+		"domains": {
+			"kindeDomain": "https://example.kinde.com" // Your Kinde domain
+		},
+		"application": {
+				"clientId": "299627bd8bfa493f8b17e6aec8ebfb86" // the M2M application ID
+		}
+}
+```
+
+### Workflow settings
+
+```jsx
+export const workflowSettings = {
+  id: "m2mTokenGeneration",
+  name: "M2M custom claims",
+  failurePolicy: {
+    action: "stop",
+  },
+  trigger: "m2m:token_generation",
+  bindings: {
+	  "kinde.m2mToken": {}, // required to modify M2M access token
+    "kinde.fetch": {}, // Required for external API calls
+    "kinde.env": {}, // required to access your environment variables
+    url: {}, // required for url params
+  },
+};
+```
+
+### M2M token binding
+
+The `kinde.m2mToken` binding is used to modify claims in the generated access token
+
+### A simple example
+
+```jsx
+kinde.m2mToken.setCustomClaim("hello", "world");
+```
+
+### An advanced example using Kinde API to correlate an organization to an M2M app
+
+```jsx
+import { createKindeAPI } from "@kinde/infrastructure";
+
+export const workflowSettings = {
+  id: "m2mTokenGeneration",
+  name: "M2M custom claims",
+  failurePolicy: {
+    action: "stop",
+  },
+  trigger: "m2m:token_generation",
+  bindings: {
+	  "kinde.m2mToken": {}, // required to modify M2M access token
+    "kinde.fetch": {}, // Required for external API calls
+    "kinde.env": {}, // required to access your environment variables
+    url: {}, // required for url params
+  },
+};
+
+export default async function handleM2M(event) {
+
+	// Get a token for Kinde management API
+  const kindeAPI = await createKindeAPI(event);
+  
+  // Call Kinde applications properties API 
+  const { data } = await kindeAPI.get({
+    endpoint: `applications/${event.request.application.clientId}/properties`,
+  });
+  const {appProperties} = data;
+  
+  // Get the org code property to make the correlation
+  const orgCode = appProperties.find(prop => prop.key === 'org_code');
+  
+  // Get org data from Kinde management API
+  const { data: org } = await kindeAPI.get({
+    endpoint: `organization?code=${orgCode.value}`
+  });
+  
+  // Use the data to set the org data on the M2M token
+  kinde.m2mToken.setCustomClaim('orgName', org.name);
+  kinde.m2mToken.setCustomClaim('orgCode', org.code);
+};
+  
+```
