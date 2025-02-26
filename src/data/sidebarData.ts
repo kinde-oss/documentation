@@ -238,6 +238,11 @@ const sidebarData = [
         autogenerate: {directory: "workflow/about-workflows"},
         collapsed: false
       },
+       {
+        label: "Workflow examples",
+        autogenerate: {directory: "workflow/example-workflows"},
+        collapsed: false
+      },
       {
         label: "Manage workflows",
         autogenerate: {directory: "workflows/manage-workflows"},
