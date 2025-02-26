@@ -4,13 +4,13 @@ title: User token generation workflow
 sidebar:
   order: 1
 relatedArticles:
-  - 
-  - 
+  - 85c135db-f55a-4edf-8d1b-0af4140c1925
+  - d672fca7-6c6a-49f8-85c9-6e86ce99f440
 ---
 
 Trigger: `user:tokens_generation`
 
-This trigger is fired when user tokens are generated (ID and access).
+This trigger fires when ID and Access tokens are generated for a user.
 
 - After authentication - a sign in or sign up event
 - After a pre-authentication event - i.e the user is redirected to Kinde and returned invisibly to your app because they were already authenticated
@@ -18,21 +18,23 @@ This trigger is fired when user tokens are generated (ID and access).
 
 ## Security considerations
 
-To ensure the integrity of Kinde issued tokens there are some claims which cannot be modified: https://github.com/kinde-oss/infrastructure/blob/main/lib/prohibitedClaims.ts
+To ensure the integrity of Kinde-issued tokens there are some claims which cannot be modified. See [Prohibited claims](https://github.com/kinde-oss/infrastructure/blob/main/lib/prohibitedClaims.ts) in the workflows infrastrucutre resource.
 
 ## Example use cases
 
+Here's a few ways that this trigger might be used for a workflow.
+
 ### Custom claims using Kinde data
 
-You may want to add additional custom claims to the access or ID token before it is delivered to your product
+You may want to add additional custom claims to the access or ID token before it is delivered to your product.
 
-### Custom claims using  data from an external service
+### Custom claims using data from an external service
 
-You have entitlements or other data in a CRM that you wish to make an API call out to and then append that data into the access token
+You have entitlements or other data in a CRM that you wish to make an API call out to and then append that data into the access token.
 
 ### Reduce token size
 
-Kinde automatically populates the access token with `permissions` and `feature_flags` . If your product leverages these features heavily the access token can quickly grow in size and you may prefer to instead use the management API to get these data points and strip them from the token
+Kinde automatically populates the access token with data such as `permissions` and `feature_flags`. If your product use these features heavily, the access token can bloat and you may prefer to use the Kinde Management API to get the data, and strip them from the token.
 
 ### Modify Kinde claim format
 
@@ -42,7 +44,7 @@ Some external systems rely on claims to be in a certain format. For example, Kin
 
 ### The event object
 
-The main argument provided to your code is the Kinde workflow `event` object which has two keys `request` and `context`. This gives you access to the reason the workflow was triggered and also An example:
+The main argument provided to your code is the Kinde workflow `event` object which has two keys `request` and `context`. This gives you access to the reason the workflow was triggered. Here's an example:
 
 ```jsx
 {
@@ -96,7 +98,7 @@ export const workflowSettings = {
 
 ### Access and ID token bindings
 
-The `kinde.accessToken`and `kinde.idToken` bindings are used to modify claims in the generated tokens
+The `kinde.accessToken`and `kinde.idToken` bindings are used to modify claims in the generated tokens.
 
 ### A simple example
 
@@ -108,7 +110,7 @@ kinde.idToken.setCustomClaim("company", "Acme Corp.");
 
 ### An advanced example getting data from an external system to include as a custom claim
 
-This example demonstrates using the Environment variables feature to store a secret API_KEY to call a CRM to get the company name to include in the access token
+This example demonstrates using the [Environment variables](/build/env-variables/store-environment-variables/) feature to store a secret API_KEY to call a CRM to get the company name to include in the access token.
 
 ```tsx
 import {
