@@ -227,6 +227,30 @@ const sidebarData = [
     ]
   },
   {
+    label: "Workflows",
+    description: "Execute custom code in response to Kinde triggers",
+    collapsed: true,
+    icon: "workflow",
+    cardLink: "/workflows/about-workflows/",
+    items: [
+      {
+        label: "About workflows",
+        autogenerate: {directory: "workflows/about-workflows"},
+        collapsed: false
+      },
+       {
+        label: "Workflow examples",
+        autogenerate: {directory: "workflows/example-workflows"},
+        collapsed: false
+      },
+      {
+        label: "Manage workflows",
+        autogenerate: {directory: "workflows/manage-workflows"},
+        collapsed: false
+      }
+    ]
+  },
+  {
     label: "Properties",
     description: "Store and use custom data about users and organizations",
     collapsed: true,
