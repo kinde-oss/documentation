@@ -14,7 +14,7 @@ The Kinde React SDK allows developers to quickly and securely integrate a new or
 
 You can also view the [React docs](https://github.com/kinde-oss/kinde-auth-react) and [React starter kit](https://github.com/kinde-starter-kits/react-starter-kit) in GitHub.
 
-This SDK is optimized for React version 18+.
+This SDK is optimized for React version 18.2.0.
 
 ## **Register for Kinde**
 
@@ -33,7 +33,7 @@ Kinde uses a React Context Provider to maintain its internal state in your appli
 Import the Kinde Provider component and wrap your application in it.
 
 ```jsx
-import { KindeProvider } from "@kinde-oss/kinde-auth-react";
+import {KindeProvider} from "@kinde-oss/kinde-auth-react";
 const App = () => (
   <KindeProvider
     clientId="<your_kinde_client_id>"
@@ -63,82 +63,68 @@ Tip: Make sure there are no hidden spaces and remove any ‘/’ forward slashes
 
 If you would like to use different Environments as part of your development process, you will need to [add them within your Kinde business](/build/environments/environments/) first. You will also need to add the Environment subdomain to the code block above.
 
-## Sign in and sign up
+## Sign in and **sign up**
 
-Kinde provides a `useKindeAuth` hook with the methods `login` and `register` method to start the flow and also `LoginLink` and `RegisterLink` components
+Kinde provides a React hook for an easy to implement login / register flow.
 
 Use the button examples below to redirect your users to Kinde, where they authenticate before being redirected back to your site.
 
 ```jsx
-import { LoginLink, RegisterLink } from '@kinde-oss/kinde-auth-react';
-
-<LoginLink>Sign in</LoginLink>
-<RegisterLink>Sign up</RegisterLink>
-```
-
-```jsx
-import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
-
+import {useKindeAuth} from '@kinde-oss/kinde-auth-react';
+...
 const { login, register } = useKindeAuth();
-
+...
 <button onClick={register} type="button">Sign up</button>
 <button onClick={login} type="button">Sign In</button>
+…
 ```
 
-### Callback Events
+### R**edirect after authentication**
 
-To handle the result of auth there are three callback events. 
-
-- `onSuccess` - On Successful authentication, this includes the user authenticated along with the passed state and context to the Kinde hook
-- `onError` - When an error occors during authentication, this includes the error along with the passed state and context to the Kinde hook
+Once your user is redirected back to your site from Kinde, you can set a callback to take place. The callback automatically passes in the user object and any application state you set prior to the redirect.
 
 ```jsx
-<KindeProvider
-    callbacks={
-        {
-          onSuccess: (user, state, context) => console.log("onSuccess", user, state, context),
-          onError: (error, state, context) => console.log("onError", error, state, context),
-        }
-      }
-  >
-    <Routes />
-  </KindeProvider>
+onRedirectCallback={(user, app_state) => {
+	console.log({user, app_state});
 }}
 ```
 
 ### Passing additional params to the auth url
 
-Both the `login` and `register` methods accept all the extra authentication params that can be passed to Kinde as part of the auth flow.  All the params are also accepted as attributes to the `LoginLink` and `RegisterLink` components.
+Both the `login` and `register` methods accept and arbitrary `authUrlParams` object which will be passed to Kinde as part of the auth flow.
 
 Some things you may wish to pass are:
 
-- `loginHint` this allows you to ask Kinde to prepopulate a users email address on the sign-up and sign-in screens.
+- `login_hint` this allows you to ask Kinde to prepopulate a users email address on the sign-up and sign-in screens.
 - `lang` if you offer multi-language support Kinde will automatically figure out the best language for your user based on their browser. However, if you want to force a language and override the users preference, you can do so by passing this attribute.
 
-```javascript
+```jsx
+<button
+  onClick={() =>
     login({
-      loginHint: "jenny@example.com",
-      lang: "ru"
+      authUrlParams: {
+        login_hint: "jenny@example.com",
+        lang: "ru"
+      }
     })
+  }
+  type="button"
+>
+  Sign In
+</button>
 ```
 
-### Signing out
+### Signing **out**
 
-Kinde provides a `useKindeAuth` hook with the method `logout` and component `LogoutLink` which can be used to end the current session.
+This is implemented in much the same way as signing in or registering. The Kinde React hook comes with a logout method.
 
 ```jsx
 const { logout } = useKindeAuth();
-
+...
 <button onClick={logout} type="button">Sign out</button>
 ```
 
-```jsx
-import { LogoutLink } from '@kinde-oss/kinde-auth-react';
-
-<LogoutLink>Sign out</LogoutLink>
-```
-
-## Test sign up
+## **Test sign up**
 
 Register your first user by signing up yourself. You’ll see your newly registered user on the **Users** page in Kinde.
 
@@ -147,9 +133,9 @@ Register your first user by signing up yourself. You’ll see your newly registe
 You can get an authorized user’s profile from any component using the Kinde React hook.
 
 ```jsx
-import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import {useKindeAuth} from "@kinde-oss/kinde-auth-react";
 const SayHello = () => {
-  const { user } = useKindeAuth();
+  const {user} = useKindeAuth();
   return <p>Hi {user.first_name}!</p>;
 };
 ```
@@ -157,37 +143,38 @@ const SayHello = () => {
 To be on the safe side we have also provided `isAuthenticated` and `isLoading` state to prevent rendering errors.
 
 ```jsx
-import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import {useKindeAuth} from "@kinde-oss/kinde-auth-react";
 
 const UserProfile = () => {
-  const { user, isAuthenticated, isLoading } = useKindeAuth();
+	const { user, isAuthenticated, isLoading } = useKindeAuth();
 
-  if (isLoading) {
-    return <p>Loading</p>;
-  }
+	if (isLoading) {
+		return <p>Loading</p>;
+	}
 
-  return ({
-    isAuthenticated ?
-      <div>
-	<h2>{user.firstName}</h2>
-	<p>{user.preferredEmail}</p>
-      </div> 
-    :
-      <p>Please sign in or register!</p>
-  });
+	return (
+		{
+			isAuthenticated ?
+				<div>
+					<h2>{user.first_name}</h2>
+					<p>{user.preferred_email}</p>
+				</div> :
+				<p>Please sign in or register!</p>
+		}
+	);
 };
 ```
 
-## Call your API
+## **Call your API**
 
 The `getToken` method lets you to securely call your API and pass the bearer token to validate that your user is authenticated.
 
 ```jsx
-const { getAccessToken } = useKindeAuth();
+const {getToken} = useKindeAuth();
 
 const fetchData = async () => {
   try {
-    const accessToken = await getAccessToken();
+    const accessToken = await getToken();
     const res = await fetch(`<your-api>`, {
       headers: {
         Authorization: `Bearer ${accessToken}`
@@ -201,9 +188,11 @@ const fetchData = async () => {
 };
 ```
 
-We have a range of backend SDKs available to assist you in securing your back end application using this token, alternatively you can use any JWT validator and decoder to assit you here.
+We recommend using our middleware on your back end to verify the token and protect endpoints. Our current implementation is Node/Express, but we’re working on more.
 
-## Audience
+You can also use any open source JWT verification library for your language of choice.
+
+## **Audience**
 
 An `audience` is the intended recipient of an access token - for example the API for your application. The `audience` argument can be passed to the Kinde client to request an audience be added to the provided token.
 
@@ -211,7 +200,8 @@ The audience of a token is the intended recipient of the token.
 
 ```jsx
 <KindeProvider
-  audience="<your_api>"
+	audience="<your_api>"
+	...
 >
 ```
 
@@ -219,30 +209,36 @@ To request multiple audiences, pass them separated by white space.
 
 ```jsx
 <KindeProvider
-  audience="<your_api1> <your_api2>"
+	audience="<your_api1> <your_api2>"
+	...
 >
 ```
 
 For details on how to connect, see [Register an API](/developer-tools/your-apis/register-manage-apis/).
 
-## Organizations
+## **Organizations**
 
-### Create an organization
+### **Create an organization**
 
-To create a new organization with the user registration, you can use the `createOrg` function to start the registration process:
+To create a new organization with the user registration, you can use the createOrg function to start the registration process:
 
 ```jsx
-<LoginLink isCreateOrg={true}>Sign in</LoginLink>
-<button onClick={() => login({isCreateOrg: true})} type="button">Sign in</button>
+import {useKindeAuth} from '@kinde-oss/kinde-auth-react';
+...
+const { createOrg } = useKindeAuth();
+...
+<button onClick={createOrg} type="button">Create Organization</button>
 ```
 
-### Sign up/sign in users to organizations
+### **Sign up/sign in users to organizations**
 
 To sign up a user to a particular organization, you must pass the `org_code` from your Kinde account as the user is created. You can find the `org_code` on the **Details** page of each organization in Kinde.
 
+Here’s an example function for registering or signing in:
+
 ```jsx
-<LoginLink orgCode="org_1234">Sign in</LoginLink>
-<button onClick={() => login({orgCode: "org_1234"})} type="button">Sign in</button>
+<button onClick={() => register({org_code: ‘org_1234’})} type="button">Register</button>
+<button onClick={() => login({org_code: ‘org_1234’})} type="button">Sign in</button>
 ```
 
 Following authentication Kinde provides a json web token (jwt) to your application. Along with the standard information we also include the `org_code` and the `permissions` for that organization (this is important as a user can belong to multiple organizations and have different permissions for each). Example of a returned token:
@@ -263,7 +259,7 @@ Following authentication Kinde provides a json web token (jwt) to your applicati
 
 For more information about how organizations work in Kinde, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
 
-## User Permissions
+## **User Permissions**
 
 Once a user has been verified as signed in, your project/application will be returned in the JWT token with an array of permissions for that user. You need to configure your project to read permissions and unlock the respective functions.
 
@@ -287,10 +283,10 @@ We provide helper functions to more easily access permissions:
 ```jsx
 const {getPermission, getPermissions} = useKindeAuth();
 
-await getPermission("create:todos");
-// {permissionKey: "create:todos", orgCode: "org_1234", isGranted: true}
+getPermission("create:todos");
+// {orgCode: "org_1234", isGranted: true}
 
-await getPermissions();
+getPermissions();
 // {orgCode: "org_1234", permissions: ["create:todos", "update:todos", "read:todos"]}
 ```
 
@@ -298,7 +294,7 @@ A practical example in code might look something like:
 
 ```jsx
 {
-  (await getPermission("create:todos")).isGranted ? <button>Create todo</button> : null;
+  getPermission("create:todos").isGranted ? <button>Create todo</button> : null;
 }
 ```
 
@@ -340,13 +336,17 @@ In order to minimize the payload in the token we have used single letter keys / 
 We provide helper functions to more easily access feature flags:
 
 ```jsx
+/**
+  * Get a flag from the feature_flags claim of the access_token.
+  * @param {string} code - The name of the flag.
+  * @param {obj} [defaultValue] - A fallback value if the flag isn't found.
+  * @param {'s'|'b'|'i'|undefined} [flagType] - The data type of the flag (integer / boolean / string).
+  * @return {object} Flag details.
+*/
 const { getFlag } = useKindeAuth();
 
 /* Example usage */
-await getFlag('theme'); // string value
-await getFlag<boolean>('theme'); // boolean value
-await getFlag<number>('theme'); // numeric value
-
+getFlag('theme');
 /*{
 //   "code": "theme",
 //   "type": "string",
@@ -365,21 +365,65 @@ getFlag('create_competition', {defaultValue: false});
 A practical example in code might look something like:
 
 ```jsx
-const { getFlag } = useKindeAuth();
+const {getFlag} = useKindeAuth();
 
 {
-  (await getFlag<boolean>('create_competition')) ? <button>Create competition</button> : null;
+  getFlag("create_competition").value ? <button>Create competition</button> : null;
 }
+```
+
+We also require wrapper functions by type which should leverage `getFlag` above.
+
+Booleans:
+
+```jsx
+/**
+ * Get a boolean flag from the feature_flags claim of the access_token.
+ * @param {string} code - The name of the flag.
+ * @param {bool} [defaultValue] - A fallback value if the flag isn't found.
+ * @return {bool}
+ */
+const {getBooleanFlag} = useKindeAuth();
+
+/* Example usage */
+getBooleanFlag("is_dark_mode");
+// true
+
+getBooleanFlag("is_dark_mode", false);
+// true
+
+getBooleanFlag("new_feature", false);
+// false (flag does not exist so falls back to default)
+```
+
+Strings and integers work in the same way as booleans above:
+
+```jsx
+/**
+ * Get a string flag from the feature_flags claim of the access_token.
+ * @param {string} code - The name of the flag.
+ * @param {string} [defaultValue] - A fallback value if the flag isn't found.
+ * @return {string}
+ */
+const {getStringFlag} = useKindeAuth();
+
+/**
+ * Get an integer flag from the feature_flags claim of the access_token.
+ * @param {string} code - The name of the flag.
+ * @param {int} [defaultValue] - A fallback value if the flag isn't found.
+ * @return {int}
+ */
+const {getIntegerFlag} = useKindeAuth();
 ```
 
 A practical example in code might look something like:
 
 ```jsx
-const {getFlag} = useKindeAuth();
+const {getBooleanFlag, getStringFlag} = useKindeAuth();
 
 {
-  getFlag<boolean>("create_competition") ? (
-    <button className={`theme-${getFlag("theme")}`}>Create competition</button>
+  getBooleanFlag("create_competition") ? (
+    <button className={`theme-${getStringFlag("theme")}`}>Create competition</button>
   ) : null;
 }
 ```
@@ -397,7 +441,9 @@ You can override this by passing `scope` into the `<KindeProvider>`.
 
 ```jsx
 <KindeProvider
+	...
   scope="openid"
+  ...
 >
 ```
 
@@ -406,12 +452,12 @@ You can override this by passing `scope` into the `<KindeProvider>`.
 We have provided a helper to grab any claim from your ID or access tokens. The helper defaults to access tokens:
 
 ```jsx
-const { getClaim } = useKindeAuth();
+const {getClaim} = useKindeAuth();
 
 getClaim("aud");
 // {name: "aud", "value": ["api.yourapp.com"]}
 
-getClaim("given_name", "idToken");
+getClaim("given_name", "id_token");
 // {name: "given_name", "value": "David"}
 ```
 
@@ -473,62 +519,6 @@ The trade off with this approach however is that if a page is refreshed or a new
 	...
 >
 ```
-
-## Migration from v4 to v5
-
-### login and register method params
-
-No longer need to use authUrlParams parameter, all url params are now passed at top level and are now camel case instead of snake case.
-
-e.g.
-
-```    
-login({
-  authUrlParams: {
-    login_hint: "jenny@example.com",
-    lang: "ru"
-  }
-})
-```
-becomes
-```    
-login({
-  loginHint: "jenny@example.com",
-  lang: "ru"
-})
-```
-
-### Callbacks
-
-`onRedirectCallback` has been removed in favor of a richer event system. 
-
-This has been replaced by `callbacks > onSuccess`
-
-### Create organization
-
-`createOrg` method has been removed and replaced by using `isCreateOrg` on the login or register methods or Components
-
-### Accessing access token
-
-`getToken` has been replaced by `await getAccessToken`
-
-### Token helpers
-
-all token helpers are now async methods
-
-### getClaims 
-
-token attribute changed to camelCase.
-
-e.g.
-```javascript
-getClaim("given_name", "id_token");
-```
-becomes
-```javascript
-await getClaim("given_name", "idtoken");
-```
-
 
 ## **API References - KindeProvider**
 
