@@ -13,20 +13,20 @@ app_context:
     s: authentication
 ---
 
-Kinde supports the use of Microsoft Entra ID (WS Federated and OpenID) as an enterprise-level authentication method. This service used to be Azure AD.
+Kinde supports the use of Microsoft Entra ID as an authentication method. We support WS Federated and OAuth2.0 (follow the topic below), and [Microsoft Entra ID SAML](/authenticate/enterprise-connections/entra-id-saml/) which is covered in a separate topic.
 
-If you are [importing users into Kinde](/manage-users/add-and-edit/import-users-in-bulk/), their Entra ID will be picked up and matched to the relevant connection based on their email address, for a seamless transition to Kinde.
+If you [import users into Kinde](/manage-users/add-and-edit/import-users-in-bulk/), their Entra ID will be picked up and matched to the relevant connection based on their email address, for a seamless transition to Kinde.
 
 <Aside>
 
-**Microsoft Entra ID** is the new name for **Microsoft** **Azure AD**, which is Microsoft’s enterprise authentication service. This doc may contain some mixed references as we update our Kinde interface for the change. [More information](https://learn.microsoft.com/en-gb/azure/active-directory/fundamentals/new-name).
+**Microsoft Entra ID** used to be known as **Microsoft Azure AD**. [More information](https://learn.microsoft.com/en-gb/azure/active-directory/fundamentals/new-name).
 
 </Aside>
 
 ## Before you begin
 
-- Your app needs to be [registered with the Microsoft identity platform](https://learn.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app).
-- You need the Client ID and Client Secret from the Microsoft app to connect to Kinde. 
+- Register an app in the [Microsoft Entra Admin Center](https://entra.microsoft.com/#home) See the docs [here](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app/).
+- Copy the Client ID and Client Secret from the Microsoft app.
 - We recommend you test connections in a non-production environment before activating in a live environment.
 
 ## Step 1: Add and configure the connection in Kinde
@@ -42,14 +42,14 @@ You can make a connection available only to a specific organization, or you can 
 1. Go to **Organizations** and open the organization. 
 2. In the menu, select **Authentication**, then select **Add connection**.
 3. In the **Add connection** window, select **New enterprise connection**, then click **Next**.
-4. Select the Microsoft connection type you want and then select **Next**. Currently we support WS Federated and OpenID types. 
+4. Select the Microsoft connection type you want (WS Federated or OAuth2.0) and then select **Next**.  
 5. Next: 'Step 2: Configure the connection'.
 
 ### Add a connection that can be shared across multiple organizations
 
 1. Go to **Settings > Environment > Authentication**.
 2. Scroll to the **Enterprise connection** section and select **Add connection**. The **Add connection** window opens.
-3. Select the Microsoft connection type you want and then select **Save**. Currently we support WS Federated and OpenID types.
+3. Select the Microsoft connection type you want (WS Federated or OAuth2.0) and then select **Save**.
 4. On the tile for the new connection, select **Configure**.
 5. Next: 'Step 2: Configure the connection'.
 
@@ -63,23 +63,23 @@ You can make a connection available only to a specific organization, or you can 
 
    </Aside>
 
-3. Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified. We recommend leaving this off for maximum security.
-4. Enter your **Microsoft Azure domain.**
-5. Enter the **Client ID** and **Client secret** as they appear in the MS Azure portal. Make sure you use the **Value** of the client secret.
-6. Enter **Home realm domains**. This speeds up the sign in process for users of those domains.
+3. Enter your **Microsoft Azure domain.**
+4. Enter the **Client ID** and **Client secret** as they appear in the MS Azure portal. Make sure you use the **Value** of the client secret.
+5. Enter **Home realm domains**. This speeds up the sign in process for users of those domains.
    Note that all home realm domains must be unique across all connections in an environment. For more information about how, see [Home realm domains or IdP discovery](/authenticate/enterprise-connections/home-realm-discovery/).
-7. If you use home realm domains, the sign in button is hidden on the auth screen by default. To show the SSO button, select the **Always show sign-in button** option. 
-8. If you want, select the **Use common endpoint** option. Recommended if you use multi-tenancy.
-9. Select **Extended profile** if you want to sync the additional information stored in a user’s Microsoft profile to their Kinde user profile. Extended attributes data is included in the `extra_claims` object of the access token.
-10. If you want to sync user groups, select **Get user groups**. Recommended if you manage permissions and access via user groups in Microsoft. You also need to do some additional setup, see below. 
+6. If you use home realm domains, the sign in button is hidden on the auth screen by default. To show the SSO button, select the **Always show sign-in button** option. 
+7. If you want, select the **Use common endpoint** option. Recommended if you use multi-tenancy.
+8. Select **Extended profile** if you want to sync the additional information stored in a user’s Microsoft profile to their Kinde user profile. Extended attributes data is included in the `extra_claims` object of the access token.
+9. If you want to sync user groups, select **Get user groups**. Recommended if you manage permissions and access via user groups in Microsoft. You also need to do some additional setup, see below. 
+10. Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified. We recommend leaving this off for maximum security.
 11. If you want, select **Sync user profiles and attributes on sign in**. Recommended to keep Kinde user profile data in sync with user profile data from Microsoft. If you choose this option, ensure that the global profile sync preference is also switched on in **Settings > Environment > Policies**.
 12. If you want to enable just-in-time (JIT) provisioning, select the **Create a user record in Kinde** option. This saves time adding users manually or via API later.
-13. Copy the **Callback URL**. You’ll need to enter this in your Microsoft app.
+13. Copy the **Callback URL**. You’ll need to enter this in your Entra ID app.
 14. Select **Save**.
 
-## Step 3: Add the callback URL to MS Azure
+## Step 3: Add the callback URL to your Entra ID app
 
-1. Open your application in the [MS Azure Portal](https://portal.azure.com/).
+1. Open your application in the [Portal](https://entra.microsoft.com/#home).
 3. Select the **Redirect URIs** links on the right.
 4. Select **Add URI**.
 5. In the relevant field, enter your callback URL (from the 'Configure the connection' procedure above)
@@ -99,7 +99,7 @@ Make sure you test the connection before enabling in production for your users.
 
 ### Add groups claim to MS Entra ID app
 
-1. Open your application in the [MS Azure Portal](https://portal.azure.com/).
+1. Open your application in the [Portal](https://entra.microsoft.com/#home).
 2. Go to **Token configuration** in the left menu. 
 3. Select **Add groups claim**.
 4. In the window that appears, select the groups to be included in tokens.
@@ -133,6 +133,6 @@ For reference, see this Microsoft doc about [configuring optional claims](https:
 
 ## Sign out behaviour for user session
 
-If your users sign in via the Entra ID (formerly Azure AD) enterprise connection in Kinde, when they sign out, they are just signing out of Kinde. They are not fully being signed out of Entra ID.
+If your users sign in via an enterprise connection in Kinde, when they sign out, they are just signing out of Kinde. They are not fully being signed out of Entra ID.
 
 It also works this way for social connections, where a third party is the identity provider.
