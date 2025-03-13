@@ -116,12 +116,28 @@ def callback():
     print(configuration.access_token) # Token here
 ```
 
+The code above setups up the Kinde client as a single instance per user session. If you want to setup the Kinde client as a singleton, you can do the following:
+```python
+@app.route("/callback")
+def callback():
+    access_token: dict = kinde_client.fetch_token_value(authorization_response=request.url)
+    print(access_token) # Token here
+```
+This logic leaves the Kinde client responsible for managing the access_token, but not for storing them. This is left up to the developer to implement.
+
 You can also get the current authentication status with `is_authenticated`.
 
 ```python
 if kinde_client.is_authenticated():
 		# Core here
 ```
+The code above will check if a user is authenticated by checking its internal state. The down side is that the there will have to be an instance of the Kinde client for each user session. This is costly and not scalable.
+
+```python
+if kinde_client.is_authenticated_token(access_token):
+		# Core here
+```
+
 
 **Note:** The kinde_client object that is created stores the access_token. This means you need to create a kinde_client object for each unique user that is signing in to your application, so that you can keep track of whether the user is authenticated or not.
 
@@ -189,6 +205,12 @@ A practical example in code might look something like:
 if kinde_client.get_permission("create:todos").get("is_granted")):
 ```
 
+The code above will check against a session managed through the Kinde client. If you want to check against a specific access token, you can do the following:
+
+```python
+permission: dict = kinde_client.get_permission_token(access_token, "create:todos")
+```
+
 ## Feature Flags
 
 We have provided a helper to grab any feature flag from `access_token`:
@@ -222,6 +244,9 @@ kinde_client.get_flag("competitions_limit", default_value = 3, flat_type = "s");
 
 
 kinde_client.get_flag("new_feature");
+
+# this will return the flag value for the given access token
+kinde_client.get_flag_token(access_token, "new_feature");
 ```
 
 We also provide wrapper functions which should leverage `getFlag` above.
@@ -238,6 +263,8 @@ kinde_client.get_boolean_flag("new_feature", False);
 kinde_client.get_boolean_flag("new_feature");
 
 kinde_client.get_boolean_flag("theme", False);
+
+kinde_client.get_boolean_flag_token(access_token, "new_feature");
 ```
 
 **Get string flags**
@@ -252,6 +279,8 @@ kinde_client.get_string_flag("cta_color", False);
 kinde_client.get_string_flag("cta_color");
 
 kinde_client.get_string_flag("is_dark_mode", False);
+
+kinde_client.get_string_flag_token(access_token, "cta_color");
 ```
 
 **Get integer flags**
@@ -266,6 +295,8 @@ kinde_client.get_integer_flag("team_count", 2);
 kinde_client.get_integer_flag("team_count");
 
 kinde_client.get_integer_flag("is_dark_mode", False);
+
+kinde_client.get_integer_flag_token(access_token, "team_count");
 ```
 
 ## Audience
@@ -303,6 +334,8 @@ We have provided a helper to grab any claim from your id or access tokens. The h
 kinde_client.get_claim("aud")
 
 kinde_client.get_claim("given_name", "id_token")
+
+kinde_client.get_claim_token(access_token, "given_name")
 ```
 
 ## Organizations
@@ -551,6 +584,8 @@ Usage:
 
 ```python
 kinde_client.fetch_token(authorization_response=”[http://localhost:8000?code=42..e9&state=d..t](https://example.com/github?code=42..e9&state=d..t)”)
+
+token: dict = kinde_client.fetch_token_value(authorization_response=”[http://localhost:8000?code=42..e9&state=d..t](https://example.com/github?code=42..e9&state=d..t)”)
 ```
 
 Sample:
@@ -567,6 +602,8 @@ Usage:
 
 ```python
 kinde_client.refresh_token()
+
+kinde_client._refresh_token_value(refresh_value)
 ```
 
 ### `create_org`
@@ -599,6 +636,8 @@ Usage:
 
 ```python
 kinde_client.get_claim("given_name", "id_token")
+
+kinde_client.get_claim_token(access_token, "given_name")
 ```
 
 Sample:
@@ -621,6 +660,8 @@ Usage:
 
 ```python
 kinde_client.get_permission(”read:todos”)
+
+kinde_client.get_permission_token(access_token, "read:todos")
 ```
 
 Sample:
@@ -637,6 +678,8 @@ Usage:
 
 ```python
 kinde_client.get_permissions()
+
+kinde_client.get_permissions_token(access_token)
 ```
 
 Sample:
@@ -653,6 +696,8 @@ Usage:
 
 ```python
 kinde_client.get_organization()
+
+kinde_client.get_organization_token(access_token)
 ```
 
 Sample:
@@ -669,6 +714,8 @@ Usage:
 
 ```python
 kinde_client.get_user_organizations()
+
+kinde_client.get_user_organizations_token(access_token)
 ```
 
 Sample:
@@ -685,6 +732,8 @@ Usage:
 
 ```python
 kinde_client.get_user_details()
+
+kinde_client.get_user_details_token(access_token)
 ```
 
 Sample:
@@ -715,6 +764,8 @@ Usage:
 
 ```python
 kinde_client.get_flag("theme");
+
+kinde_client.get_flag_token(access_token, "theme");
 ```
 
 Sample:
@@ -743,6 +794,8 @@ Usage:
 
 ```python
 kinde_client.get_boolean_flag("is_dark_mode");
+
+kinde_client.get_boolean_flag_token(access_token, "is_dark_mode");
 ```
 
 Sample: `True` or `False`
@@ -762,6 +815,8 @@ Usage:
 
 ```python
 kinde_client.get_string_flag("theme");
+
+kinde_client.get_string_flag_token(access_token, "theme");
 ```
 
 Sample: `“pink”`
@@ -781,6 +836,8 @@ Usage:
 
 ```python
 kinde_client.get_integer_flag("competitions_limit");
+
+kinde_client.get_integer_flag_token(access_token, "competitions_limit");
 ```
 
 Sample: `5`
