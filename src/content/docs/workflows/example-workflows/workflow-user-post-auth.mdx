@@ -1,0 +1,125 @@
+---
+page_id: 62fafade-5d33-4f85-9fd2-712c533db3d0
+title: User post authentication workflow
+sidebar:
+  order: 1
+relatedArticles:
+  - 85c135db-f55a-4edf-8d1b-0af4140c1925
+  - d672fca7-6c6a-49f8-85c9-6e86ce99f440
+---
+
+Trigger: `user:post_authentication`
+
+This trigger fires after the user has completed single factor authentication (e.g email + password or Google).
+
+<Aside type="warning">
+
+At this stage the user is not authorized - we have not checked organization access or carried out MFA.
+
+</Aside>
+
+## Example use cases
+
+### Minimize account sharing
+
+Check previous logins by the user to see if they have carried out impossible travel or if their IP address looks suspicious.
+
+### Add properties to a user
+
+Add additional properties to a user before tokens are generated.
+
+### Add user to organizations
+
+If the user has been invited to join multiple organizations you can add them as this point, before going through the authorization flow.
+
+### Determine if the user is a first time user
+
+Users can be created in multiple ways (imported / API / via the UI / self-registration). This could well be an existing user in your own database, so we tell you if this is a new user from a Kinde perspective. i.e we create a new record so you can act accordingly.
+
+## Workflow code
+
+### The event object
+
+The main argument provided to your code is the Kinde workflow `event` object which has two keys `request` and `context`. This gives you access to the reason the workflow was triggered and additional relevant datapoints. Here's an example:
+
+```jsx
+{
+    "request": {
+        "ip": "***",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:135.0) Gecko/20100101 Firefox/135.0",
+        "authUrlParams": {
+            "state": "b9ea1131f7796a10abe8eac1b48c715575a0ffd349fb9c602e13d824",
+            "orgCode": "org_12345667",
+            "clientId": "cad2d86b1ac645e1957889fcb1eff0f9",
+            "redirectUri": "http://localhost:3000"
+        }
+    },
+    "context": {
+        "auth": {
+            "connectionId": "conn_0194ee03c226d48c6858d5a412359ed2",
+            "isNewUserRecordCreated": true
+        },
+        "user": { 
+            "id": "kp_6e54d9612e8748b39557c9975bdba033"
+        },
+        "domains": { 
+            "kindeDomain": "https://newbus.localkinde.me"
+        },
+        "workflow": { 
+            "trigger": "user:post_authentication"
+        },
+        "application": {
+            "clientId": "cad2d86b1ac645e1957889fcb1eff0f9"
+        }
+    }
+}
+
+```
+
+### Workflow settings
+
+```jsx
+export const workflowSettings = {
+  id: "postAuthentication",
+  name: "Post-authentication",
+  failurePolicy: {
+    action: "stop",
+  },
+  trigger: "user:post_authentication",
+  bindings: {},
+};
+```
+
+Example determining if first time user:
+
+```jsx
+import {
+  onPostAuthenticationEvent,
+  WorkflowSettings,
+  WorkflowTrigger,
+  } from "@kinde/infrastructure";
+
+export const workflowSettings: WorkflowSettings = {
+  id: "postAuthentication",
+  name: "Post authentication",
+  failurePolicy: {
+    action: "stop",
+  },
+  trigger: WorkflowTrigger.PostAuthentication,
+  bindings: {
+    "kinde.fetch": {}, // Required for external API calls
+    "kinde.env": {}, // required to access your environment variables
+    url: {}, // required for url params
+  },
+};
+
+export default async function handlePostAuth(event: onPostAuthenticationEvent) {
+
+	const isNewKindeUser = event.context.auth.isNewUserRecordCreated;
+	
+	// The user has been added to the Kinde user pool for the first time
+	if (isNewKindeUser) {
+		// do something
+	}
+   
+};
