@@ -1,0 +1,151 @@
+---
+page_id: ed2f7810-6f8c-4dec-bcf1-f49922174daa
+title: MS Entra ID (SAML) enterprise connection
+sidebar: 
+  order: 12
+relatedArticles:
+  - 556c9ce6-477b-4a31-9ce1-75f612eb3740
+  - e100d77b-530b-4327-8216-93c955657e0c
+  - 66b2a627-b24a-4ccf-a792-80a6a9fe35ef
+  - e89d246a-5cdf-4993-9cee-94b31ec27583
+---
+
+Kinde supports the use of Microsoft Entra ID (SAML) as an enterprise-level authentication method. This service used to be Azure AD.
+
+If you are [importing users into Kinde](/manage-users/add-and-edit/import-users-in-bulk/), their Entra ID will be picked up and matched to the relevant connection based on their email address, for a seamless transition to Kinde.
+
+<Aside>
+
+**Microsoft Entra ID** is the new name for **Microsoft** **Azure AD**, which is Microsoft’s enterprise authentication service. This doc may contain some mixed references. [More information](https://learn.microsoft.com/en-gb/azure/active-directory/fundamentals/new-name).
+
+</Aside>
+
+## Before you begin
+
+- You need a Microsoft developer account to register an application. 
+- Test the connection in a non-production environment before activating in a live environment.
+
+## Step 1: Add the connection in Kinde
+
+<Aside>
+
+You can make a connection available only to a specific organization, or you can create it so it can be used across any organization in your business. 
+
+</Aside>
+
+### Add a connection for a specific organization
+
+1. Go to **Organizations** and open the organization. 
+2. In the menu, select **Authentication**, then select **Add connection**.
+3. In the **Add connection** window, select **New enterprise connection**, then click **Next**.
+4. Select the Microsoft connection type you want and then select **Next**. Currently we support WS Federated and OpenID types. 
+5. Next: 'Step 2: Configure the connection'.
+
+### Add a connection that can be shared across multiple organizations
+
+1. Go to **Settings > Environment > Authentication**.
+2. Scroll to the **Enterprise connection** section and select **Add connection**. The **Add connection** window opens.
+3. Select the Microsoft connection type you want and then select **Save**. Currently we support WS Federated and OpenID types.
+4. On the tile for the new connection, select **Configure**.
+5. Next: 'Step 2: Configure the connection'.
+
+## Step 2: Configure the connection in Kinde
+
+1. Enter a **Connection name.** Make this something you can easily identify, especially if you are adding multiple connections for different business customers.
+
+   <Aside type="warning">
+
+   If you plan to import users into Kinde, make sure the connection name matches the connection name in the Entra ID record.
+
+   </Aside>
+
+2. For the **Entity ID**, enter a random string like `hEb876ZZlkg99Dwat64Mnbvyh129`. Make a copy of the string as you will add this to your SAML application later.
+3. Scroll past the IdP metadata URL and other key attribute fields. We will ad dthis information later. 
+4. Enter **Home realm domains**. This speeds up the sign in process for users of those domains.
+   Note that all home realm domains must be unique across all connections in an environment. For more information about how, see [Home realm domains or IdP discovery](/authenticate/enterprise-connections/home-realm-discovery/).
+
+   ![SAML configuration screen](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/79c7b045-d391-47a0-ee77-a2c3cbb78c00/public)
+
+5. If you use home realm domains, the sign in button is hidden on the auth screen by default. To show the SSO button, select the **Always show sign-in button** option. 
+6. Copy the ACS URL, you will need this for the SAML provider app.
+6. If you want to enable just-in-time (JIT) provisioning, select the **Create a user record in Kinde** option. This saves time adding users manually or via API later.
+7. Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified. We recommend leaving this off for maximum security.
+14. Select **Save**.
+
+## Step 3: Create and configure an Entra ID enterprise application
+
+1. On the [Microsoft Entra admin center](https://entra.microsoft.com/#home) home screen, select **Applications > Enterprise Applications**.
+2. Select **New application** and in the next screen select **Create your own application**. A side panel opens.
+3. Enter the name for the application. 
+4. Select the **Integrate any other application you don't find in the gallery (Non-gallery)** option and then select **Create**. It can take a few seconds for the application to be created.
+5. Select **Get started** on the **2. Set up single sign on** tile, then select the SAML tile.
+6. Edit the **Basic SAML Configuration**. The side panel opens.
+
+   ![SAML config side panel](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/cb24d39d-07a8-4622-bf7f-2f8eeca1fb00/public)
+
+7. Select **Add identifier**, then enter the same random string like you did previously for the Entity ID in Kinde. E.g. `hEb876ZZlkg99Dwat64Mnbvyh129`. 
+8. Select **Add reply URL** and paste the ACS URL that you copied from the connection configuration screen in Kinde, then select **Save**.
+9. Close the panel.
+10. Select **Edit** on the **Attributes & Claims** section. Copy the values of the identifiers (Principal name, Given name, Surname), for example:
+
+   ![Example identifiers to copy](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/79037f34-5b20-443f-39ca-d3cb70e9b800/public)
+
+11. In the **SAML certificates** section, copy the **App federation metadata URL**. You'll add this as the **IdP metadata URL** in the Kinde connection.
+12. Download the Federation metadata XML file. This is the SAML signed certificate.
+
+## Step 4: Finish configuring the connection in Kinde
+
+Make sure you test the connection before enabling in production for your users.
+
+1. Open the SAML connection in Kinde. Via **Organization > Authentication** or via **Settings > Authentication**.
+2. Paste in the data you got from the SAML app:
+   - IdP metadata URL
+   - Email key attribute (Principal name)
+   - First name attribute (Given name)
+   - Last name attribute (Surname)
+3. Open the **Federation Metadata XML** file in a text editor and copy the contents of the file. 
+4. Paste them into the **Signing certifiacte** field in the Kinde connection.
+2. Switch on the connection. This will make it instantly available to users if this is your production environment.
+   1. For environment-level connections, scroll down and select the apps that will use the auth method.
+   2. For organization-level connections, scroll down and select if you want to switch this on for the org. 
+3. Select **Save**.
+
+## Step 4: Test the connection
+
+1. Go to your test application and attempt to sign in.
+2. If you left the **Home realm domains** field blank in Kinde, when you launch your application, you should see a button to sign in. Click it and go to step 4.
+3. If you completed the **Home realm domains** field, you should be redirected immediately to your IdP sign in screen.
+4. Enter your IdP details and complete any additional authentication required.
+
+## Sign out behaviour for user session
+
+If your users sign in via the Entra ID (formerly Azure AD) enterprise connection in Kinde, when they sign out, they are just signing out of Kinde. They are not fully being signed out of Entra ID. It also works this way for social connections, where a third party is the identity provider.
+
+## (Optional) Sync Entra ID groups with Kinde
+
+### Add groups claim to MS Entra ID app
+
+1. Open your application in the [MS Azure Portal](https://portal.azure.com/).
+2. Go to **Token configuration** in the left menu. 
+3. Select **Add groups claim**.
+4. In the window that appears, select the groups to be included in tokens.
+
+![image of edit groups claim screen](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/fed278be-bdcd-43b6-7130-8c866928b700/public)
+
+5. If you want, customize the token properties by type.
+6. Save your changes.
+
+For reference, see this Microsoft doc about [configuring optional claims](https://learn.microsoft.com/en-us/entra/identity-platform/optional-claims?tabs=appui/) 
+
+### Customize ID token in Kinde
+
+1. Open your application in Kinde.
+2. Go to **Tokens**.
+3. Scroll to **Token customization** and select **Configure** on the **ID tokens** tile.
+4. Switch on **Social identity** as an additional claim.
+5. Select **Save**.
+
+### Access group info in tokens
+
+- ID token - `ext_provider > claims > profile > groups`
+- Access token - `ext_groups`

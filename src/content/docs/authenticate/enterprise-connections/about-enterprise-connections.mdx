@@ -1,6 +1,6 @@
 ---
 page_id: fcf28a71-c3a8-4474-9564-ad089d3f2105
-title: About enterprise connections
+title: Manage enterprise connections
 sidebar:
   order: 1
 relatedArticles:
@@ -19,6 +19,7 @@ Kinde supports a number of enterprise connection types, including:
 
 - [Custom SAML](/authenticate/enterprise-connections/custom-saml/)
 - [Microsoft Entra ID](/authenticate/enterprise-connections/azure/) (was Azure AD) WS Federated or Open ID
+- [Microsoft Entra ID (SAML)](/authenticate/enterprise-connections/entra-id-saml/)
 - [Google Workspace](/authenticate/enterprise-connections/custom-saml-google-workspace/) (via SAML)
 - [Okta](/authenticate/enterprise-connections/okta-saml-connection/) (via SAML)
 - [Cloudflare](/authenticate/enterprise-connections/cloudflare-saml/) (via SAML)
@@ -37,11 +38,15 @@ See [Provisioning users with enterprise connections](/authenticate/enterprise-co
 
 ## How identities are handled in enterprise connections
 
-Users with enterprise identities in Kinde can’t also have other identity types in Kinde. E.g. a user can have an email identity and a social identity. But if a user has an enterprise identity, they cannot have other identities. In this case, identity information is sourced with the identity provider and is managed via the identity provider, not in Kinde. Learn more about [identities in Kinde](/authenticate/about-auth/identity-and-verification/).
+Users with enterprise identities in Kinde can’t also have other identity types in Kinde. E.g. a user can have an email identity and a social identity. But if a user has an enterprise identity, they cannot have other identities. In this case, identity information is sourced with the identity provider (IdP) and is managed via the identity provider, not in Kinde. Learn more about [identities in Kinde](/authenticate/about-auth/identity-and-verification/).
 
 ## Enterprise connections for B2B businesses
 
 Many businesses have businesses for customers (B2B), and use Kinde organizations to manage authentication and access. Kinde lets you set a number of enterprise authentication features at the organization level, see [Enterprise authentication for B2B](/authenticate/enterprise-connections/enterprise-connections-b2b/).
+
+## Session sign out behavior 
+
+When enterprise connection users sign out, they are only signed out of the Kinde session, they are not signed out of the identity provider. We do not force sign out of the IdP because this could break existing sessions the user is signed into, for other applications. This behavior also applies for social connections, where a third party is the identity provider.
 
 ## Routing in enterprise connections
 
@@ -51,7 +56,7 @@ When users sign up via an enterprise connection with single-sign-on (SSO), they 
 
 Home realm discovery routes users based on their email domain. So when a user enters their email and selects the continue button, they are routed to their IdP based on the email domain, to authenticate. For example if the user enters [chris@acme.com](mailto:chris@acme.com) Kinde checks which IdP uses the [**acme.com**](http://acme.com/) domain and silently verifies his identity. He only signs in once.
 
-Note that this feature has nothing to do with security or access control and everything to do with routing. Not to be confused with setting access restrictions for [domain allowlists](/authenticate/enterprise-connections/enterprise-connections-b2b/#restrict-org-access-via-connections).
+Note that this feature has nothing to do with security or access control and everything to do with routing. Not to be confused with setting access restrictions for [domain allowlists](/authenticate/enterprise-connections/enterprise-connections-b2b/).
 
 Learn more about [home realm discovery](/authenticate/enterprise-connections/home-realm-discovery/).
 
@@ -74,3 +79,34 @@ If you would prefer users explicitly choose to sign in with SSO, you can add a u
 3. Switch on **Show 'Sign in with SSO' button**.
 
 Users click the universal button, enter their credentials, and get routed silently to the IdP for verification. 
+
+## Disable an enterprise connection
+
+<Aside type="danger">
+
+Before you disable a connection, make sure that there are no users relying on it for authentication. Once disabled, the sign in option becomes unavailable to users.
+
+</Aside>
+
+1. Navigate to the connection in Kinde. Via **Organization > Authentication** or via **Settings > Authentication**.
+2. For an organization-level connection:
+   1. Select the three dots menu on the connection tile. 
+   2. Select **Disable connection**. 
+   3. Confirm the action in the confirmation window.
+3. For an enterprise level connection:
+   1. Select **Configure** on the connection tile.
+   2. Scroll down and disable the connection for each application.
+   3. Select **Save**. Confirm the action in the confirmation message.
+
+## Delete an enterprise connection
+
+<Aside type="danger">
+
+Before you delete a connection, make sure that there are no users relying on it for authentication. Once deleted, the sign in option becomes unavailable to users. This action can’t be reversed.
+
+</Aside>
+
+1. Navigate to the connection in Kinde. Via **Organization > Authentication** or via **Settings > Authentication**.
+2. Select the three dots menu on the connection tile.
+3. Select **Delete connection**. 
+4. Confirm the action in the confirmation window.

@@ -13,7 +13,7 @@ app_context:
     s: authentication
 ---
 
-In Kinde, you can use SAML as your authentication protocol. Kinde acts as a service provider (SP), so you still need to bring your own identity provider (IdP) to set it up. Identity providers can include Google, Microsoft Azure, Cloudflare, and others.
+In Kinde, you can use SAML as your authentication protocol. Kinde acts as a service provider (SP), so you still need to bring your own identity provider (IdP) to set it up. Identity providers can include Google, Microsoft, Cloudflare, and others.
 
 Note: Since there are differences between set ups for each IdP, we are unable to provide full details on how to configure them all to connect with Kinde. However, the fields we mention below, should have similar names in your IdP.
 
@@ -35,48 +35,50 @@ You can obtain the certificate and key from your IdP or you can generate yoursel
 4. Add the certificate to your IdP settings. The certificate there and the one in Kinde must match exactly. Instructions for how to do this varies, depending on your IdP.
 5. Copy the certificate and private key details into Kinde as per the procedure below.
 
-## Set up SAML in Kinde
+## Step 1: Add SAML connection in Kinde
 
-1. In Kinde, go to **Settings > Authentication**.
-2. Scroll down to the **Enterprise connections** area and select **Add connections**.
-3. In the window that opens, select the SAML option and then **Save**. The SAML tile now appears as a connection.
-4. Select **Configure** on the SAML tile. The configuration dialog opens. The information you enter here, needs to exactly match the information in your identity provider settings.
+### Add a connection for a specific organization
 
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/1692de3f-366d-41fe-24b8-5b85f4602600/public"
-  alt=""
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
+1. Go to **Organizations** and open the organization. 
+2. In the menu, select **Authentication**, then select **Add connection**.
+3. In the **Add connection** window, select **New enterprise connection**, then click **Next**.
+4. Select the connection type you want and then select **Next**.  
+5. Next: 'Step 2: Configure the connection'.
 
-5. Enter a name for the connection. It must match the name in your SAML setup.
-6. Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified. We recommend leaving this off for maximum security.
-7. Enter an **Entity ID.** This is a value you can make up using a random alphanumeric string, e.g. `5836g209gbhw09r8y0913`. The Entity ID you enter here must be configured exactly the same in your identity provider (unless your IdP is Microsoft Azure).
-8. If Microsoft Azure is your provider and your app is a bit older, you may need to add spn: to the beginning of the Entity ID string in Kinde, e.g. `spn:5836g209gbhw09r8y0913`. This is not required for newly created apps.
-9. Enter the **IdP metadata URL**. This URL comes from your identity provider.
-10. Enter an **Email key attribute**. This is the attribute in the SAML token that contains the user’s email. Setting this value ensures that the email address returned in the SAML response is correctly retrieved. We do not recommend leaving this field blank, but if you do we will set ‘email’ as the attribute.
-11. Enter any relevant **Home realm domains**. This is how SAML recognizes a user’s credentials and routes them to the correct sign in page. Note that home realm domains need to be unique across all connections in an environment. [Read more about home realm domains](/authenticate/enterprise-connections/home-realm-discovery/).
-12. If you use home realm domains, the sign in button is hidden on the auth screen by default. To show the SSO button, select the **Always show sign-in button** option. 
+### Add a connection that can be shared across multiple organizations
 
-13. Copy the **ACS URL**, which is also known as a reply URL. This will need to be copied to the relevant area of your identity provider configuration.
-14. If you want to enable just-in-time (JIT) provisioning for users, select the **Create a user record in Kinde** option. This saves time adding users manually or via API later.
+1. Go to **Settings > Environment > Authentication**.
+2. Scroll to the **Enterprise connection** section and select **Add connection**. The **Add connection** window opens.
+3. Select the connection type you want and then select **Save**.
+4. On the tile for the new connection, select **Configure**.
+5. Next: 'Step 2: Configure the connection'.
 
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/96a64401-60df-409d-df80-ffeb3d2a7900/public"
-  alt=""
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
+## Step 2: Configure the connection
 
-15. (Optional) In the **Sign SAML request** section, paste in the **Signed certificate** and **Private key**. You may have got these from your IdP or you may have generated yourself (see procedure above).
-16. Choose which applications you want to enable SAML for and select **Save**.
-17. Complete any additional configuration in your identity provider’s settings, such as adding the **Entity ID** and **ACS URL**.
+1. Enter a name for the connection. It must match the name in your SAML setup.
+2. Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified. We recommend leaving this off for maximum security.
+3. Enter an **Entity ID.** This is a value you can make up using a random alphanumeric string, e.g. `5836g209gbhw09r8y0913`. The Entity ID you enter here must be configured exactly the same in your identity provider (unless your IdP is Microsoft Azure).
+
+   ![SAML configuration screen](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/740dba80-b1a3-410e-f03b-c07e9261f000/public)
+
+4. If Microsoft is your provider and your app is a bit older, you may need to add spn: to the beginning of the Entity ID string in Kinde, e.g. `spn:5836g209gbhw09r8y0913`. This is not required for newly created apps.
+5. Enter the **IdP metadata URL**. This URL comes from your identity provider.
+6. Enter an **Email key attribute**. This is the attribute in the SAML token that contains the user’s email. Setting this value ensures that the email address returned in the SAML response is correctly retrieved. We do not recommend leaving this field blank, but if you do we will set ‘email’ as the attribute.
+7. Enter any relevant **Home realm domains**. This is how SAML recognizes a user’s credentials and routes them to the correct sign in page. Note that home realm domains need to be unique across all connections in an environment. [Read more about home realm domains](/authenticate/enterprise-connections/home-realm-discovery/).
+
+   ![Second part of SAML config screen](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/db4586e4-5097-4d71-b984-c8716195bc00/public)
+
+8. If you use home realm domains, the sign in button is hidden on the auth screen by default. To show the SSO button, select the **Always show sign-in button** option. 
+
+9. Copy the **ACS URL**, which is also known as a reply URL. This will need to be copied to the relevant area of your identity provider configuration.
+10. If you want to enable just-in-time (JIT) provisioning for users, select the **Create a user record in Kinde** option. This saves time adding users manually or via API later.
+11. (Optional) In the **Sign SAML request** section, paste in the **Signed certificate** and **Private key**. You may have got these from your IdP or you may have generated yourself (see procedure above).
+12. Switch on the connection. This will make it instantly available to users if this is your production environment.
+    1. For environment-level connections, scroll down and select the apps that will use the auth method.
+    2. For organization-level connections, scroll down and select if you want to switch this on for the org. 
+13. Select **Save**.
+
+Next: Complete any additional configuration in your identity provider’s settings, such as adding the **Entity ID** and **ACS URL**.
 
 ## Test the connection
 
@@ -86,15 +88,3 @@ Once you have entered the ACS URL in your identity provider, the connection shou
 2. If you left the **Home realm domains** field blank in Kinde, when you launch your application, you should see a button to sign in. Click it and go to step 4.
 3. If you completed the **Home realm domains** field, you should be redirected immediately to your IdP sign in screen.
 4. Enter your IdP details and complete any additional authentication required.
-
-## Delete a SAML connection
-
-<Aside type="danger">
-
-Before you delete a connection, make sure that there are no users relying on it for authentication. Once deleted, the sign in option becomes unavailable to users. This action can’t be reversed.
-
-</Aside>
-
-1. In Kinde, go to **Settings > Environment > Authentication**.
-2. Scroll down to the **Enterprise connections** section and select the three dots on the tile for the connection, then select **Delete connection**.
-3. In the confirmation window, select **Delete connection**.
