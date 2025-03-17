@@ -1,0 +1,39 @@
+---
+page_id: e2d19423-4e08-46b1-b5cf-25c982e9f2c6
+title: Page rendering
+sidebar:
+  order: 9
+relatedArticles:
+  - f0bc688b-a817-42ab-9a20-8e09cec06f37
+
+---
+
+By default Kinde will swap out the content of the `<body>` tag in a single DOM replacement when navigating between pages. This gives you single-page-application (SPA) behaviour with all the performance and security benefits of a server-rendered page.
+
+We chose the `<body>` element as we do not know the structure of your code. But this does mean there is a risk of collisions with scripts that do something with the `body` (e.g. Google Font Loader or third party browser extensions) which can produce very weird and hard to debug errors in production. 
+
+We recommend that you designate a specific entry point for Kinde by placing the `data-kinde-root` attribute on a wrapper element.
+
+This has the added advantage of minimizing the amount of the UI being swapped out, which means less network requests and a better end user experience. 
+
+Here's an example:
+
+```jsx
+<header>
+   <Logo>
+</header>
+
+// our header and logo won't change so exclude from re-rendering
+<main data-kinde-root="true">
+		<h1>{heading}</h1>
+		<p>{description}</p>
+		{getKindeWidget()}
+</main>
+
+// our footer won't change so exclude from re-rendering
+<footer>
+	// some content here
+</footer>
+```
+
+This means that only critical page items are being re-rendered.
