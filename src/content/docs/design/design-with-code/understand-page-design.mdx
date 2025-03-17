@@ -1,0 +1,249 @@
+---
+page_id: 743d264d-ef08-4f2e-a42c-2b971152dccf
+title: Understand Kinde page customization
+sidebar:
+  order: 5
+relatedArticles:
+  - 66f83c18-d261-48b8-a517-648ed1b7b064
+
+---
+
+The 'page' is the whole UI that is rendered by the browser. You can provide your own markup for everything that surrounds the Kinde widget. We give you a handy placeholder so you can tell us where you want the widget rendered. 
+
+You define a page by default exporting a function from a `page.[ts/tsx/js/jsx]` file.
+
+```jsx
+"use server";
+
+import React from "react";
+import { renderToString } from "react-dom/server.browser";
+import {
+  getKindeRequiredCSS,
+  getKindeRequiredJS,
+  getKindeNonce,
+  getKindeWidget,
+  getKindeCSRF,
+  getLogoUrl,
+  getSVGFaviconUrl,
+  setKindeDesignerCustomProperties,
+  getKindeRegisterUrl
+} from "@kinde/infrastructure";
+
+const Layout = async ({ request, context }) => {
+  return (
+    <html lang={request.locale.lang} dir={request.locale.isRtl ? "rtl" : "ltr"}>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="noindex" />
+        <meta name="csrf-token" content={getKindeCSRF()} />
+        <title>{context.widget.content.page_title}</title>
+
+        <link rel="icon" href={getSVGFaviconUrl()} type="image/svg+xml" />
+        {getKindeRequiredCSS()}
+        {getKindeRequiredJS()}
+        <style nonce={getKindeNonce()}>
+          {`:root {
+          ${setKindeDesignerCustomProperties({
+            baseBackgroundColor: "#fff",
+            baseLinkColor: "#230078",
+            buttonBorderRadius: "0.5rem",
+            primaryButtonBackgroundColor: "#230078",
+            primaryButtonColor: "#fff",
+            inputBorderRadius: "0.5rem",
+          })}}
+          `}
+        </style>
+        <style nonce={getKindeNonce()}>
+          {`
+            :root {
+                --kinde-base-color: rgb(12, 0, 32);
+                --kinde-base-font-family: -apple-system, system-ui, BlinkMacSystemFont, Helvetica, Arial, Segoe UI, Roboto, sans-serif;
+            }
+
+            [data-kinde-control-select-text]{
+                background-color: rgb(250, 250, 251);
+            }
+            .c-container {
+              padding: 1.5rem;
+              display: grid;
+              gap: 230px;
+            }
+            .c-widget {
+                max-width: 400px;
+                width: 100%;
+                margin: 0px auto;
+            }
+            .c-footer {
+              border-top: 1px solid rgba(12, 0, 32, 0.08);
+              padding-block: 1.5rem;
+              display: flex;
+              justify-content: space-between;
+            }
+            .c-footer-links {
+                display: flex;
+                gap: 1.5rem;
+            }
+          `}
+        </style>
+      </head>
+      <body>
+        <div data-kinde-root="/admin" class="c-container">
+          <header class="c-header">
+            <img src={getLogoUrl()} alt={context.widget.content.logo_alt} />
+          </header>
+          <main>
+            <div class="c-widget">
+              <h1>{context.widget.content.heading}</h1>
+              <p>{context.widget.content.description}</p>
+              <div>{getKindeWidget()}</div>
+            </div>
+          </main>
+          <footer class="c-footer">
+            <p class="c-no-account-link">
+              No account? <a href={getKindeRegisterUrl()}>Sign up for free</a>
+            </p>
+            <ul class="c-footer-links">
+              <li>
+                <a href="">Privacy</a>
+              </li>
+              <li>
+                <a href="">Terms</a>
+              </li>
+              <li>
+                <a href="">Get help</a>
+              </li>
+            </ul>
+          </footer>
+        </div>
+      </body>
+    </html>
+  );
+};
+
+export default async function Page(event) {
+  const page = await Layout({ ...event });
+  return renderToString(page);
+}
+```
+
+### Supported templating languages
+
+Kinde uses server-rendered JavaScript to compose custom pages and has a range of templating options available:
+
+- React
+- Liquid
+- JavaScript
+- TypeScript
+
+<aside>
+ℹ️
+
+Important! If you are using React for templating, note this code is rendered on the server. This means client side functions for example, `useEffect`,  will not be available.
+
+</aside>
+
+### Page structure in the Git directory
+
+The code for your pages must live in a GitHub repository (other git providers to be supported later). Your directory structure in the repo is critical to Kinde being able to run your design code.
+
+The directory structure for a Kinde custom code repo should be as follows:
+
+```jsx
+myApp/
+  ├── kindeSrc/
+  │   └── environment/
+  │       └── pages/
+  │           └── (kinde)/
+  │               └── (default)/
+  │                   └── page.tsx
+  ├── package.json
+  └── kinde.json
+```
+
+### Kinde.json
+
+The `kinde.json` file defines the config for all custom code in Kinde, including workflows and custom pages. A typical config file will look as follows:
+
+```json
+{ 
+  "rootDir": "kindeSrc", -- the directory where Kinde should look for your code
+  "version": "2024-12-09" -- the last breaking change
+}
+```
+
+`rootDir` - the directory where Kinde should look for your custom code. Defaults to `kindeSrc` so that you can include Kinde code alongside existing projects. Change this if you wish the code to live in another directory.
+
+`version` - based on the date when the API version was released. Any breaking changes will be released in a new API version.
+
+The structure should be in the format `pages/(kinde)/(<route>)/page.[ts/tsx]` where `<route>` is used to map your code to a rendered page in Kinde. For example `pages/(kinde)/(register)/page.tsx` will map to the register / sign up page in the auth flow.
+
+The `page.[tsx/ts]` function can be written in the templating languages as per above.
+
+### Which pages can I customize?
+
+All Kinde hosted pages can be customized and use url route mapping to determine which template to use.
+
+If a specific mapped route does not exist, a special route called `(default)` will be rendered. Set up the `(default)` page to ensure all your pages follow this design unless you have overridden them with custom code.  
+
+Available routes:
+
+`(default)` - The page template that will be used for all Kinde hosted pages when a specific one cannot be found.
+
+`(register)` - The sign up page
+
+`(login)` - The sign in page
+
+`(index)` - If someone visits the root domain for your business (https://<yourdomain>.kinde.com)
+
+If you need to provide specific customization for a page not listed her, reach out and let us know
+
+### Set the page default export function
+
+Your `page.[ext]` file should contain a default export. It doesn’t matter what this is called but the general convention is to call it `Page`. This is provided a single `event` argument which is an object containing 2 keys `context` and `request`.
+
+The `request` key contains information about the request to the page and includes the following sub-objects
+
+- `authUrlParams` contains useful info from authorization request url
+    - `orgCode` - the requested organization code e.g `org_12345`
+    - `state` - the state parameter in the auth url
+    - `clientId` - the `client_id` query param from the auth url - this is the application ID
+    - `redirectUri` - the `redirect_uri` query param from the auth url
+- `locale` - localization data
+    - `isRtl` - if the requested language should be rendered right to left
+    - `lang` - the code for the requested language
+- `route`
+    - `context`- the requested widget `CX_m` e.g `register` | `choose_organization`
+    - `flow` - whether the flow is a sign in or sign up flow e.g `register` | `login`
+    - `path` - the path of the request `auth` | `account`| `\`
+
+The top level `context` key object contains information about the page itself, like the page state and content.
+
+- `domains` contains relevant domain info
+    - `kindeDomain` your domain on Kinde e.g https://example.kinde.com
+- `widget` contains data generated from the widget
+    - `content` an object containing page content - translated and with placeholders replace
+        - `pageTitle` the title of the page commonly displayed in the `<title>` tag for showing in the browser tab
+        - `heading` the main heading for the page
+        - `description` the page description
+        - `logoAlt` the alt text for your company logo
+
+### Page settings
+
+Sometimes additional information will need to be passed to Kinde from your page. You can use the page settings object for this
+
+```jsx
+export const pageSettings = {};
+```
+
+The main use case for this is when you want to make bindings available to your page, for example access to your Kinde environment variables.
+
+```jsx
+export const pageSettings = {
+  bindings: {
+    "kinde.env": {},
+  }
+}
+```
+
+This allows you to have fine grained control over what your pages can access.
