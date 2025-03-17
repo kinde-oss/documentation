@@ -1,0 +1,90 @@
+---
+page_id: 14aeb42e-8799-481c-88cf-62f521b33d5e
+title: Manage page design assets
+sidebar:
+  order: 6
+relatedArticles:
+  - f0bc688b-a817-42ab-9a20-8e09cec06f37
+
+---
+
+It is common that your logos and favicons are hosted on Kinde.
+
+**Favicons**
+
+The Kinde infrastructure package ships with helper methods for accessing these:
+
+```jsx
+import {
+	getFallbackFaviconUrl,
+  getSVGFaviconUrl,
+} from "@kinde/infrastructure";
+```
+
+**Usage**
+
+```jsx
+<link rel="icon" href={getFallbackFaviconUrl()} sizes="48x48">
+<link rel="icon" href={getSVGFavicon()} type="image/svg+xml" />
+```
+
+**Logos**
+
+The Kinde infrastructure package ships with helper methods for accessing these:
+
+```jsx
+import {
+	getLogoUrl,
+  getDarkModeLogoUrl,
+} from "@kinde/infrastructure";
+```
+
+**Usage**
+
+```jsx
+// Always use light logo
+<img
+	src={getLogoUrl()}
+	alt={event.context.widget.content.logoAlt}
+/>
+
+// Always use dark logo
+<img
+	src={getDarkModeLogoUrl()}
+	alt={event.context.widget.content.logoAlt}
+/>
+
+// User preference
+<picture>
+	<source
+		media="(prefers-color-scheme: dark)"
+		srcset={getDarkModeLogoUrl()}
+	>
+	<img
+		src={getLogoUrl()}
+		alt={event.context.widget.content.logoAlt}
+	/>
+</picture>
+```
+
+**Org logos**
+
+Both functions accept the org code as an argument to return the relevant organization logo url:
+
+```jsx
+// Org logos
+// Pass org code in
+const {orgCode} = event.request.authUrlParams
+<img
+	src={getLogoUrl(orgCode)}
+	alt={event.context.widget.content.logoAlt}
+/>
+```
+
+### Manage externally-hosted assets
+
+We know you will want to use assets like fonts and images stored outside of Kinde. Our strict CSP which we have for security, can make calling external sources somewhat trickier, but with good reason.
+
+Your root domain as well as any subdomains of that domain are added to our CSP by default so to use your own assets and comply with Kinde’s CSP, the assets should be stored on servers that share the same domain as your custom domain. 
+
+For example, if you are using the custom domain [`auth.myapp.com`](http://auth.myapp.com) you could host fonts/images/css at [`https://assets.myapp.com`](https://assets.myapp.com) and they would be accessible in your code.
