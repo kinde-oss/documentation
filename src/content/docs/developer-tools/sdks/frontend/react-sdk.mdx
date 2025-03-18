@@ -237,7 +237,7 @@ To create a new organization with the user registration, you can use the `create
 
 ### Sign up/sign in users to organizations
 
-To sign up a user to a particular organization, you must pass the `org_code` from your Kinde account as the user is created. You can find the `org_code` on the **Details** page of each organization in Kinde.
+To sign up a user to a particular organization, you must pass the `orgCode` from your Kinde account as the user is created. You can find the `orgCode` on the **Details** page of each organization in Kinde.
 
 ```jsx
 <LoginLink orgCode="org_1234">Sign in</LoginLink>
@@ -421,13 +421,13 @@ You will find that when you refresh the browser using a front-end based SDK that
 There are two ways to work around this.
 
 - (Recommended) use our [Custom Domains](/build/domains/pointing-your-domain/) feature which then allows us to set a secure, httpOnly first party cookie on your domain.
-- (Non-production solution only) If you’re not yet ready to add your custom domain, or for local development, we offer an escape hatch `<KindeProvider>` `isDangerouslyUseLocalStorage`. This will use local storage to store the refresh token. DO NOT use this in production.
+- (Non-production solution only) If you’re not yet ready to add your custom domain, or for local development, we offer an escape hatch `<KindeProvider>` `useInsecureForRefreshToken`. This will use local storage to store the refresh token. DO NOT use this in production.
 
 Once you implement one of the above, you don’t need to do anything else.
 
 ## **Persisting application state**
 
-The options argument passed into the `login` and `register` methods accepts an `app_state` key where you can pass in the current application state prior to redirecting to Kinde. This is then returned to you in the second argument of the `onRedirectCallback` as seen above.
+The options argument passed into the `login` and `register` methods accepts an `state` key where you can pass in the current application state prior to redirecting to Kinde. This is then returned to you in the second argument of the `onSuccess` callback as seen above.
 
 A common use case is to allow redirects to the page the user was trying to access prior to authentication. This could be achieved as follows:
 
@@ -437,7 +437,7 @@ Login handler:
 <button
   onClick={() =>
     login({
-      app_state: {
+      state: {
         redirectTo: location.state ? location.state?.from?.pathname : null
       }
     })
@@ -449,11 +449,13 @@ Redirect handler:
 
 ```jsx
 <KindeProvider
-	onRedirectCallback={(user, app_state) => {
-	  if (app_state?.redirectTo) {
-		  window.location = app_state?.redirectTo;
-     }
-   }}
+  callbacks={
+    {
+      onSuccess: (user, state, context) => {
+        window.location = state?.redirectTo
+      },
+    }
+  }
 >
 ```
 
@@ -464,12 +466,12 @@ By default the JWTs provided by Kinde are stored in memory. This protects you fr
 The trade off with this approach however is that if a page is refreshed or a new tab is opened then the token is wiped from memory, and the sign in button would need to be clicked to re-authenticate. There are two ways to prevent this behaviour:
 
 1. Use the Kinde custom domain feature. We can then set a secure, httpOnly cookie against your domain containing only the refresh token which is not vulnerable to CSRF attacks.
-2. There is an escape hatch which can be used for local development: `isDangerouslyUseLocalStorage`. This SHOULD NOT be used in production. We recommend you use a custom domain. This will store only the refresh token in local storage and is used to silently re-authenticate.
+2. There is an escape hatch which can be used for local development: `useInsecureForRefreshToken`. This SHOULD NOT be used in production. We recommend you use a custom domain. This will store only the refresh token in local storage and is used to silently re-authenticate.
 
 ```jsx
 <KindeProvider
-	isDangerouslyUseLocalStorage={process.env.NODE_ENV === 'development'}
-	...
+  useInsecureForRefreshToken={process.env.NODE_ENV === 'development'}
+  ...
 >
 ```
 
@@ -563,7 +565,7 @@ Type: `string`
 
 Required: No
 
-### `isDangerouslyUseLocalStorage`
+### `useInsecureForRefreshToken`
 
 An escape hatch for storing the refresh in local storage for local development.
 
