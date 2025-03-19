@@ -215,8 +215,8 @@ const sidebarData = [
         collapsed: false
       },
       {
-        label: "Design with code",
-        autogenerate: {directory: "design/design-with-code"},
+        label: "Customize with code",
+        autogenerate: {directory: "design/customize-with-code"},
         collapsed: false
       },
     ]
