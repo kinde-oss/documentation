@@ -215,15 +215,10 @@ const sidebarData = [
         collapsed: false
       },
       {
-        label: "Emails",
-        autogenerate: {directory: "design/emails"},
+        label: "Customize with code",
+        autogenerate: {directory: "design/customize-with-code"},
         collapsed: false
       },
-      {
-        label: "Forms",
-        autogenerate: {directory: "design/forms"},
-        collapsed: false
-      }
     ]
   },
   {
