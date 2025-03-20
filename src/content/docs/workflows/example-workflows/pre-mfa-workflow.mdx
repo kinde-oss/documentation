@@ -1,0 +1,150 @@
+---
+page_id: ca483387-5987-4449-a775-a9dfdedc0c7c
+title: Pre-MFA workflow
+sidebar:
+  order: 5
+relatedArticles:
+  - 85c135db-f55a-4edf-8d1b-0af4140c1925
+  - d672fca7-6c6a-49f8-85c9-6e86ce99f440
+---
+
+Trigger: `user:pre_mfa`
+
+This trigger is fired after the user has complete single factor authentication (e.g email + password or Google) and determined which organization (if any) they are trying to access. 
+
+## Example use cases
+
+### Determining if MFA is required based on data in an external service
+
+You may be using a service like Zanzibar or OpenFGA for fine-grained access control and wish to call out to it to determine if a user needs to complete MFA.
+
+### Making MFA required if a user has a certain permission
+
+You may wish to enforce MFA for users who have some sensitive permissions such as `delete:project` .
+
+### Skipping MFA for certain organizations
+
+You want to enforce MFA at an environment level for all organizations, but there are a few who do not want to adopt your policy.
+
+### MFA prompts
+
+When you only want to prompt MFA when a user has not been prompted for MFA over a certain time period.
+
+## Workflow code
+
+### The event object
+
+The main argument provided to your code is the Kinde workflow `event` object which has two keys `request` and `context`. This gives you access to the reason the workflow was triggered and additional relevant datapoints. Here’s an example:
+
+```jsx
+{
+  "request": {
+  },
+  "context": {
+    "auth": {
+			"connectionId": "conn_01945d3ccf4926118bfdeb6e1158edb5" // connection ID the user auth'd with
+		},
+	  "domains": {
+	    "kindeDomain": "https://example.kinde.com"
+	  },
+    "mfa": {
+      "policy": "required", // required | optional | off
+      "context": "environment", // environment or organization
+      "enabledFactors": ["mfa:sms", "mfa:email", "mfa:authenticator_app"], // factors you have enabled for this context
+      "isUserRoleExempt": false, // advanced orgs can make specific roles exempt from MFA
+      "isUserConnectionExempt": false // advanced orgs can make enterprise connections exempt from MFA
+    }
+    "user": { 
+	    "id": "kp_77d28fc7b16240dd9ec12b08071fe46e" // the users ID
+	  },
+    "workflow": {
+	    "trigger": "user:pre_mfa"
+	  },
+    "application": {
+	    "clientId": "cee9743fc7ee4d2e84061fe1a662051d"
+	   },
+    "organization": {
+	    "code": "org_75ad9f26d2c"
+	   }
+  }
+}
+```
+
+### Workflow settings
+
+```jsx
+export const workflowSettings = {
+  id: "preMFA",
+  name: "Pre-MFA",
+  failurePolicy: {
+    action: "stop",
+  },
+  trigger: "user:pre_mfa",
+  bindings: {
+    "kinde.mfa": {}, // required to change the MFA policy
+  },
+};
+```
+
+### MFA binding
+
+The `kinde.mfa` binding is used to modify the MFA policy for the current auth flow.
+
+```jsx
+// In the current flow the user will be asked to complete MFA
+kinde.mfa.setEnforcementPolicy("required");
+
+// In the current flow the user will be exempt from MFA
+kinde.mfa.setEnforcementPolicy("skip");
+```
+
+### External system query example
+
+This example demonstrates using the [environment variables](/build/env-variables/add-manage-env-variables/) feature to store a secret API_KEY to call a FGA system, to determine if a user needs to do MFA.
+
+```tsx
+import {
+  onPreMFAEvent,
+  getKindeAccessTokenHandle,
+  WorkflowSettings,
+  WorkflowTrigger,
+  createKindeAPI
+} from "@kinde/infrastructure";
+
+export const workflowSettings: WorkflowSettings = {
+  id: "preMFA",
+  name: "Pre MFA",
+  failurePolicy: {
+    action: "stop",
+  },
+  trigger: WorkflowTrigger.PreMFA,
+  bindings: {
+    "kinde.fetch": {}, // Required for external API calls
+    "kinde.env": {}, // required to access your environment variables
+    url: {}, // required for url params
+  },
+};
+
+export default async function handlePreMFA(event: onPreMFAEvent) {
+
+	const FGA_API_KEY = getEnvironmentVariable('MY_FGA_API_KEY')?.value
+	const {user, organization} = event.context;
+  const { data: fgaData } = await fetch(`https://someFGAsystem.io/?api_key=${FGA_API_KEY}`, {
+    method: "POST",
+    responseFormat: 'json',
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: new URLSearchParams({
+	    userId: user.id,
+	    orgCode: organization.code
+    })
+  });
+  
+  const isMfaRequired = fgaData.some(permission => permission === 'delete:sensitive');
+	const policy = isMfaRequired ? 'required' : 'skip';
+  kinde.mfa.setEnforcementPolicy(policy);
+   
+};
+  
+```

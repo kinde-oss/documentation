@@ -1,0 +1,162 @@
+---
+page_id: f499ebb0-d7f5-4244-bf92-6bf0f6082b62
+title: User token generation workflow
+sidebar:
+  order: 6
+relatedArticles:
+  - 85c135db-f55a-4edf-8d1b-0af4140c1925
+  - d672fca7-6c6a-49f8-85c9-6e86ce99f440
+---
+
+Trigger: `user:tokens_generation`
+
+This trigger fires when ID and Access tokens are generated for a user.
+
+- After authentication - a sign in or sign up event.
+- After a pre-authentication event - i.e the user is redirected to Kinde and returned invisibly to your app because they were already authenticated.
+- When a refresh token is generated.
+
+## Security considerations
+
+To ensure the integrity of Kinde-issued tokens there are some claims which cannot be modified. See [Prohibited claims](https://github.com/kinde-oss/infrastructure/blob/main/lib/prohibitedClaims.ts) in the workflows infrastructure resource.
+
+## Example use cases
+
+Here's a few ways that this trigger might be used for a workflow.
+
+### Custom claims using Kinde data
+
+You may want to add additional custom claims to the access or ID token before it is delivered to your product.
+
+### Custom claims using data from an external service
+
+You have entitlements or other data in a CRM that you wish to make an API call out to, and then append that data into the access token.
+
+### Reduce token size
+
+Kinde automatically populates the access token with data such as `permissions` and `feature_flags`. If your product use these features heavily, the access token can bloat and you may prefer to use the Kinde Management API to get the data, and strip them from the token.
+
+### Modify Kinde claim format
+
+Some external systems rely on claims to be in a certain format. For example, Kinde supplies roles as an array of objects, but some systems require a space separated string. This workflow allows you to restructure the format of these Kinde claims.
+
+## Workflow code
+
+### The event object
+
+The main argument provided to your code is the Kinde workflow `event` object which has two keys `request` and `context`. This gives you access to the reason the workflow was triggered. Here's an example:
+
+```jsx
+{
+	"request": {
+		"auth": {
+			"audience": ["<EXAMPLE_API>"]
+		},
+		"ip": "192.168.0.1"
+	},
+	"context": {
+		"domains": {
+			"kindeDomain": "<https://example.kinde.com>" // Your Kinde domain
+		},
+		"auth": {
+				"reason": "authorization_request" | "refresh_token_request",
+				"isExistingSession": false // if user was preauthenticated,
+				"connectionId": "conn_12345" // the ID of the auth connection method used
+		},
+		"application": {
+				"clientId": "299627bd8bfa493f8b17e6aec8ebfb86" // the M2M application ID
+		},
+		"user": {
+				"id": "kp_1234567890", // the ID of the user
+				"identityId": "identity_123456789" // the ID of the identity the user authenticated with
+		},
+		"organization": {
+			"code": "org_123456789" // the org code the user authorized against
+		}
+}
+
+```
+
+### Workflow settings
+
+```jsx
+export const workflowSettings = {
+  id: "userTokenGeneration",
+  name: "Access token custom claims",
+  failurePolicy: {
+    action: "stop",
+  },
+  trigger: "user:tokens_generation",
+  bindings: {
+    "kinde.idToken": {}, // required to modify ID token claims
+    "kinde.accessToken": {}, // required to modify access token claims
+    "kinde.fetch": {}, // Required for external API calls
+    "kinde.env": {}, // required to access your environment variables
+    url: {}, // required for url params
+  },
+};
+
+```
+
+### Access and ID token bindings
+
+The `kinde.accessToken`and `kinde.idToken` bindings are used to modify claims in the generated tokens.
+
+### A simple example
+
+```jsx
+kinde.accessToken.setCustomClaim("hello", "world");
+
+kinde.idToken.setCustomClaim("company", "Acme Corp.");
+
+```
+
+### An advanced example
+
+This example demonstrates using the [Environment variables](/build/env-variables/add-manage-env-variables/) feature to store a secret API_KEY to call a CRM to get the company name to include in the access token.
+
+```tsx
+import {
+  onUserTokenGeneratedEvent,
+  getKindeAccessTokenHandle,
+  WorkflowSettings,
+  WorkflowTrigger,
+  createKindeAPI
+} from "@kinde/infrastructure";
+
+export const workflowSettings: WorkflowSettings = {
+  id: "userTokenGeneration",
+  name: "Access token custom claims",
+  failurePolicy: {
+    action: "stop",
+  },
+  trigger: WorkflowTrigger.UserTokenGeneration,
+  bindings: {
+    "kinde.idToken": {}, // required to modify ID token claims
+    "kinde.accessToken": {}, // required to modify access token claims
+    "kinde.fetch": {}, // Required for external API calls
+    "kinde.env": {}, // required to access your environment variables
+    url: {}, // required for url params
+  },
+};
+
+export default async function handleUserTokens(event: onUserTokenGeneratedEvent) {
+
+	const MY_API_KEY = getEnvironmentVariable('MY_API_KEY')?.value
+
+ const { data: crmData } = await fetch(`https://somecrm.io/?api_key=${MY_API_KEY}`, {
+    method: "GET",
+    responseFormat: 'json',
+    headers: {
+      "Content-Type": "application/json",
+    }
+  });
+
+  const accessToken = accessTokenCustomClaims<{
+     companyName: string;
+   }>();
+
+   accessToken.companyName = crmData.companyName;
+};
+
+```
