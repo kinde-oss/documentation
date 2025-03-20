@@ -106,6 +106,57 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 ```
 
+## Multiple Environments
+
+You may need to test or deploy your app across different environments, such as development, staging, or production. The Kinde iOS SDK now supports configuration for multiple environments, allowing you to easily switch between them. Follow these steps to set up and configure environments in your Kinde account and integrate them into your iOS app.
+
+### Setting Up Environments
+
+Before you can configure multiple environments in your iOS app, you must first create these environments in your Kinde dashboard. After setting up your environments, create an application under each environment. You will get different App Details (such as issuer, clientId, redirectUri, etc.) for each environment you create. These details will be used to configure your iOS app for the specific environment.
+
+- **Log in to your Kinde account** and navigate to the **Environments** section.
+- Create the necessary environments (e.g., Production, Development, Staging).
+- For each environment, create a new application under the respective environment.
+- After creating the app, you'll receive different **App Details** (such as `issuer`, `clientId`, `redirectUri`, etc.) for each environment.
+
+### Configuring Multiple Environments
+
+Once the environments are set up in your Kinde dashboard, you can configure your iOS app to handle multiple environments by using a JSON file for each environment. Create a JSON file for each environment in your project. For example:
+
+- `kinde-auth-production.json`
+- `kinde-auth-development.json`
+- `kinde-auth-staging.json` (if applicable)
+
+Each file should contain the configuration details for that specific environment. Here's an example configuration:
+
+```json
+{
+	"issuer": "https://<your-business>.kinde.com",
+	"clientId": "<your-client-id>",
+	"redirectUri": "<your-url-scheme>://kinde_callback",
+	"postLogoutRedirectUri": "<your-url-scheme>://kinde_logoutcallback",
+	"scope": "offline openid email profile"
+}
+```
+
+To set up multiple environments in your iOS app, use the `KindeSDKAPI.configure()` method and pass the environment configuration file name. Here's how to do it:
+
+#### Example: Switch to the Production Environment
+
+```swift
+// Use the 'production' environment configuration
+KindeSDKAPI.configure(fileName: "kinde-auth-production")
+```
+
+#### Example: Switch to the Development Environment
+
+```swift
+// Switch to the 'development' environment
+KindeSDKAPI.configure(fileName: "kinde-auth-development")
+```
+
+To switch to a different environment, simply change the configuration file name in the `KindeSDKAPI.configure()` method.
+
 ## Custom Logger (Optional)
 
 You can use your own Custom Logger as well by extending `LoggerProtocol`.
