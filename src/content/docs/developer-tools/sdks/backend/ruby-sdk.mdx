@@ -35,8 +35,8 @@ gem 'kinde_sdk', git: 'https://github.com/kinde-oss/kinde-ruby-sdk.git', branch:
 
 1. In Kinde, go to **Settings > Applications > [Your app] > View details**.
 2. Add your callback URLs in the relevant fields. For example:
-   - Allowed callback URLs (also known as redirect URIs) - for example, `http://localhost:8000/api/auth/kinde_callback`
-   - Allowed logout redirect URLs - for example, `http://localhost:8000`
+   - Allowed callback URLs (also known as redirect URIs) - for example, `http://localhost:3000/kinde_sdk/callback`
+   - Allowed logout redirect URLs - for example, `http://localhost:3000`
 3. Select **Save**.
 
 ## Add environments
@@ -50,8 +50,8 @@ Kinde comes with a production environment, but you can set up other environments
 The following variables need to be replaced in the code snippets below.
 
 - `KINDE_DOMAIN` - your Kinde domain - e.g. `https://your_kinde_domain.kinde.com`
-- `KINDE_REDIRECT_URL` - your callback url, make sure this URL is under your allowed callback redirect URLs. - e.g. `http://localhost:8000/api/auth/kinde_callback`
-- `KINDE_POST_LOGOUT_REDIRECT_URL` - where you want users to be redirected to after logging out, make sure this URL is under your allowed logout redirect URLs. - e.g. `http://localhost:8000`
+- `KINDE_REDIRECT_URL` - your callback url, make sure this URL is under your allowed callback redirect URLs. - e.g. `http://localhost:3000/kinde_sdk/callback`
+- `KINDE_POST_LOGOUT_REDIRECT_URL` - where you want users to be redirected to after logging out, make sure this URL is under your allowed logout redirect URLs. - e.g. `http://localhost:3000`
 - `KINDE_CLIENT_ID` - you can find this on the **Application details** page - e.g. `your_kinde_client_id`
 - `KINDE_CLIENT_SECRET` - you can find this on the **Application details** page - e.g. `your_kinde_client_secret`
 
@@ -126,6 +126,36 @@ KindeSdk.client_credentials_access(
   # audience:             # default to "#{@config.domain}/api",
   # domain:               # default to @config.domain
 )
+```
+
+## Rails Authentication integration
+The Kinde Ruby SDK gem provides a Rails authentication integration that simplifies the process of integrating Kinde authentication into your Rails application. This is provided by the AuthController class, which is responsible for handling the authentication flow and redirecting users to the appropriate page.
+
+### AuthController
+
+The AuthController class is responsible for handling the authentication flow and redirecting users to the appropriate page. It is provided by the SDK gem and is located in 'lib/kinde_sdk/controllers/auth_controller.rb'.
+
+### Routes
+To enable the AuthController, you need to add the following routes to your `config/routes.rb` file:
+
+```ruby
+  namespace :kinde_sdk do
+    get "callback" => "auth#callback"
+    get "auth" => "auth#auth"
+    get "logout" => "auth#logout"
+    get "logout_callback" => "auth#logout_callback"
+    get "client_credentials_auth" => "auth#client_credentials_auth"
+  end
+```
+### Usage
+To use the AuthController consume the routes in your application. For example in a Rails view file use the auth path to trigger the login flow:
+
+```ruby
+        <div class="buttons">
+            <a class="button is-primary" href="<%= kinde_sdk_auth_path %>">
+              <strong>Log in</strong>
+            </a>
+        </div>
 ```
 
 ## Sign in and registration
