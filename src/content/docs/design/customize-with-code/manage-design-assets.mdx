@@ -1,6 +1,6 @@
 ---
 page_id: 14aeb42e-8799-481c-88cf-62f521b33d5e
-title: Manage page design assets
+title: Manage assets
 sidebar:
   order: 6
 relatedArticles:
@@ -8,38 +8,32 @@ relatedArticles:
   - 66f83c18-d261-48b8-a517-648ed1b7b064
 ---
 
-It is likely that your logos and favicons are hosted on Kinde, but you may also manage externally hosted assets. Here's how assets are referenced in your custom code.
+It is likely that your logos and favicons are managed in Kinde, but you may also manage externally hosted assets like stylesheets, fonts, and images.
 
-## Favicons
+## Kinde hosted assets
 
-The Kinde infrastructure package ships with helper methods for accessing these:
+Within your custom code you can reference assets which have been uploaded within the Kinde admin area. The Kinde infrastructure package ships with helper methods for accessing these:
+
+### Favicons
 
 ```jsx
-import {
-	getFallbackFaviconUrl,
-  getSVGFaviconUrl,
-} from "@kinde/infrastructure";
+import {getFallbackFaviconUrl, getSVGFaviconUrl} from "@kinde/infrastructure";
 ```
 
-### Usage
+#### Usage
 
 ```jsx
 <link rel="icon" href={getFallbackFaviconUrl()} sizes="48x48">
 <link rel="icon" href={getSVGFaviconUrl()} type="image/svg+xml" />
 ```
 
-## Logos
-
-The Kinde infrastructure package ships with helper methods for accessing these:
+### Logos
 
 ```jsx
-import {
-	getLogoUrl,
-  getDarkModeLogoUrl,
-} from "@kinde/infrastructure";
+import {getLogoUrl, getDarkModeLogoUrl} from "@kinde/infrastructure";
 ```
 
-### Usage
+#### Usage
 
 ```jsx
 // Always use light logo
@@ -67,12 +61,11 @@ import {
 </picture>
 ```
 
-## Org logos
+### Org logos
 
-Both functions accept the org code as an argument to return the relevant organization logo url:
+Both logo functions accept the org code as an argument to return the relevant organization logo url:
 
 ```jsx
-// Org logos
 // Pass org code in
 const {orgCode} = event.request.authUrlParams
 <img
@@ -81,10 +74,10 @@ const {orgCode} = event.request.authUrlParams
 />
 ```
 
-## Storing externally-hosted assets
+## External CSS files, fonts and images
 
-We know you will want to use assets like fonts and images stored outside of Kinde. Our strict CSP which we have for security, can make calling external sources somewhat trickier, but with good reason.
+We know you will want to use assets like stylesheets, fonts and images. Kinde does not currently offer hosting for these static assets and you will need to host them yourself.
 
-Your root domain as well as any subdomains of that domain are added to our CSP by default so to use your own assets and comply with Kinde’s CSP, the assets should be stored on servers that share the same domain as your custom domain. 
+Your root domain as well as any subdomains of that domain are added to our Content-Security-Policy (CSP) by default so to use your own assets and comply with Kinde’s CSP, the assets should be stored on servers that share the same domain as your custom domain.
 
-For example, if you are using the custom domain [`auth.myapp.com`](http://auth.myapp.com) you could host fonts/images/css at [`https://assets.myapp.com`](https://assets.myapp.com) and they would be accessible in your code.
+For example, if you are using the custom domain `auth.myapp.com` you could host your external fonts, images and CSS files at `assets.myapp.com` and they would be accessible in your code.
