@@ -80,11 +80,77 @@ const {orgCode} = event.request.authUrlParams
 	alt={event.context.widget.content.logoAlt}
 />
 ```
+# External Assets in Kinde
 
-## Storing externally-hosted assets
+## Overview
+When developing with Kinde, you'll likely need to integrate static assets like stylesheets, fonts, and images. This guide explains how to effectively manage external assets while maintaining Kinde's strict Content Security Policy (CSP).
 
-We know you will want to use assets like fonts and images stored outside of Kinde. Our strict CSP which we have for security, can make calling external sources somewhat trickier, but with good reason.
+## Content Security Policy (CSP) Considerations
+Kinde implements a robust security policy that restricts how external resources can be loaded. 
 
-Your root domain as well as any subdomains of that domain are added to our CSP by default so to use your own assets and comply with Kinde’s CSP, the assets should be stored on servers that share the same domain as your custom domain. 
+### Domain-Based Asset Hosting
+- **Key Requirement**: Assets must be hosted on a subdomain that shares the domain of your custom domain
+- **Important Note**: You cannot use the subdomain of the custom domain itself for asset hosting
 
-For example, if you are using the custom domain [`auth.myapp.com`](http://auth.myapp.com) you could host fonts/images/css at [`https://assets.myapp.com`](https://assets.myapp.com) and they would be accessible in your code.
+**Example Configurations**:
+- If your custom domain is `account.myapp.com`:
+  - Valid asset subdomains: 
+    - `assets.myapp.com`
+    - `static.myapp.com`
+    - `cdn.myapp.com`
+- If your custom domain is `auth.example.com`:
+  - Valid asset subdomains:
+    - `assets.example.com`
+    - `static.example.com`
+
+### Asset Hosting Best Practices
+
+#### CSS Files
+- **Hosting Options**:
+  - Self-host stylesheets on a compatible subdomain
+  - Minify CSS for optimal performance
+  - Use compressed file formats
+
+**Optimization Tips**:
+- Use tools like `cssnano` or `clean-css` for minification
+- Consider using CSS preprocessors with built-in optimization
+
+#### Custom Fonts
+- **Recommended Font Format**: `.woff2`
+- **Benefits of `.woff2`**:
+  - Smallest file size
+  - Broad browser support
+  - Faster loading times
+
+**Font Optimization Strategies**:
+- Use font subsetting to reduce file size
+- Implement `font-display: swap` for improved perceived performance
+- Host fonts on a consistent subdomain
+
+#### Images
+- **Preferred Image Formats**: 
+  - `.webp`
+  - `.avif`
+- **Image Optimization Techniques**:
+  - Use dedicated image optimization tools
+  - Compress images without significant quality loss
+  - Implement responsive image techniques
+
+**Recommended Optimization Tools**:
+- `ImageOptim`
+- `squoosh.app`
+- `sharp` (Node.js library)
+
+## Implementation Example
+
+```html
+<!-- Correct asset loading -->
+<link rel="stylesheet" href="https://assets.example.com/styles/main.min.css">
+<style>
+  @font-face {
+    font-family: 'CustomFont';
+    src: url('https://static.example.com/fonts/customfont.woff2') format('woff2');
+    font-display: swap;
+  }
+</style>
+```
