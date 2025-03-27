@@ -103,14 +103,43 @@ NUXT_KINDE_POST_LOGIN_REDIRECT_URL=<where_your_project_is_running>
 
 ## Protecting pages
 
-It’s likely that your project will have both pages that are publicly available and private ones which should only be available to logged in users. Add this code snippet to pages you would like to protect.
+It’s likely that your project will have both pages that are publicly available and private ones which should only be available to logged in users. 
+
+Route protection is setup in within the `routeRules` in `nuxt.config.ts`
+
+In the below example,
+
+- `/**` - This protected all routes redirecting the the login route. 
+- `/dashboard` - route is protected to users with `admin` permissions.
+- `/public` - this is flagged as a public route and will be open to all visitors.
 
 ```jsx
-<script setup lang="ts">
-	definePageMeta({
-	  middleware: ['auth-logged-in'],
-	})
-</script>
+routeRules: {
+  '/**': {
+    appMiddleware: ['auth-logged-in'],
+    kinde: {
+      redirectUrl: '/api/login',
+      external: true,
+    },
+  },
+  '/dashboard': {
+    appMiddleware: ['auth-logged-in'],
+    kinde: {
+      // list of permissions that are required to access the route
+      permissions: {
+        admin: true,
+      },
+      redirectUrl: '/api/login',
+      external: true,
+    },
+  },
+  '/public': {
+    appMiddleware: ['auth-logged-in'],
+    kinde: {
+      public: true,
+    },
+  },
+},
 ```
 
 ## Getting all permissions for the current user
