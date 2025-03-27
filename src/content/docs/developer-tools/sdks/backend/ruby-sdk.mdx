@@ -27,7 +27,7 @@ If you haven’t already got a Kinde account, [register for free here](https://a
 Add this line into your Gemfile and run a bundler or install manually through a gem command.
 
 ```ruby
-gem 'kinde_sdk', git: 'https://github.com/kinde-oss/kinde-ruby-sdk.git', branch: 'main'
+gem 'kinde_sdk', '~> 1.6.1'
 
 ```
 
@@ -241,7 +241,7 @@ Callback is triggered in the body with the code. Use the whole `params` object o
 Next, exchange access and refresh tokens. You will receive `code` as the parameter in the callback endpoint, and `code_verifier` (if PKCE enabled) as per the previous step.
 
 ```ruby
-KindeApi.fetch_tokens(
+KindeSdk.fetch_tokens(
   params_or_code, 
   # client_id:          # default to @config.client_id,
   # client_secret:      # default to @config.client_secret,
@@ -261,8 +261,8 @@ KindeApi.fetch_tokens(
 Save the whole hash in your session, redis or any other storage, and use it to build your client.
 
 ```ruby
-session[:kinde_auth] = KindeApi.fetch_tokens(code).slice(:access_token, :refresh_token, :expires_at)
-client = KindeApi.client(session[:kinde_auth]) # => #<KindeApi::Client:0x00007faf31e5ecb8>
+session[:kinde_auth] = KindeSdk.fetch_tokens(code).slice(:access_token, :refresh_token, :expires_at)
+client = KindeSdk.client(session[:kinde_auth]) # => #<KindeSdk::Client:0x00007faf31e5ecb8>
 
 ```
 
@@ -577,14 +577,14 @@ client.organizations.add_organization_users(code: "org_1111", users: ["kp:12311.
 For proper refreshing you'll need to use `access_token`, `refresh_token` and probably `expires_in` if you want to know if your access token is still active. Use these two methods to work with refreshing:
 
 ```ruby
-KindeApi.token_expired?(
+KindeSdk.token_expired?(
   session[:kinde_auth],
   # client_id:                  # default to @config.client_id,
   # client_secret:              # default to @config.client_secret,
   # audience:                   # default to "#{@config.domain}/api",
   # domain:                     # default to @config.domain
   ) # => false
-KindeApi.refresh_token(
+KindeSdk.refresh_token(
   session[:kinde_auth],
   # client_id:                  # default to @config.client_id,
   # client_secret:              # default to @config.client_secret,
@@ -594,7 +594,7 @@ KindeApi.refresh_token(
 
 ```
 
-`KindeApi#refresh_token` returns a new token hash, so it needs to be updated in your storage.
+`KindeSdk#refresh_token` returns a new token hash, so it needs to be updated in your storage.
 
 ## SDK API reference
 
