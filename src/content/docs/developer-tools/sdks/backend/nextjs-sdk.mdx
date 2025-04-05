@@ -331,7 +331,6 @@ You can get an authorized user’s Kinde Auth data from any server component usi
 | [`getBooleanFlag`](#getbooleanflag)             | Get a boolean feature flag                            |
 | [`getIntegerFlag`](#getintegerflag)             | Get an integer feature flag                           |
 | [`getStringFlag`](#getstringflag)               | Get a string feature flag                             |
-| [`refreshTokens`](#refreshtokens)               | Refresh tokens to get up-to-date Kinde data           |
 | [`getAccessToken`](#getaccesstoken)             | Get the decoded access token                          |
 | [`getAccessTokenRaw`](#getaccesstokenraw)       | Get the access token                                  |
 | [`getIdToken`](#getidtoken)                     | Get the decoded ID token                              |
@@ -1483,29 +1482,57 @@ if (!(await isAuthenticated())) {
 
 Our middleware will automatically refresh the tokens in your session in the background. 
 
-Sometimes, you may want to refresh these tokens yourself. An example of this is when you update Kinde data via the UI or with the Management API. 
+Sometimes, you may want to refresh these tokens on demand. An example of this is when you update Kinde data via the UI or with the Management API. 
 
-To have these updates immediately reflected in your app, you will need to get the most up-to-date Kinde data and then refresh the tokens in your session.
+To immediately get the most up-to-date Kinde data in your session, use the `refreshData` function provided by `useKindeBrowserClient`.
 
-To get the most up-to-date Kinde data in your session, use the `refreshTokens` helper function provided by `getKindeServerSession`.
+<Aside title="Warning" type="warning">
+
+This utility only works in Next.js 14 and above. Attempting to use it in an older version will result in a warning.
+
+Due to limitations in Next.js, refreshing data on demand can only occur from a client component.
+
+For more information, see the [Next.js docs](https://nextjs.org/docs/app/api-reference/functions/cookies#understanding-cookie-behavior-in-server-components).
+
+</Aside>
 
 <Aside title="Important">
 
-Due to limitations in Next.js, this will only work in a route handler or server action.
+The `refreshData` function is an asynchronous server action, and it's important to await it
+so that you receive immediate access to the latest data.
 
 </Aside>
 
 ```tsx
-'use server'
+"use client";
 
-const handleRefresh = async () => {
-  const { refreshTokens } = getKindeServerSession();
-	await refreshTokens();
-}
+import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 
-...
+export const UpdatePermissionsButton = () => {
+    const { refreshData, getPermissions } = useKindeBrowserClient();
 
-<button onClick={handleRefresh}>Get up to date data</button>
+    const handleUpdatePermissions = async () => {
+        // For example purposes, lets say you have an API route that updates the permissions for a user
+        await fetch("/api/user/permissions");
+
+        // Then you can refresh the data and have the changes reflected immediately
+        await refreshData();
+
+        const newPermissions = getPermissions();
+
+        // Do something with the new permissions
+        // ...
+    }
+
+    return (
+        <button
+            type="button"
+            onClick={handleUpdatePermissions}
+        >
+            Update Permissions
+        </button>
+    );
+};
 ```
 
 ## Kinde Management API
