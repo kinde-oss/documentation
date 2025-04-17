@@ -1,140 +1,157 @@
 <script>
-  // Get the button element
-  const inkeepTriggers = document.querySelectorAll("[kui-trigger='search']");
+    import type {
+        InkeepAIChatSettings,
+        InkeepSearchSettings,
+        InkeepBaseSettings,
+        InkeepModalSettings,
+        InkeepJS,
+        InkeepComponentInstance
+    } from "@inkeep/cxkit-types";
 
-  // Create a new div element to hold the Inkeep modal and set its id and position
-  const inkeepDiv = document.createElement("div");
-  inkeepDiv.id = "inkeepModal";
-  inkeepDiv.style.position = "absolute";
-  document.body.appendChild(inkeepDiv);
+    declare global {
+        interface Window {
+            Inkeep: InkeepJS;
+        }
+    }
 
-  const handleClose = () => {
-      inkeepWidget.render({
-          ...config,
-          isOpen: false,
-          baseSettings: undefined
-      });
-  };
+    // Get the button element
+    const inkeepTriggers = document.querySelectorAll("[kui-trigger='search']");
 
-  const handleOpen = () => {
-      const theme = document.documentElement.getAttribute("data-theme");
-      const isInkeepActive = document.body.classList.contains("inkeep-active");
+    function handleOpenChange(newOpen: boolean) {
+        inkeepWidget?.update({modalSettings: {isOpen: newOpen}});
+    }
 
-      if (isInkeepActive) {
-          inkeepWidget.render({
-              ...config,
-              isOpen: true,
-              baseSettings: {
-                  colorMode: {
-                      forcedColorMode: theme
-                  }
-              }
-          });
-      } else {
-          initializeInkeep();
-      }
-  };
+    const handleOpen = () => {
+        const isInkeepActive = document.body.classList.contains("inkeep-active");
+        if (isInkeepActive) {
+            inkeepWidget?.update({
+                modalSettings: {
+                    isOpen: true
+                }
+            });
+        } else {
+            initializeInkeep();
+        }
+    };
 
-  const config = {
-      componentType: "CustomTrigger", // required
-      targetElement: inkeepDiv, // required
-      properties: {
-          isOpen: false, // required
-          onClose: handleClose, // required
-          onOpen: undefined,
-          baseSettings: {
-              apiKey: import.meta.env.PUBLIC_INKEEP_API_KEY!, // required
-              integrationId: import.meta.env.PUBLIC_INKEEP_INTEGRATION_ID!, // required
-              organizationId: import.meta.env.PUBLIC_INKEEP_ORGANIZATION_ID!, // required
-              primaryBrandColor: "#0f0f0f",
-              organizationDisplayName: "Kinde",
-              colorMode: {
-                  enableSystem: true
-              },
-              theme: {
-                  stylesheetUrls: ["/vendors/inkeep.css"]
-              }
-          },
-          aiChatSettings: {
-              chatSubjectName: "Kinde",
-              botAvatarSrcUrl:
-                  "/bot-avatar-light.png",
-              botAvatarDarkSrcUrl:
-                  "/bot-avatar-dark.png",
-              getHelpCallToActions: [
-                  {
-                      name: "Slack",
-                      url: "https://join.slack.com/t/thekindecommunity/shared_invite/zt-2k5i0aeet-d6Z_2qYphcNCpj0bFa4oCg",
-                      icon: {
-                          builtIn: "FaSlack"
-                      }
-                  },
-                  {
-                      name: "Discord",
-                      url: "https://discord.gg/wHX6j7wG5d",
-                      icon: {
-                          builtIn: "FaDiscord"
-                      }
-                  },
-                  {
-                      name: "Github",
-                      url: "https://github.com/kinde-oss",
-                      icon: {
-                          builtIn: "FaGithub"
-                      }
-                  }
-              ],
-              quickQuestions: [
-                  "Where do I set up my authentication methods?",
-                  "How can I be notified when certain events happen?",
-                  "What's the quickest way to get started with Kinde?"
-              ]
-          }
-      }
-  };
+    const baseSettings: InkeepBaseSettings = {
+        apiKey: import.meta.env.PUBLIC_INKEEP_API_KEY!, // required
+        primaryBrandColor: "#0f0f0f",
+        organizationDisplayName: "Kinde",
+        colorMode: {
+            sync: {
+                target: document.documentElement,
+                attributes: ["data-theme"],
+                isDarkMode: (attributes) => attributes["data-theme"] === "dark"
+            }
+        },
+        theme: {
+            styles: [
+                {
+                    type: "link",
+                    value: "/vendors/inkeep.css"
+                }
+            ]
+        }
+    };
+    const aiChatSettings: InkeepAIChatSettings = {
+        chatSubjectName: "Kinde",
+        aiAssistantAvatar: {
+            light: "/bot-avatar-light.png",
+            dark: "/bot-avatar-dark.png"
+        },
+        getHelpOptions: [
+            {
+                name: "Slack",
+                action: {
+                    type: "open_link",
+                    url: "https://join.slack.com/t/thekindecommunity/shared_invite/zt-2k5i0aeet-d6Z_2qYphcNCpj0bFa4oCg"
+                },
+                icon: {
+                    builtIn: "FaSlack"
+                }
+            },
+            {
+                name: "Discord",
+                action: {
+                    type: "open_link",
+                    url: "https://discord.gg/wHX6j7wG5d"
+                },
+                icon: {
+                    builtIn: "FaDiscord"
+                }
+            },
+            {
+                name: "Github",
+                action: {
+                    type: "open_link",
+                    url: "https://github.com/kinde-oss"
+                },
+                icon: {
+                    builtIn: "FaGithub"
+                }
+            }
+        ],
+        exampleQuestions: [
+            "Where do I set up my authentication methods?",
+            "How can I be notified when certain events happen?",
+            "What's the quickest way to get started with Kinde?"
+        ]
+    };
 
-  // Embed the widget using the `Inkeep.embed()` function.
-  let inkeepWidget: any;
-  // Add event listener to open the Inkeep modal when the button is clicked
-  inkeepTriggers.forEach((trigger) => trigger.addEventListener("click", handleOpen));
+    const modalSettings: InkeepModalSettings = {
+        isOpen: false,
+        onOpenChange: handleOpenChange
+    };
 
-  function initializeInkeep() {
-      import("@inkeep/uikit-js")
-          .then((lib) => {
-              inkeepWidget = lib.Inkeep(config.properties.baseSettings).embed(config as any);
+    const searchSettings: InkeepSearchSettings = {
+        tabs: []
+    };
 
-              document.body.classList.add("inkeep-active");
-          })
-          .then(() => {
-              const theme = document.documentElement.getAttribute("data-theme");
+    const config = {
+        baseSettings,
+        aiChatSettings,
+        modalSettings,
+        searchSettings
+    };
 
-              setTimeout(() => {
-                inkeepWidget.render({
-                  ...config,
-                  isOpen: true,
-                  baseSettings: {
-                      colorMode: {
-                          forcedColorMode: theme
-                      }
-                  }
-              });
-              }, 50);
-              
-          })
-          .catch((error) => console.log(error));
-  }
+    // Embed the widget using the `Inkeep.embed()` function.
+    let inkeepWidget: InkeepComponentInstance | undefined;
+    // Add event listener to open the Inkeep modal when the button is clicked
+    inkeepTriggers.forEach((trigger) => trigger.addEventListener("click", handleOpen));
 
-  document.addEventListener("keydown", function (event) {
-      // Check if the `/` key is pressed
-      if (event.key === "/" && !event.metaKey && !event.ctrlKey) {
-          event.preventDefault();
-          handleOpen();
-      }
+    function initializeInkeep() {
+        import("@inkeep/cxkit-js")
+            .then(() => {
+                if (window.Inkeep.ModalSearchAndChat) {
+                    inkeepWidget = window.Inkeep.ModalSearchAndChat(config as any);
+                }
 
-      // Check if Cmd (Meta) + K or Ctrl + K is pressed
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-          event.preventDefault();
-          handleOpen();
-      }
-  });
+                document.body.classList.add("inkeep-active");
+            })
+            .then(() => {
+                setTimeout(() => {
+                    inkeepWidget?.update({
+                        modalSettings: {
+                            isOpen: true
+                        }
+                    });
+                }, 50);
+            })
+            .catch((error) => console.log(error));
+    }
+
+    document.addEventListener("keydown", function (event) {
+        // Check if the `/` key is pressed
+        if (event.key === "/" && !event.metaKey && !event.ctrlKey) {
+            event.preventDefault();
+            handleOpen();
+        }
+
+        // Check if Cmd (Meta) + K or Ctrl + K is pressed
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+            event.preventDefault();
+            handleOpen();
+        }
+    });
 </script>
