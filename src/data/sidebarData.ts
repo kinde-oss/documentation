@@ -9,11 +9,7 @@ const sidebarData = [
     collapsed: true,
     cardLink: "/get-started/guides/first-things-first/",
     items: [
-      {
-        label: "Guides",
-        autogenerate: {directory: "get-started/guides"},
-        collapsed: false
-      },
+      {label: "Guides", autogenerate: {directory: "get-started/guides"}, collapsed: false},
       {
         label: "Learn about Kinde",
         autogenerate: {directory: "get-started/learn-about-kinde"},
@@ -24,11 +20,7 @@ const sidebarData = [
         autogenerate: {directory: "get-started/switch-to-kinde"},
         collapsed: false
       },
-      {
-        label: "Connect",
-        autogenerate: {directory: "get-started/connect"},
-        collapsed: false
-      },
+      {label: "Connect", autogenerate: {directory: "get-started/connect"}, collapsed: false},
       {
         label: "APIs and SDKs",
         autogenerate: {directory: "get-started/apis-and-sdks"},
@@ -53,36 +45,12 @@ const sidebarData = [
         autogenerate: {directory: "build/set-up-options"},
         collapsed: false
       },
-      {
-        label: "Environments",
-        autogenerate: {directory: "build/environments"},
-        collapsed: false
-      },
-      {
-        label: "Applications",
-        autogenerate: {directory: "build/applications"},
-        collapsed: false
-      },
-      {
-        label: "Organizations",
-        autogenerate: {directory: "build/organizations"},
-        collapsed: false
-      },
-      {
-        label: "Tokens",
-        autogenerate: {directory: "build/tokens"},
-        collapsed: false
-      },
-      {
-        label: "Env variables",
-        autogenerate: {directory: "build/env-variables"},
-        collapsed: false
-      },
-      {
-        label: "Domain management",
-        autogenerate: {directory: "build/domains"},
-        collapsed: false
-      }
+      {label: "Environments", autogenerate: {directory: "build/environments"}, collapsed: false},
+      {label: "Applications", autogenerate: {directory: "build/applications"}, collapsed: false},
+      {label: "Organizations", autogenerate: {directory: "build/organizations"}, collapsed: false},
+      {label: "Tokens", autogenerate: {directory: "build/tokens"}, collapsed: false},
+      {label: "Env variables", autogenerate: {directory: "build/env-variables"}, collapsed: false},
+      {label: "Domain management", autogenerate: {directory: "build/domains"}, collapsed: false}
     ]
   },
   {
@@ -92,11 +60,7 @@ const sidebarData = [
     collapsed: true,
     cardLink: "/developer-tools/about/our-sdks/",
     items: [
-      {
-        label: "Overview",
-        autogenerate: {directory: "developer-tools/about"},
-        collapsed: false
-      },
+      {label: "Overview", autogenerate: {directory: "developer-tools/about"}, collapsed: false},
       {
         label: "Special guides",
         autogenerate: {directory: "developer-tools/guides"},
@@ -122,11 +86,7 @@ const sidebarData = [
         autogenerate: {directory: "developer-tools/kinde-api"},
         collapsed: false
       },
-      {
-        label: "Your APIs",
-        autogenerate: {directory: "developer-tools/your-apis"},
-        collapsed: false
-      }
+      {label: "Your APIs", autogenerate: {directory: "developer-tools/your-apis"}, collapsed: false}
     ]
   },
   {
@@ -199,16 +159,8 @@ const sidebarData = [
     collapsed: true,
     cardLink: "/design/brand/apply-branding-for-an-organization/",
     items: [
-      {
-        label: "Brand",
-        autogenerate: {directory: "design/brand"},
-        collapsed: false
-      },
-      {
-        label: "Page layout",
-        autogenerate: {directory: "design/pages"},
-        collapsed: false
-      },
+      {label: "Brand", autogenerate: {directory: "design/brand"}, collapsed: false},
+      {label: "Page layout", autogenerate: {directory: "design/pages"}, collapsed: false},
       {
         label: "Content",
         autogenerate: {directory: "design/content-customization"},
@@ -218,7 +170,7 @@ const sidebarData = [
         label: "Customize with code",
         autogenerate: {directory: "design/customize-with-code"},
         collapsed: false
-      },
+      }
     ]
   },
   {
@@ -233,8 +185,19 @@ const sidebarData = [
         autogenerate: {directory: "workflows/about-workflows"},
         collapsed: false
       },
-       {
-        label: "Workflow examples",
+      {
+        label: "Getting started",
+        autogenerate: {directory: "workflows/getting-started"},
+        collapsed: false
+      },
+      {
+        label: "Configuration",
+        autogenerate: {directory: "workflows/configuration"},
+        collapsed: false
+      },
+      {label: "Bindings", autogenerate: {directory: "workflows/bindings"}, collapsed: false},
+      {
+        label: "Triggers",
         autogenerate: {directory: "workflows/example-workflows"},
         collapsed: false
       },
@@ -271,11 +234,7 @@ const sidebarData = [
     collapsed: true,
     cardLink: "/manage-users/about/",
     items: [
-      {
-        label: "Overview",
-        autogenerate: {directory: "manage-users/about"},
-        collapsed: false
-      },
+      {label: "Overview", autogenerate: {directory: "manage-users/about"}, collapsed: false},
       {
         label: "Add and edit",
         autogenerate: {directory: "manage-users/add-and-edit"},
@@ -305,11 +264,7 @@ const sidebarData = [
     collapsed: true,
     cardLink: "/releases/about/about-feature-flags/",
     items: [
-      {
-        label: "About",
-        autogenerate: {directory: "releases/about"},
-        collapsed: false
-      },
+      {label: "About", autogenerate: {directory: "releases/about"}, collapsed: false},
       {
         label: "Feature flags",
         autogenerate: {directory: "releases/feature-flags"},
@@ -334,11 +289,7 @@ const sidebarData = [
         autogenerate: {directory: "integrate/connected-apps"},
         collapsed: false
       },
-      {
-        label: "Webhooks",
-        autogenerate: {directory: "integrate/webhooks"},
-        collapsed: false
-      },
+      {label: "Webhooks", autogenerate: {directory: "integrate/webhooks"}, collapsed: false},
       {
         label: "Third-party tools",
         autogenerate: {directory: "integrate/third-party-tools"},
@@ -387,16 +338,8 @@ const sidebarData = [
         autogenerate: {directory: "trust-center/privacy-and-compliance"},
         collapsed: false
       },
-      {
-        label: "Agreements",
-        autogenerate: {directory: "trust-center/agreements"},
-        collapsed: false
-      },
-      {
-        label: "Security",
-        autogenerate: {directory: "trust-center/security"},
-        collapsed: false
-      },
+      {label: "Agreements", autogenerate: {directory: "trust-center/agreements"}, collapsed: false},
+      {label: "Security", autogenerate: {directory: "trust-center/security"}, collapsed: false},
       {
         label: "Kinde performance",
         autogenerate: {directory: "trust-center/kinde-performance"},

@@ -16,7 +16,7 @@ This workflow trigger is only available on the Kinde Scale plan
 
 Trigger: `user:pre_mfa`
 
-This trigger is fired after the user has complete single factor authentication (e.g email + password or Google) and determined which organization (if any) they are trying to access. 
+This trigger is fired after the user has complete single factor authentication (e.g email + password or Google) and determined which organization (if any) they are trying to access.
 
 ## Example use cases
 
@@ -60,7 +60,7 @@ The main argument provided to your code is the Kinde workflow `event` object whi
       "isUserRoleExempt": false, // advanced orgs can make specific roles exempt from MFA
       "isUserConnectionExempt": false // advanced orgs can make enterprise connections exempt from MFA
     }
-    "user": { 
+    "user": {
 	    "id": "kp_77d28fc7b16240dd9ec12b08071fe46e" // the users ID
 	  },
     "workflow": {
@@ -83,12 +83,12 @@ export const workflowSettings = {
   id: "preMFA",
   name: "Pre-MFA",
   failurePolicy: {
-    action: "stop",
+    action: "stop"
   },
   trigger: "user:pre_mfa",
   bindings: {
-    "kinde.mfa": {}, // required to change the MFA policy
-  },
+    "kinde.mfa": {} // required to change the MFA policy
+  }
 };
 ```
 
@@ -121,36 +121,38 @@ export const workflowSettings: WorkflowSettings = {
   id: "preMFA",
   name: "Pre MFA",
   failurePolicy: {
-    action: "stop",
+    action: "stop"
   },
   trigger: WorkflowTrigger.PreMFA,
   bindings: {
     "kinde.fetch": {}, // Required for external API calls
     "kinde.env": {}, // required to access your environment variables
-    url: {}, // required for url params
-  },
+    url: {} // required for url params
+  }
 };
 
 export default async function handlePreMFA(event: onPreMFAEvent) {
+  const FGA_API_KEY = getEnvironmentVariable("MY_FGA_API_KEY")?.value;
+  const {user, organization} = event.context;
+  const {data: fgaData} = await fetch(
+    `https://someFGAsystem.io/?api_key=${FGA_API_KEY}`,
+    {
+      method: "POST",
+      responseFormat: "json",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: new URLSearchParams({
+        userId: user.id,
+        orgCode: organization.code
+      })
+    }
+  );
 
-	const FGA_API_KEY = getEnvironmentVariable('MY_FGA_API_KEY')?.value
-	const {user, organization} = event.context;
-  const { data: fgaData } = await fetch(`https://someFGAsystem.io/?api_key=${FGA_API_KEY}`, {
-    method: "POST",
-    responseFormat: 'json',
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: new URLSearchParams({
-	    userId: user.id,
-	    orgCode: organization.code
-    })
-  });
-  
-  const isMfaRequired = fgaData.some(permission => permission === 'delete:sensitive');
-	const policy = isMfaRequired ? 'required' : 'skip';
+  const isMfaRequired = fgaData.some(
+    (permission) => permission === "delete:sensitive"
+  );
+  const policy = isMfaRequired ? "required" : "skip";
   kinde.mfa.setEnforcementPolicy(policy);
-   
-};
-  
+}
 ```

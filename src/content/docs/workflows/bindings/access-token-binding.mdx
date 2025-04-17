@@ -1,0 +1,59 @@
+---
+page_id: a5c850c0-0251-44ea-adef-73606694ace3
+title: kinde.accessToken
+sidebar:
+  order: 2
+relatedArticles:
+  - d170e5f0-c6c0-4323-90c9-1d722c837384
+  - 5917da0f-24f0-48df-a387-aca03ce1fe7a
+---
+
+The `kinde.accessToken` binding lets you modify access tokens for the current user. Custom claims you add will be included in the access token returned to the client.
+
+## Methods
+
+### `setCustomClaim(name: string, value: any): void`
+
+Adds a custom claim to the access token. The claim will be available when the token is returned to the client.
+
+## Available in workflows
+
+- [user:tokens_generation](/workflows/example-workflows/user-token-generation/)
+
+## Configuration
+
+```js
+export const workflowSettings = {
+  // ...other settings
+  bindings: {"kinde.accessToken": {}}
+};
+```
+
+## Usage
+
+### Using the Kinde infrastructure library (recommended)
+
+The [Kinde infrastructure library](https://github.com/kinde-oss/infrastructure) provides type-safe access token modification:
+
+```js
+import { accessTokenCustomClaims } from "@kinde/infrastructure";
+
+export default async function (event: onUserTokenGeneratedEvent) {
+  const accessToken = accessTokenCustomClaims<{
+    hello: string;
+    ipAddress: string;
+  }>();
+
+  accessToken.hello = "Hello there!";
+  accessToken.ipAddress = event.request.ip;
+};
+```
+
+### Using the low-level API
+
+If you're not using the infrastructure library, you can modify the access token directly:
+
+```js
+kinde.accessToken.setCustomClaim("hello", "Hello there!");
+kinde.accessToken.setCustomClaim("ipAddress", event.request.ip);
+```

@@ -34,7 +34,7 @@ If you want, you can use M2M applications similar to API keys to enable access t
 
 The main argument provided to your code is the Kinde workflow `event` object which has two keys `request` and `context`. This gives you access to the reason the workflow was triggered. Here's an example:
 
-```jsx
+````jsx
 {
 	"request": {
 		"auth": {
@@ -71,7 +71,7 @@ export const workflowSettings = {
     url: {}, // required for url params
   },
 };
-```
+````
 
 ### M2M token binding
 
@@ -86,45 +86,43 @@ kinde.m2mToken.setCustomClaim("hello", "world");
 ### An advanced example using Kinde API to correlate an organization to an M2M application.
 
 ```jsx
-import { createKindeAPI } from "@kinde/infrastructure";
+import {createKindeAPI} from "@kinde/infrastructure";
 
 export const workflowSettings = {
   id: "m2mTokenGeneration",
   name: "M2M custom claims",
   failurePolicy: {
-    action: "stop",
+    action: "stop"
   },
   trigger: "m2m:token_generation",
   bindings: {
-	  "kinde.m2mToken": {}, // required to modify M2M access token
+    "kinde.m2mToken": {}, // required to modify M2M access token
     "kinde.fetch": {}, // Required for external API calls
     "kinde.env": {}, // required to access your environment variables
-    url: {}, // required for url params
-  },
+    url: {} // required for url params
+  }
 };
 
 export default async function handleM2M(event) {
-
-	// Get a token for Kinde management API
+  // Get a token for Kinde management API
   const kindeAPI = await createKindeAPI(event);
-  
-  // Call Kinde applications properties API 
-  const { data } = await kindeAPI.get({
-    endpoint: `applications/${event.context.application.clientId}/properties`,
+
+  // Call Kinde applications properties API
+  const {data} = await kindeAPI.get({
+    endpoint: `applications/${event.context.application.clientId}/properties`
   });
   const {appProperties} = data;
-  
+
   // Get the org code property to make the correlation
-  const orgCode = appProperties.find(prop => prop.key === 'org_code');
-  
+  const orgCode = appProperties.find((prop) => prop.key === "org_code");
+
   // Get org data from Kinde management API
-  const { data: org } = await kindeAPI.get({
+  const {data: org} = await kindeAPI.get({
     endpoint: `organization?code=${orgCode.value}`
   });
-  
+
   // Use the data to set the org data on the M2M token
-  kinde.m2mToken.setCustomClaim('orgName', org.name);
-  kinde.m2mToken.setCustomClaim('orgCode', org.code);
-};
-  
+  kinde.m2mToken.setCustomClaim("orgName", org.name);
+  kinde.m2mToken.setCustomClaim("orgCode", org.code);
+}
 ```

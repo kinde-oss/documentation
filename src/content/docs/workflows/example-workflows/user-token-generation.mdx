@@ -84,7 +84,7 @@ export const workflowSettings = {
   id: "userTokenGeneration",
   name: "Access token custom claims",
   failurePolicy: {
-    action: "stop",
+    action: "stop"
   },
   trigger: "user:tokens_generation",
   bindings: {
@@ -92,10 +92,9 @@ export const workflowSettings = {
     "kinde.accessToken": {}, // required to modify access token claims
     "kinde.fetch": {}, // Required for external API calls
     "kinde.env": {}, // required to access your environment variables
-    url: {}, // required for url params
-  },
+    url: {} // required for url params
+  }
 };
-
 ```
 
 ### Access and ID token bindings
@@ -108,7 +107,6 @@ The `kinde.accessToken`and `kinde.idToken` bindings are used to modify claims in
 kinde.accessToken.setCustomClaim("hello", "world");
 
 kinde.idToken.setCustomClaim("company", "Acme Corp.");
-
 ```
 
 ### An advanced example
@@ -128,7 +126,7 @@ export const workflowSettings: WorkflowSettings = {
   id: "userTokenGeneration",
   name: "Access token custom claims",
   failurePolicy: {
-    action: "stop",
+    action: "stop"
   },
   trigger: WorkflowTrigger.UserTokenGeneration,
   bindings: {
@@ -136,27 +134,30 @@ export const workflowSettings: WorkflowSettings = {
     "kinde.accessToken": {}, // required to modify access token claims
     "kinde.fetch": {}, // Required for external API calls
     "kinde.env": {}, // required to access your environment variables
-    url: {}, // required for url params
-  },
+    url: {} // required for url params
+  }
 };
 
-export default async function handleUserTokens(event: onUserTokenGeneratedEvent) {
+export default async function handleUserTokens(
+  event: onUserTokenGeneratedEvent
+) {
+  const MY_API_KEY = getEnvironmentVariable("MY_API_KEY")?.value;
 
-	const MY_API_KEY = getEnvironmentVariable('MY_API_KEY')?.value
-
- const { data: crmData } = await fetch(`https://somecrm.io/?api_key=${MY_API_KEY}`, {
-    method: "GET",
-    responseFormat: 'json',
-    headers: {
-      "Content-Type": "application/json",
+  const {data: crmData} = await fetch(
+    `https://somecrm.io/?api_key=${MY_API_KEY}`,
+    {
+      method: "GET",
+      responseFormat: "json",
+      headers: {
+        "Content-Type": "application/json"
+      }
     }
-  });
+  );
 
   const accessToken = accessTokenCustomClaims<{
-     companyName: string;
-   }>();
+    companyName: string;
+  }>();
 
-   accessToken.companyName = crmData.companyName;
-};
-
+  accessToken.companyName = crmData.companyName;
+}
 ```
