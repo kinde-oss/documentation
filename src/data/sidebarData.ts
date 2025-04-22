@@ -205,6 +205,12 @@ const sidebarData = [
         label: "Manage workflows",
         autogenerate: {directory: "workflows/manage-workflows"},
         collapsed: false
+      },
+      {label: "Testing", autogenerate: {directory: "workflows/testing"}, collapsed: false},
+      {
+        label: "Observability",
+        autogenerate: {directory: "workflows/observability"},
+        collapsed: false
       }
     ]
   },
