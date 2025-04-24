@@ -30,7 +30,7 @@ You may want to add additional custom claims to the access or ID token before it
 
 ### Custom claims using data from an external service
 
-You have entitlements or other data in a CRM that you wish to make an API call out to, and then append that data into the access token.
+You have entitlements or other data in a CRM that you wish to make an API call out to, and then append that data into the access token. [See example code](https://github.com/kinde-starter-kits/workflow-examples/blob/main/userTokens/customClaimsAccessTokenWorkflow.ts)
 
 ### Reduce token size
 
@@ -42,11 +42,11 @@ Some external systems rely on claims to be in a certain format. For example, Kin
 
 ## Workflow code
 
-### The event object
+### Sample event object
 
 The main argument provided to your code is the Kinde workflow `event` object which has two keys `request` and `context`. This gives you access to the reason the workflow was triggered. Here's an example:
 
-```jsx
+```json
 {
 	"request": {
 		"auth": {
@@ -59,105 +59,36 @@ The main argument provided to your code is the Kinde workflow `event` object whi
 			"kindeDomain": "<https://example.kinde.com>" // Your Kinde domain
 		},
 		"auth": {
-				"reason": "authorization_request" | "refresh_token_request",
-				"isExistingSession": false // if user was preauthenticated,
-				"connectionId": "conn_12345" // the ID of the auth connection method used
+			"origin": "authorization_request" | "refresh_token_request",
+			"isExistingSession": false, // if user was preauthenticated,
+			"connectionId": "conn_12345" // the ID of the auth connection method used
 		},
 		"application": {
-				"clientId": "299627bd8bfa493f8b17e6aec8ebfb86" // the M2M application ID
+			"clientId": "299627bd8bfa493f8b17e6aec8ebfb86" // the M2M application ID
 		},
 		"user": {
-				"id": "kp_1234567890", // the ID of the user
-				"identityId": "identity_123456789" // the ID of the identity the user authenticated with
+			"id": "kp_1234567890", // the ID of the user
+			"identityId": "identity_123456789" // the ID of the identity the user authenticated with
 		},
 		"organization": {
 			"code": "org_123456789" // the org code the user authorized against
+		},
+		"workflow": {
+			"trigger": "user:tokens_generation"
 		}
+	}
 }
-
-```
-
-### Workflow settings
-
-```jsx
-export const workflowSettings = {
-  id: "userTokenGeneration",
-  name: "Access token custom claims",
-  failurePolicy: {
-    action: "stop"
-  },
-  trigger: "user:tokens_generation",
-  bindings: {
-    "kinde.idToken": {}, // required to modify ID token claims
-    "kinde.accessToken": {}, // required to modify access token claims
-    "kinde.fetch": {}, // Required for external API calls
-    "kinde.env": {}, // required to access your environment variables
-    url: {} // required for url params
-  }
-};
 ```
 
 ### Access and ID token bindings
 
-The `kinde.accessToken`and `kinde.idToken` bindings are used to modify claims in the generated tokens.
+To modify claims in the generated user tokens you will need to make use of the following bindings
 
-### A simple example
+- [kinde.accessToken](/workflows/bindings/access-token-binding/)
+- [kinde.idToken](/workflows/bindings/id-token-binding/)
 
-```jsx
-kinde.accessToken.setCustomClaim("hello", "world");
+### Example workflows
 
-kinde.idToken.setCustomClaim("company", "Acme Corp.");
-```
+See examples on GitHub:
 
-### An advanced example
-
-This example demonstrates using the [Environment variables](/build/env-variables/add-manage-env-variables/) feature to store a secret API_KEY to call a CRM to get the company name to include in the access token.
-
-```tsx
-import {
-  onUserTokenGeneratedEvent,
-  getKindeAccessTokenHandle,
-  WorkflowSettings,
-  WorkflowTrigger,
-  createKindeAPI
-} from "@kinde/infrastructure";
-
-export const workflowSettings: WorkflowSettings = {
-  id: "userTokenGeneration",
-  name: "Access token custom claims",
-  failurePolicy: {
-    action: "stop"
-  },
-  trigger: WorkflowTrigger.UserTokenGeneration,
-  bindings: {
-    "kinde.idToken": {}, // required to modify ID token claims
-    "kinde.accessToken": {}, // required to modify access token claims
-    "kinde.fetch": {}, // Required for external API calls
-    "kinde.env": {}, // required to access your environment variables
-    url: {} // required for url params
-  }
-};
-
-export default async function handleUserTokens(
-  event: onUserTokenGeneratedEvent
-) {
-  const MY_API_KEY = getEnvironmentVariable("MY_API_KEY")?.value;
-
-  const {data: crmData} = await fetch(
-    `https://somecrm.io/?api_key=${MY_API_KEY}`,
-    {
-      method: "GET",
-      responseFormat: "json",
-      headers: {
-        "Content-Type": "application/json"
-      }
-    }
-  );
-
-  const accessToken = accessTokenCustomClaims<{
-    companyName: string;
-  }>();
-
-  accessToken.companyName = crmData.companyName;
-}
-```
+[Add custom claims to access token](https://github.com/kinde-starter-kits/workflow-examples/blob/main/userTokens/customClaimsAccessTokenWorkflow.ts) - Call an external API to get data to add as custom claims to the user access token.
