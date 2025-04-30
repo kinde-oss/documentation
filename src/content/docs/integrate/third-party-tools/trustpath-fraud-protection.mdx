@@ -35,7 +35,7 @@ For a workflow to function in Kinde, the workflow files need to be structured an
 
 The workflow starts with a simple async function triggered after user authentication:
 
-```css
+```js
 export default async function FraudDetectionWorkflow(event:
 onPostAuthenticationEvent) {
 }
@@ -60,7 +60,7 @@ To make an informed decision, TrustPath. needs more than a user ID—it also nee
 
 Once these are set up, you can retrieve the additional data you need, using the `createKindeAPI` helper from [@kinde/infrastructure](https://github.com/kinde-oss/infrastructure), which allows us to call the Kinde Management API:
 
-```css
+```js
 const kindeAPI = await createKindeAPI(event);
 const user = await getUserData(kindeAPI, event.context.user.id);
 async function getUserData(kindeAPI: any, userId: string) {
@@ -80,7 +80,7 @@ return user;
 
 (Recommended) Store the API key securely as an [environment variable](/workflows/configuration/environment-variables-and-secrets/) in **Kinde**, just like the other variables mentioned above.
 
-```css
+```js
 const trustPathAPIKey = getEnvironmentVariable("TRUSTPATH_API_KEY")?.value;
 ```
 
@@ -90,7 +90,7 @@ This ensures you’re not hardcoding sensitive credentials, and it keeps your ap
 
 TrustPath evaluates risk differently based on the event type. For example, account creation versus account sign in.
 
-```css
+```js
 const isNewUser = event.context.auth.isNewUserRecordCreated;
 const eventType = isNewUser ? "account_register" : "account_login";
 ```
@@ -151,7 +151,7 @@ TrustPath supports many advanced configurations like this. You can contact their
 
 Now that we have the user info and event type, we can build the payload to send to TrustPath when the workflow is triggered.
 
-```css
+```js
 const requestBody = {
 ip: event.request.ip.split(",")[0].trim(), // Handles cases where multiple IPs are forwarded
 email: user.preferred_email,
@@ -171,7 +171,7 @@ This information passed in the request body allows TrustPath to cross-reference 
 
 Once the connection is set up between APIs, data is ready to be sent to TrustPath via a standard HTTP POST request. Here’s an example:
 
-```css
+```js
 const response = await kinde.fetch(
   "https://api.trustpath.io/v1/risk/evaluate",
   {
@@ -198,7 +198,7 @@ When the API call to TrustPath comes back, the response will include a state fie
 
 Here's how to enforce a block for declined requests:
 
-```css
+```js
 const state = response.json.data.score.state;
 
 if (state === "decline") {
