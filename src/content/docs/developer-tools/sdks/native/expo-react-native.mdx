@@ -1,6 +1,6 @@
 ---
 page_id: 3e372a8b-9168-4d50-a5e7-13941cfbd632
-title: Expo and React Native SDK
+title: Expo
 sidebar:
   order: 20
 relatedArticles:
@@ -14,403 +14,135 @@ head:
 
 The Kinde React Native SDK allows developers to quickly and securely integrate a new or an existing React Native application into the Kinde platform. This SDK is for people using Expo.
 
-## Supported versions
-
-We support Expo with React Native versions 0.70 and higher.
-
-Use this document for Expo and React Native.
-
-To use just React Native, see [React Native SDK](/developer-tools/sdks/native/react-native-sdk/). You can also view the [React Native docs](https://github.com/kinde-oss/kinde-react-native-sdk-0-7x) and [React Native starter kit](https://github.com/kinde-oss/kinde-react-native-sdk-0-7x) in GitHub.
-
-We are working on creating an updated Expo package (it is being tested) and we will add a link here when it's ready.
-
 ## Register for Kinde
 
-If you haven’t already got a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). Registering gives you a Kinde domain, which you need to get started, e.g. `yourapp.kinde.com`.
+If you haven't already got a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). Registering gives you a Kinde domain, which you need to get started, e.g. `yourapp.kinde.com`.
 
 ## Before you install
 
 You will need Node, the React Native command line interface, a JDK, Android Studio (for Android) and Xcode (for iOS).
 
-Follow [the installation instructions for your chosen OS](https://reactnative.dev/docs/environment-setup) to install dependencies.
+Follow [the installation instructions for your chosen OS](https://reactnative.dev/docs/environment-setup) to install dependencies.
 
-## **Installation with Expo Managed Workflow**
+## Installation with Expo Managed Workflow
+
+### Install package
 
 <PackageManagers pkg="@kinde-oss/react-native-sdk-0-7x" />
 
-## **Installation with Bare React Native**
+### Setup provider
 
-### **Android**
+```
+<KindeAuthProvider
+  config={{
+    domain: "<KINDE DOMAIN>",  // e.g https://mybusiness.kinde.com
+    clientId: "<CLIENT ID>",
+  }}
+  // All callbacks are optional
+  callbacks={{
+    onSuccess: async (token, state, context) => {
+    },
+    onError: (error) => {
+    },
+    onEvent: async (event, state, context) => {
+    },
+  }}
+>
+```
 
-1. The SDK can be installed using your package manager or `expo` cli
+### Auth Methods
 
-   <PackageManagers pkg="@kinde-oss/react-native-sdk-0-7x" title="With package managers" />
+```
+const kinde = useKindeAuth();
 
-   ```shell title="With Expo CLI"
-   expo install @kinde-oss/react-native-sdk-0-7x
-   ```
+const handleSignUp = async () => {
+  const token = await kinde.register();
 
-   ```shell title="With Expo CLI (npx)"
-   npx expo install @kinde-oss/react-native-sdk-0-7x
-   ```
+  if (token) {
+    // User was authenticated
+  }
+};
 
-2. Configure the deep link support for your app
+const handleSignIn = async () => {
+  const token = await kinde.login();
+  if (token) {
+    // User was authenticated
+  }
+};
 
-   ```shell
-   npx uri-scheme add <your scheme>
+const handleLogout = async () => {
+  console.log("logout", await kinde.logout());
+};
+```
 
-   # npx uri-scheme add myapp
+#### Example usage
 
-   ```
+```
+<Pressable onPress={handleSignIn}>
+	<ThemedText>Sign In</ThemedText>
+</Pressable>
+```
 
-3. Edit `android/settings.gradle`
+Login and register methods accept and object containing all [Kinde supported URL parameters](https://docs.kinde.com/developer-tools/about/using-kinde-without-an-sdk/#request-parameters).
 
-   ```java
-   ...
+Logout accepts object which allows you to revoke the token
 
-   include ':react-native-keychain'
-   project(':react-native-keychain').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-keychain/android')
+```
+kinde.logout({ revokeToken: true })
+```
 
-   include ':react-native-inappbrowser-reborn'
-   project(':react-native-inappbrowser-reborn').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-inappbrowser-reborn/android')
-   ...
+### Token utilities
 
-   ```
+All utility functions from `@kinde/js-utils` are available through `@kinde/expo/utils` and also through the `useKindeAuth` hook. This allows you to use these utilities directly in your Expo application.
 
-4. Edit `android/app/build.gradle`
+```tsx
+import { getUserProfile, getFlag, getRoles } from "@kinde/expo/utils";
 
-   ```java
-   apply plugin: 'com.android.application'
+// Example usage
+const checkUserProfile = async () => {
+  const profile = await getUserProfile();
+  console.log("User profile:", profile);
+};
+```
 
-   android {
-     ...
-   }
+#### Utility functions include:
 
-   dependencies {
-     ...
+- `getUserProfile` - Get the current user's profile
+- `getFlag` - Check feature flag values
+- `getRoles` - Get the current user's roles
+- `getCurrentOrganization` - Get the current organization
+- `getUserOrganizations` - Get all organizations the user belongs to
+- `getPermission` - get a single permission value
+- `getPermissions` - get all user permissions
+- `getClaim` - Get a specific claim from the token
+- `getClaims` - Get all claims from the token
+- `refreshToken` - Manually refresh the access token
 
-     implementation project(':react-native-keychain')
-   	implementation project(':react-native-inappbrowser-reborn')
+#### Properties (Only available from `useKindeAuth`)
 
-     ...
-   }
+- `isAuthenticated` - Returns true/false if the user is authenticated
 
-   ```
+## Kinde configuration
 
-5. Edit `MainApplication.java`
-
-   ```java
-   ...
-   import com.oblador.keychain.KeychainPackage;
-   import com.proyecto26.inappbrowser.RNInAppBrowserPackage;
-   ...
-
-   public class MainApplication extends Application implements ReactApplication {
-       private final ReactNativeHost mReactNativeHost =
-         new ReactNativeHost(this) {
-           ...
-           @Override
-           protected List<ReactPackage> getPackages() {
-   					...
-             List<ReactPackage> packages = new PackageList(this).getPackages();
-             packages.add(new KeychainPackage());
-             packages.add(new RNInAppBrowserPackage());
-   					...
-             return packages;
-           }
-           ...
-         };
-
-     ...
-   }
-   ...
-
-   ```
-
-   In React Native version 0.73 or above, the `MainApplication.java` file has been replaced with `MainApplication.kt`
-
-   ```kotlin
-   import com.oblador.keychain.KeychainPackage;
-   import com.proyecto26.inappbrowser.RNInAppBrowserPackage;
-   ...
-
-   class MainApplication : Application(), ReactApplication {
-       override val reactNativeHost: ReactNativeHost =
-         object : DefaultReactNativeHost(this) {
-           override fun getPackages(): List<ReactPackage> =
-               PackageList(this).packages.apply {
-                 // Packages that cannot be autolinked yet can be added manually here, for example:
-                 // add(MyReactNativePackage())
-                 add(KeychainPackage());
-                 add(RNInAppBrowserPackage());
-               }
-
-           ...
-         }
-
-     ...
-   }
-   ```
-
-6. Execute the command `yarn run android` or `npx expo run:android`
-
-### **iOS**
-
-1. Install the **CocoaPods**. We recommend installing **CocoaPods** using [Homebrew](https://brew.sh/).
-
-   ```shell
-   # Install CocoaPods via brew
-   brew install cocoapods
-
-   ```
-
-2. Install the SDK
-
-   ```shell
-   expo install @kinde-oss/react-native-sdk-0-7x expo-secure-store expo-web-browser expo-constants
-   // or
-   npx expo install @kinde-oss/react-native-sdk-0-7x expo-secure-store expo-web-browser expo-constants
-
-   ```
-
-3. Add the following to your `Podfile` and run pod update:
-
-   ```swift
-   pod 'RNKeychain', :path => '../node_modules/react-native-keychain'
-   pod 'RNInAppBrowser', :path => '../node_modules/react-native-inappbrowser-reborn'
-
-   ```
-
-   ```shell
-   cd ios && pod update
-
-   ```
-
-4. Execute the command `yarn run ios` or `npx expo run:ios`
-
-If you encounter any errors during the SDK installation process, you can refer to the **General tips** section at the bottom of this document, for troubleshooting guidance.
-
-## K**inde configuration**
-
-1. In Kinde, go to **Settings > Applications.**
-2. Select **View details** on the **Frontend app**.
-3. Scroll down to the **Callback URLs** section.
+1. In Kinde, go to **Settings > Applications.**
+2. Select **View details** on the **Frontend app**.
+3. Scroll down to the **Callback URLs** section.
 4. Add in the callback URLs for your React Native app, which should look something like this:
-   - Allowed callback URLs - `<myapp://localhost:3000>/kinde_callback`
-   - Allowed logout redirect URLs - `<myapp://localhost:3000>/kinde_callback`
+   - Allowed callback URLs - `<myapp://localhost:3000>`
+   - Allowed logout redirect URLs - `<myapp://localhost:3000>`
+
 
 Make sure you press the Save button at the bottom of the page!
 
-Note: The `<myapp://localhost:3000>/kinde_callback/kinde_callback` is used as an example of local URL Scheme, change to the local URL Scheme or production URL Scheme that you use.
+Note: The `<myapp://localhost:3000>` is used as an example of local URL Scheme, change to the local URL Scheme or production URL Scheme that you use.
 
-## Environments
 
-If you would like to use our Environments feature as part of your development process. You will need to create them first within your Kinde account. In this case you would use the Environment subdomain in the code block above.
-
-## Configure your app
-
-### **Environment variables**
-
-Put these variables in your .env file. You can find these variables on the same page as where you set the callback URLs.
-
-- `KINDE_ISSUER_URL` - your Kinde domain
-- `KINDE_POST_CALLBACK_URL` - After the user authenticates we will callback to this address. Make sure this URL is under your allowed callback URLs
-- `KINDE_POST_LOGOUT_REDIRECT_URL` - where you want users to be redirected to after logging out. Make sure this URL is under your allowed logout redirect URLs
-- `KINDE_CLIENT_ID` - you can find this on the App Keys page
-
-```jsx
-KINDE_ISSUER_URL=https://<your_kinde_subdomain>.kinde.com
-KINDE_POST_CALLBACK_URL=<myapp://localhost:3000>/kinde_callback
-KINDE_POST_LOGOUT_REDIRECT_URL=<myapp://localhost:3000>/kinde_callback
-KINDE_CLIENT_ID=<your_kinde_client_id>
-
-```
-
-Note: The `myapp://localhost:3000/kinde_callback` is used as an example of local URL Scheme, change to the local URL Scheme or production URL Scheme that you use.
-
-## Configuration deep link
-
-### **Linking to your app**
-
-To link to your [development](https://docs.expo.dev/development/introduction/) build or standalone app, you need to specify a custom URL scheme for your app. You can register a scheme in your Expo config (**app.json**, **app.config.js**) by adding a string under the `scheme` key:
-
-```json
-{
-  "expo": {
-    "scheme": "myapp",
-    ...
-  }
-}
-
-```
-
-### **Linking to Expo Go**
-
-[Expo Go](https://expo.dev/expo-go) uses the `exp://` scheme, however, if we link to `exp://` without any address afterward, it will open the app to the home screen.
-
-In development, your app will live at a url like `exp://127.0.0.1:19000`. When published, an experience will be hosted at a URL like  `exp://u.expo.dev/[project-id]?channel-name=channel-name]&runtime-version=[runtime-version]`, where `u.expo.dev/[project-id]` is the hosted URL that Expo Go fetches from.
-
-**Caution**: You also should update your callback URL to both your app and Kinde.
-
-```jsx
-KINDE_ISSUER_URL=https://your_kinde_domain.kinde.com
-KINDE_POST_CALLBACK_URL=exp://your_machine_ip:your_machine_port // f.e: exp://127.0.0.1:19000
-KINDE_CLIENT_ID=your_kinde_client_id
-KINDE_POST_LOGOUT_REDIRECT_URL=exp://your_machine_ip:your_machine_port // f.e: exp://127.0.0.1:19000
-
-```
-
-## Integrate with your app
-
-To create a new instance of the KindeSDK object, execute the code below.
-
-```jsx
-...
-import { KindeSDK } from '@kinde-oss/react-native-sdk-0-7x';
-...
-
-...
-const client = new KindeSDK(YOUR_KINDE_ISSUER, YOUR_KINDE_REDIRECT_URI, YOUR_KINDE_CLIENT_ID, YOUR_KINDE_LOGOUT_REDIRECT_URI);
-...
-
-```
-
-## Sign in and registration
-
-Kinde provides methods for easily implementing a login / register flow.
-
-As an example if you add buttons as follows.
-
-```jsx
-<View>
-  <View>
-    <Button title="Sign In" onPress={handleSignIn} />
-  </View>
-  <View>
-    <Button title="Sign Up" color="#000" onPress={handleSignUp} />
-  </View>
-</View>
-```
-
-Then define new functions that match for each button.
-
-Note: Make sure you've already defined **KindeSDK** as **client** in the state.
-
-```jsx
-...
-const handleSignUp = async () => {
-  const token = await client.register();
-  if (token) {
-    // User was authenticated
-  }
-};
-
-const handleSignIn = async () => {
-  const token = await client.login();
-  if (token) {
-    // User was authenticated
-  }
-};
-...
-
-```
-
-## **Log out**
-
-This is implemented in much the same way as signing in or registering. The Kinde SPA client comes with a logout method:
-
-```jsx
-const handleLogout = async () => {
-  const loggedOut = await client.logout();
-  if (loggedOut) {
-    // User was logged out
-  }
-};
-```
-
-We have also implemented an API for token revocation. Pass `true` as an argument in the `logout` function. This flag will assist in revoking the token without having to open the website within your apps.
-
-```jsx
-const handleLogout = async () => {
-  const loggedOut = await client.logout(true);
-  if (loggedOut) {
-    // User was logged out
-  }
-};
-```
-
-**Note: Handle redirects are now deprecated**
-
-Starting from version 1.1 of the SDK, the need to handle redirects has been eliminated. Authentication is now performed by launching a web browser within your app instead of relying on an external browser. For a comprehensive example of how to handle authentication, see below.
-
-## **Full code sample for authentication**
-
-```jsx
-const checkAuthenticate = async () => {
-  // Using `isAuthenticated` to check if the user is authenticated or not
-  if (await client.isAuthenticated) {
-    // Need to implement, e.g: call an api, etc...
-  } else {
-    // Need to implement, e.g: redirect user to sign in, etc..
-  }
-};
-
-useEffect(() => {
-  checkAuthenticate();
-}, []);
-
-const handleSignIn = async () => {
-  const token = await client.login();
-
-  if (token) {
-    // Need to implement, e.g: call an api, etc...
-  }
-};
-
-const handleSignUp = async () => {
-  const token = await client.register();
-
-  if (token) {
-    // Need to implement, e.g: call an api, etc...
-  }
-};
-
-const handleLogout = async () => {
-  // With open web in your apps
-  const isLoggedOut = await client.logout();
-
-  if (isLoggedOut) {
-    // Need to implement, e.g: redirect user to login screen, etc...
-  }
-
-  // Without open web in your apps
-  const isLoggedOut = await client.logout();
-
-  if (isLoggedOut) {
-    // Need to implement, e.g: redirect user to login screen, etc...
-  }
-};
-```
-
-## **Get user information**
-
-To access the user information, use the `getUserDetails` helper function.
-
-```jsx
-const userProfile = await client.getUserDetails();
-console.log(userProfile);
-// output: {"given_name":"Dave","id":"abcdef","family_name":"Smith","email":"dave@smith.com"}
-```
-
-## View users in Kinde
-
-Go to the **Users** page within Kinde to see your newly registered user.
 
 ### User Permissions
 
 Once a user has been verified, your product/application will return the JWT token with an array of permissions for that user. You will need to configure your product/application to read permissions and unlock the respective functions.
 
-[Set permissions](/manage-users/roles-and-permissions/user-permissions/) in your Kinde account. Here’s an example set of permissions.
+[Set permissions](/manage-users/roles-and-permissions/user-permissions/) in your Kinde account. Here's an example set of permissions.
 
 ```jsx
 const permissions = [
