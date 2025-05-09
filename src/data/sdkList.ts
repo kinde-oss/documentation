@@ -66,7 +66,7 @@ const sdkList: SDK[] = [
   },
   {
     name: "Expo",
-    link: "/developer-tools/sdks/native/expo-react-native/",
+    link: "/developer-tools/sdks/native/expo/",
     icon: "expo",
     iconWidth: "26",
     type: "Native"
