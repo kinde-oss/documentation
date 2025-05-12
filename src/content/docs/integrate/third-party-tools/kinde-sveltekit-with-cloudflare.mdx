@@ -170,11 +170,6 @@ export async function GET(event: RequestEvent) {
   const url = new URL(event.request.url);
   const path = url.pathname.split('/').pop() || '';
   
-  console.log(`Auth request: ${path}`, {
-    hasStorage: !!storage,
-    hasState: !!url.searchParams.get('state'),
-    hasCode: !!url.searchParams.get('code')
-  });
   
   if (!storage) {
     console.error('KV storage not available');
@@ -203,11 +198,9 @@ export async function GET(event: RequestEvent) {
 // Generate crypto-secure random string for state
 function generateRandomString(length = 32) {
   const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let text = '';
-  for (let i = 0; i < length; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array, b => possible.charAt(b % possible.length)).join('');
 }
 
 // Add this at the top of your file
@@ -228,7 +221,6 @@ function base64URLEncode(buffer: ArrayBuffer): string {
 async function handleLogin(event: RequestEvent, storage: any, isRegister: boolean) {
   // Generate state parameter
   const state = generateRandomString(24);
-  console.log(KINDE_CLIENT_ID, KINDE_CLIENT_SECRET, KINDE_ISSUER_URL, KINDE_REDIRECT_URL, KINDE_POST_LOGIN_REDIRECT_URL, KINDE_POST_LOGOUT_REDIRECT_URL, KINDE_AUTH_WITH_PKCE, SCOPE)
   // For PKCE, generate code challenge
   let codeVerifier: string | undefined;
   let codeChallenge: string | undefined;
@@ -242,7 +234,7 @@ async function handleLogin(event: RequestEvent, storage: any, isRegister: boolea
   }
   
   // Store state (and code verifier if using PKCE)
-  await storage.setState(state, codeVerifier || 'true');
+await storage.setState(state, JSON.stringify({ codeVerifier, redirect: postLoginRedirect }));
   
   // Get additional parameters from URL
   const url = new URL(event.request.url);
@@ -311,6 +303,80 @@ async function handleCallback(event: RequestEvent, storage: any) {
     
     return json({ error: 'Invalid state parameter' }, { status: 401 });
   }
+  
+  // Get code verifier for PKCE if it exists
+  const codeVerifier = storedState === 'true' ? undefined : storedState;
+  
+  // Get post-login redirect URL
+  const redirectUrl = await storage.getState(`redirect:${state}`) || POST_LOGIN_REDIRECT_URL;
+  
+  // Clean up stored state
+  await storage.deleteState(state);
+  await storage.deleteState(`redirect:${state}`);
+  
+  try {
+    // Exchange code for tokens
+    const tokenResponse = await fetchTokens(code, codeVerifier);
+    
+    // Generate a unique session ID for this user
+    const sessionId = generateRandomString(32);
+    
+    // Store tokens in KV storage with user-specific session ID
+    await storage.setState(`session:${sessionId}:tokens`, {
+      access_token: tokenResponse.access_token,
+      refresh_token: tokenResponse.refresh_token || null,
+      id_token: tokenResponse.id_token || null,
+      expires_in: tokenResponse.expires_in || 3600,
+      timestamp: Date.now()
+    });
+    
+    if (KINDE_DEBUG === 'true') {
+      console.log('Tokens stored successfully for session:', sessionId);
+      console.log('Redirecting to:', redirectUrl);
+    }
+    
+    // Extract user ID from tokens if available
+    let userId = null;
+    if (tokenResponse.id_token) {
+      try {
+        // Parse the ID token to get user information
+        const idTokenParts = tokenResponse.id_token.split('.');
+        if (idTokenParts.length >= 2) {
+          const payload = JSON.parse(atob(idTokenParts[1]));
+          userId = payload.sub || null;
+        }
+      } catch (e) {
+        console.error('Failed to extract user ID from token:', e);
+      }
+    }
+    
+    // If we have a user ID, create a mapping for easier lookups
+    if (userId) {
+      await storage.setState(`user:${userId}:session`, sessionId);
+    }
+    
+    // Create a redirect response with proper headers and set session cookie
+    return new Response(null, {
+      status: 302,
+      headers: {
+        'Location': redirectUrl,
+        'Cache-Control': 'no-store',
+        'Set-Cookie': `kinde_session=${sessionId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000` // 30 days
+      }
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Token exchange error:', errorMessage);
+    
+    // Store error for debugging
+    await storage.setState('token_error', {
+      time: new Date().toISOString(),
+      error: safeStringify(error)
+    });
+    
+    return json({ error: 'Token exchange failed' }, { status: 500 });
+  }
+}
   
   // Get code verifier for PKCE if it exists
   const codeVerifier = storedState === 'true' ? undefined : storedState;
@@ -444,15 +510,32 @@ async function fetchTokens(code: string, codeVerifier?: string) {
 
 // Handle logout
 async function handleLogout(event: RequestEvent, storage: any) {
-  // Clear tokens from KV storage
-  await storage.deleteState('tokens');
-  console.log('Tokens deleted during logout');
+  // Get session ID from cookie
+  const cookies = event.request.headers.get('cookie') || '';
+  const sessionMatch = cookies.match(/kinde_session=([^;]+)/);
+  const sessionId = sessionMatch ? sessionMatch[1] : null;
+  
+  if (sessionId) {
+    // Clear tokens for this specific session
+    await storage.deleteState(`session:${sessionId}:tokens`);
+    
+    if (KINDE_DEBUG === 'true') {
+      console.log(`Tokens deleted for session: ${sessionId}`);
+    }
+  }
   
   // Redirect to Kinde's logout endpoint
   const logoutUrl = new URL('/logout', ISSUER_URL);
   logoutUrl.searchParams.append('redirect', POST_LOGOUT_REDIRECT_URL);
   
-  return redirect(302, logoutUrl.toString());
+  // Create a response with a Set-Cookie header to clear the session cookie
+  return new Response(null, {
+    status: 302,
+    headers: {
+      'Location': logoutUrl.toString(),
+      'Set-Cookie': 'kinde_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0' // Clear the cookie
+    }
+  });
 }
 
 // Helper function to safely stringify errors
@@ -473,23 +556,101 @@ function safeStringify(obj: any): string {
 Create `src/routes/+layout.server.ts`:
 
 ```typescript
+import { kindeAuthClient } from '@kinde-oss/kinde-auth-sveltekit';
 import type { LayoutServerLoad } from './$types';
 import { createKindeStorage } from '$lib/kindeCloudflareStorage';
+import { KINDE_ISSUER_URL, KINDE_CLIENT_ID, KINDE_CLIENT_SECRET } from '$env/static/private';
 
 export const load: LayoutServerLoad = async (event) => {
   const storage = createKindeStorage(event);
- 
+  
   if (!storage) {
-	return { authenticated: false };
+    return { authenticated: false };
   }
- 
+  
   try {
-	const tokens = await storage.getState('tokens');
-	return { authenticated: !!tokens?.access_token };
+    // Get session ID from cookie
+    const cookies = event.request.headers.get('cookie') || '';
+    const sessionMatch = cookies.match(/kinde_session=([^;]+)/);
+    const sessionId = sessionMatch ? sessionMatch[1] : null;
+    
+    if (!sessionId) {
+      return { authenticated: false };
+    }
+    
+    // Retrieve tokens for this specific session
+    const tokens = await storage.getState(`session:${sessionId}:tokens`);
+    
+    if (!tokens?.access_token) {
+      return { authenticated: false };
+    }
+    
+    // Check token expiration
+    const now = Date.now();
+    const tokenAge = now - (tokens.timestamp || 0);
+    const expiresIn = tokens.expires_in || 3600; // Default to 1 hour if not specified
+    const tokenExpiresInMs = expiresIn * 1000;
+    
+    // If token is still valid (with 60-second buffer)
+    if (tokenAge < tokenExpiresInMs - 60000) {
+      return { authenticated: true, sessionId };
+    }
+    
+    // If token is expired but we have a refresh token, try to refresh
+    if (tokens.refresh_token) {
+      try {
+        const refreshedTokens = await refreshTokens(tokens.refresh_token);
+        
+        // Store refreshed tokens
+        await storage.setState(`session:${sessionId}:tokens`, {
+          access_token: refreshedTokens.access_token,
+          refresh_token: refreshedTokens.refresh_token || tokens.refresh_token,
+          id_token: refreshedTokens.id_token || tokens.id_token,
+          expires_in: refreshedTokens.expires_in || 3600,
+          timestamp: Date.now()
+        });
+        
+        return { authenticated: true, sessionId };
+      } catch (refreshError) {
+        console.error('Failed to refresh token:', refreshError);
+        // Token refresh failed, user needs to re-authenticate
+        return { authenticated: false };
+      }
+    }
+    
+    return { authenticated: false };
   } catch (error) {
-	return { authenticated: false };
+    console.error('Error checking authentication:', error);
+    return { authenticated: false };
   }
 };
+
+// Function to refresh tokens
+async function refreshTokens(refreshToken: string) {
+  const tokenUrl = new URL('/oauth2/token', KINDE_ISSUER_URL);
+  const params = new URLSearchParams();
+  
+  params.append('grant_type', 'refresh_token');
+  params.append('refresh_token', refreshToken);
+  params.append('client_id', KINDE_CLIENT_ID);
+  params.append('client_secret', KINDE_CLIENT_SECRET);
+  
+  const response = await fetch(tokenUrl.toString(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json'
+    },
+    body: params
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(`Token refresh failed: ${error.error || response.status}`);
+  }
+  
+  return await response.json();
+} 
 ```
 
 ## 9. Protect Routes
