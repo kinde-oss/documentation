@@ -221,6 +221,12 @@ function base64URLEncode(buffer: ArrayBuffer): string {
 async function handleLogin(event: RequestEvent, storage: any, isRegister: boolean) {
   // Generate state parameter
   const state = generateRandomString(24);
+  
+  // Get additional parameters from URL (moved earlier to avoid undefined reference)
+  const url = new URL(event.request.url);
+  const orgCode = url.searchParams.get('org_code');
+  const postLoginRedirect = url.searchParams.get('post_login_redirect_url') || POST_LOGIN_REDIRECT_URL;
+  
   // For PKCE, generate code challenge
   let codeVerifier: string | undefined;
   let codeChallenge: string | undefined;
@@ -233,13 +239,11 @@ async function handleLogin(event: RequestEvent, storage: any, isRegister: boolea
     codeChallenge = base64URLEncode(challengeBuffer);
   }
   
-  // Store state (and code verifier if using PKCE)
-await storage.setState(state, JSON.stringify({ codeVerifier, redirect: postLoginRedirect }));
+  // Store only the code verifier under the state key
+  await storage.setState(state, codeVerifier || '');
   
-  // Get additional parameters from URL
-  const url = new URL(event.request.url);
-  const orgCode = url.searchParams.get('org_code');
-  const postLoginRedirect = url.searchParams.get('post_login_redirect_url') || POST_LOGIN_REDIRECT_URL;
+  // Store redirect separately
+  await storage.setState(`redirect:${state}`, postLoginRedirect);
   
   // Build auth URL
   const authUrl = new URL(isRegister ? '/oauth2/auth/register' : '/oauth2/auth', ISSUER_URL);
@@ -255,9 +259,6 @@ await storage.setState(state, JSON.stringify({ codeVerifier, redirect: postLogin
   if (orgCode) {
     authUrl.searchParams.append('org_code', orgCode);
   }
-  
-  // Store post-login redirect
-  await storage.setState(`redirect:${state}`, postLoginRedirect);
   
   // Add PKCE parameters if enabled
   if (USE_PKCE && codeChallenge) {
@@ -377,56 +378,6 @@ async function handleCallback(event: RequestEvent, storage: any) {
     return json({ error: 'Token exchange failed' }, { status: 500 });
   }
 }
-  
-  // Get code verifier for PKCE if it exists
-  const codeVerifier = storedState === 'true' ? undefined : storedState;
-  
-  // Get post-login redirect URL
-  const redirectUrl = await storage.getState(`redirect:${state}`) || POST_LOGIN_REDIRECT_URL;
-  
-  // Clean up stored state
-  await storage.deleteState(state);
-  await storage.deleteState(`redirect:${state}`);
-  
-  try {
-    // Exchange code for tokens
-    const tokenResponse = await fetchTokens(code, codeVerifier);
-    
-    // Store tokens in KV storage
-    await storage.setState('tokens', {
-      access_token: tokenResponse.access_token,
-      refresh_token: tokenResponse.refresh_token || null,
-      id_token: tokenResponse.id_token || null,
-      expires_in: tokenResponse.expires_in || 3600,
-      timestamp: Date.now()
-    });
-    
-    console.log('Tokens stored successfully');
-    
-    // Log the redirect URL for debugging
-    console.log('Redirecting to:', redirectUrl);
-    
-    // Create a redirect response with proper headers
-    return new Response(null, {
-      status: 302,
-      headers: {
-        'Location': redirectUrl,
-        'Cache-Control': 'no-store'
-      }
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Token exchange error:', errorMessage);
-    
-    // Store error for debugging
-    await storage.setState('token_error', {
-      time: new Date().toISOString(),
-      error: safeStringify(error)
-    });
-    
-    return json({ error: 'Token exchange failed' }, { status: 500 });
-  }
-}
 
 // Exchange authorization code for tokens
 async function fetchTokens(code: string, codeVerifier?: string) {
@@ -443,12 +394,9 @@ async function fetchTokens(code: string, codeVerifier?: string) {
     'Accept': 'application/json'
   };
   
-  // The key fix: Always include client_secret with Kinde, even with PKCE
   if (USE_PKCE && codeVerifier && codeVerifier !== 'true') {
     console.log('Using PKCE flow with code verifier');
     params.append('code_verifier', codeVerifier);
-    
-    // CRITICAL FIX: Kinde requires client_secret even with PKCE flow for server-side apps
     params.append('client_secret', SECRET);
   } else {
     console.log('Using standard authorization code flow with client secret');
@@ -670,7 +618,7 @@ export const load: PageServerLoad = async (event) => {
 	throw redirect(302, '/login');
   }
  
-  const tokens = await storage.getState('tokens');
+ const tokens = await storage.getState(`session:${sessionId}:tokens`);
  
   if (!tokens?.access_token) {
 	throw redirect(302, '/login');
