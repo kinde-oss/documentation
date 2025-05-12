@@ -93,7 +93,25 @@ Logout accepts object which allows you to revoke the token
 kinde.logout({ revokeToken: true })
 ```
 
-### Token utilities
+#### Properties (Only available from `useKindeAuth`)
+
+- `isAuthenticated` - Returns true/false if the user is authenticated
+
+## Kinde configuration
+
+1. In Kinde, go to **Settings > Applications.**
+2. Select **View details** on the **Frontend app**.
+3. Scroll down to the **Callback URLs** section.
+4. Add in the callback URLs for your React Native app, which should look something like this:
+   - Allowed callback URLs - `<myapp://localhost:3000>`
+   - Allowed logout redirect URLs - `<myapp://localhost:3000>`
+
+
+Make sure you press the Save button at the bottom of the page!
+
+Note: The `<myapp://localhost:3000>` is used as an example of local URL Scheme, change to the local URL Scheme or production URL Scheme that you use.
+
+## Token Utilities
 
 All utility functions from `@kinde/js-utils` are available through `@kinde/expo/utils` and also through the `useKindeAuth` hook. This allows you to use these utilities directly in your Expo application.
 
@@ -121,27 +139,6 @@ const checkUserProfile = async () => {
 - `getClaims` - Get all claims from the token
 - `refreshToken` - Manually refresh the access token
 
-#### Properties (Only available from `useKindeAuth`)
-
-- `isAuthenticated` - Returns true/false if the user is authenticated
-
-## Kinde configuration
-
-1. In Kinde, go to **Settings > Applications.**
-2. Select **View details** on the **Frontend app**.
-3. Scroll down to the **Callback URLs** section.
-4. Add in the callback URLs for your React Native app, which should look something like this:
-   - Allowed callback URLs - `<myapp://localhost:3000>`
-   - Allowed logout redirect URLs - `<myapp://localhost:3000>`
-
-
-Make sure you press the Save button at the bottom of the page!
-
-Note: The `<myapp://localhost:3000>` is used as an example of local URL Scheme, change to the local URL Scheme or production URL Scheme that you use.
-
-## Token Utilities
-
-testing
 
 ### `getDecodedToken`
 
@@ -210,7 +207,7 @@ const orgCode = await getCurrentOrganization();
 
 ### `getUserOrganizations`
 
-Returns the current users logged in organization code.
+Returns all organization codes the current user belongs to.
 
 ```typescript
 getUserOrganizations = async (): Promise<string[] | null>
@@ -233,7 +230,9 @@ const orgCode = await getUserOrganizations();
 Get the value of a feature flag.
 
 ```typescript
-getFlag = async (): Promise<string | null>
+getFlag = async <T = string | boolean | number | object>(
+  name: string,
+): Promise<T | null>
 ```
 
 Example usage:
@@ -314,7 +313,7 @@ getRoles = async (): Promise<Role[]>
 Example usage:
 ```javascript
 // Get the feature flag value
-const roles = await getRoles("feature_flag_name");
+const roles = await getRoles();
 // [
 //   {
 //     id: "01932730-c828-c01c-9f5d-c8f15be13e24",
