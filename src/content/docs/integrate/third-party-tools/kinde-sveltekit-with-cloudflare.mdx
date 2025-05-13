@@ -267,9 +267,7 @@ if (USE_PKCE && codeVerifier) {
     authUrl.searchParams.append('code_challenge', codeChallenge);
     authUrl.searchParams.append('code_challenge_method', 'S256');
   }
-  
-  // Redirect to Kinde auth URL
-  console.log(`Redirecting to Kinde auth: ${authUrl.toString()}`);
+
   return redirect(302, authUrl.toString());
 }
 
@@ -361,7 +359,7 @@ const codeVerifier = typeof storedState === 'string' && storedState.length > 0
       headers: {
         'Location': redirectUrl,
         'Cache-Control': 'no-store',
-        'Set-Cookie': `kinde_session=${sessionId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000` // 30 days
+       'Set-Cookie': `kinde_session=${sessionId}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`
       }
     });
   } catch (error) {
@@ -394,19 +392,12 @@ async function fetchTokens(code: string, codeVerifier?: string) {
   };
   
   if (USE_PKCE && codeVerifier && codeVerifier !== 'true') {
-    console.log('Using PKCE flow with code verifier');
     params.append('code_verifier', codeVerifier);
     params.append('client_secret', SECRET);
   } else {
-    console.log('Using standard authorization code flow with client secret');
     params.append('client_secret', SECRET);
   }
   
-  console.log('Token exchange request:', {
-    url: tokenUrl.toString(),
-    isPKCE: USE_PKCE && codeVerifier && codeVerifier !== 'true',
-    hasClientSecret: true
-  });
   
   try {
     const response = await fetch(tokenUrl.toString(), {
@@ -416,13 +407,11 @@ async function fetchTokens(code: string, codeVerifier?: string) {
     });
     
     const responseText = await response.text();
-    console.log('Token response status:', response.status);
     
     // Try to parse the response as JSON
     let responseData;
     try {
       responseData = JSON.parse(responseText);
-      console.log('Token response parsed successfully');
     } catch (parseError) {
       console.error('Failed to parse token response as JSON:', responseText);
       throw new Error(`Invalid JSON response: ${responseText}`);
@@ -444,9 +433,6 @@ async function fetchTokens(code: string, codeVerifier?: string) {
       console.error('Token response missing access_token:', responseData);
       throw new Error('Token response missing required fields');
     }
-    
-    // Log success
-    console.log('Token exchange successful');
     
     return responseData;
   } catch (error) {
