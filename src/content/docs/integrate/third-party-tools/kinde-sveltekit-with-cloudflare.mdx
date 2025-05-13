@@ -298,8 +298,8 @@ async function handleCallback(event: RequestEvent, storage: any) {
   if (!storedState) {
     console.error('State not found:', state);
     
-    // Store error for debugging
-    await storage.setState('last_error', {
+    // Store error for debugging with namespaced key to avoid collisions
+    await storage.setState(`error:${state}`, {
       time: new Date().toISOString(),
       error: 'State not found',
       state
@@ -464,7 +464,7 @@ async function handleLogout(event: RequestEvent, storage: any) {
     status: 302,
     headers: {
       'Location': logoutUrl.toString(),
-      'Set-Cookie': 'kinde_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0' // Clear the cookie
+      'Set-Cookie': 'kinde_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0' // Clear the cookie
     }
   });
 }
