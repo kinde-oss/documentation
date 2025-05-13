@@ -62,6 +62,7 @@ KINDE_POST_LOGOUT_REDIRECT_URL = "https://your-domain.pages.dev"
 KINDE_POST_LOGIN_REDIRECT_URL = "https://your-domain.pages.dev/dashboard"
 KINDE_AUTH_WITH_PKCE = "true"
 KINDE_SCOPE = 'openid profile email offline'
+KINDE_DEBUG = "false"
 ```
 
 ## 5. Create a KV Storage Adapter
@@ -153,7 +154,7 @@ Create `src/routes/api/auth/[...kindeAuth]/+server.ts`:
 import { json, redirect } from '@sveltejs/kit';
 import type { RequestEvent } from "@sveltejs/kit";
 import { createKindeStorage } from '$lib/kindeCloudflareStorage';
-import { KINDE_ISSUER_URL, KINDE_CLIENT_ID, KINDE_CLIENT_SECRET, KINDE_REDIRECT_URL, KINDE_POST_LOGIN_REDIRECT_URL, KINDE_POST_LOGOUT_REDIRECT_URL, KINDE_AUTH_WITH_PKCE } from '$env/static/private';
+import { KINDE_ISSUER_URL, KINDE_CLIENT_ID, KINDE_CLIENT_SECRET, KINDE_REDIRECT_URL, KINDE_POST_LOGIN_REDIRECT_URL, KINDE_POST_LOGOUT_REDIRECT_URL, KINDE_AUTH_WITH_PKCE,KINDE_SCOPE } from '$env/static/private';
 
 // Get environment variables
 const SECRET = KINDE_CLIENT_SECRET;
@@ -162,7 +163,7 @@ const CLIENT_ID = KINDE_CLIENT_ID;
 const REDIRECT_URL = KINDE_REDIRECT_URL;
 const POST_LOGIN_REDIRECT_URL = KINDE_POST_LOGIN_REDIRECT_URL;
 const POST_LOGOUT_REDIRECT_URL = KINDE_POST_LOGOUT_REDIRECT_URL;
-const SCOPE = 'openid profile email offline'
+const SCOPE = KINDE_SCOPE
 const USE_PKCE = KINDE_AUTH_WITH_PKCE === 'true';
 
 export async function GET(event: RequestEvent) {
@@ -239,8 +240,9 @@ async function handleLogin(event: RequestEvent, storage: any, isRegister: boolea
     codeChallenge = base64URLEncode(challengeBuffer);
   }
   
-  // Store only the code verifier under the state key
-  await storage.setState(state, codeVerifier || '');
+if (USE_PKCE && codeVerifier) {
+    await storage.setState(state, codeVerifier);
+  }
   
   // Store redirect separately
   await storage.setState(`redirect:${state}`, postLoginRedirect);
@@ -305,8 +307,9 @@ async function handleCallback(event: RequestEvent, storage: any) {
     return json({ error: 'Invalid state parameter' }, { status: 401 });
   }
   
-  // Get code verifier for PKCE if it exists
-  const codeVerifier = storedState === 'true' ? undefined : storedState;
+const codeVerifier = typeof storedState === 'string' && storedState.length > 0
+    ? storedState
+    : undefined;
   
   // Get post-login redirect URL
   const redirectUrl = await storage.getState(`redirect:${state}`) || POST_LOGIN_REDIRECT_URL;
@@ -330,11 +333,7 @@ async function handleCallback(event: RequestEvent, storage: any) {
       expires_in: tokenResponse.expires_in || 3600,
       timestamp: Date.now()
     });
-    
-    if (KINDE_DEBUG === 'true') {
-      console.log('Tokens stored successfully for session:', sessionId);
-      console.log('Redirecting to:', redirectUrl);
-    }
+
     
     // Extract user ID from tokens if available
     let userId = null;
@@ -464,12 +463,7 @@ async function handleLogout(event: RequestEvent, storage: any) {
   const sessionId = sessionMatch ? sessionMatch[1] : null;
   
   if (sessionId) {
-    // Clear tokens for this specific session
     await storage.deleteState(`session:${sessionId}:tokens`);
-    
-    if (KINDE_DEBUG === 'true') {
-      console.log(`Tokens deleted for session: ${sessionId}`);
-    }
   }
   
   // Redirect to Kinde's logout endpoint
@@ -615,17 +609,40 @@ export const load: PageServerLoad = async (event) => {
   const storage = createKindeStorage(event);
  
   if (!storage) {
-	throw redirect(302, '/login');
+    throw redirect(302, '/api/auth/login');
   }
- 
- const tokens = await storage.getState(`session:${sessionId}:tokens`);
- 
+  
+  const cookies = event.request.headers.get('cookie') || '';
+  const sessionMatch = cookies.match(/kinde_session=([^;]+)/);
+  const sessionId = sessionMatch ? sessionMatch[1] : null;
+  
+  if (!sessionId) {
+    throw redirect(302, '/api/auth/login');
+  }
+  
+  // Now we can safely access the tokens with the sessionId
+  const tokens = await storage.getState(`session:${sessionId}:tokens`);
+  
   if (!tokens?.access_token) {
-	throw redirect(302, '/login');
+    throw redirect(302, '/api/auth/login');
   }
  
-  return { authenticated: true };
+  return { 
+    authenticated: true,
+    userId: tokens.id_token ? getUserIdFromToken(tokens.id_token) : null
+  };
 };
+
+// Helper function to get user ID from ID token
+function getUserIdFromToken(idToken) {
+  try {
+    const payload = JSON.parse(atob(idToken.split('.')[1]));
+    return payload.sub;
+  } catch (e) {
+    console.error('Failed to extract user ID from token');
+    return null;
+  }
+} 
 ```
 
 Your Kinde authentication is now working with SvelteKit on Cloudflare Pages!
