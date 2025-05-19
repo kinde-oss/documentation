@@ -46,20 +46,60 @@ You'll now see it in your list of installed extensions. The first time you launc
 File format guidelines:
 
 - User details and passwords must be in NDJSON (Newline Delimited JSON) format
-- Import file size limit is 5MB. You may need to split the file if the exported size exceeds this.
+- Import file size limit is 20MB. You may need to split the file if the exported size exceeds this.
 
 ### Supported auth methods
 
 Kinde supports migrating the following authentication methods from Auth0: Usernames, Email, Phone, Google, Apple, Microsoft, Facebook, GitHub, Twitch, Bitbucket. If you need to migrate another authentication type from Auth0 please get in touch with support.
 
+Auth methods are shown in the `connection` attribute. These are represented as follows in the identity array:
+
+- Username-Password-Authentication
+- email
+- sms
+- google-oauth2
+- github
+- twitch
+- facebook
+- bitbucket
+- windowslive
+
+Here's an example of the an identity extracted from Auth0.
+
+```js
+{
+  "Id": "auth0|001",
+  "Given Name": "Joe Bloggs",
+  "Nickname": "Joey",
+  "Name": "Joe Bloggs",
+  "Email": "joe@bloggs.com",
+  "Email Verified": false,
+  "Connection": "Username-Password-Authentication",
+  "Created At": "2022-11-29T09:24:17.907Z",
+  "Updated At": "2022-11-29T09:24:17.907Z",
+  "identities": [
+    {
+      "profileData": {
+        "email": "joe@bloggs.com",
+        "email_verified": false
+      },
+      "provider": "auth0",
+      "connection": "Username-Password-Authentication",
+      "isSocial": false,
+      "user_id": "001"
+    }
+  ]
+}
+```
+
 ### Can’t get the passwords from Auth0?
 
-Some Auth0 plans don’t allow password exports, or you might not want to wait 2 weeks for the json file. If this is the case, import the user data you’re able to, and Kinde will ask users to set a new password the next time they sign in.
+Some Auth0 plans don’t allow password exports, or you might not want to wait 2 weeks for the file. If this is the case, import the user data you’re able to, and Kinde will ask users to set a new password the next time they sign in.
 
 ### Export Auth0 data
 
 1. Launch the extension by selecting **Import / Export Extension.**
-2. **E**xport your existing Auth0 users associated with database connections, select **Export**.
+2. Export your existing Auth0 users associated with database connections, select **Export**.
 
    ![Auth0 export selections screen shot](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0748f464-d46f-4455-20dc-8f1c677fbb00/public)
 
@@ -87,7 +127,7 @@ Once the password hashes have been imported, your users will be able to sign in 
 
 ### How Auth0 user identities are treated on import
 
-Social identities without an email can be imported, and are identified by the identity type. You can import users with multiple identities, these will be listed under the user’s profile.
+Social identities without an email can be imported, and are identified by the connection type. You can also import users with multiple identities, these will be listed under the user’s profile. 
 
 ## After the migration
 
