@@ -12,15 +12,15 @@ app_context:
   - m: profile
 ---
 
-You can import users in bulk, from CSV or from other files provided by your previous authentication service, such as Auth0.
+You can import users in bulk, from CSV, JSON, or from other files provided by your previous authentication service, such as Auth0.
 
 ## File requirements
 
 - Non Auth0 data - User details and passwords need to be in UTF-8 encoded CSV format
 - Auth0 data - User details and passwords need to be in NDJSON (Newline Delimited JSON) format
-- File size limit 5MB
+- File size up to 20MB supported
 
-If you’ve got large user sets (over 5MB) or are concerned about file size limits, contact us to ensure the import goes smoothly.
+If you’ve got large user sets (over 20MB) or are concerned about file size limits, you might consider importing in batches, or contact us for import support.
 
 ## Before you import users
 
@@ -36,21 +36,203 @@ Kinde treats usernames as case-insensitive. In other words, we ignore case. We d
 
 We are happy to support users choosing an aesthetically pleasing username combination, like `RosyRose` or `BuilderBob`. We just don't also support separate identities for `rosYrosE` and `BUilderbob`. Before importing users, we recommend checking that all usernames are unique in more than just case.
 
-## Prepare JSON data (Auth0 imports)
+## Prepare NDJSON data (Auth0 imports)
 
 When you export user details from Auth0:
 
 - select all the default fields and add the `identities` field to the import list.
-- select the JSON file format for export.
+- select the NDJSON file format for export.
 
-`Identities` data distinguishes the type of identity, e.g. username, phone, GitHub, Google, etc.
+`Identities` data distinguishes the type of identity, specifically the `connection` attribute. e.g. username, phone, GitHub, Google, etc.
+
+Example of the NDJSON file format
+
+```js
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "User Object",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string" },
+    "first_name": { "type": "string" },
+    "last_name": { "type": "string" },
+    "email": { "type": "string", "format": "email" },
+    "email_verified": { "type": "boolean" },
+    "created_on": { "type": "string", "format": "date-time" },
+    "identities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "identity": { "type": "string" },
+          "user_id": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": [
+              "oauth2:slack",
+              "oauth2:github",
+              "oauth2:twitch",
+              "oauth2:gitlab",
+              "oauth2:linkedin",
+              "oauth2:facebook",
+              "oauth2:xero",
+              "oauth2:bitbucket",
+              "oauth2:stripe",
+              "wsfed:azure_ad",
+              "oauth2:discord",
+              "oauth2:twitter",
+              "phone",
+              "username",
+              "email",
+              "oauth2:microsoft",
+              "oauth2:azure_ad",
+              "oauth2:google",
+              "oauth2:clever",
+              "oauth2:apple",
+              "oauth2:roblox"
+            ]
+          },
+          "is_verified": { "type": "boolean" }
+        }
+      }
+    },
+    "organizations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "external_id": { "type": "string" },
+          "roles": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "permissions": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "audience": { "type": "string" },
+                "scope": { "type": "string" }
+              },
+              "required": ["audience", "scope"]
+            }
+          }
+        }
+      }
+    },
+    "feature_flags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string" },
+          "value": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" },
+              { "type": "object" }
+            ]
+          }
+        },
+        "required": ["key", "value"]
+      }
+    },
+    "properties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string" },
+          "value": { "type": "string" }
+        },
+        "required": ["key", "value"]
+      }
+    },
+    "password": {
+      "type": "object",
+      "properties": {
+        "hashed_password": { "type": "string" },
+        "hashing_algorithm": { "type": "string" },
+        "salt": { "type": "string" },
+        "salt_position": { "type": "string", "enum": ["prefix", "suffix", "none"] },
+        "salt_format": { "type": "string" }
+      },
+      "required": [
+        "hashed_password",
+        "hashing_algorithm"
+      ]
+    }
+  }
+}
+```
+
+Example of a single line of user data in NDJSON
+
+```js
+{
+  "id": "001",
+  "first_name": "John",
+  "last_name": "Snow",
+  "email": "john@snow.com",
+  "email_verified": true,
+  "created_on": "2025-05-08T13:00:23+01:00",
+  "identities": [
+    {
+      "identity": "john@snow.com",
+      "type": "email",
+      "is_verified": true
+    }
+  ],
+  "organizations": [
+    {
+      "external_id": "org_1",
+      "roles": ["admin", "member"],
+      "permissions": ["read", "write"],
+      "scopes": [
+        { "audience": "myapi", "scope": "user" }
+      ]
+    }
+  ],
+  "feature_flags": [
+    { "key": "feature_bool", "value": "true" },
+    { "key": "feature_int", "value": "1" },
+    { "key": "feature_text", "value": "hello world" }
+  ],
+  "properties": [
+    { "key": "kp_usr_city", "value": "Bristol" },
+    { "key": "kp_usr_industry", "value": "Technology" }
+  ],
+  "password": {
+    "hashed_password": "e7bd1e090a921de087269f9ac10336fb",
+    "hashing_algorithm": "md5",
+    "salt": "salty",
+    "salt_position": "prefix",
+    "salt_format": "hex"
+  }
+}
+```
 
 ### How Auth0 user identities are treated on import
 
-Social identities without an email can be imported, and are identified by the identity type. You can import users with multiple identities, these will be listed under the user’s profile.
+Social identities without an email can be imported, and are identified by the connection type. You can import users with multiple identities, these will be listed under the user’s profile.
 
-Kinde supports migrating the following authentication methods from Auth0: Usernames, Email, Phone, Google, Apple, Microsoft, Facebook, GitHub, Twitch, Bitbucket.
-If you need to migrate another authentication type from Auth0 please get in touch with support.
+Kinde supports migrating the following authentication methods from Auth0: Usernames, Email, Phone, Google, Apple, Microsoft, Facebook, GitHub, Twitch, Bitbucket. Auth methods are shown in the `connection` attribute. These are represented as follows in the identity data:
+
+- Username-Password-Authentication
+- email
+- sms
+- google-oauth2
+- github
+- twitch
+- facebook
+- bitbucket
+- windowslive
+
 
 ### Import options
 
@@ -159,7 +341,7 @@ id,roles,permissions,external_organization_id
 0001,"role_3,role_4","permission_3,permission_4","ext_org_id_2"
 ```
 
-## **How to import users**
+## How to import users
 
 1. In Kinde, go to **Users**, then select **Import users**.
 2. Select the option for your situation:
@@ -183,7 +365,7 @@ When you import passwords via CSV, Kinde does not check for password strength. H
 
 In future, we may add the ability to check password strength and initiate a password change if it's deemed to weak by standard password criteria.
 
-## Re-**importing does not update user info**
+## Re-importing does not update user info
 
 If you add a user via import and they start authenticating via Kinde, and then you import their records again with changes - for example, a name change or a new email - that information will not be updated in Kinde.
 
