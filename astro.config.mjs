@@ -49,7 +49,9 @@ export default defineConfig({
     "/developer-tools/kinde-api/get-access-token-for-connecting-securely-to-kindes-api/":
       "/developer-tools/kinde-api/access-token-for-api/",
     "/developer-tools/kinde-api/test-the-connection-to-kindes-api/":
-      "/developer-tools/kinde-api/troubleshoot-kinde-api/"
+      "/developer-tools/kinde-api/troubleshoot-kinde-api/",
+    "/developer-tools/sdks/native/expo-react-native/": 
+    "/developer-tools/sdks/native/expo/"
   },
   markdown: {
     rehypePlugins: [

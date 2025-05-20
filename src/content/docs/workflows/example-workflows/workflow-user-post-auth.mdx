@@ -34,92 +34,49 @@ If the user has been invited to join multiple organizations you can add them as 
 
 ### Determine if the user is a first time user
 
-Users can be created in multiple ways (imported / API / via the UI / self-registration). This could well be an existing user in your own database, so we tell you if this is a new user from a Kinde perspective. i.e we create a new record so you can act accordingly.
+Users can be created in multiple ways (imported / API / via the UI / self-registration). This could well be an existing user in your own database, so we tell you if this is a new user from a Kinde perspective. i.e we create a new record so you can act accordingly. [Example code](https://github.com/kinde-starter-kits/workflow-examples/blob/main/postUserAuthentication/syncNewUserToHubspotWorkflow.ts)
 
 ## Workflow code
 
-### The event object
+### Sample event object
 
 The main argument provided to your code is the Kinde workflow `event` object which has two keys `request` and `context`. This gives you access to the reason the workflow was triggered and additional relevant datapoints. Here's an example:
 
-```jsx
+```json
 {
-    "request": {
-        "ip": "***",
-        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:135.0) Gecko/20100101 Firefox/135.0",
-        "authUrlParams": {
-            "state": "b9ea1131f7796a10abe8eac1b48c715575a0ffd349fb9c602e13d824",
-            "orgCode": "org_12345667",
-            "clientId": "cad2d86b1ac645e1957889fcb1eff0f9",
-            "redirectUri": "http://localhost:3000"
-        }
-    },
-    "context": {
-        "auth": {
-            "connectionId": "conn_0194ee03c226d48c6858d5a412359ed2",
-            "isNewUserRecordCreated": true
-        },
-        "user": { 
-            "id": "kp_6e54d9612e8748b39557c9975bdba033"
-        },
-        "domains": { 
-            "kindeDomain": "https://newbus.localkinde.me"
-        },
-        "workflow": { 
-            "trigger": "user:post_authentication"
-        },
-        "application": {
-            "clientId": "cad2d86b1ac645e1957889fcb1eff0f9"
-        }
+  "request": {
+    "ip": "***",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:135.0) Gecko/20100101 Firefox/135.0",
+    "authUrlParams": {
+      "state": "b9ea1131f7796a10abe8eac1b48c715575a0ffd349fb9c602e13d824",
+      "orgCode": "org_12345667",
+      "clientId": "cad2d86b1ac645e1957889fcb1eff0f9",
+      "redirectUri": "http://localhost:3000"
     }
+  },
+  "context": {
+    "auth": {
+      "connectionId": "conn_0194ee03c226d48c6858d5a412359ed2",
+      "isNewUserRecordCreated": true
+    },
+    "user": {
+      "id": "kp_6e54d9612e8748b39557c9975bdba033"
+    },
+    "domains": {
+      "kindeDomain": "https://newbus.localkinde.me"
+    },
+    "workflow": {
+      "trigger": "user:post_authentication"
+    },
+    "application": {
+      "clientId": "cad2d86b1ac645e1957889fcb1eff0f9"
+    }
+  }
 }
-
 ```
 
-### Workflow settings
+### Example workflows
 
-```jsx
-export const workflowSettings = {
-  id: "postAuthentication",
-  name: "Post-authentication",
-  failurePolicy: {
-    action: "stop",
-  },
-  trigger: "user:post_authentication",
-  bindings: {},
-};
-```
+See examples on GitHub:
 
-Example determining if first time user:
-
-```jsx
-import {
-  onPostAuthenticationEvent,
-  WorkflowSettings,
-  WorkflowTrigger,
-  } from "@kinde/infrastructure";
-
-export const workflowSettings: WorkflowSettings = {
-  id: "postAuthentication",
-  name: "Post authentication",
-  failurePolicy: {
-    action: "stop",
-  },
-  trigger: WorkflowTrigger.PostAuthentication,
-  bindings: {
-    "kinde.fetch": {}, // Required for external API calls
-    "kinde.env": {}, // required to access your environment variables
-    url: {}, // required for url params
-  },
-};
-
-export default async function handlePostAuth(event: onPostAuthenticationEvent) {
-
-	const isNewKindeUser = event.context.auth.isNewUserRecordCreated;
-	
-	// The user has been added to the Kinde user pool for the first time
-	if (isNewKindeUser) {
-		// do something
-	}
-   
-};
+[Sync new user data to Hubspot](https://github.com/kinde-starter-kits/workflow-examples/blob/main/postUserAuthentication/syncNewUserToHubspotWorkflow.ts) - Send user data and UTM tags to Hubspot when a new user record is created in Kinde.
