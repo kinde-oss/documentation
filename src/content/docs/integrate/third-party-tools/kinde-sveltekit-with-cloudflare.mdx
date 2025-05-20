@@ -1,22 +1,31 @@
 ---
 page_id: 4f3a9e2a-12eb-4b4c-8790-48b6e09a224d
-title: "Integrating Kinde Authentication with SvelteKit on Cloudflare Pages"
-description: "A step-by-step guide to implement Kinde authentication in a SvelteKit application deployed to Cloudflare Pages"
+title: Kinde with Sveltekit on Cloudflare Pages
+sidebar:
+  order: 9
+relatedArticles:
+  - 855e5ca8-f2fb-4162-a594-10cee8a2ff8b
+  - f1ba22b9-b35f-478a-be09-4524d060fe36
+  - 00d62179-e0e8-489c-90f7-9a593f3b058a
 ---
 
 
 This guide walks you through implementing Kinde authentication in a SvelteKit application deployed to Cloudflare Pages using KV storage for state management.
 
 
-> Note: This implementation is more complex than ideal due to Cloudflare's serverless environment constraints. We're working on more elegant solutions, but this guide provides a robust working implementation.
+<Aside type="warning">
 
-## Prerequisites
+This implementation is more complex than ideal due to Cloudflare's serverless environment constraints. We're working on more elegant solutions, but this guide provides a robust working implementation.
+
+</Aside>
+
+## What you need
 
 - A Cloudflare account
 - A Kinde account (register at [kinde.com](https://kinde.com))
 - SvelteKit project ready for Cloudflare Pages deployment
 
-## 1. Set Up a Kinde application
+## Step 1: Set Up a Kinde application
 
 1. Sign in to your Kinde account.
 2. Go to **Settings > Applications**.
@@ -26,20 +35,20 @@ This guide walks you through implementing Kinde authentication in a SvelteKit ap
    - Allowed logout redirect URL: `https://your-domain.pages.dev`
 5. Note your **Client ID** and **Client Secret**.
 
-## 2. Install required dependencies
+## Step 2: Install required dependencies
 
 ```bash
 npm install @kinde-oss/kinde-auth-sveltekit
 npm install -D @sveltejs/adapter-cloudflare
 ```
 
-## 3. Configure Cloudflare KV Storage
+## Step 3: Configure Cloudflare KV Storage
 
 1. In Cloudflare, go to **Workers & Pages > KV**.
 2. Create a new namespace (e.g., `AUTH_STORAGE`).
 3. Copy the namespace ID.
 
-## 4. Set Up Wrangler configuration
+## Step 4: Set Up Wrangler configuration
 
 Update your `wrangler.toml`:
 
@@ -64,11 +73,11 @@ KINDE_SCOPE = "openid profile email offline"
 KINDE_DEBUG = "false"
 ```
 
-## 4.1 Add KINDE_CLIENT_SECRET Separately from a .dev.vars file to avoid leaking your secret. 
+###  Add KINDE_CLIENT_SECRET separately from a .dev.vars file to avoid leaking your secret. 
 
 npx wrangler secret put KINDE_CLIENT_SECRET
 
-## 5. Create a KV Storage Adapter
+## Step 5: Create a KV Storage Adapter
 
 Create `src/lib/kindeCloudflareStorage.ts`:
 
@@ -129,7 +138,7 @@ export const createKindeStorage = (event: RequestEvent) => {
 };
 ```
 
-## 6. Set up SvelteKit Hooks
+## Step 6: Set up SvelteKit hooks
 
 Update `src/hooks.server.ts`:
 
@@ -149,7 +158,7 @@ export const handle: Handler = async ({ event, resolve }) => {
 };
 ```
 
-## 7. Implement authentication routes
+## Step 7: Implement authentication routes
 
 Create `src/routes/api/auth/[...kindeAuth]/+server.ts`:
 
@@ -482,7 +491,7 @@ function safeStringify(obj: any): string {
   }
 } 
 ```
-## 8. Check Authentication Status
+## Step 8: Check authentication status
 
 Create `src/routes/+layout.server.ts`:
 
@@ -584,7 +593,7 @@ async function refreshTokens(refreshToken: string) {
 } 
 ```
 
-## 9. Protect routes
+## Step 9: Protect routes
 
 For protected routes like a dashboard:
 
