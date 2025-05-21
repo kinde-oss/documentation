@@ -1,0 +1,647 @@
+---
+page_id: 4f3a9e2a-12eb-4b4c-8790-48b6e09a224d
+title: Kinde with Sveltekit on Cloudflare Pages
+sidebar:
+  order: 9
+relatedArticles:
+  - 855e5ca8-f2fb-4162-a594-10cee8a2ff8b
+  - f1ba22b9-b35f-478a-be09-4524d060fe36
+  - 00d62179-e0e8-489c-90f7-9a593f3b058a
+---
+
+
+This guide walks you through implementing Kinde authentication in a SvelteKit application deployed to Cloudflare Pages using KV storage for state management.
+
+
+<Aside type="warning">
+
+This implementation is more complex than ideal due to Cloudflare's serverless environment constraints. We're working on more elegant solutions, but this guide provides a robust working implementation.
+
+</Aside>
+
+## What you need
+
+- A Cloudflare account
+- A Kinde account (register at [kinde.com](https://kinde.com))
+- SvelteKit project ready for Cloudflare Pages deployment
+
+## Step 1: Set Up a Kinde application
+
+1. Sign in to your Kinde account.
+2. Go to **Settings > Applications**.
+3. Create a new Sveltekit application.
+4. Configure the callback URLs:
+   - Allowed callback URL: `https://your-domain.pages.dev/api/auth/kinde_callback`
+   - Allowed logout redirect URL: `https://your-domain.pages.dev`
+5. Note your **Client ID** and **Client Secret**.
+
+## Step 2: Install required dependencies
+
+```bash
+npm install @kinde-oss/kinde-auth-sveltekit
+npm install -D @sveltejs/adapter-cloudflare
+```
+
+## Step 3: Configure Cloudflare KV Storage
+
+1. In Cloudflare, go to **Workers & Pages > KV**.
+2. Create a new namespace (e.g., `AUTH_STORAGE`).
+3. Copy the namespace ID.
+
+## Step 4: Set Up Wrangler configuration
+
+Update your `wrangler.toml`:
+
+```toml
+name = "your-project-name"
+compatibility_date = "2023-06-28"
+compatibility_flags = ["nodejs_compat_v2"]
+pages_build_output_dir = "./svelte-kit/cloudflare"
+
+kv_namespaces = [
+  { binding = "AUTH_STORAGE", id = "your-namespace-id" }
+]
+
+[vars]
+KINDE_ISSUER_URL = "https://your-kinde-domain.kinde.com"
+KINDE_CLIENT_ID = "your-client-id"
+KINDE_REDIRECT_URL = "https://your-domain.pages.dev/api/auth/kinde_callback"
+KINDE_POST_LOGOUT_REDIRECT_URL = "https://your-domain.pages.dev"
+KINDE_POST_LOGIN_REDIRECT_URL = "https://your-domain.pages.dev/dashboard"
+KINDE_AUTH_WITH_PKCE = "true"
+KINDE_SCOPE = "openid profile email offline"
+KINDE_DEBUG = "false"
+```
+
+###  Add KINDE_CLIENT_SECRET separately from a .dev.vars file to avoid leaking your secret. 
+```bash
+npx wrangler secret put KINDE_CLIENT_SECRET
+```
+## Step 5: Create a KV Storage Adapter
+
+Create `src/lib/kindeCloudflareStorage.ts`:
+
+```typescript
+import type { RequestEvent } from '@sveltejs/kit';
+
+export const createKindeStorage = (event: RequestEvent) => {
+  const platform = event.platform as any;
+  const env = platform?.env;
+  const AUTH_STORAGE = env?.AUTH_STORAGE;
+ 
+  if (!AUTH_STORAGE) {
+	return null;
+  }
+ 
+  return {
+	setState: async (stateId: string, stateData: any) => {
+  	try {
+    	const key = `kinde:state:${stateId}`;
+    	const value = typeof stateData === 'string'
+      	? stateData
+      	: JSON.stringify(stateData);
+   	 
+    	await AUTH_STORAGE.put(key, value, { expirationTtl: 600 });
+    	return true;
+  	} catch (error) {
+    	return false;
+  	}
+	},
+    
+	getState: async (stateId: string) => {
+  	try {
+    	const key = `kinde:state:${stateId}`;
+    	const value = await AUTH_STORAGE.get(key);
+   	 
+    	if (!value) return null;
+   	 
+    	try {
+      	return JSON.parse(value);
+    	} catch {
+      	return value;
+    	}
+  	} catch (error) {
+    	return null;
+  	}
+	},
+    
+	deleteState: async (stateId: string) => {
+  	try {
+    	const key = `kinde:state:${stateId}`;
+    	await AUTH_STORAGE.delete(key);
+    	return true;
+  	} catch (error) {
+    	return false;
+  	}
+	}
+  };
+};
+```
+
+## Step 6: Set up SvelteKit hooks
+
+Update `src/hooks.server.ts`:
+
+```typescript
+import { sessionHooks, type Handler } from '@kinde-oss/kinde-auth-sveltekit';
+import { createKindeStorage } from '$lib/kindeCloudflareStorage';
+
+export const handle: Handler = async ({ event, resolve }) => {
+  const storage = createKindeStorage(event);
+ 
+  sessionHooks({
+	event,
+	...(storage ? { storage } : {})
+  });
+ 
+  return await resolve(event);
+};
+```
+
+## Step 7: Implement authentication routes
+
+Create `src/routes/api/auth/[...kindeAuth]/+server.ts`:
+
+```typescript
+import { json, redirect } from '@sveltejs/kit';
+import type { RequestEvent } from "@sveltejs/kit";
+import { createKindeStorage } from '$lib/kindeCloudflareStorage';
+import { KINDE_ISSUER_URL, KINDE_CLIENT_ID, KINDE_CLIENT_SECRET, KINDE_REDIRECT_URL, KINDE_POST_LOGIN_REDIRECT_URL, KINDE_POST_LOGOUT_REDIRECT_URL, KINDE_AUTH_WITH_PKCE,KINDE_SCOPE } from '$env/static/private';
+
+// Get environment variables
+const SECRET = KINDE_CLIENT_SECRET;
+const ISSUER_URL = KINDE_ISSUER_URL;
+const CLIENT_ID = KINDE_CLIENT_ID;
+const REDIRECT_URL = KINDE_REDIRECT_URL;
+const POST_LOGIN_REDIRECT_URL = KINDE_POST_LOGIN_REDIRECT_URL;
+const POST_LOGOUT_REDIRECT_URL = KINDE_POST_LOGOUT_REDIRECT_URL;
+const SCOPE = KINDE_SCOPE
+const USE_PKCE = KINDE_AUTH_WITH_PKCE === 'true';
+
+export async function GET(event: RequestEvent) {
+  const storage = createKindeStorage(event);
+  const url = new URL(event.request.url);
+  const path = url.pathname.split('/').pop() || '';
+  
+  
+  if (!storage) {
+    console.error('KV storage not available');
+    return json({ error: 'KV storage not available' }, { status: 500 });
+  }
+  
+  // Handle various auth endpoints
+  switch (path) {
+    case 'login':
+      return handleLogin(event, storage, false);
+    
+    case 'register':
+      return handleLogin(event, storage, true);
+    
+    case 'kinde_callback':
+      return handleCallback(event, storage);
+    
+    case 'logout':
+      return handleLogout(event, storage);
+    
+    default:
+      return json({ error: 'Unknown auth endpoint' }, { status: 404 });
+  }
+}
+
+// Generate crypto-secure random string for state
+function generateRandomString(length = 32) {
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array, b => possible.charAt(b % possible.length)).join('');
+}
+
+// Add this at the top of your file
+async function sha256(plain: string): Promise<ArrayBuffer> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plain);
+  return await crypto.subtle.digest('SHA-256', data);
+}
+
+function base64URLEncode(buffer: ArrayBuffer): string {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+// Handle login or registration
+async function handleLogin(event: RequestEvent, storage: any, isRegister: boolean) {
+  // Generate state parameter
+  const state = generateRandomString(24);
+  
+  // Get additional parameters from URL (moved earlier to avoid undefined reference)
+  const url = new URL(event.request.url);
+  const orgCode = url.searchParams.get('org_code');
+  const postLoginRedirect = url.searchParams.get('post_login_redirect_url') || POST_LOGIN_REDIRECT_URL;
+  
+  // For PKCE, generate code challenge
+  let codeVerifier: string | undefined;
+  let codeChallenge: string | undefined;
+  
+  if (USE_PKCE) {
+    codeVerifier = generateRandomString(64);
+    
+    // Create proper code challenge with SHA-256
+    const challengeBuffer = await sha256(codeVerifier);
+    codeChallenge = base64URLEncode(challengeBuffer);
+  }
+  
+if (USE_PKCE && codeVerifier) {
+    await storage.setState(state, codeVerifier);
+  }
+  
+  // Store redirect separately
+  await storage.setState(`redirect:${state}`, postLoginRedirect);
+  
+  // Build auth URL
+  const authUrl = new URL(isRegister ? '/oauth2/auth/register' : '/oauth2/auth', ISSUER_URL);
+  
+  // Add standard OAuth parameters
+  authUrl.searchParams.append('client_id', CLIENT_ID);
+  authUrl.searchParams.append('redirect_uri', REDIRECT_URL);
+  authUrl.searchParams.append('response_type', 'code');
+  authUrl.searchParams.append('scope', SCOPE);
+  authUrl.searchParams.append('state', state);
+  
+  // Add optional parameters
+  if (orgCode) {
+    authUrl.searchParams.append('org_code', orgCode);
+  }
+  
+  // Add PKCE parameters if enabled
+  if (USE_PKCE && codeChallenge) {
+    authUrl.searchParams.append('code_challenge', codeChallenge);
+    authUrl.searchParams.append('code_challenge_method', 'S256');
+  }
+
+  return redirect(302, authUrl.toString());
+}
+
+// Handle OAuth callback
+async function handleCallback(event: RequestEvent, storage: any) {
+  const url = new URL(event.request.url);
+  const code = url.searchParams.get('code');
+  const state = url.searchParams.get('state');
+  const error = url.searchParams.get('error');
+  
+  // Check for OAuth errors
+  if (error) {
+    console.error('OAuth error:', error);
+    return json({ error: `OAuth error: ${error}` }, { status: 400 });
+  }
+  
+  // Validate required parameters
+  if (!code || !state) {
+    console.error('Missing code or state parameter');
+    return json({ error: 'Missing code or state parameter' }, { status: 400 });
+  }
+  
+  // Verify state parameter
+  const storedState = await storage.getState(state);
+  if (!storedState) {
+    console.error('State not found:', state);
+    
+    // Store error for debugging with namespaced key to avoid collisions
+    await storage.setState(`error:${state}`, {
+      time: new Date().toISOString(),
+      error: 'State not found',
+      state
+    });
+    
+    return json({ error: 'Invalid state parameter' }, { status: 401 });
+  }
+  
+const codeVerifier = typeof storedState === 'string' && storedState.length > 0
+    ? storedState
+    : undefined;
+  
+  // Get post-login redirect URL
+  const redirectUrl = await storage.getState(`redirect:${state}`) || POST_LOGIN_REDIRECT_URL;
+  
+  // Clean up stored state
+  await storage.deleteState(state);
+  await storage.deleteState(`redirect:${state}`);
+  
+  try {
+    // Exchange code for tokens
+    const tokenResponse = await fetchTokens(code, codeVerifier);
+    
+    // Generate a unique session ID for this user
+    const sessionId = generateRandomString(32);
+    
+    // Store tokens in KV storage with user-specific session ID
+    await storage.setState(`session:${sessionId}:tokens`, {
+      access_token: tokenResponse.access_token,
+      refresh_token: tokenResponse.refresh_token || null,
+      id_token: tokenResponse.id_token || null,
+      expires_in: tokenResponse.expires_in || 3600,
+      timestamp: Date.now()
+    });
+
+    
+    // Extract user ID from tokens if available
+    let userId = null;
+    if (tokenResponse.id_token) {
+      try {
+        // Parse the ID token to get user information
+        const idTokenParts = tokenResponse.id_token.split('.');
+        if (idTokenParts.length >= 2) {
+          const payload = JSON.parse(atob(idTokenParts[1]));
+          userId = payload.sub || null;
+        }
+      } catch (e) {
+        console.error('Failed to extract user ID from token:', e);
+      }
+    }
+    
+    // If we have a user ID, create a mapping for easier lookups
+    if (userId) {
+      await storage.setState(`user:${userId}:session`, sessionId);
+    }
+    
+    // Create a redirect response with proper headers and set session cookie
+    return new Response(null, {
+      status: 302,
+      headers: {
+        'Location': redirectUrl,
+        'Cache-Control': 'no-store',
+       'Set-Cookie': `kinde_session=${sessionId}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`
+      }
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Token exchange error:', errorMessage);
+    
+    // Store error for debugging
+    await storage.setState('token_error', {
+      time: new Date().toISOString(),
+      error: safeStringify(error)
+    });
+    
+    return json({ error: 'Token exchange failed' }, { status: 500 });
+  }
+}
+
+// Exchange authorization code for tokens
+async function fetchTokens(code: string, codeVerifier?: string) {
+  const tokenUrl = new URL('/oauth2/token', ISSUER_URL);
+  const params = new URLSearchParams();
+  
+  params.append('grant_type', 'authorization_code');
+  params.append('code', code);
+  params.append('redirect_uri', REDIRECT_URL);
+  params.append('client_id', CLIENT_ID);
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'Accept': 'application/json'
+  };
+  
+  if (USE_PKCE && codeVerifier && codeVerifier !== 'true') {
+    params.append('code_verifier', codeVerifier);
+    params.append('client_secret', SECRET);
+  } else {
+    params.append('client_secret', SECRET);
+  }
+  
+  
+  try {
+    const response = await fetch(tokenUrl.toString(), {
+      method: 'POST',
+      headers,
+      body: params
+    });
+    
+    const responseText = await response.text();
+    
+    // Try to parse the response as JSON
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse token response as JSON:', responseText);
+      throw new Error(`Invalid JSON response: ${responseText}`);
+    }
+    
+    // Check for errors in the response
+    if (!response.ok) {
+      console.error('Token exchange error details:', {
+        status: response.status,
+        error: responseData.error,
+        description: responseData.error_description
+      });
+      
+      throw new Error(`Token exchange failed: ${response.status} - ${responseData.error}: ${responseData.error_description}`);
+    }
+    
+    // Check if the response has the expected tokens
+    if (!responseData.access_token) {
+      console.error('Token response missing access_token:', responseData);
+      throw new Error('Token response missing required fields');
+    }
+    
+    return responseData;
+  } catch (error) {
+    console.error('Token exchange error:', error instanceof Error ? error.message : 'Unknown error');
+    throw error;
+  }
+}
+
+// Handle logout
+async function handleLogout(event: RequestEvent, storage: any) {
+  // Get session ID from cookie
+  const cookies = event.request.headers.get('cookie') || '';
+  const sessionMatch = cookies.match(/kinde_session=([^;]+)/);
+  const sessionId = sessionMatch ? sessionMatch[1] : null;
+  
+  if (sessionId) {
+    await storage.deleteState(`session:${sessionId}:tokens`);
+  }
+  
+  // Redirect to Kinde's logout endpoint
+  const logoutUrl = new URL('/logout', ISSUER_URL);
+  logoutUrl.searchParams.append('redirect', POST_LOGOUT_REDIRECT_URL);
+  
+  // Create a response with a Set-Cookie header to clear the session cookie
+  return new Response(null, {
+    status: 302,
+    headers: {
+      'Location': logoutUrl.toString(),
+      'Set-Cookie': 'kinde_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0' // Clear the cookie
+    }
+  });
+}
+
+// Helper function to safely stringify errors
+function safeStringify(obj: any): string {
+  try {
+    if (obj instanceof Error) {
+      return obj.message + (obj.stack ? `\n${obj.stack}` : '');
+    }
+    
+    return JSON.stringify(obj);
+  } catch (e) {
+    return `[Unstringifiable object: ${typeof obj}]`;
+  }
+} 
+```
+## Step 8: Check authentication status
+
+Create `src/routes/+layout.server.ts`:
+
+```typescript
+import { kindeAuthClient } from '@kinde-oss/kinde-auth-sveltekit';
+import type { LayoutServerLoad } from './$types';
+import { createKindeStorage } from '$lib/kindeCloudflareStorage';
+import { KINDE_ISSUER_URL, KINDE_CLIENT_ID, KINDE_CLIENT_SECRET } from '$env/static/private';
+
+export const load: LayoutServerLoad = async (event) => {
+  const storage = createKindeStorage(event);
+  
+  if (!storage) {
+    return { authenticated: false };
+  }
+  
+  try {
+    // Get session ID from cookie
+    const cookies = event.request.headers.get('cookie') || '';
+    const sessionMatch = cookies.match(/kinde_session=([^;]+)/);
+    const sessionId = sessionMatch ? sessionMatch[1] : null;
+    
+    if (!sessionId) {
+      return { authenticated: false };
+    }
+    
+    // Retrieve tokens for this specific session
+    const tokens = await storage.getState(`session:${sessionId}:tokens`);
+    
+    if (!tokens?.access_token) {
+      return { authenticated: false };
+    }
+    
+    // Check token expiration
+    const now = Date.now();
+    const tokenAge = now - (tokens.timestamp || 0);
+    const expiresIn = tokens.expires_in || 3600; // Default to 1 hour if not specified
+    const tokenExpiresInMs = expiresIn * 1000;
+    
+    // If token is still valid (with 60-second buffer)
+    if (tokenAge < tokenExpiresInMs - 60000) {
+      return { authenticated: true, sessionId };
+    }
+    
+    // If token is expired but we have a refresh token, try to refresh
+    if (tokens.refresh_token) {
+      try {
+        const refreshedTokens = await refreshTokens(tokens.refresh_token);
+        
+        // Store refreshed tokens
+        await storage.setState(`session:${sessionId}:tokens`, {
+          access_token: refreshedTokens.access_token,
+          refresh_token: refreshedTokens.refresh_token || tokens.refresh_token,
+          id_token: refreshedTokens.id_token || tokens.id_token,
+          expires_in: refreshedTokens.expires_in || 3600,
+          timestamp: Date.now()
+        });
+        
+        return { authenticated: true, sessionId };
+      } catch (refreshError) {
+        console.error('Failed to refresh token:', refreshError);
+        // Token refresh failed, user needs to re-authenticate
+        return { authenticated: false };
+      }
+    }
+    
+    return { authenticated: false };
+  } catch (error) {
+    console.error('Error checking authentication:', error);
+    return { authenticated: false };
+  }
+};
+
+// Function to refresh tokens
+async function refreshTokens(refreshToken: string) {
+  const tokenUrl = new URL('/oauth2/token', KINDE_ISSUER_URL);
+  const params = new URLSearchParams();
+  
+  params.append('grant_type', 'refresh_token');
+  params.append('refresh_token', refreshToken);
+  params.append('client_id', KINDE_CLIENT_ID);
+  params.append('client_secret', KINDE_CLIENT_SECRET);
+  
+  const response = await fetch(tokenUrl.toString(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json'
+    },
+    body: params
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(`Token refresh failed: ${error.error || response.status}`);
+  }
+  
+  return await response.json();
+} 
+```
+
+## Step 9: Protect routes
+
+For protected routes like a dashboard:
+
+```typescript
+// src/routes/dashboard/+page.server.ts
+import type { PageServerLoad } from './$types';
+import { createKindeStorage } from '$lib/kindeCloudflareStorage';
+import { redirect } from '@sveltejs/kit';
+
+export const load: PageServerLoad = async (event) => {
+  const storage = createKindeStorage(event);
+ 
+  if (!storage) {
+    throw redirect(302, '/api/auth/login');
+  }
+  
+  const cookies = event.request.headers.get('cookie') || '';
+  const sessionMatch = cookies.match(/kinde_session=([^;]+)/);
+  const sessionId = sessionMatch ? sessionMatch[1] : null;
+  
+  if (!sessionId) {
+    throw redirect(302, '/api/auth/login');
+  }
+  
+  // Now we can safely access the tokens with the sessionId
+  const tokens = await storage.getState(`session:${sessionId}:tokens`);
+  
+  if (!tokens?.access_token) {
+    throw redirect(302, '/api/auth/login');
+  }
+ 
+  return { 
+    authenticated: true,
+    userId: tokens.id_token ? getUserIdFromToken(tokens.id_token) : null
+  };
+};
+
+// Helper function to get user ID from ID token
+function getUserIdFromToken(idToken) {
+  try {
+    const payload = JSON.parse(atob(idToken.split('.')[1]));
+    return payload.sub;
+  } catch (e) {
+    console.error('Failed to extract user ID from token');
+    return null;
+  }
+} 
+```
+
+Your Kinde authentication should now be working with SvelteKit on Cloudflare Pages.
+
