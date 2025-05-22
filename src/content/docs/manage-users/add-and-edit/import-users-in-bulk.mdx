@@ -12,15 +12,15 @@ app_context:
   - m: profile
 ---
 
-You can import users in bulk, from CSV or from other files provided by your previous authentication service, such as Auth0.
+You can import users in bulk, from CSV, JSON, or from other files provided by your previous authentication service, such as Auth0.
 
 ## File requirements
 
 - Non Auth0 data - User details and passwords need to be in UTF-8 encoded CSV format
 - Auth0 data - User details and passwords need to be in NDJSON (Newline Delimited JSON) format
-- File size limit 5MB
+- File size up to 20MB supported
 
-If you’ve got large user sets (over 5MB) or are concerned about file size limits, contact us to ensure the import goes smoothly.
+If you’ve got large user sets (over 20MB) or are concerned about file size limits, you might consider importing in batches, or contact us for import support.
 
 ## Before you import users
 
@@ -36,21 +36,32 @@ Kinde treats usernames as case-insensitive. In other words, we ignore case. We d
 
 We are happy to support users choosing an aesthetically pleasing username combination, like `RosyRose` or `BuilderBob`. We just don't also support separate identities for `rosYrosE` and `BUilderbob`. Before importing users, we recommend checking that all usernames are unique in more than just case.
 
-## Prepare JSON data (Auth0 imports)
+## Prepare NDJSON data (Auth0 imports)
 
 When you export user details from Auth0:
 
 - select all the default fields and add the `identities` field to the import list.
-- select the JSON file format for export.
+- select the NDJSON file format for export.
 
-`Identities` data distinguishes the type of identity, e.g. username, phone, GitHub, Google, etc.
+`Identities` data distinguishes the type of identity, specifically the `connection` attribute. e.g. username, phone, GitHub, Google, etc.
 
 ### How Auth0 user identities are treated on import
 
-Social identities without an email can be imported, and are identified by the identity type. You can import users with multiple identities, these will be listed under the user’s profile.
+Social identities without an email can be imported, and are identified by the connection type. You can import users with multiple identities, these will be listed under the user’s profile.
 
-Kinde supports migrating the following authentication methods from Auth0: Usernames, Email, Phone, Google, Apple, Microsoft, Facebook, GitHub, Twitch, Bitbucket.
-If you need to migrate another authentication type from Auth0 please get in touch with support.
+Kinde supports migrating the following authentication methods from Auth0: Usernames, Email, Phone, Google, Apple, Microsoft, Facebook, GitHub, Twitch, Bitbucket. Auth methods are shown in the `connection` attribute. These are represented as follows in the identity data:
+
+- Username-Password-Authentication
+- email
+- sms
+- google-oauth2
+- apple
+- microsoft
+- github
+- twitch
+- facebook
+- bitbucket
+- windowslive
 
 ### Import options
 
@@ -159,7 +170,7 @@ id,roles,permissions,external_organization_id
 0001,"role_3,role_4","permission_3,permission_4","ext_org_id_2"
 ```
 
-## **How to import users**
+## How to import users
 
 1. In Kinde, go to **Users**, then select **Import users**.
 2. Select the option for your situation:
@@ -183,7 +194,7 @@ When you import passwords via CSV, Kinde does not check for password strength. H
 
 In future, we may add the ability to check password strength and initiate a password change if it's deemed to weak by standard password criteria.
 
-## Re-**importing does not update user info**
+## Re-importing does not update user info
 
 If you add a user via import and they start authenticating via Kinde, and then you import their records again with changes - for example, a name change or a new email - that information will not be updated in Kinde.
 
