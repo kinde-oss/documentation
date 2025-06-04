@@ -139,8 +139,8 @@ const sidebarData = [
     ]
   },
   {
-    label: "Plans and payments",
-    description: "Build plans and pricing so that your users can pay you",
+    label: "Billing",
+    description: "Monetize your product, build plans, and accept payments",
     icon: "billing",
     collapsed: true,
     cardLink: "/billing/about-payments-and-plans/",
