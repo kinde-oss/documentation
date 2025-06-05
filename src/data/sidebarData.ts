@@ -146,8 +146,33 @@ const sidebarData = [
     cardLink: "/billing/about-payments-and-plans/",
     items: [
       {
-        label: "About payments and plans",
-        autogenerate: {directory: "billing/about-payments-and-plans"},
+        label: "About billing",
+        autogenerate: {directory: "billing/about-billing"},
+        collapsed: false
+      }
+      {
+        label: "Get started",
+        autogenerate: {directory: "billing/get-started"},
+        collapsed: false
+      }
+      {
+        label: "Manage plans",
+        autogenerate: {directory: "billing/mange-plans"},
+        collapsed: false
+      }
+      {
+        label: "Payment management",
+        autogenerate: {directory: "billing/payment-management"},
+        collapsed: false
+      }
+      {
+        label: "Pricing",
+        autogenerate: {directory: "billing/pricing"},
+        collapsed: false
+      }
+      {
+        label: "Billing user experience",
+        autogenerate: {directory: "billing/billing-user-experience"},
         collapsed: false
       }
     ]
