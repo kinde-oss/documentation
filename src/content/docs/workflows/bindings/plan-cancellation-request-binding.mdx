@@ -1,0 +1,56 @@
+---
+page_id: 4b477e97-8a76-4419-b796-9193e4e73771
+title: kinde.planCancellationRequest
+sidebar:
+  order: 12
+relatedArticles:
+  - af03409d-465f-4beb-8f9e-47eb97cfbf41
+  - 5917da0f-24f0-48df-a387-aca03ce1fe7a
+---
+
+The `kinde.planCancellationRequest` binding provides methods to use when a plan cancellation request is initiated.
+
+## Methods
+
+### `deny(reason: string): void`
+
+Prevent the user from cancelling their plan.
+
+## Available in workflows
+
+- [user:plan_cancellation_request](/workflows/example-workflows/plan-cancellation-request-workflow/)
+
+## Configuration
+
+```js
+export const workflowSettings = {
+  // ...other settings
+  bindings: {"kinde.planCancellationRequest": {}}
+};
+```
+
+## Usage
+
+### Using the Kinde infrastructure library (recommended)
+
+The [Kinde infrastructure library](https://github.com/kinde-oss/infrastructure) provides a type-safe helper:
+
+```js
+import { denyPlanCancellation } from "@kinde/infrastructure";
+
+export default async function (event: onPlanCancellationRequestedEvent) {
+  if (!canCancelPlan()) {
+    denyPlanCancellation("You are not allowed to cancel your plan as you have outstanding payments");
+  }
+}
+```
+
+### Using the low-level API
+
+If you're not using the infrastructure library, you can call the underlying API directly:
+
+```js
+kinde.planCancellationRequest.deny(
+  "You are not allowed to cancel your plan as you have outstanding payments"
+);
+```
