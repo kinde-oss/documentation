@@ -1,0 +1,62 @@
+---
+page_id: 54e9d131-96a6-4d09-8355-0b748a4cd106
+title: Plan cancellation request workflow
+sidebar:
+  order: 9
+relatedArticles:
+  - f197d00e-1fc8-46ed-8290-35773532cd2d
+  - d672fca7-6c6a-49f8-85c9-6e86ce99f440
+---
+
+Trigger: `user:plan_selection`
+
+This trigger fires when a plan selection request is made. This can be initiated by the user through the Kinde self-serve portal or via the Kinde Management API.
+
+This is not a provisioning workflow, this occurs before plan selection or any payments are processed.
+
+## Example use cases
+
+### Check if customer is eligible to change plan
+
+You may want to check if the customer is eligible to change their plan based on certain criteria. For example, if they are trying to downgrade to a plan with a lower usage usage allowance that their current plan but they are already breaching the limits.
+
+## Workflow code
+
+### Plan selection binding
+
+The [kinde.planSelection](/workflows/bindings/plan-selection/) binding is used to prevent plan change requests.
+
+### Sample event object
+
+The main argument provided to your code is the Kinde workflow `event` object which has two keys `request` and `context`. This gives you access to the reason the workflow was triggered. Here's an example:
+
+```json
+{
+  "request": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:135.0) Gecko/20100101 Firefox/135.0",
+    "ip": "192.168.0.1"
+  },
+  "context": {
+    "domains": {
+      "kindeDomain": "https://example.kinde.com" // Your Kinde domain
+    },
+    "billing": {
+      "currentPlanCode": "professional", // plan they are changing from
+      "requestedPlanCode": "free" // plan they are changing to
+    },
+    "user": {
+      "id": "kp_1234566" // the user ID
+    },
+    "organization": {
+      "code": "org_123456" // the organization code if applicable
+    },
+    "workflow": {
+      "trigger": "user:plan_selection"
+    }
+  }
+}
+```
+
+### Example workflows
+
+Coming soon.
