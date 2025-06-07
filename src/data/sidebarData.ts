@@ -139,15 +139,40 @@ const sidebarData = [
     ]
   },
   {
-    label: "Plans and payments",
-    description: "Build plans and pricing so that your users can pay you",
+    label: "Billing",
+    description: "Monetize your product, build plans, and accept payments",
     icon: "billing",
     collapsed: true,
     cardLink: "/billing/about-payments-and-plans/",
     items: [
       {
-        label: "About payments and plans",
-        autogenerate: {directory: "billing/about-payments-and-plans"},
+        label: "About billing",
+        autogenerate: {directory: "billing/about-billing"},
+        collapsed: false
+      }
+      {
+        label: "Get started",
+        autogenerate: {directory: "billing/get-started"},
+        collapsed: false
+      }
+      {
+        label: "Manage plans",
+        autogenerate: {directory: "billing/mange-plans"},
+        collapsed: false
+      }
+      {
+        label: "Payment management",
+        autogenerate: {directory: "billing/payment-management"},
+        collapsed: false
+      }
+      {
+        label: "Pricing",
+        autogenerate: {directory: "billing/pricing"},
+        collapsed: false
+      }
+      {
+        label: "Billing user experience",
+        autogenerate: {directory: "billing/billing-user-experience"},
         collapsed: false
       }
     ]
