@@ -143,9 +143,8 @@ const sidebarData = [
     description: "Monetize your product, build plans, and accept payments",
     icon: "billing",
     collapsed: true,
-    cardLink: "/billing/about-billing/",
+    cardLink: "/billing/about-billing/about-billing/",
     items: [
-      {
       {
         label: "About billing",
         autogenerate: {directory: "billing/about-billing"},
