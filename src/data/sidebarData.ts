@@ -143,7 +143,7 @@ const sidebarData = [
     description: "Monetize your product, build plans, and accept payments",
     icon: "billing",
     collapsed: true,
-    cardLink: "/billing/about-payments-and-plans/",
+    cardLink: "/billing/about-billing/",
     items: [
       {
       {
