@@ -2,7 +2,7 @@
 page_id: 743d264d-ef08-4f2e-a42c-2b971152dccf
 title: Understand Kinde page customization
 sidebar:
-  order: 4
+  order: 5
 relatedArticles:
   - 66f83c18-d261-48b8-a517-648ed1b7b064
   - f0bc688b-a817-42ab-9a20-8e09cec06f37
@@ -18,7 +18,7 @@ You define a page by default exporting a function from a `page.[ts/tsx/js/jsx]` 
 "use server";
 
 import React from "react";
-import { renderToString } from "react-dom/server.browser";
+import {renderToString} from "react-dom/server.browser";
 import {
   getKindeRequiredCSS,
   getKindeRequiredJS,
@@ -31,7 +31,7 @@ import {
   getKindeRegisterUrl
 } from "@kinde/infrastructure";
 
-const Layout = async ({ request, context }) => {
+const Layout = async ({request, context}) => {
   return (
     <html lang={request.locale.lang} dir={request.locale.isRtl ? "rtl" : "ltr"}>
       <head>
@@ -52,7 +52,7 @@ const Layout = async ({ request, context }) => {
             buttonBorderRadius: "0.5rem",
             primaryButtonBackgroundColor: "#230078",
             primaryButtonColor: "#fff",
-            inputBorderRadius: "0.5rem",
+            inputBorderRadius: "0.5rem"
           })}}
           `}
         </style>
@@ -124,7 +124,7 @@ const Layout = async ({ request, context }) => {
 };
 
 export default async function Page(event) {
-  const page = await Layout({ ...event });
+  const page = await Layout({...event});
   return renderToString(page);
 }
 ```
@@ -140,7 +140,7 @@ Kinde uses server-rendered JavaScript to compose custom pages and has a range of
 
 <Aside>
 
-If you are using React for templating, note this code is rendered on the server. This means client side functions for example, `useEffect`,  will not be available.
+If you are using React for templating, note this code is rendered on the server. This means client side functions for example, `useEffect`, will not be available.
 
 </Aside>
 
@@ -167,7 +167,7 @@ myApp/
 The `kinde.json` file defines the config for all custom code in Kinde, including workflows and custom pages. A typical config file will look as follows:
 
 ```json
-{ 
+{
   "rootDir": "kindeSrc", -- the directory where Kinde should look for your code
   "version": "2024-12-09" -- the last breaking change
 }
@@ -181,7 +181,7 @@ The `kinde.json` file defines the config for all custom code in Kinde, including
 
 All Kinde hosted pages can be customized and use url route mapping to determine which template to use.
 
-If a specific mapped route does not exist, a special route called `(default)` will be rendered. Set up the `(default)` page to ensure all your pages follow this design unless you have overridden them with custom code.  
+If a specific mapped route does not exist, a special route called `(default)` will be rendered. Set up the `(default)` page to ensure all your pages follow this design unless you have overridden them with custom code.
 
 <Aside type="warning">
 
@@ -193,73 +193,74 @@ Once you start customizing pages, it's on you not to break them. We recommend al
 
 These are the most frequently used or fallback pages.
 
-* `(default)` – Fallback template used when a specific page is not found.
-* `(register)` – The sign-up page.
-* `(login)` – The sign-in page.
-* `(index)` – Landing page when visiting the root domain (e.g. `https://<yourdomain>.kinde.com`).
+- `(default)` – Fallback template used when a specific page is not found.
+- `(register)` – The sign-up page.
+- `(login)` – The sign-in page.
+- `(index)` – Landing page when visiting the root domain (e.g. `https://<yourdomain>.kinde.com`).
 
 ### Authentication
 
 Pages involved in initiating authentication flows.
-* `(register)` – The sign-up page.
-* `(login)` – The sign-in page.
-* `(sso_home_realm)` – Displayed when a user selects “Continue with SSO” to choose their identity provider.
-* `(provide_email)` – Shown when using a social login provider that does not return an email address.
-* `(clickwrap)` – Displays terms and conditions or agreements that must be accepted.
+
+- `(register)` – The sign-up page.
+- `(login)` – The sign-in page.
+- `(sso_home_realm)` – Displayed when a user selects “Continue with SSO” to choose their identity provider.
+- `(provide_email)` – Shown when using a social login provider that does not return an email address.
+- `(clickwrap)` – Displays terms and conditions or agreements that must be accepted.
 
 ### Password flows
 
 Used in password-based authentication and recovery.
 
-* `(verify_password)` – Shown during sign-in when using a password-based method.
-* `(set_password)` – Shown during a password-based sign-up flow.
-* `(reset_password_verify_email_otp)` – First step of the reset flow where the user verifies identity using an email OTP.
-* `(reset_password)` – Password entry screen shown after verification during the reset flow.
+- `(verify_password)` – Shown during sign-in when using a password-based method.
+- `(set_password)` – Shown during a password-based sign-up flow.
+- `(reset_password_verify_email_otp)` – First step of the reset flow where the user verifies identity using an email OTP.
+- `(reset_password)` – Password entry screen shown after verification during the reset flow.
 
 ### One-Time Passcode (OTP) verification
 
 Used in sign-in and sign-up flows with OTP (email or phone).
 
-* `(sign_in_use_email_otp)` – Sign in with a one-time email code.
-* `(sign_up_use_email_otp)` – Sign up with a one-time email code.
-* `(sign_in_sign_up_use_phone_otp)` – Sign in or sign up with a one-time phone code.
+- `(sign_in_use_email_otp)` – Sign in with a one-time email code.
+- `(sign_up_use_email_otp)` – Sign up with a one-time email code.
+- `(sign_in_sign_up_use_phone_otp)` – Sign in or sign up with a one-time phone code.
 
 ### Multi-Factor Authentication (MFA)
 
 Shown after primary authentication when MFA is required or being set up.
 
-* `(mfa_method_selection)` – User selects their preferred MFA method.
-* `(mfa_authenticator_app)` – Setup screen for using an authenticator app.
-* `(mfa_setup_email)` – Setup screen for email-based MFA.
-* `(mfa_setup_phone)` – Setup screen for phone-based MFA.
-* `(mfa_use_email_otp)` – Enter a one-time email code for MFA.
-* `(mfa_use_phone_otp)` – Enter a one-time phone code for MFA.
-* `(mfa_use_recovery_code)` – Enter a recovery code if unable to use other MFA methods.
-* `(mfa_view_recovery_codes)` – View and save MFA recovery codes.
+- `(mfa_method_selection)` – User selects their preferred MFA method.
+- `(mfa_authenticator_app)` – Setup screen for using an authenticator app.
+- `(mfa_setup_email)` – Setup screen for email-based MFA.
+- `(mfa_setup_phone)` – Setup screen for phone-based MFA.
+- `(mfa_use_email_otp)` – Enter a one-time email code for MFA.
+- `(mfa_use_phone_otp)` – Enter a one-time phone code for MFA.
+- `(mfa_use_recovery_code)` – Enter a recovery code if unable to use other MFA methods.
+- `(mfa_view_recovery_codes)` – View and save MFA recovery codes.
 
 ### Billing (coming soon)
 
 Pages related to choosing a plan and making a payment.
 
-* `(choose_plan)` – User selects a subscription plan.
-* `(collect_payment_details)` – User enters billing information.
-* `(subscription_success)` – Confirmation page shown after successful subscription.
+- `(choose_plan)` – User selects a subscription plan.
+- `(collect_payment_details)` – User enters billing information.
+- `(subscription_success)` – Confirmation page shown after successful subscription.
 
 ### Early access
 
 Pages for gated access to your product before full launch.
 
-* `(request_access)` – Request early access to your product.
-* `(request_access_success)` – Confirmation page after a request is submitted.
+- `(request_access)` – Request early access to your product.
+- `(request_access_success)` – Confirmation page after a request is submitted.
 
 ### Error pages
 
 Shown when a user encounters an error state.
 
-* `(account_locked)` – The user’s account has been locked.
-* `(account_not_found)` – No account was found for the entered credentials.
-* `(invalid_redirect_url)` – The redirect URL is invalid or not on the allowed list.
-* `(error)` – Generic error screen.
+- `(account_locked)` – The user’s account has been locked.
+- `(account_not_found)` – No account was found for the entered credentials.
+- `(invalid_redirect_url)` – The redirect URL is invalid or not on the allowed list.
+- `(error)` – Generic error screen.
 
 If you want specific customization for a page not listed here, reach out and let us know.
 
@@ -270,28 +271,28 @@ Your `page.[ext]` file should contain a default export. It doesn’t matter what
 The `request` key contains information about the request to the page and includes the following sub-objects:
 
 - `authUrlParams` contains useful info from authorization request url
-    - `orgCode` - the requested organization code e.g `org_12345`
-    - `state` - the state parameter in the auth url
-    - `clientId` - the `client_id` query param from the auth url - this is the application ID
-    - `redirectUri` - the `redirect_uri` query param from the auth url
+  - `orgCode` - the requested organization code e.g `org_12345`
+  - `state` - the state parameter in the auth url
+  - `clientId` - the `client_id` query param from the auth url - this is the application ID
+  - `redirectUri` - the `redirect_uri` query param from the auth url
 - `locale` - localization data
-    - `isRtl` - if the requested language should be rendered right to left
-    - `lang` - the code for the requested language
+  - `isRtl` - if the requested language should be rendered right to left
+  - `lang` - the code for the requested language
 - `route`
-    - `context`- the requested widget `CX_m` e.g `register` | `choose_organization`
-    - `flow` - whether the flow is a sign in or sign up flow e.g `register` | `login`
-    - `path` - the path of the request `auth` | `account`| `\`
+  - `context`- the requested widget `CX_m` e.g `register` | `choose_organization`
+  - `flow` - whether the flow is a sign in or sign up flow e.g `register` | `login`
+  - `path` - the path of the request `auth` | `account`| `\`
 
 The top level `context` key object contains information about the page itself, like the page state and content.
 
 - `domains` contains relevant domain info
-    - `kindeDomain` your domain on Kinde e.g https://example.kinde.com
+  - `kindeDomain` your domain on Kinde e.g https://example.kinde.com
 - `widget` contains data generated from the widget
-    - `content` an object containing page content - translated and with placeholders replace
-        - `pageTitle` the title of the page commonly displayed in the `<title>` tag for showing in the browser tab
-        - `heading` the main heading for the page
-        - `description` the page description
-        - `logoAlt` the alt text for your company logo
+  - `content` an object containing page content - translated and with placeholders replace
+    - `pageTitle` the title of the page commonly displayed in the `<title>` tag for showing in the browser tab
+    - `heading` the main heading for the page
+    - `description` the page description
+    - `logoAlt` the alt text for your company logo
 
 ## Page settings
 
@@ -306,9 +307,9 @@ The main use case for this is when you want to make bindings available to your p
 ```js
 export const pageSettings = {
   bindings: {
-    "kinde.env": {},
+    "kinde.env": {}
   }
-}
+};
 ```
 
 This allows you to have fine grained control over what your pages can access.
