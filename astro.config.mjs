@@ -55,7 +55,7 @@ export default defineConfig({
       "/developer-tools/sdks/native/expo/",
     "/design/pages/design-your-welcome-pages/":
       "/design/brand/apply-branding-for-an-organization/",
-    "/developer-tools/guides/deploy-on-vercel/kinde.com":
+    "/developer-tools/guides/deploy-on-vercel/kinde.com/":
       "/developer-tools/guides/deploy-on-vercel/",
     "design/pages/set-language-for-pages/":
       "/design/content-customization/set-language-for-pages/"
