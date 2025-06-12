@@ -37,7 +37,8 @@ export default defineConfig({
   redirects: {
     "/developer-tools/kinde-api/register-manage-apis/":
       "/developer-tools/your-apis/register-manage-apis/",
-    "/developer-tools/kinde-api/protect-your-api/": "/developer-tools/your-apis/protect-your-api/",
+    "/developer-tools/kinde-api/protect-your-api/": 
+      "/developer-tools/your-apis/protect-your-api/",
     "/developer-tools/kinde-api/access-to-your-api/":
       "/developer-tools/your-apis/access-to-your-api/",
     "/developer-tools/kinde-api/custom-api-scopes/":
@@ -51,7 +52,13 @@ export default defineConfig({
     "/developer-tools/kinde-api/test-the-connection-to-kindes-api/":
       "/developer-tools/kinde-api/troubleshoot-kinde-api/",
     "/developer-tools/sdks/native/expo-react-native/": 
-    "/developer-tools/sdks/native/expo/"
+      "/developer-tools/sdks/native/expo/",
+    "/design/pages/design-your-welcome-pages/":
+      "/design/brand/apply-branding-for-an-organization/",
+    "/developer-tools/guides/deploy-on-vercel/kinde.com":
+      "/developer-tools/guides/deploy-on-vercel/",
+    "design/pages/set-language-for-pages/":
+      "/design/content-customization/set-language-for-pages/"
   },
   markdown: {
     rehypePlugins: [
