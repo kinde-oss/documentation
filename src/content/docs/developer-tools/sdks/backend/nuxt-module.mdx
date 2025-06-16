@@ -317,6 +317,51 @@ export default defineNuxtConfig({
 }
 ```
 
+## Access endpoint
+
+If you want to check a user's access to a permission or feature flag from the client-side (like inside `useAsyncData()` or `onMounted()`), the Nuxt SDK uses a server-side POST route located at:
+
+```bash
+/api/access
+```
+
+This route is used under the hood by functions like `getPermissions()` and `getPermission()`.
+
+### Important: Avoid proxy conflicts
+
+Nuxt automatically matches API routes via file structure. If you're using a catch-all file like:
+
+```ts
+// server/api/[...].ts
+export default defineEventHandler(() => {
+  return 'This will override /api/access and break permission checks';
+});
+```
+
+The above will **override `/api/access`**, which will cause `getPermissions()` and similar functions to fail silently or return incorrect data.
+
+### How to fix
+
+You have **two options** to resolve this:
+
+#### Option 1: Exclude `/api/access` in your catch-all handler
+
+```ts
+// server/api/[...].ts
+export default defineEventHandler(async (event) => {
+  const url = getRequestURL(event);
+  if (url.pathname === '/api/access') {
+    return; // Let Nuxt route handle this
+  }
+
+  // Your custom handler
+});
+```
+
+#### Option 2: Don’t use catch-all proxies
+
+Use dedicated route files instead of a `[...].ts` proxy when possible.
+
 ## Kinde Management API
 
 To use our management API please see [@kinde/management-api-js](https://github.com/kinde-oss/management-api-js)
