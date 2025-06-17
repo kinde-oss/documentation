@@ -162,10 +162,10 @@ In this guide, we will walk through integrating Kinde and Supabase to build a pe
 9. Open the `components/auth-button.tsx` file and replace the entire content with the following. This code will replace Supabase Auth functions with Kinde Auth.
     
     ```tsx
-        import {
-        RegisterLink,
-        LoginLink,
-        LogoutLink,
+      import {
+      RegisterLink,
+      LoginLink,
+      LogoutLink,
       } from "@kinde-oss/kinde-auth-nextjs/components"
       import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
 
@@ -194,7 +194,7 @@ In this guide, we will walk through integrating Kinde and Supabase to build a pe
     
 10. Replace `lib/supabase/server.ts` with the following code:
     
-    ```tsx
+    ```ts
     import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
     import { createServerClient } from "@supabase/ssr"
     import { cookies } from "next/headers"
@@ -242,14 +242,52 @@ In this guide, we will walk through integrating Kinde and Supabase to build a pe
       )
     }
     ```
+11. Replace `lib/supabase/middleware.ts` with the following code:
+
+    ```ts
+    import { NextResponse, type NextRequest } from "next/server"
+    import { hasEnvVars } from "../utils"
+
+    export async function updateSession(request: NextRequest) {
+      const supabaseResponse = NextResponse.next({
+        request,
+      })
+
+      // If the env vars are not set, skip middleware check. You can remove this once you setup the project.
+      if (!hasEnvVars) {
+        return supabaseResponse
+      }
+
+      // Do not run code between createServerClient and
+      // supabase.auth.getUser(). A simple mistake could make it very hard to debug
+      // issues with users being randomly logged out.
+
+      // IMPORTANT: DO NOT REMOVE auth.getUser()
+
+      // IMPORTANT: You *must* return the supabaseResponse object as it is.
+      // If you're creating a new response object with NextResponse.next() make sure to:
+      // 1. Pass the request in it, like so:
+      //    const myNewResponse = NextResponse.next({ request })
+      // 2. Copy over the cookies, like so:
+      //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+      // 3. Change the myNewResponse object to fit your needs, but avoid changing
+      //    the cookies!
+      // 4. Finally:
+      //    return myNewResponse
+      // If this is not done, you may be causing the browser and server to go out
+      // of sync and terminate the user's session prematurely!
+
+      return supabaseResponse
+    }
+    ```
     
-11. Start the development environment by typing the following in your terminal:
+12. Start the development environment by typing the following in your terminal:
     
     ```
     npm run dev
     ```
     
-12. Go to http://localhost:3000 and sign up/sign in to your Kinde application to test the integration.
+13. Go to http://localhost:3000 and sign up/sign in to your Kinde application to test the integration.
 
 ## Step 4: Build a simple to-do app
 
