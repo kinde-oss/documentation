@@ -127,8 +127,8 @@ In this guide, we will walk through integrating Kinde and Supabase to build a pe
 5. Create the Kinde auth endpoint in this path **app/api/auth/[kindeAuth]**:
     
     ```bash
-    mkdir -p app/api/auth/[kindeAuth]
-    touch app/api/auth/[kindeAuth]/route.js
+    mkdir -p "app/api/auth/[kindeAuth]"
+    touch "app/api/auth/[kindeAuth]/route.js"
     ```
     
 6. Open the newly created `route.js` file, enter the following code, and save the file:
@@ -146,7 +146,7 @@ In this guide, we will walk through integrating Kinde and Supabase to build a pe
     
 8. Add the following to your `.env.local` file:
     - The Kinde environment vars details you copied earlier. You can get these again from your Kinde application Quick start page.
-    - The Supabase Project URL and Anon public key. You can get these from **Supabase > Project Settings > Data API.**
+    - The Supabase Project URL from **Supabase > Project Settings > Data API.** and Anon public key from **Supabase > API Keys.**
     
     ```
     KINDE_CLIENT_ID=<kinde_client_id>
@@ -159,88 +159,42 @@ In this guide, we will walk through integrating Kinde and Supabase to build a pe
     NEXT_PUBLIC_SUPABASE_ANON_KEY=<supabase_anon_public_key>
     ```
     
-9. Open the `components/header-auth.tsx` file and replace the entire content with the following. This code will replace Supabase Auth functions with Kinde Auth.
+9. Open the `components/auth-button.tsx` file and replace the entire content with the following. This code will replace Supabase Auth functions with Kinde Auth.
     
-    ```sql
-    import {
+    ```tsx
+      import {
       RegisterLink,
       LoginLink,
       LogoutLink,
-    } from "@kinde-oss/kinde-auth-nextjs/components"
-    import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
-    
-    import { signOutAction } from "@/app/actions"
-    import { hasEnvVars } from "@/utils/supabase/check-env-vars"
-    import { Badge } from "./ui/badge"
-    import { Button } from "./ui/button"
-    
-    export default async function AuthButton() {
-      const { getUser } = getKindeServerSession()
-      const user = await getUser()
-    
-      if (!hasEnvVars) {
-        return (
-          <>
-            <div className='flex gap-4 items-center'>
-              <div>
-                <Badge
-                  variant={"default"}
-                  className='font-normal pointer-events-none'
-                >
-                  Please update .env.local file with anon key and url
-                </Badge>
-              </div>
-              <div className='flex gap-2'>
-                <Button
-                  asChild
-                  size='sm'
-                  variant={"outline"}
-                  disabled
-                  className='opacity-75 cursor-none pointer-events-none'
-                >
-                  <LoginLink className='btn btn-ghost sign-in-btn'>
-                    Sign in
-                  </LoginLink>
-                </Button>
-                <Button
-                  asChild
-                  size='sm'
-                  variant={"default"}
-                  disabled
-                  className='opacity-75 cursor-none pointer-events-none'
-                >
-                  <RegisterLink className='btn btn-dark'>Sign up</RegisterLink>
-                </Button>
-              </div>
-            </div>
-          </>
+      } from "@kinde-oss/kinde-auth-nextjs/components"
+      import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
+
+      import { Button } from "./ui/button"
+
+      export async function AuthButton() {
+        const { getUser } = getKindeServerSession()
+        const user = await getUser()
+
+        return user ? (
+          <div className="flex items-center gap-4">
+            Hey, {user.email}!<LogoutLink className="text-subtle">Log out</LogoutLink>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Button asChild size="sm" variant={"outline"}>
+              <LoginLink className="btn btn-ghost sign-in-btn">Sign in</LoginLink>
+            </Button>
+            <Button asChild size="sm" variant={"default"}>
+              <RegisterLink className="btn btn-dark">Sign up</RegisterLink>
+            </Button>
+          </div>
         )
       }
-      return user ? (
-        <div className='flex items-center gap-4'>
-          Hey, {user.given_name}!
-          <form action={signOutAction}>
-            <Button type='submit' variant={"outline"}>
-              <LogoutLink className='text-subtle'>Log out</LogoutLink>
-            </Button>
-          </form>
-        </div>
-      ) : (
-        <div className='flex gap-2'>
-          <Button asChild size='sm' variant={"outline"}>
-            <LoginLink className='btn btn-ghost sign-in-btn'>Sign in</LoginLink>
-          </Button>
-          <Button asChild size='sm' variant={"default"}>
-            <RegisterLink className='btn btn-dark'>Sign up</RegisterLink>
-          </Button>
-        </div>
-      )
-    }
     ```
     
-10. Replace `utils/supabase/server.ts` with the following code:
+10. Replace `lib/supabase/server.ts` with the following code:
     
-    ```tsx
+    ```ts
     import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
     import { createServerClient } from "@supabase/ssr"
     import { cookies } from "next/headers"
@@ -288,101 +242,132 @@ In this guide, we will walk through integrating Kinde and Supabase to build a pe
       )
     }
     ```
+11. Replace `lib/supabase/middleware.ts` with the following code:
+
+    ```ts
+    import { NextResponse, type NextRequest } from "next/server"
+    import { hasEnvVars } from "../utils"
+
+    export async function updateSession(request: NextRequest) {
+      const supabaseResponse = NextResponse.next({
+        request,
+      })
+
+      // If the env vars are not set, skip middleware check. You can remove this once you setup the project.
+      if (!hasEnvVars) {
+        return supabaseResponse
+      }
+
+      // Do not run code between createServerClient and
+      // supabase.auth.getUser(). A simple mistake could make it very hard to debug
+      // issues with users being randomly logged out.
+
+      // IMPORTANT: DO NOT REMOVE auth.getUser()
+
+      // IMPORTANT: You *must* return the supabaseResponse object as it is.
+      // If you're creating a new response object with NextResponse.next() make sure to:
+      // 1. Pass the request in it, like so:
+      //    const myNewResponse = NextResponse.next({ request })
+      // 2. Copy over the cookies, like so:
+      //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+      // 3. Change the myNewResponse object to fit your needs, but avoid changing
+      //    the cookies!
+      // 4. Finally:
+      //    return myNewResponse
+      // If this is not done, you may be causing the browser and server to go out
+      // of sync and terminate the user's session prematurely!
+
+      return supabaseResponse
+    }
+    ```
     
-11. Start the development environment by typing the following in your terminal:
+12. Start the development environment by typing the following in your terminal:
     
     ```
     npm run dev
     ```
     
-12. Go to http://localhost:3000 and sign up/sign in to your Kinde application to test the integration.
+13. Go to http://localhost:3000 and sign up/sign in to your Kinde application to test the integration.
 
 ## Step 4: Build a simple to-do app
 
-1. In your project directory, on a new terminal window, create a `todo` directory with a `page.tsx` file inside it by running the following command.  This file will serve as your to-do page.
-    
-    ```jsx
-    mkdir app/todo
-    touch app/todo/page.tsx
-    ```
-    
-2. Add the following code to `page.tsx` which is a basic to-do list table:
+1. Open the `/components/hero.tsx` with your favorite code editor.
+
+2. Add the following code to `hero.tsx` which is a basic to-do list table:
     
     ```tsx
-    import { createClient } from "@/utils/supabase/server"
-    
-    export default async function TodoList() {
-      const supabase = await createClient()
-      const { data: todos } = await supabase.from("todos").select()
-    
-      return (
-        <div
-          style={{ display: "flex", justifyContent: "center", marginTop: "50px" }}
-        >
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th
-                  style={{
-                    border: "1px solid #ddd",
-                    padding: "8px",
-                    textAlign: "left",
-                    backgroundColor: "#f2f2f2",
-                  }}
-                >
-                  ID
-                </th>
-                <th
-                  style={{
-                    border: "1px solid #ddd",
-                    padding: "8px",
-                    textAlign: "left",
-                    backgroundColor: "#f2f2f2",
-                  }}
-                >
-                  Task
-                </th>
-                <th
-                  style={{
-                    border: "1px solid #ddd",
-                    padding: "8px",
-                    textAlign: "left",
-                    backgroundColor: "#f2f2f2",
-                  }}
-                >
-                  Is Complete
-                </th>
+    import { createClient } from "@/lib/supabase/server"
+
+    export async function Hero() {
+    const supabase = await createClient()
+    const { data: todos } = await supabase.from("todos").select()
+
+    return (
+      <div className="flex flex-col gap-16 items-center">
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              <th
+                style={{
+                  border: "1px solid #ddd",
+                  padding: "8px",
+                  textAlign: "left",
+                  backgroundColor: "#f2f2f2",
+                }}
+              >
+                ID
+              </th>
+              <th
+                style={{
+                  border: "1px solid #ddd",
+                  padding: "8px",
+                  textAlign: "left",
+                  backgroundColor: "#f2f2f2",
+                }}
+              >
+                Task
+              </th>
+              <th
+                style={{
+                  border: "1px solid #ddd",
+                  padding: "8px",
+                  textAlign: "left",
+                  backgroundColor: "#f2f2f2",
+                }}
+              >
+                Is Complete
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {todos?.map((row) => (
+              <tr key={row.id}>
+                <td style={{ border: "1px solid #ddd", padding: "8px" }}>
+                  {row.id}
+                </td>
+                <td style={{ border: "1px solid #ddd", padding: "8px" }}>
+                  {row.task}
+                </td>
+                <td style={{ border: "1px solid #ddd", padding: "8px" }}>
+                  {String(row.completed_state)}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {todos?.map((row) => (
-                <tr key={row.id}>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>
-                    {row.id}
-                  </td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>
-                    {row.task}
-                  </td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>
-                    {String(row.completed_state)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
     }
     ```
     
-3. Go to http://localhost:3000/todo to preview the page. You won’t see any to-do items because we haven’t set any permissions yet.
+3. Go to http://localhost:3000 to preview the page. You won’t see any to-do items because we haven’t set any permissions yet.
     
     ![Empty to-do list](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c71da76d-f54a-4d2e-9636-bb063b120800/public)
     
 4. To ensure the user is redirected to the **to-do page** after they sign in, update the `KINDE_POST_LOGIN_REDIRECT_URL` in your `.env.local` file to:
     
     ```yaml
-    KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000/todo
+    KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000
     ```
     
 
