@@ -11,10 +11,7 @@ const sidebarData = [
     items: [
       {label: "Guides", autogenerate: {directory: "get-started/guides"}, collapsed: false},
       {
-        label: "Learn about Kinde",
-        autogenerate: {directory: "get-started/learn-about-kinde"},
-        collapsed: false
-      },
+        label: "Learn about Kinde", autogenerate: {directory: "get-started/learn-about-kinde"}, collapsed: false},
       {
         label: "Switch to Kinde",
         autogenerate: {directory: "get-started/switch-to-kinde"},
@@ -265,17 +262,25 @@ const sidebarData = [
   },
   {
     label: "Features and releases",
-    description: "Take control of feature development and releases  ",
+    description: "Take control of feature development and app releases",
     icon: "releases",
     collapsed: true,
     cardLink: "/releases/about/about-feature-flags/",
     items: [
-      {label: "About", autogenerate: {directory: "releases/about"}, collapsed: false},
+      {
+        label: "About",
+        autogenerate: {directory: "releases/about"}, 
+        collapsed: false},
+      {
+        label: "Guides",
+        autogenerate: {directory: "releases/guides"},
+        collapsed: false},
       {
         label: "Feature flags",
         autogenerate: {directory: "releases/feature-flags"},
         collapsed: false
       }
+      
       // {
       //   label: "Plan and release",
       //   autogenerate: {directory: "releases/plan-and-release"},
