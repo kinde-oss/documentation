@@ -11,10 +11,7 @@ const sidebarData = [
     items: [
       {label: "Guides", autogenerate: {directory: "get-started/guides"}, collapsed: false},
       {
-        label: "Learn about Kinde",
-        autogenerate: {directory: "get-started/learn-about-kinde"},
-        collapsed: false
-      },
+        label: "Learn about Kinde", autogenerate: {directory: "get-started/learn-about-kinde"}, collapsed: false},
       {
         label: "Switch to Kinde",
         autogenerate: {directory: "get-started/switch-to-kinde"},
