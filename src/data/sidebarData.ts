@@ -163,6 +163,11 @@ const sidebarData = [
         collapsed: false
       },
       {
+        label: "Subscription management",
+        autogenerate: {directory: "billing/manage-subscribers"},
+        collapsed: false
+      },
+      {
         label: "Pricing",
         autogenerate: {directory: "billing/pricing"},
         collapsed: false
