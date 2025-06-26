@@ -37,7 +37,7 @@ npm install -D @sveltejs/adapter-cloudflare
 ## Step 2: Configure Cloudflare KV storage
 
 1. In Cloudflare dashboard, go to **Workers & Pages > KV**
-2. Create a new namespace (e.g., `AUTH_TOKENS`)
+2. Create a new namespace (e.g., `AUTH_STORAGE`)
 3. Copy the namespace ID
 
 ## Step 3: Configure environment variables
@@ -113,7 +113,7 @@ class CookieStorage implements SessionManager {
   }
   
   async removeSessionItem(key: string): Promise<void> {
-    this.event.cookies.delete(`kinde_${key}`, { path: '/' });
+    this.event.cookies.delete(`kinde_${key}`, { path: '/', secure: true });
   }
 
   async removeItems(keys: string[]): Promise<void> {
@@ -125,7 +125,7 @@ class CookieStorage implements SessionManager {
   async clearSession(): Promise<void> {
     const cookiesToClear = ['state', 'nonce', 'codeVerifier'];
     for (const key of cookiesToClear) {
-      this.event.cookies.delete(`kinde_${key}`, { path: '/' });
+      this.event.cookies.delete(`kinde_${key}`, { path: '/', secure: true });
     }
   }
 }
@@ -202,8 +202,7 @@ export async function GET(event: RequestEvent) {
     return json({ error: 'KV storage not available' }, { status: 500 });
   }
 
-  const url = new URL(event.request.url);
-  const path = url.pathname.split('/').pop() || '';
+  const path = event.params.kindeAuth ?? '';
   const config = getConfig();
   
   switch (path) {
@@ -324,13 +323,6 @@ Once configured, you can use standard links for authentication:
 - Logout: `/api/auth/logout`
 
 Use `isAuthenticated()` and `getUserProfile()` from js-utils in your server-side code to check authentication status and retrieve user data.
-
-## Key benefits
-
-- **Minimal code**: js-utils handles OAuth flow, token management, and user profile retrieval
-- **Hybrid storage**: Cookies for immediate consistency (OAuth data), KV for persistence (tokens)
-- **Type safety**: Full TypeScript support with js-utils types
-- **Production ready**: Handles token refresh, state validation, and security best practices
 
 ## Troubleshooting
 
