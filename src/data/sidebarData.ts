@@ -79,8 +79,13 @@ const sidebarData = [
         collapsed: false
       },
       {
-        label: "Kinde API",
+        label: "Kinde Management API",
         autogenerate: {directory: "developer-tools/kinde-api"},
+        collapsed: false
+      },
+      {
+        label: "Account API",
+        autogenerate: {directory: "developer-tools/account-api"},
         collapsed: false
       },
       {label: "Your APIs", autogenerate: {directory: "developer-tools/your-apis"}, collapsed: false}
