@@ -1,0 +1,79 @@
+---
+page_id: 
+title: Enable self-serve portal for users
+sidebar:
+  order: 8
+relatedArticles:
+  - beebe908-27f8-4be6-b74c-05fc8ff5dfb5
+  - a2668524-5842-4c68-ab50-30b7e8c3e842
+---
+
+You can configure a self-serve portal to enable users to be able to self-manage functions provided by Kinde. For example, you can allow them to update their profile, as well as their billing subscription and payment details (if you have billing set up).
+
+A self-serve portal means your customers can make basic account changes without contacting you for support. This can save time and money.
+
+## Configure the user self-serve portal
+
+1. Go to **Settings > Environment > Self-serve portal**.
+2. Enter the **Return URL** that you want users to land on when they exit the portal, e.g. your app dashboard.
+4. In the **User profile** section, select the functions you want the user to be able to manage. If you select **Billing**, they can manage their plan as well as payment methods.
+5. Select **Save**.
+
+## Generate the self-serve portal link
+
+Access to the portal is granted via a one-time link. There are two main ways to generate this link:
+
+- **Using the user's access token** (recommended)
+- **Using the Kinde Management API**
+
+### Include the self-serve portal link in the user's access token
+
+This method is ideal when you want to generate the portal link on the fly—for example, when a user clicks an "Account" button in your app.
+
+### Generate a self-serve portal link with a Kinde SDK
+
+If you're using the Kinde React SDK, you can use the `<PortalLink />` component, which both generates the link and redirects the user:
+
+```jsx
+import {PortalLink} from "@kinde-oss/kinde-auth-react";
+
+<PortalLink>Account</PortalLink>;
+```
+
+### Generate a self-serve portal link without a Kinde SDK
+
+If you're not using a Kinde SDK, you can manually call the Account API:
+
+```js
+const response = await fetch("/api/v1/account_api/portal_link", {
+  headers: {
+    Authorization: `Bearer ${userAccessToken}`
+  }
+});
+const data = await response.json();
+window.location = data.url;
+```
+
+Optional parameters:
+
+- `return_url` – where to redirect the user after exiting the portal.
+- `sub_nav` – specify the portal section to open (e.g., `organization_billing`, `profile`).
+
+### Manage the self-serve portal link using the Kinde Management API
+
+This option is useful for server-side applications or if you're using Kinde billing features without Kinde Authentication.
+
+Make a request to the `POST /api/v1/portal/generate_url` endpoint using an M2M token.
+
+**Request body**
+
+```js
+{
+  "user_id": "kp_1234567890", // The ID of the user for whom you want to generate the portal link
+  "organization_code": "org_123456789", // Optional: the organization code for which the portal link is generated
+  "return_url": "https://yourapp.com/dashboard", // Optional: where to redirect the user after exiting the portal
+  "sub_nav": "profile" // Optional: specify the portal section to open (e.g., `organization_billing`, `profile`)
+}
+```
+
+This will return a one-time portal link for the specified user.
