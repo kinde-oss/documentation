@@ -1,0 +1,90 @@
+---
+page_id: bbcccc7e-2a7a-44f2-8069-1c4bd37141b1
+title: Machine-to-Machine (M2M) access scoped to organizations
+sidebar:
+  order: 10
+relatedArticles:
+  - 815f10b0-7bd2-407a-9ac2-9fb582862a5b
+  - 8f6af95a-14ef-436d-862f-bfa82e836558
+  - 263176d3-d823-4bba-a95f-02f6df00bd10
+---
+
+<Aside type="upgrade">
+
+This is an advanced feature that is only available on the [Kinde Plus or Scale plans](https://kinde.com/pricing/)
+
+</Aside>
+
+Kinde supports creating machine-to-machine (M2M) applications that are scoped to a specific organization. This lets you securely issue access tokens tied to an organization, ensuring that any automation or service calling your APIs is restricted to the correct customer context.
+
+Global (unscoped) M2M applications are still supported for broader use cases, such as internal automation across multiple orgs.
+
+## When to use an org-scoped M2M application
+
+You should use an organization-scoped M2M app when:
+
+- You are building automation that acts on behalf of a specific customer or tenant.
+- You are deploying AI agents, bots, or backend services that must be restricted to a single organization’s data.
+- You want to issue different tokens with separate scopes or permissions per organization.
+- You need to simplify tenant isolation and avoid passing or validating org codes manually.
+
+## How it works
+
+1. Create an M2M application inside an organization in the Kinde dashboard.
+2. Assign scopes that define what the app can access (e.g. `read:users`, `write:flags`).
+3. Use the client credentials flow to request an access token using the generated `client_id` and `client_secret`.
+4. Kinde returns a token with trusted claims about the organization and app.
+5. The token can be used to interact with Kinde APIs on behalf of that organization.
+
+Each org-scoped app is tightly bound to a single organization. Tokens issued from that app cannot be used across orgs.
+
+## Token structure
+
+An example tokens issued to an org-scoped M2M app may include the following claims:
+
+```json
+{
+  "aud": ["https://api.foobar.com/v1/"],
+  "azp": "12ce25d1109d4c66b0f469e47d33f8eb",
+  "exp": 1751212288,
+  "gty": ["client_credentials"],
+  "iat": 1751125888,
+  "iss": "https://example.kinde.com",
+  "jti": "28a8d6a8-fe7c-4c90-84a6-1b3ccaaeabf2",
+  "org_code": "org_1234567890",
+  "scope": "read:users write:flags",
+  "scp": ["read:users", "write:flags"],
+  "v": "2"
+}
+```
+
+These claims can be used by your backend services to authorize access to specific APIs or resources.
+
+## Org-scoped vs global M2M applications
+
+| Feature               | Global M2M app                     | Org-scoped M2M app             |
+| --------------------- | ---------------------------------- | ------------------------------ |
+| Org context in token  | No                                 | Yes                            |
+| Tenant data isolation | Manual                             | Enforced                       |
+| Use case              | Admin scripts, internal automation | Per-tenant agents, scoped APIs |
+| Token restrictions    | None                               | Scoped to one org              |
+| Token claims          | Basic                              | Includes `org_code`, `scope`   |
+
+## Create an org-scoped M2M app
+
+1. In Kinde, go to **Organizations**, then view an organization.
+2. Select **M2M apps**.
+3. Select **Add M2M application**
+4. Enter a name for the application
+5. Select **Save**.
+
+Kinde generates a `client_id` and `client_secret` tied to the selected organization.
+Use the credentials in a standard client credentials flow to request a token.
+
+## Best practices
+
+- Use separate M2M apps for different scopes or services.
+- Limit the [scopes](https://docs.kinde.com/developer-tools/your-apis/custom-api-scopes/) assigned to each M2M app to the minimum required for its function.
+- [Rotate client secrets](https://docs.kinde.com/build/applications/rotate-client-secret/) periodically using the UI.
+- Audit token usage by tracking `client_id` and `org_code` in logs.
+- Avoid including any personally identifiable information (PII) in token claims.
