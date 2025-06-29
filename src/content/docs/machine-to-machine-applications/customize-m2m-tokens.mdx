@@ -1,0 +1,106 @@
+---
+page_id: 3a16e08b-62c7-4725-8884-7065bfb2dbf2
+title: Customize the claims of an M2M token
+sidebar:
+  order: 7
+relatedArticles:
+  - 6f82d354-7b77-4560-99d7-20a5b723b4b3
+  - 5b13e167-b032-4a61-a67a-81a12d6e20d5
+  - 9f832d29-1b76-4bb2-b4dc-e4a9a9c327b3
+---
+
+You can customize the claims of tokens issued to machine-to-machine (M2M) applications in Kinde by including selected **Properties** and **Feature Flags**. This allows you to inject structured metadata and configuration directly into the token, without requiring an additional lookup at runtime.
+
+This is useful for:
+- Routing or behavior changes based on metadata
+- Feature gating in backend systems
+- Configuring AI agents or other automation tools
+
+## Where to configure token customization
+
+1. Go to your M2M application in Kinde
+2. Select the **Tokens** tab
+
+From here you can:
+- Set the token lifetime
+- Enable **Hasura-compatible mapping**
+- Opt to include scopes under a `permissions` claim
+- Toggle on **Properties** and **Feature flags** to be included in the token
+
+Tokens remain signed JWTs and can be verified like any other Kinde-issued token.
+
+## Include properties in the token
+
+**Properties** are a flexible metadata system in Kinde. You can define custom fields and assign values to individual M2M applications — for example, `tier`, `region`, or `model_version`.
+
+To include a property in the token:
+
+1. First, assign the property value to the M2M app (see [Add metadata to an M2M application](/build/applications/m2m-properties/))
+2. Then, in the **Tokens** tab, toggle that property on
+
+The value will appear in the token under a `application_properties` claim:
+
+```json
+{
+"application_properties": {
+    "region": {
+      "v": "eu"
+    },
+    "tier": {
+      "v": "pro"
+    }
+  }
+}
+```
+
+The `v` is a shortcode for the value of the property.
+
+Only the properties you explicitly toggle on will be included.
+
+## Include feature flags in the token
+
+If your M2M app is scoped to an organization, you can also include feature flags that are enabled for that org.
+
+To do this:
+
+1. In the **Tokens** tab of the M2M app, toggle on any feature flags you want to include
+2. These flags will appear in the token under a `feature_flags` claim
+
+Example:
+
+```json
+{
+  "feature_flags": {
+      "new-ai-agent": {
+          "t": "b",
+          "v": true
+       },
+  	   "access-level": {
+          "t": "s",
+          "v": "beta"
+       }
+    }
+}
+```
+The `t` and `v` are short codes for the type and value of the feature flag.
+
+- `t` = `type` (boolean, string, number)
+- `v` = `value` (true | false, "beta", 1, etc.)
+
+Only the feature flags you explicitly toggle on will be included.
+
+## Notes
+
+- Properties must be defined and assigned before they can be included in a token
+- Only environment level feature flags are available for M2M apps
+- Only toggled flags and properties are included — the token stays lean and secure
+
+## Complete control over the token
+
+For complete control over the token, you can use the Kinde M2M token generation workflow to customize the token further.
+
+For example, you can:
+- Add custom claims to the token
+- Add custom scopes to the token
+- Add custom metadata to the token
+

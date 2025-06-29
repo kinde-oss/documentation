@@ -1,0 +1,92 @@
+---
+page_id: 0ef40c87-d5e3-4a7a-b294-7a80b3e7638b
+title: Quick start – Set up your first M2M application
+sidebar:
+  order: 2
+relatedArticles:
+  - f1c72f80-4f8e-4b5e-bc4d-6f2a798ec7f1
+  - 9f832d29-1b76-4bb2-b4dc-e4a9a9c327b3
+  - 5b13e167-b032-4a61-a67a-81a12d6e20d5
+  - e76bda15-2021-4b11-9d30-10991c5b4cc1
+---
+
+This guide shows you how to create a machine-to-machine (M2M) application in Kinde, authorize it for an API, and use the client credentials flow to get a token and make a secure API request.
+
+## Step 1 — Create a machine-to-machine app
+
+1. Go to the **Applications** section in your Kinde dashboard
+2. Select **Machine-to-machine apps**
+3. Choose **Add M2M application**
+4. Enter a name
+
+## Step 2 — Create an API in Kinde (if you don't have one)
+
+You can skip this step if you already have an API registered in Kinde.
+
+1. Go to the **APIs** section in your Kinde dashboard
+2. Select **Add API**
+3. Enter a name
+4. Select **Save**
+
+## Step 3 — Authorize the app to access an API
+
+1. Open your newly created app
+2. Go to the **APIs** tab
+3. Select the API (audience) this app should be allowed to call.
+4. Select **Save**.
+
+If you skip this step, token requests will be rejected.
+
+## Step 4 — (Optional) Add scopes
+
+If your API uses scopes to define permissions:
+
+1. Go to **APIs** in your Kinde dashboard
+2. Choose the API you’re protecting
+3. Add scopes (e.g. `read:users`, `write:flags`)
+4. Go back to your M2M app and assign those scopes
+
+For more detail, see [Define and manage API scopes](/build/applications/api-scopes/).
+
+## Step 5 — Get a token
+
+You can test the app in one of two ways:
+
+### Option A — Use the Test tab in Kinde
+
+1. Open your M2M app
+2. Go to the **Test** tab
+3. Select the API (audience)
+4. Copy the generated token
+
+### Option B — Use the client credentials flow directly
+
+'''bash
+curl --request POST 'https://your-subdomain.kinde.com/oauth2/token' \
+  --header 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'grant_type=client_credentials' \
+  --data-urlencode 'client_id=your-client-id' \
+  --data-urlencode 'client_secret=your-client-secret' \
+  --data-urlencode 'audience=https://api.kinde.com' \
+  --data-urlencode 'scope=read:users write:flags'
+'''
+
+The response will include a bearer token you can use in requests:
+
+'''json
+{
+  "access_token": "<token>",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}
+'''
+
+## Step 6 — Use the token in an API call
+
+Include the token in the `Authorization` header:
+
+'''bash
+curl https://your-subdomain.kinde.com/v1/organizations \
+  -H "Authorization: Bearer <token>"
+'''
+
