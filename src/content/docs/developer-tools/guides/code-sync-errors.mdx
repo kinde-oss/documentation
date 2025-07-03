@@ -1,0 +1,52 @@
+---
+page_id: 35e9465b-f723-4beb-a3e2-594d6b6329d2
+title: Troubleshoot code sync errors
+sidebar:
+  order: 3
+relatedArticles:
+  - 85c135db-f55a-4edf-8d1b-0af4140c1925
+  - 261fb4ed-83e5-4f92-8f52-8da22749a92e
+---
+
+If you've got your repo synced to pass code to Kinde, for use in custom page code or workflows, you may encounter errors from time to time. Here's some common ones and how to solve. 
+
+## Deployment failed: More than one workflow assigned to this trigger
+
+Each trigger is mapped to a single workflow, make sure you don’t have any existing workflows already using the trigger.
+
+## No default function exported
+
+Kinde expects a default function to be exported. Make sure the format is correct:
+
+```jsx
+// Pages
+export default async function Page(event) {
+
+  return "<div>Page content</div>";
+}
+
+// Workflows
+export default async function Workflow(event) {
+
+  // Workflow code here
+}
+```
+
+## Workflow ID is required
+
+Workflows require a unique ID to be set in the `workflowSettings` object.
+
+If you do have an ID set in your code this indicates that the page could not compile, and therefore the settings could not be read.
+
+## Sync log showing no pages and no workflows
+
+Technically the sync was successful but Kinde was unable to find any pages or workflows in your repo. Check you `kindeSrc` file and default exports.
+
+## No matching export in "kindeKnownPackage: https://cdn.jsdelivr.net/npm/@kinde/infrastructure@latest/+esm" for import <xxxxx>
+
+Occurs if you are trying to use a method from the Kinde infrastructure package that doesn’t exist. Check your imports.
+
+## Runtime error: `x` is not defined at `y`
+
+Check your code for undefined variable usage.
+
