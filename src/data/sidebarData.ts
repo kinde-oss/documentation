@@ -266,6 +266,37 @@ const sidebarData = [
     ]
   },
   {
+    label: "Machine-to-Machine (M2M)",
+    description: "Build machine-to-machine applications",
+    collapsed: true,
+    icon: "workflow",
+    cardLink: "/machine-to-machine-applications/about-m2m/",
+    items: [
+      {
+        label: "Overview",
+        autogenerate: {directory: "machine-to-machine-applications/about-m2m"},
+        collapsed: false
+      },
+      {
+        label: "M2M application setup",
+        autogenerate: {directory: "machine-to-machine-applications/m2m-application-setup"},
+        collapsed: false
+      },
+      {
+        label: "Organization-scoped M2M apps",
+        autogenerate: {directory: "machine-to-machine-applications/organization-scoped-m2m-apps"},
+        collapsed: false
+      },
+      {label: "M2M token customization", autogenerate: {directory: "machine-to-machine-applications/m2m-token-customization"}, collapsed: false},
+      {
+        label: "Automation",
+        autogenerate: {directory: "machine-to-machine-applications/m2m-workflow-automation"},
+        collapsed: false
+      },
+      {label: "Troubleshooting", autogenerate: {directory: "machine-to-machine-applications/troubleshooting-m2m"}, collapsed: false}
+    ]
+  },
+  {
     label: "Manage users",
     description: "Manage user profiles, including roles and permissions",
     icon: "profile",
@@ -304,7 +335,7 @@ const sidebarData = [
     items: [
       {
         label: "About",
-        autogenerate: {directory: "releases/about"}, 
+        autogenerate: {directory: "releases/about"},
         collapsed: false},
       {
         label: "Guides",
@@ -315,7 +346,7 @@ const sidebarData = [
         autogenerate: {directory: "releases/feature-flags"},
         collapsed: false
       }
-      
+
       // {
       //   label: "Plan and release",
       //   autogenerate: {directory: "releases/plan-and-release"},
