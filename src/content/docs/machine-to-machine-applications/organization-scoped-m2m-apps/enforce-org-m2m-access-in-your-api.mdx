@@ -11,7 +11,6 @@ relatedArticles:
 
 If you're using [org-scoped machine-to-machine (M2M) apps](/machine-to-machine-applications/organization-scoped-m2m-apps/m2m-applications-for-organizations/), Kinde will automatically include a trusted `org_code` claim in the token. You can then enforce access control in your own APIs using this claim.
 
-
 ## When to enforce org context
 
 You should validate `org_code` in any API route or resource that is **tenant-specific**, such as:
@@ -33,35 +32,31 @@ When you receive a token, decode it and check:
 ## Example in Node.js (Express)
 
 ```js
-const jwt = require('jsonwebtoken')
-
+const jwt = require("jsonwebtoken");
 function verifyOrgAccess(req, res, next) {
-  const authHeader = req.headers.authorization
-  const token = authHeader?.split(' ')[1]
-
-  if (!token) return res.status(401).send('Missing token')
-
-  const decoded = jwt.decode(token)
-
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(" ")[1];
+  if (!token) return res.status(401).send("Missing token");
+  // If Kinde is **not** validating the token for you,
+  // verify the signature instead of a raw decode.
+  // const PUBLIC_KEY = ... // fetch from /.well-known/openid-configuration
+  const decoded = jwt.verify(token, PUBLIC_KEY, {algorithms: ["RS256"]});
   // Check for required claims
-  if (!decoded?.org_code) return res.status(403).send('Token not scoped to an organization')
-
-  const orgFromRoute = req.params.org_code
-
+  if (!decoded?.org_code) return res.status(403).send("Token not scoped to an organization");
+  const orgFromRoute = req.params.org_code;
   if (decoded.org_code !== orgFromRoute) {
-    return res.status(403).send('Token does not match organization')
+    return res.status(403).send("Token does not match organization");
   }
-
-  next()
+  next();
 }
 ```
 
 Then apply the middleware:
 
 ```js
-app.get('/orgs/:org_code/users', verifyOrgAccess, (req, res) => {
+app.get("/orgs/:org_code/users", verifyOrgAccess, (req, res) => {
   // safe to fetch users for this org
-})
+});
 ```
 
 ## Notes
@@ -76,6 +71,7 @@ app.get('/orgs/:org_code/users', verifyOrgAccess, (req, res) => {
 If the token has no `org_code`, treat it as **not authorized** to access org-specific resources unless explicitly allowed.
 
 You may choose to:
+
 - Reject the request
 - Allow access only to system-level endpoints
 - Prompt developers to use org-scoped apps instead
