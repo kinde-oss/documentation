@@ -1,0 +1,78 @@
+---
+page_id: 455ff4f0-5679-45cc-b3a1-c5801917670e
+title: Add metadata to an M2M app using properties
+sidebar:
+  order: 3
+relatedArticles:
+  - 6d443d12-cf58-4be7-84a8-7de30c0eba2c
+  - 5313529d-2bd6-4340-97ca-62db60de2674
+  - 4cb63554-d6b3-45cf-bdad-2fac4790d3aa
+---
+
+You can use **Properties** in Kinde to add structured metadata to a Machine-to-Machine (M2M) application. These properties can store configuration or contextual data like `region`, `tier`, or `model_version`.
+
+This is useful for:
+
+- Customizing tokens
+- Driving logic in downstream systems
+- Managing AI agent behavior
+
+If you're looking to include properties inside tokens, see [Customize the claims of an M2M token with properties](/machine-to-machine-applications/m2m-application-setup/add-metadata-to-an-m2m-application-with-properties/).
+
+## Step 1 - Define your property
+
+Before you can assign a property to an app, you need to define it.
+
+1. In Kinde, go to **Properties**
+2. Select **Add property**
+3. Choose the object type: **Application**
+4. Give the property a name (e.g. `tier`, `region`, `model_version`)
+5. Add a description and data type (optional)
+6. You can opt for whether a property is allowed to be included in tokens (optional)
+7. Select **Save**
+
+Once saved, this property is now available across all M2M applications.
+
+## Step 2 - Assign the property to an M2M application
+
+1. In Kinde, go to **Applications > M2M apps**
+2. Select the app you want to assign metadata to
+3. Open the **Properties** tab
+4. Add or edit values for the available fields
+
+For example:
+
+| Property      | Value |
+| ------------- | ----- |
+| region        | eu    |
+| model_version | v2    |
+| tier          | pro   |
+
+These values are stored with the app but are not included in tokens unless explicitly enabled.
+
+## Include a property in an M2M token
+
+1. Go to **Applications > Your M2M app**
+2. Select the **Tokens** tab
+3. Under **Properties**, toggle on the properties you want included in the token
+
+These flags will be embedded in the token under the `application_properties` claim:
+
+```json
+{
+  "application_properties": {
+    "region": {
+      "v": "eu"
+    },
+    "tier": {
+      "v": "pro"
+    }
+  }
+}
+```
+
+## Note
+
+- Properties are available for applications, users, and organizations
+- Only **Application** properties are relevant for M2M apps
+- This feature is useful for setting up per-customer configuration without hardcoding or external storage
