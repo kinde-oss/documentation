@@ -19,6 +19,8 @@ The Kinde Python SDK allows developers to quickly and securely integrate a new o
 
 If you are using a previous version of Python, you may need to refer to the [previous v1 SDK](/developer-tools/sdks/backend/python-sdk-v1/).
 
+If you're migrating from an older version of the SDK, see our [migration guide](https://github.com/kinde-oss/kinde-python-sdk/blob/main/MIGRATION.md) for detailed instructions.
+
 For new projects, you can find our [Starter Kit on GitHub](https://github.com/kinde-starter-kits/python-starter-kit).
 
 ## Install
@@ -49,12 +51,18 @@ The Kinde Python SDK uses environment variables for configuration. Here are all 
 - `SITE_PORT` - Your application's port (default: `5000`)
 - `SITE_URL` - Your application's base URL
 - `CODE_VERIFIER` - Required for PKCE flow (auto-generated if not provided)
-- `SECRET_KEY` - Used for session management
+
+**Session management variables** (core SDK features):
+- `SECRET_KEY` - Used for session management and token security
 - `SESSION_TYPE` - Session storage type (e.g., `filesystem`)
 - `SESSION_PERMANENT` - Whether sessions are permanent (default: `False`)
+
+**Application configuration**:
 - `TEMPLATES_AUTO_RELOAD` - Whether to auto-reload templates (default: `True`)
-- `MGMT_API_CLIENT_ID` - Management API client ID (if using management features)
-- `MGMT_API_CLIENT_SECRET` - Management API client secret (if using management features)
+
+**Management API variables** (only needed if using Management API features):
+- `MGMT_API_CLIENT_ID` - Management API client ID
+- `MGMT_API_CLIENT_SECRET` - Management API client secret
 
 Example `.env` file:
 ```bash
@@ -540,21 +548,7 @@ Here are some common claims you might want to access:
 "org_id"
 ```
 
-### Token types
 
-The SDK supports two types of tokens:
-
-1. Access Token (`token_type="access_token"`):
-   - Contains authorization information
-   - Used for API access
-   - Contains permissions and organization context
-   - Default token type
-
-2. ID Token (`token_type="id_token"`):
-   - Contains user identity information
-   - Used for user profile data
-   - Contains name, email, and other user details
-   - Must be explicitly requested using `token_type="id_token"`
 
 ## Organizations
 
@@ -626,9 +620,41 @@ oauth.get_user_organizations()
 
 For more information about how organizations work in Kinde, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
 
-### Token storage
+### Token and session management
 
-Once the user has successfully authenticated, you'll get a JWT and possibly a refresh token that should be stored securely.
+The Kinde Python SDK automatically handles token and session management for your application. Once a user has successfully authenticated, the SDK manages:
+
+- **Token acquisition and storage**: Automatically obtains and securely stores access tokens, ID tokens, and refresh tokens
+- **Token refresh**: Automatically refreshes tokens when they expire
+- **Session management**: Handles user sessions across requests
+- **Framework integration**: Works seamlessly with Flask and FastAPI session systems
+
+The SDK uses the session configuration from your environment variables (`SECRET_KEY`, `SESSION_TYPE`, `SESSION_PERMANENT`) to manage sessions appropriately for your chosen framework.
+
+#### Token types
+
+The SDK supports two types of tokens:
+
+1. **Access Token** (`token_type="access_token"`):
+   - Contains authorization information
+   - Used for API access
+   - Contains permissions and organization context
+   - Default token type
+
+2. **ID Token** (`token_type="id_token"`):
+   - Contains user identity information
+   - Used for user profile data
+   - Contains name, email, and other user details
+   - Must be explicitly requested using `token_type="id_token"`
+
+#### Session handling
+
+The SDK automatically integrates with your framework's session system:
+
+- **Flask**: Uses Flask's built-in session management
+- **FastAPI**: Integrates with FastAPI's session handling
+
+You don't need to manually manage tokens or sessions - the SDK handles this automatically for you.
 
 ## Management API
 
@@ -716,13 +742,14 @@ except Exception as e:
 
 ### Token management
 
-The Management API client automatically handles token management, including:
-- Token acquisition
-- Token refresh
-- Token storage
-- Thread safety
+The Management API client has its own token management system for API authentication, which is separate from the core SDK's user session token management. The Management API client automatically handles:
 
-You don't need to manage tokens manually - the client handles this for you.
+- **accessing Kinde Management API endpoints**: Obtains tokens for accessing Kinde's management endpoints
+- **Token refresh**: Automatically refreshes management API tokens when they expire
+- **Token storage**: Securely stores management API tokens
+- **Thread safety**: Ensures thread-safe token handling for concurrent requests
+
+You don't need to manually manage Management API tokens - the client handles this for you. This is different from the core SDK's user session token management, which handles user authentication tokens automatically.
 
 ### Best practices
 
