@@ -994,38 +994,26 @@ async def get_users_limited(
 
 ### Error handling for FastAPI M2M
 
-Proper error handling is crucial for M2M applications with FastAPI:
+FastAPI provides excellent exception handling capabilities:
 
 ```python
-from typing import Union
 from fastapi import HTTPException, status
+from typing import Optional
 
-def handle_m2m_error(error: Exception, operation: str) -> HTTPException:
-    """Centralized error handling for M2M operations"""
-    
-    if isinstance(error, ValueError):
-        return HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid request for {operation}: {str(error)}"
-        )
-    elif "unauthorized" in str(error).lower() or "invalid token" in str(error).lower():
-        return HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Authentication failed for {operation}",
-            headers={"WWW-Authenticate": "Bearer"}
-        )
-    elif "forbidden" in str(error).lower():
-        return HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Insufficient permissions for {operation}"
-        )
-    else:
-        return HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal server error during {operation}: {str(error)}"
-        )
+# Custom exceptions for M2M operations
+class M2MAuthenticationError(Exception):
+    """Raised when M2M authentication fails"""
+    pass
 
-# Using centralized error handling
+class M2MAuthorizationError(Exception):
+    """Raised when M2M authorization fails"""
+    pass
+
+class M2MValidationError(Exception):
+    """Raised when M2M request validation fails"""
+    pass
+
+# Simple error handling in endpoints
 @app.get("/management/users/secure")
 async def get_users_secure(token_manager: ManagementTokenManager = Depends(get_management_token)):
     try:
@@ -1038,8 +1026,70 @@ async def get_users_secure(token_manager: ManagementTokenManager = Depends(get_m
         users_response = management_client.get_users()
         return {"users": users_response.users}
         
+    except M2MAuthenticationError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication failed",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+    except M2MAuthorizationError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions"
+        )
+    except M2MValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
-        raise handle_m2m_error(e, "user retrieval")
+        # Log the actual error for debugging
+        logger.error(f"Unexpected error in get_users: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
+
+# Alternative: Using FastAPI's exception handlers
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+app = FastAPI()
+
+@app.exception_handler(M2MAuthenticationError)
+async def m2m_auth_exception_handler(request: Request, exc: M2MAuthenticationError):
+    return JSONResponse(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        content={"detail": "Authentication failed"},
+        headers={"WWW-Authenticate": "Bearer"}
+    )
+
+@app.exception_handler(M2MAuthorizationError)
+async def m2m_authz_exception_handler(request: Request, exc: M2MAuthorizationError):
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN,
+        content={"detail": "Insufficient permissions"}
+    )
+
+@app.exception_handler(M2MValidationError)
+async def m2m_validation_exception_handler(request: Request, exc: M2MValidationError):
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={"detail": str(exc)}
+    )
+
+# With exception handlers, your endpoints become much cleaner
+@app.get("/management/users/clean")
+async def get_users_clean(token_manager: ManagementTokenManager = Depends(get_management_token)):
+    management_client = ManagementClient(
+        domain=token_manager.domain,
+        client_id=token_manager.client_id,
+        client_secret=token_manager.client_secret
+    )
+    
+    users_response = management_client.get_users()
+    return {"users": users_response.users}
+    # Custom exceptions will be automatically handled by the exception handlers
 ```
 
 ### Security best practices for M2M
@@ -1100,7 +1150,7 @@ Flask requires a different approach since it doesn't have built-in dependency in
 ```python
 import os
 import logging
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 from functools import wraps
 from kinde_sdk.auth.management import ManagementTokenManager, ManagementClient
 
@@ -1155,8 +1205,8 @@ def require_m2m_auth(f):
     def decorated_function(*args, **kwargs):
         try:
             token_manager = get_management_token_flask()
-            # Store token_manager in request context for use in route
-            request.token_manager = token_manager
+            # Store token_manager in Flask's g object for use in route
+            g.token_manager = token_manager
             return f(*args, **kwargs)
         except ValueError as e:
             return jsonify({"error": str(e)}), 401
@@ -1174,7 +1224,7 @@ def require_m2m_auth(f):
 def get_users():
     """Get users with M2M authentication"""
     try:
-        token_manager = request.token_manager
+        token_manager = g.token_manager
         
         # Create ManagementClient with the token manager
         management_client = ManagementClient(
@@ -1201,7 +1251,7 @@ def get_users():
 def get_organizations():
     """Get organizations with M2M authentication"""
     try:
-        token_manager = request.token_manager
+        token_manager = g.token_manager
         
         management_client = ManagementClient(
             domain=token_manager.domain,
