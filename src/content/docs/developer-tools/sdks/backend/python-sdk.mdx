@@ -47,9 +47,6 @@ The Kinde Python SDK uses environment variables for configuration. Here are all 
 - `KINDE_AUDIENCE` - The intended recipient of the access token (for API access)
 - `KINDE_CALLBACK_URL` - Alternative name for KINDE_REDIRECT_URI
 - `LOGOUT_REDIRECT_URL` - Where users are redirected after logout
-- `SITE_HOST` - Your application's host (default: `127.0.0.1`)
-- `SITE_PORT` - Your application's port (default: `5000`)
-- `SITE_URL` - Your application's base URL
 - `CODE_VERIFIER` - Required for PKCE flow (auto-generated if not provided)
 
 **Session management variables** (core SDK features):
@@ -61,25 +58,30 @@ The Kinde Python SDK uses environment variables for configuration. Here are all 
 - `TEMPLATES_AUTO_RELOAD` - Whether to auto-reload templates (default: `True`)
 
 **Management API variables** (only needed if using Management API features):
-- `MGMT_API_CLIENT_ID` - Management API client ID
-- `MGMT_API_CLIENT_SECRET` - Management API client secret
+- `KINDE_MANAGEMENT_CLIENT_ID` - Management API client ID
+- `KINDE_MANAGEMENT_CLIENT_SECRET` - Management API client secret
 
 Example `.env` file:
 ```bash
-KINDE_CLIENT_ID=your_client_id
-KINDE_CLIENT_SECRET=your_client_secret
-KINDE_REDIRECT_URI=http://localhost:5000/api/auth/kinde_callback
-KINDE_HOST=https://yourdomain.kinde.com
-KINDE_ISSUER_URL=https://yourdomain.kinde.com
+# Core SDK configuration
+KINDE_CLIENT_ID=a651c908d1664b058bd506b273a195dc
+KINDE_CLIENT_SECRET=VNDok6YX5pPw47F9GTRdXAytOsbWHAH7GT3NkLMAkkHWy0Lzev2
+KINDE_REDIRECT_URI=http://127.0.0.1:5000/callback
+KINDE_HOST=https://burntjam.kinde.com
+KINDE_AUDIENCE=
+LOGOUT_REDIRECT_URL=http://127.0.0.1:5000/api/auth/logout
+KINDE_CALLBACK_URL=http://localhost:5000/callback
+KINDE_ISSUER_URL=https://burntjam.kinde.com
 GRANT_TYPE=AUTHORIZATION_CODE_WITH_PKCE
-SITE_HOST=localhost
-SITE_PORT=5000
-SITE_URL=http://localhost:5000
-LOGOUT_REDIRECT_URL=http://localhost:8000
-SECRET_KEY=your_secret_key
+CODE_VERIFIER=joasd923nsad09823noaguesr9u3qtewrnaio90eutgersgdsfg
+TEMPLATES_AUTO_RELOAD=True
 SESSION_TYPE=filesystem
 SESSION_PERMANENT=False
-TEMPLATES_AUTO_RELOAD=True
+SECRET_KEY=joasd923nsad09823noaguesr9u3qtewrnaio90eutgersgdsfgs
+
+# Management API configuration (only needed if using Management API features)
+KINDE_MANAGEMENT_CLIENT_ID=7a085224d7de40b2a495601fe266d5c8
+KINDE_MANAGEMENT_CLIENT_SECRET=4NOfz2baSRCeNFpOXuHp1pHHQckCHuFacywJghgO4lC035he
 ```
 
 ### Set callback URLs
@@ -98,25 +100,36 @@ Kinde comes with a production environment, but you can set up other environments
 
 The OAuth client is now automatically configured based on the framework you're using. Simply import the OAuth class from the auth module and create an instance:
 
+<Tabs>
+<Tab title="Flask">
+
 ```python
 from kinde_sdk.auth.oauth import OAuth
-
-# For Flask applications
 from flask import Flask
+
 app = Flask(__name__)
 oauth = OAuth(
     framework="flask",
     app=app  # optional: pass your Flask app instance
 )
+```
 
-# For FastAPI applications
+</Tab>
+<Tab title="FastAPI">
+
+```python
+from kinde_sdk.auth.oauth import OAuth
 from fastapi import FastAPI
+
 app = FastAPI()
 oauth = OAuth(
     framework="fastapi",
     app=app  # optional: pass your FastAPI app instance
 )
 ```
+
+</Tab>
+</Tabs>
 
 The SDK will automatically detect and configure the appropriate framework implementation based on the framework parameter and app instance you provide.
 
@@ -133,7 +146,10 @@ The Kinde client provides methods for easy sign in and sign up. You can add butt
 
 ### Automatic Route Registration
 
-The framework wrapper can automatically register all necessary routes. For Flask:
+The framework wrapper can automatically register all necessary routes.
+
+<Tabs>
+<Tab title="Flask">
 
 ```python
 from kinde_sdk.auth.oauth import OAuth
@@ -146,7 +162,8 @@ oauth = OAuth(
 )
 ```
 
-For FastAPI:
+</Tab>
+<Tab title="FastAPI">
 
 ```python
 from kinde_sdk.auth.oauth import OAuth
@@ -159,11 +176,15 @@ oauth = OAuth(
 )
 ```
 
+</Tab>
+</Tabs>
+
 ### Manual route implementation
 
 If you prefer to implement the routes manually, here's how you can do it:
 
-For Flask:
+<Tabs>
+<Tab title="Flask">
 
 ```python
 import asyncio
@@ -241,7 +262,8 @@ def get_user():
         return f"Failed to get user info: {str(e)}", 400
 ```
 
-For FastAPI:
+</Tab>
+<Tab title="FastAPI">
 
 ```python
 from fastapi import FastAPI, Request
@@ -276,6 +298,9 @@ async def get_user(request: Request):
         return RedirectResponse(url=await oauth.login())
     return oauth.get_user_info(request)
 ```
+
+</Tab>
+</Tabs>
 
 The manual implementation gives you more control over the authentication flow and allows you to add custom logic like session management, error handling, and logging. Note that Flask requires special handling of async methods using `asyncio` since it doesn't natively support async/await like FastAPI does.
 
@@ -658,6 +683,42 @@ You don't need to manually manage tokens or sessions - the SDK handles this auto
 
 ## Management API
 
+Before using the Management API, you must configure a Machine-to-Machine (M2M) application in Kinde and set the required environment variables as described below.
+
+### Machine-to-Machine (M2M) Applications
+
+The Kinde Python SDK supports Machine-to-Machine (M2M) applications, which allow server-to-server communication without user interaction. M2M applications use client credentials flow and are required for Management API access.
+
+#### Environment setup for M2M
+
+For M2M applications, you'll need additional environment variables:
+
+```bash
+# M2M Management API credentials
+KINDE_MANAGEMENT_CLIENT_ID=your_m2m_client_id
+KINDE_MANAGEMENT_CLIENT_SECRET=your_m2m_client_secret
+```
+
+#### Create and configure M2M application
+
+1. **Create M2M Application**:
+   - In your Kinde dashboard, go to **Settings > Applications**
+   - Click **Add application**
+   - Select **Machine to machine (M2M)** as the application type
+   - Give your application a name (e.g., "Management API Client")
+   - Click **Create application**
+
+2. **Authorize Management API Access**:
+   - Click the three dots (...) next to your M2M application
+   - Select **Authorize application**
+   - Choose the **Kinde Management API** from the list
+   - Select the required scopes (e.g., `read:users`, `write:users`, `read:organizations`)
+   - Click **Authorize**
+
+3. **Copy Credentials**:
+   - Note the **Client ID** and **Client Secret** from your M2M application
+   - Add them to your `.env` file as shown in the example above
+
 The Kinde Python SDK provides a Management API client for interacting with Kinde's management endpoints. This allows you to programmatically manage users, organizations, and other resources.
 
 ### Getting started
@@ -751,687 +812,4 @@ The Management API client has its own token management system for API authentica
 
 You don't need to manually manage Management API tokens - the client handles this for you. This is different from the core SDK's user session token management, which handles user authentication tokens automatically.
 
-### Best practices
-
-1. Always use async/await when calling Management API methods
-2. Handle API errors appropriately
-3. Cache results when appropriate to reduce API calls
-4. Use appropriate error handling for production environments
-5. Keep your client credentials secure
-
 For more information about the Management API endpoints and capabilities, see the [Kinde Management API documentation](https://docs.kinde.com/kinde-apis/management/).
-
-## Machine-to-Machine (M2M) Applications
-
-The Kinde Python SDK supports Machine-to-Machine (M2M) applications, which allow server-to-server communication without user interaction. M2M applications use client credentials flow and can validate bearer tokens for secure API access.
-
-The implementation approach differs depending on your web framework. Below are examples for FastAPI, Flask, and Django.
-
-### Environment setup for M2M
-
-For M2M applications, you'll need additional environment variables:
-
-```bash
-# M2M Management API credentials
-KINDE_MANAGEMENT_CLIENT_ID=your_m2m_client_id
-KINDE_MANAGEMENT_CLIENT_SECRET=your_m2m_client_secret
-```
-
-## FastAPI M2M Implementation
-
-FastAPI provides excellent support for M2M applications with built-in dependency injection and automatic request validation.
-
-### Token validation and introspection with FastAPI
-
-M2M applications can validate incoming bearer tokens using token introspection. Here's how to implement secure token validation with FastAPI:
-
-```python
-import os
-import logging
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from kinde_sdk.auth.management import ManagementTokenManager, ManagementClient
-
-# Set up logging
-logger = logging.getLogger(__name__)
-security = HTTPBearer()
-
-# Extract, introspect, and validate management token from header
-def get_management_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> ManagementTokenManager:
-    logger.debug("Starting token validation")
-    bearer_token = credentials.credentials
-    logger.debug(f"Received bearer token (first 20 chars): {bearer_token[:20]}...")
-    
-    # SDK config from env
-    domain = os.getenv("KINDE_HOST", "https://app.kinde.com")
-    logger.debug(f"Raw domain from env: {domain}")
-    if domain.startswith(('http://', 'https://')):
-        domain = domain.split('://', 1)[1]
-    logger.debug(f"Normalized domain: {domain}")
-    client_id = os.getenv("KINDE_MANAGEMENT_CLIENT_ID")
-    client_secret = os.getenv("KINDE_MANAGEMENT_CLIENT_SECRET")
-    logger.debug(f"Client ID: {client_id}")
-    # Not logging secret for security
-    
-    if not all([domain, client_id, client_secret]):
-        logger.error("Missing Kinde management credentials")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Missing Kinde management credentials in environment"
-        )
-    
-    try:
-        token_manager = ManagementTokenManager(
-            domain=domain,
-            client_id=client_id,
-            client_secret=client_secret
-        )
-        logger.debug(f"ManagementTokenManager instantiated {bearer_token}")
-        
-        introspection_result = token_manager.validate_and_set_via_introspection(bearer_token)
-        logger.debug(f"Introspection result: {introspection_result}")
-        
-        access_token = token_manager.get_access_token()
-        if not access_token:
-            logger.error("No access token after introspection")
-            raise ValueError("Invalid management token after introspection")
-        logger.debug("Access token obtained successfully")
-        
-        return token_manager
-    
-    except ValueError as e:
-        logger.error(f"ValueError in token validation: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
-            headers={"WWW-Authenticate": "Bearer"}
-        )
-    except Exception as e:
-        logger.error(f"Exception in token validation: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Token introspection failed: {str(e)}",
-            headers={"WWW-Authenticate": "Bearer"}
-        )
-```
-
-### FastAPI M2M API endpoints
-
-Once you have token validation set up, you can create secure M2M API endpoints with FastAPI:
-
-```python
-from fastapi import FastAPI
-
-app = FastAPI()
-
-# Example route using the validated management token
-@app.get("/management/users")
-async def get_users(token_manager: ManagementTokenManager = Depends(get_management_token)):
-    logger.debug("Entering get_users endpoint")
-    try:
-        # Create ManagementClient with the token manager
-        management_client = ManagementClient(
-            domain=token_manager.domain,
-            client_id=token_manager.client_id,
-            client_secret=token_manager.client_secret
-        )
-        logger.debug("ManagementClient created")
-        
-        # Fetch users (example API call)
-        users_response = management_client.get_users()
-        
-        # Get the user count from the response
-        user_count = len(users_response.users) if users_response.users else 0
-        logger.debug(f"Fetched {user_count} users")
-        
-        return {
-            "message": "Users fetched successfully",
-            "user_count": user_count,
-            "users": users_response.users if users_response.users else []  # In production, filter sensitive data
-        }
-    except Exception as e:
-        logger.error(f"Error in get_users: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch users: {str(e)}"
-        ) from e
-
-# Example organization management endpoint
-@app.get("/management/organizations")
-async def get_organizations(token_manager: ManagementTokenManager = Depends(get_management_token)):
-    try:
-        management_client = ManagementClient(
-            domain=token_manager.domain,
-            client_id=token_manager.client_id,
-            client_secret=token_manager.client_secret
-        )
-        
-        orgs_response = management_client.get_organizations()
-        
-        return {
-            "message": "Organizations fetched successfully",
-            "organizations": orgs_response.organizations if orgs_response.organizations else []
-        }
-    except Exception as e:
-        logger.error(f"Error in get_organizations: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch organizations: {str(e)}"
-        ) from e
-```
-
-### Advanced FastAPI M2M patterns
-
-Here are some advanced patterns for M2M applications with FastAPI:
-
-```python
-# Custom token validation with additional checks
-def validate_token_with_scopes(required_scopes: list):
-    def _validate_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> ManagementTokenManager:
-        token_manager = get_management_token(credentials)
-        
-        # Check if token has required scopes
-        token_scopes = token_manager.get_token_scopes()
-        missing_scopes = [scope for scope in required_scopes if scope not in token_scopes]
-        
-        if missing_scopes:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Missing required scopes: {missing_scopes}"
-            )
-        
-        return token_manager
-    
-    return _validate_token
-
-# Endpoint with scope validation
-@app.get("/management/sensitive-data")
-async def get_sensitive_data(
-    token_manager: ManagementTokenManager = Depends(validate_token_with_scopes(["read:sensitive_data"]))
-):
-    # Your sensitive data logic here
-    return {"data": "sensitive information"}
-
-# Rate limiting with token validation
-from fastapi import Request
-import time
-
-# Simple in-memory rate limiter (use Redis in production)
-request_counts = {}
-
-def rate_limit_by_token(max_requests: int = 100, window_seconds: int = 60):
-    def _rate_limit(request: Request, token_manager: ManagementTokenManager = Depends(get_management_token)):
-        client_id = token_manager.client_id
-        current_time = time.time()
-        
-        if client_id not in request_counts:
-            request_counts[client_id] = {"count": 0, "window_start": current_time}
-        
-        # Reset window if needed
-        if current_time - request_counts[client_id]["window_start"] > window_seconds:
-            request_counts[client_id] = {"count": 1, "window_start": current_time}
-        else:
-            request_counts[client_id]["count"] += 1
-            
-            if request_counts[client_id]["count"] > max_requests:
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="Rate limit exceeded"
-                )
-        
-        return token_manager
-    
-    return _rate_limit
-
-# Rate-limited endpoint
-@app.get("/management/users/limited")
-async def get_users_limited(
-    token_manager: ManagementTokenManager = Depends(rate_limit_by_token(max_requests=50))
-):
-    # Your rate-limited logic here
-    return {"message": "Rate-limited user data"}
-```
-
-### Error handling for FastAPI M2M
-
-FastAPI provides excellent exception handling capabilities:
-
-```python
-from fastapi import HTTPException, status
-from typing import Optional
-
-# Custom exceptions for M2M operations
-class M2MAuthenticationError(Exception):
-    """Raised when M2M authentication fails"""
-    pass
-
-class M2MAuthorizationError(Exception):
-    """Raised when M2M authorization fails"""
-    pass
-
-class M2MValidationError(Exception):
-    """Raised when M2M request validation fails"""
-    pass
-
-# Simple error handling in endpoints
-@app.get("/management/users/secure")
-async def get_users_secure(token_manager: ManagementTokenManager = Depends(get_management_token)):
-    try:
-        management_client = ManagementClient(
-            domain=token_manager.domain,
-            client_id=token_manager.client_id,
-            client_secret=token_manager.client_secret
-        )
-        
-        users_response = management_client.get_users()
-        return {"users": users_response.users}
-        
-    except M2MAuthenticationError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication failed",
-            headers={"WWW-Authenticate": "Bearer"}
-        )
-    except M2MAuthorizationError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions"
-        )
-    except M2MValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-    except Exception as e:
-        # Log the actual error for debugging
-        logger.error(f"Unexpected error in get_users: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
-        )
-
-# Alternative: Using FastAPI's exception handlers
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-
-app = FastAPI()
-
-@app.exception_handler(M2MAuthenticationError)
-async def m2m_auth_exception_handler(request: Request, exc: M2MAuthenticationError):
-    return JSONResponse(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        content={"detail": "Authentication failed"},
-        headers={"WWW-Authenticate": "Bearer"}
-    )
-
-@app.exception_handler(M2MAuthorizationError)
-async def m2m_authz_exception_handler(request: Request, exc: M2MAuthorizationError):
-    return JSONResponse(
-        status_code=status.HTTP_403_FORBIDDEN,
-        content={"detail": "Insufficient permissions"}
-    )
-
-@app.exception_handler(M2MValidationError)
-async def m2m_validation_exception_handler(request: Request, exc: M2MValidationError):
-    return JSONResponse(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        content={"detail": str(exc)}
-    )
-
-# With exception handlers, your endpoints become much cleaner
-@app.get("/management/users/clean")
-async def get_users_clean(token_manager: ManagementTokenManager = Depends(get_management_token)):
-    management_client = ManagementClient(
-        domain=token_manager.domain,
-        client_id=token_manager.client_id,
-        client_secret=token_manager.client_secret
-    )
-    
-    users_response = management_client.get_users()
-    return {"users": users_response.users}
-    # Custom exceptions will be automatically handled by the exception handlers
-```
-
-### Security best practices for M2M
-
-1. **Token Validation**: Always validate incoming bearer tokens using introspection
-2. **Scope Checking**: Verify that tokens have the required scopes for each operation
-3. **Rate Limiting**: Implement rate limiting to prevent abuse
-4. **Logging**: Log all M2M operations for audit trails
-5. **Error Handling**: Use proper HTTP status codes and error messages
-6. **Credential Security**: Store client credentials securely and never log them
-7. **Token Expiration**: Handle token expiration gracefully
-8. **HTTPS Only**: Always use HTTPS in production
-
-### Testing FastAPI M2M endpoints
-
-Here's how to test your FastAPI M2M endpoints:
-
-```python
-import requests
-
-# Test token validation
-def test_m2m_endpoint():
-    url = "https://your-api.com/management/users"
-    headers = {
-        "Authorization": "Bearer your_valid_token_here"
-    }
-    
-    response = requests.get(url, headers=headers)
-    
-    if response.status_code == 200:
-        print("M2M endpoint working correctly")
-        print(f"Response: {response.json()}")
-    else:
-        print(f"Error: {response.status_code}")
-        print(f"Response: {response.text}")
-
-# Test with invalid token
-def test_invalid_token():
-    url = "https://your-api.com/management/users"
-    headers = {
-        "Authorization": "Bearer invalid_token"
-    }
-    
-    response = requests.get(url, headers=headers)
-    
-    if response.status_code == 401:
-        print("Token validation working correctly")
-    else:
-        print("Token validation not working as expected")
-```
-
-## Flask M2M Implementation
-
-Flask requires a different approach since it doesn't have built-in dependency injection like FastAPI. Here's how to implement M2M functionality with Flask:
-
-### Token validation with Flask
-
-```python
-import os
-import logging
-from flask import Flask, request, jsonify, g
-from functools import wraps
-from kinde_sdk.auth.management import ManagementTokenManager, ManagementClient
-
-# Set up logging
-logger = logging.getLogger(__name__)
-
-app = Flask(__name__)
-
-def get_management_token_flask():
-    """Extract and validate management token from Flask request"""
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        raise ValueError("Missing or invalid Authorization header")
-    
-    bearer_token = auth_header.split(' ')[1]
-    logger.debug(f"Received bearer token (first 20 chars): {bearer_token[:20]}...")
-    
-    # SDK config from env
-    domain = os.getenv("KINDE_HOST", "https://app.kinde.com")
-    if domain.startswith(('http://', 'https://')):
-        domain = domain.split('://', 1)[1]
-    
-    client_id = os.getenv("KINDE_MANAGEMENT_CLIENT_ID")
-    client_secret = os.getenv("KINDE_MANAGEMENT_CLIENT_SECRET")
-    
-    if not all([domain, client_id, client_secret]):
-        raise ValueError("Missing Kinde management credentials in environment")
-    
-    try:
-        token_manager = ManagementTokenManager(
-            domain=domain,
-            client_id=client_id,
-            client_secret=client_secret
-        )
-        
-        introspection_result = token_manager.validate_and_set_via_introspection(bearer_token)
-        logger.debug(f"Introspection result: {introspection_result}")
-        
-        access_token = token_manager.get_access_token()
-        if not access_token:
-            raise ValueError("Invalid management token after introspection")
-        
-        return token_manager
-    
-    except Exception as e:
-        logger.error(f"Token validation failed: {str(e)}")
-        raise ValueError(f"Token introspection failed: {str(e)}")
-
-def require_m2m_auth(f):
-    """Decorator to require M2M authentication for Flask routes"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        try:
-            token_manager = get_management_token_flask()
-            # Store token_manager in Flask's g object for use in route
-            g.token_manager = token_manager
-            return f(*args, **kwargs)
-        except ValueError as e:
-            return jsonify({"error": str(e)}), 401
-        except Exception as e:
-            logger.error(f"Authentication error: {str(e)}")
-            return jsonify({"error": "Authentication failed"}), 401
-    return decorated_function
-```
-
-### Flask M2M API endpoints
-
-```python
-@app.route('/management/users', methods=['GET'])
-@require_m2m_auth
-def get_users():
-    """Get users with M2M authentication"""
-    try:
-        token_manager = g.token_manager
-        
-        # Create ManagementClient with the token manager
-        management_client = ManagementClient(
-            domain=token_manager.domain,
-            client_id=token_manager.client_id,
-            client_secret=token_manager.client_secret
-        )
-        
-        # Fetch users
-        users_response = management_client.get_users()
-        user_count = len(users_response.users) if users_response.users else 0
-        
-        return jsonify({
-            "message": "Users fetched successfully",
-            "user_count": user_count,
-            "users": users_response.users if users_response.users else []
-        })
-    except Exception as e:
-        logger.error(f"Error in get_users: {str(e)}")
-        return jsonify({"error": f"Failed to fetch users: {str(e)}"}), 500
-
-@app.route('/management/organizations', methods=['GET'])
-@require_m2m_auth
-def get_organizations():
-    """Get organizations with M2M authentication"""
-    try:
-        token_manager = g.token_manager
-        
-        management_client = ManagementClient(
-            domain=token_manager.domain,
-            client_id=token_manager.client_id,
-            client_secret=token_manager.client_secret
-        )
-        
-        orgs_response = management_client.get_organizations()
-        
-        return jsonify({
-            "message": "Organizations fetched successfully",
-            "organizations": orgs_response.organizations if orgs_response.organizations else []
-        })
-    except Exception as e:
-        logger.error(f"Error in get_organizations: {str(e)}")
-        return jsonify({"error": f"Failed to fetch organizations: {str(e)}"}), 500
-```
-
-## Django M2M Implementation
-
-Django provides middleware-based authentication. Here's how to implement M2M functionality with Django:
-
-### Token validation with Django
-
-```python
-import os
-import logging
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from django.views import View
-from functools import wraps
-from kinde_sdk.auth.management import ManagementTokenManager, ManagementClient
-
-logger = logging.getLogger(__name__)
-
-def get_management_token_django(request):
-    """Extract and validate management token from Django request"""
-    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        raise ValueError("Missing or invalid Authorization header")
-    
-    bearer_token = auth_header.split(' ')[1]
-    logger.debug(f"Received bearer token (first 20 chars): {bearer_token[:20]}...")
-    
-    # SDK config from env
-    domain = os.getenv("KINDE_HOST", "https://app.kinde.com")
-    if domain.startswith(('http://', 'https://')):
-        domain = domain.split('://', 1)[1]
-    
-    client_id = os.getenv("KINDE_MANAGEMENT_CLIENT_ID")
-    client_secret = os.getenv("KINDE_MANAGEMENT_CLIENT_SECRET")
-    
-    if not all([domain, client_id, client_secret]):
-        raise ValueError("Missing Kinde management credentials in environment")
-    
-    try:
-        token_manager = ManagementTokenManager(
-            domain=domain,
-            client_id=client_id,
-            client_secret=client_secret
-        )
-        
-        introspection_result = token_manager.validate_and_set_via_introspection(bearer_token)
-        logger.debug(f"Introspection result: {introspection_result}")
-        
-        access_token = token_manager.get_access_token()
-        if not access_token:
-            raise ValueError("Invalid management token after introspection")
-        
-        return token_manager
-    
-    except Exception as e:
-        logger.error(f"Token validation failed: {str(e)}")
-        raise ValueError(f"Token introspection failed: {str(e)}")
-
-def require_m2m_auth_django(view_func):
-    """Decorator to require M2M authentication for Django views"""
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        try:
-            token_manager = get_management_token_django(request)
-            # Store token_manager in request for use in view
-            request.token_manager = token_manager
-            return view_func(request, *args, **kwargs)
-        except ValueError as e:
-            return JsonResponse({"error": str(e)}, status=401)
-        except Exception as e:
-            logger.error(f"Authentication error: {str(e)}")
-            return JsonResponse({"error": "Authentication failed"}, status=401)
-    return wrapper
-```
-
-### Django M2M API endpoints
-
-```python
-from django.views import View
-from django.http import JsonResponse
-
-@method_decorator(csrf_exempt, name='dispatch')
-class UsersView(View):
-    @require_m2m_auth_django
-    def get(self, request):
-        """Get users with M2M authentication"""
-        try:
-            token_manager = request.token_manager
-            
-            # Create ManagementClient with the token manager
-            management_client = ManagementClient(
-                domain=token_manager.domain,
-                client_id=token_manager.client_id,
-                client_secret=token_manager.client_secret
-            )
-            
-            # Fetch users
-            users_response = management_client.get_users()
-            user_count = len(users_response.users) if users_response.users else 0
-            
-            return JsonResponse({
-                "message": "Users fetched successfully",
-                "user_count": user_count,
-                "users": users_response.users if users_response.users else []
-            })
-        except Exception as e:
-            logger.error(f"Error in get_users: {str(e)}")
-            return JsonResponse({"error": f"Failed to fetch users: {str(e)}"}, status=500)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class OrganizationsView(View):
-    @require_m2m_auth_django
-    def get(self, request):
-        """Get organizations with M2M authentication"""
-        try:
-            token_manager = request.token_manager
-            
-            management_client = ManagementClient(
-                domain=token_manager.domain,
-                client_id=token_manager.client_id,
-                client_secret=token_manager.client_secret
-            )
-            
-            orgs_response = management_client.get_organizations()
-            
-            return JsonResponse({
-                "message": "Organizations fetched successfully",
-                "organizations": orgs_response.organizations if orgs_response.organizations else []
-            })
-        except Exception as e:
-            logger.error(f"Error in get_organizations: {str(e)}")
-            return JsonResponse({"error": f"Failed to fetch organizations: {str(e)}"}, status=500)
-```
-
-### Django URL configuration
-
-```python
-# urls.py
-from django.urls import path
-from .views import UsersView, OrganizationsView
-
-urlpatterns = [
-    path('management/users/', UsersView.as_view(), name='users'),
-    path('management/organizations/', OrganizationsView.as_view(), name='organizations'),
-]
-```
-
-## Framework Comparison
-
-| Feature | FastAPI | Flask | Django |
-|---------|---------|-------|--------|
-| **Dependency Injection** | Built-in with `Depends()` | Manual with decorators | Manual with decorators |
-| **Request Validation** | Automatic | Manual | Manual |
-| **Async Support** | Native | Requires `asyncio` | Limited |
-| **Type Hints** | Full support | Optional | Limited |
-| **Documentation** | Auto-generated OpenAPI | Manual | Manual |
-| **Performance** | High | Medium | Medium |
-| **Learning Curve** | Low | Low | Medium |
-
-### Key Differences
-
-1. **FastAPI**: Uses dependency injection with `Depends()` for clean, type-safe code
-2. **Flask**: Uses decorators and manual request handling with more flexibility
-3. **Django**: Uses class-based views with decorators, more structured approach
-
