@@ -8,6 +8,34 @@ head:
     attrs:
       property: "og:image"
       content: "https://kinde.com/assets/images/open-graph/DOCS-SSI-SDK_Android.png"
+topics:
+  - developer-tools
+  - sdks
+  - android
+  - native
+sdk:
+  - android
+languages:
+  - kotlin
+  - java
+  - xml
+audience:
+  - developers
+complexity: intermediate
+keywords:
+  - android sdk
+  - kotlin
+  - java
+  - maven
+  - retrofit
+  - gson
+  - pkce
+  - user permissions
+  - meta-data
+updated: 2024-01-15
+featured: false
+deprecated: false
+ai-summary: Complete guide for Android SDK including Maven installation, Retrofit integration, PKCE authentication, and native Android app integration.
 ---
 
 The Kinde Android SDK allows developers to quickly and securely integrate a new or existing application into the Kinde platform.
@@ -407,344 +435,4 @@ Following authentication, Kinde provides a json web token (jwt) to your applicat
 
 Example of a returned token:
 
-```kotlin
-{
-   "aud": [],
-   "exp": 1658475930,
-   "iat": 1658472329,
-   "iss": "https://your_subdomain.kinde.com",
-   "jti": "123457890",
-   "org_code": "org_1234",
-   "permissions": ["read:todos", "create:todos"],
-   "scp": [
-		   "openid",
-		   "profile",
-		   "email",
-		   "offline"
-   ],
-   "sub": "kp:123457890"
-}
 ```
-
-The `id_token` will also contain an array of organizations that a user belongs to. This is useful if you wanted to build out an organization switcher, for example.
-
-```json
-{
-		...
-		"org_codes": ["org_1234", "org_4567"],
-		...
-};
-```
-
-There are two helper functions you can use to extract information:
-
-```kotlin
-sdk.getOrganization()
-// {'orgCode': 'org_1234'}
-
-sdk.getUserOrganizations()
-// {'orgCodes': ['org_1234', 'org_abcd']}
-```
-
-For more information about how organizations work in Kinde, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
-
-### Token storage
-
-Once the user has successfully authenticated, you'll have a JWT and possibly a refresh token that should be stored securely.
-
-## SDK API reference
-
-### `activity`
-
-Activity of the application.
-
-Type: `AppCompatActivity`
-
-Required: Yes
-
-### `loginRedirect`
-
-The URL that the user will be returned to after authentication.
-
-Type: `string`
-
-Required: Yes
-
-### `logoutRedirect`
-
-Where the user will be redirected when they sign out.
-
-Type: `string`
-
-Required: Yes
-
-### `scopes`
-
-Type: `List<String>`
-
-Is required: No
-
-Default:
-
-```kotlin
-listOf("openid", "offline", "email", "profile")
-```
-
-### `SDKListener`
-
-The listener that receives callbacks from the SDK.
-
-Type:
-
-```kotlin
-SDKListener { fun onNewToken(token: String) fun onLogout() fun onException(exception: Exception) }
-```
-
-Required: Yes
-
-## KindeSDK methods
-
-### `login`
-
-Starts the authorization flow.
-
-Arguments:
-
-```kotlin
-grantType: GrantType?, orgCode: String? // GrantType { PKCE, NONE }
-```
-
-Usage:
-
-```kotlin
-sdk.login(GrantType.PKCE)orsdk.login(GrantType.PKCE, orgCode = "your_org_code")
-```
-
-### `register`
-
-Starts the registration flow.
-
-Arguments:
-
-```kotlin
-grantType: GrantType?, orgCode: String?
-```
-
-Usage:
-
-```kotlin
-sdk.register(GrantType.PKCE)orsdk.register(GrantType.PKCE, orgCode = "your_org_code")
-```
-
-### `createOrg`
-
-Starts the registration flow and creates a new organization in your business.
-
-Arguments:
-
-```kotlin
-grantType: GrantType?, orgCode: String?
-```
-
-Usage:
-
-```kotlin
-sdk.createOrg(orgName =”Your Organization”)orsdk.register(GrantType.PKCE, orgName =”Your Organization”)
-```
-
-### `logout`
-
-Logs the user out of Kinde.
-
-Usage: `sdk.logout()`
-
-### `isAuthenticated`
-
-Checks that access token is present.
-
-Usage: `sdk.isAuthenticated()`
-
-Sample output: `true` or `false`
-
-### `getUserDetails`
-
-Gets user details from an access or ID token.
-
-Usage: `sdk.getUserDetails()`
-
-Sample output:
-
-```kotlin
-{
-	givenName: "Dave";
-	id: "abcdef";
-	familyName: "Smith";
-	email: "dave@smith.com"
-}
-```
-
-### `getClaim`
-
-Gets a claim from an access or ID token.
-
-Arguments:
-
-```kotlin
-claim: String, tokenType: TokenType // TokenType { ID_TOKEN, ACCESS_TOKEN}
-```
-
-Usage:
-
-```kotlin
-sdk.getClaim('given_name', TokenType.ID_TOKEN);
-```
-
-Sample output: `"David"`
-
-### `getPermission`
-
-Returns the state of a given permission.
-
-Usage:
-
-```kotlin
-sdk.getPermission("read:todos")
-```
-
-Sample output:
-
-```kotlin
-{
-	orgCode: "org_1234",
-	isGranted: true
-}
-```
-
-### `getPermissions`
-
-Returns all permissions for the current user for the organization they are logged into.
-
-Arguments: `permission: String`
-
-Usage: `sdk.getPermissions()`
-
-Sample output:
-
-```kotlin
-{
-	orgCode: "org_1234",
-	permissions: [
-		"create:todos",
-		"update:todos",
-		"read:todos",
-		"create:todos",
-		"update:todos",
-		"read:todos"
-	]
-}
-```
-
-### `getUserOrganizations`
-
-Gets an array of all organizations the user has access to.
-
-Usage: `sdk.getUserOrganizations()`
-
-Sample output:
-
-```kotlin
-{
-	orgCodes: [
-		"org_1234",
-		"org_5678",
-		"org1_234",
-		"org_5678"
-	]
-}
-```
-
-### `getOrganization`
-
-Get details for the organization your user is signed into.
-
-Usage: `sdk.getOrganization()`
-
-Sample output:
-
-```kotlin
-{orgCode: "org_1234"}
-```
-
-### `getFlag`
-
-Gets a feature flag from an access token.
-
-Arguments:
-
-```kotlin
-code: String, defaultValue: Any? = null; flagType: FlagType? = null // FlagType { String, Integer, Boolean }
-```
-
-Usage: `sdk.getFlag("theme");`
-
-Sample output:
-
-```kotlin
-{"code": "theme", "type": "string", "value": "pink","is_default": False}
-```
-
-### `getBooleanFlag`
-
-Gets a boolean feature flag from an access token
-
-Arguments:
-
-```kotlin
-code: String; defaultValue: Boolean? = null
-```
-
-Usage:
-
-```kotlin
-sdk.getBooleanFlag(”is_dark_mode”);
-```
-
-Sample output: `true` or `false`
-
-### `getStringFlag`
-
-Gets a string feature flag from an access token
-
-Arguments:
-
-```kotlin
-code: String; defaultValue: String? = null
-```
-
-Usage:
-
-```kotlin
-sdk.getStringFlag("theme");
-```
-
-Sample output: `“pink”`
-
-### `getIntegerFlag`
-
-Gets a integer feature flag from an access token
-
-Arguments:
-
-```kotlin
-code: String; defaultValue: Int? = null
-```
-
-Usage:
-
-```kotlin
-sdk.getIntegerFlag("competitions_limit");
-```
-
-Sample output: `5`
-
-If you need help getting Kinde connected, contact us at [support@kinde.com](mailto:support@kinde.com).
