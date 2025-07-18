@@ -35,6 +35,7 @@ export default defineConfig({
     enabled: false
   },
   redirects: {
+    "/sitemap.xml": "/sitemap-0.xml",
     "/developer-tools/kinde-api/register-manage-apis/":
       "/developer-tools/your-apis/register-manage-apis/",
     "/developer-tools/kinde-api/protect-your-api/": 
