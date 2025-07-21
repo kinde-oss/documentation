@@ -1,5 +1,25 @@
 ---
 import {Icon} from "astro-icon/components";
+import { getEntry } from 'astro:content';
+
+// Get the current page path and always use docs.kinde.com as the hostname
+const currentPath = Astro.url.pathname;
+const productionUrl = `https://docs.kinde.com${currentPath}`;
+const chatGptUrl = `https://chat.openai.com/?q=${encodeURIComponent(`Can you summarize this page: ${productionUrl}`)}`;
+
+// Get the raw markdown content
+let rawMarkdown = '';
+try {
+  // Convert the path to the content ID (remove leading slash and trailing slash)
+  const contentId = currentPath.replace(/^\/|\/$/g, '');
+  const entry = await getEntry('docs', contentId);
+  if (entry) {
+    const body = await entry.body;
+    rawMarkdown = body || '';
+  }
+} catch (error) {
+  console.error('Error getting markdown content:', error);
+}
 ---
 
 <aside
@@ -12,4 +32,125 @@ import {Icon} from "astro-icon/components";
     <Icon name="book" size={16} />
     <h3 class="text-sm font-medium dark:!font-normal">Contribute</h3>
   </a>
+  
+  <a
+    href={chatGptUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    class={`flex items-center justify-start gap-1 mt-4 text-kinde-grey-900 hover:opacity-90 dark:text-white plausible-event-name=Open+with+ChatGPT plausible-event-url=${currentPath}`}
+  >
+    <Icon name="talk-1" size={16} />
+    <h3 class="text-sm font-medium dark:!font-normal">Open with ChatGPT</h3>
+  </a>
+  
+  <button
+    id="copy-markdown-button"
+    class={`flex items-center justify-start gap-1 mt-4 text-kinde-grey-900 hover:opacity-90 dark:text-white bg-transparent border-none cursor-pointer w-full text-left p-0 plausible-event-name=Copy+for+AI plausible-event-url=${currentPath}`}
+    data-markdown={rawMarkdown}
+  >
+    <Icon name="sparkle" size={16} />
+    <h3 class="text-sm font-medium dark:!font-normal">Copy for AI</h3>
+  </button>
 </aside>
+
+<script>
+  document.getElementById('copy-markdown-button')?.addEventListener('click', async function() {
+    try {
+      // Get the raw markdown from the data attribute
+      const rawMarkdown = this.getAttribute('data-markdown');
+      if (!rawMarkdown) {
+        console.error('No markdown content available');
+        return;
+      }
+
+      // Get the page title
+      const titleElement = document.querySelector('h1');
+      const title = titleElement?.textContent || 'Kinde Documentation';
+      
+      // Create markdown content with metadata
+      const markdownContent = `# ${title}
+
+Source: ${window.location.href}
+
+${rawMarkdown}
+
+---
+*This content was copied from the Kinde documentation page. You can use this markdown content with any AI LLM to get help with this documentation.*`;
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(markdownContent);
+      
+      // Show success notification
+      const button = this as HTMLButtonElement;
+      const titleElement2 = button.querySelector('h3');
+      if (titleElement2) {
+        const originalText = titleElement2.textContent;
+        titleElement2.textContent = 'Markdown copied!';
+        
+        // Show a notification
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #10b981;
+          color: white;
+          padding: 12px 16px;
+          border-radius: 8px;
+          font-size: 14px;
+          z-index: 10000;
+          max-width: 300px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        notification.innerHTML = `
+          <div style="font-weight: 600; margin-bottom: 4px;">Markdown copied to clipboard!</div>
+          <div style="font-size: 12px;">You can now paste this into any AI LLM.</div>
+        `;
+        document.body.appendChild(notification);
+        
+        // Remove notification after 4 seconds
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 4000);
+        
+        // Reset button text after 3 seconds
+        setTimeout(() => {
+          if (titleElement2) {
+            titleElement2.textContent = originalText;
+          }
+        }, 3000);
+      }
+      
+    } catch (error) {
+      console.error('Error copying markdown:', error);
+      // Show error notification
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #ef4444;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        z-index: 10000;
+        max-width: 300px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+      notification.innerHTML = `
+        <div style="font-weight: 600; margin-bottom: 4px;">Error copying markdown</div>
+        <div style="font-size: 12px;">Please try again.</div>
+      `;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 4000);
+    }
+  });
+</script>
