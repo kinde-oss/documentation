@@ -121,7 +121,12 @@ export default defineConfig({
       applyBaseStyles: false
     }),
     icon(),
-    sitemap(),
+    sitemap({
+      filter: (page) => !page.includes('404'),
+      customPages: [
+        'https://docs.kinde.com/'
+      ]
+    }),
     AutoImport({
       imports: [
         "./src/components/SDKSelector.astro",
