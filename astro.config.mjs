@@ -80,19 +80,19 @@ export default defineConfig({
     "/integrate/":
       "/integrate/connected-apps/add-connected-apps/",
     "/machine-to-machine-applications/":
-      "/machine-to-machine-applications/about-m2m/index/",
+      "/machine-to-machine-applications/about-m2m/authenticate-with-m2m/",
     "/manage-your-account/":
       "/manage-your-account/business-information/update-your-details/",
     "/manage-users/":
-      "/manage-users/about/index/",
+      "/manage-users/about/manage-users-across-organizations/",
     "/properties/":
-      "/properties/about-properties/index/",
+      "/properties/about-properties/application-properties/",
     "/releases/":
       "/releases/about/about-feature-flags/",
     "/trust-center/":
       "/trust-center/agreements/terms-of-service/",
     "/workflows/":
-      "/workflows/about-workflows/index/",
+      "/workflows/about-workflows/",
     
     // Authenticate section subfolder redirects
     "/authenticate/about-auth/":
@@ -217,8 +217,6 @@ export default defineConfig({
       "/manage-your-account/your-data/check-your-mau/",
     
     // Manage users section subfolder redirects
-    "/manage-users/about/":
-      "/manage-users/about/index/",
     "/manage-users/access-control/":
       "/manage-users/access-control/accept-policies-signup/",
     "/manage-users/add-and-edit/":
@@ -253,8 +251,6 @@ export default defineConfig({
       "/trust-center/security/security-at-kinde/",
     
     // Workflows section subfolder redirects
-    "/workflows/about-workflows/":
-      "/workflows/about-workflows/index/",
     "/workflows/bindings/":
       "/workflows/bindings/access-token-binding/",
     "/workflows/configuration/":
@@ -268,7 +264,7 @@ export default defineConfig({
     "/workflows/observability/":
       "/workflows/observability/workflow-build-logs/",
     "/workflows/testing/":
-      "/workflows/testing/index/"
+      "/workflows/testing/preview-workflows/"
   },
   markdown: {
     rehypePlugins: [
