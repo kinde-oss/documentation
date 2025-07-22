@@ -196,7 +196,7 @@ export default defineConfig({
     
     // Machine-to-machine applications section subfolder redirects
     "/machine-to-machine-applications/about-m2m/":
-      "/machine-to-machine-applications/about-m2m/authenticate-with-m2m/",
+      "/machine-to-machine-applications/about-m2m/index/",
     "/machine-to-machine-applications/m2m-application-setup/":
       "/machine-to-machine-applications/m2m-application-setup/add-feature-flags-to-m2m-applications/",
     "/machine-to-machine-applications/m2m-token-customization/":
@@ -217,6 +217,8 @@ export default defineConfig({
       "/manage-your-account/your-data/check-your-mau/",
     
     // Manage users section subfolder redirects
+    "/manage-users/about/":
+      "/manage-users/about/index/",
     "/manage-users/access-control/":
       "/manage-users/access-control/accept-policies-signup/",
     "/manage-users/add-and-edit/":
@@ -228,7 +230,7 @@ export default defineConfig({
     
     // Properties section subfolder redirects
     "/properties/about-properties/":
-      "/properties/about-properties/application-properties/",
+      "/properties/about-properties/index/",
     "/properties/work-with-properties/":
       "/properties/work-with-properties/manage-properties/",
     
@@ -251,6 +253,8 @@ export default defineConfig({
       "/trust-center/security/security-at-kinde/",
     
     // Workflows section subfolder redirects
+    "/workflows/about-workflows/":
+      "workflows/about-workflows/index/",
     "/workflows/bindings/":
       "/workflows/bindings/access-token-binding/",
     "/workflows/configuration/":
@@ -264,7 +268,7 @@ export default defineConfig({
     "/workflows/observability/":
       "/workflows/observability/workflow-build-logs/",
     "/workflows/testing/":
-      "/workflows/testing/preview-workflows/"
+      "/workflows/testing/index/"
   },
   markdown: {
     rehypePlugins: [
