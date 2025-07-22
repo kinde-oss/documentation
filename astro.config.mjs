@@ -106,7 +106,7 @@ export default defineConfig({
     "/authenticate/enterprise-connections/":
       "/authenticate/enterprise-connections/about-enterprise-connections/",
     "/authenticate/manage-authentication/":
-      "/authenticate/manage-authentication/authenticated-sessions-across-multiple-applications/",
+      "/authenticate/manage-authentication/user-auth-applications/",
     "/authenticate/multi-factor-auth/":
       "/authenticate/multi-factor-auth/about-multi-factor-authentication/",
     "/authenticate/social-sign-in/":
@@ -116,7 +116,7 @@ export default defineConfig({
     "/billing/about-billing/":
       "/billing/about-billing/about-billing/",
     "/billing/billing-user-experience/":
-      "/billing/billing-user-experience/add-pricing-table/",
+      "/billing/billing-user-experience/plan-selection/",
     "/billing/get-started/":
       "/billing/get-started/add-billing-role/",
     "/billing/manage-plans/":
