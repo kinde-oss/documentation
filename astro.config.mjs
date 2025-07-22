@@ -106,7 +106,7 @@ export default defineConfig({
     "/authenticate/enterprise-connections/":
       "/authenticate/enterprise-connections/about-enterprise-connections/",
     "/authenticate/manage-authentication/":
-      "/authenticate/manage-authentication/user-auth-applications/",
+      "/authenticate/manage-authentication/authenticated-sessions-across-multiple-applications/",
     "/authenticate/multi-factor-auth/":
       "/authenticate/multi-factor-auth/about-multi-factor-authentication/",
     "/authenticate/social-sign-in/":
@@ -116,7 +116,7 @@ export default defineConfig({
     "/billing/about-billing/":
       "/billing/about-billing/about-billing/",
     "/billing/billing-user-experience/":
-      "/billing/billing-user-experience/plan-selection/",
+      "/billing/billing-user-experience/add-pricing-table/",
     "/billing/get-started/":
       "/billing/get-started/add-billing-role/",
     "/billing/manage-plans/":
@@ -217,8 +217,6 @@ export default defineConfig({
       "/manage-your-account/your-data/check-your-mau/",
     
     // Manage users section subfolder redirects
-    "/manage-users/about/":
-      "/manage-users/about/index/",
     "/manage-users/access-control/":
       "/manage-users/access-control/accept-policies-signup/",
     "/manage-users/add-and-edit/":
@@ -253,8 +251,6 @@ export default defineConfig({
       "/trust-center/security/security-at-kinde/",
     
     // Workflows section subfolder redirects
-    "/workflows/about-workflows/":
-      "/workflows/about-workflows/index/",
     "/workflows/bindings/":
       "/workflows/bindings/access-token-binding/",
     "/workflows/configuration/":
@@ -268,7 +264,7 @@ export default defineConfig({
     "/workflows/observability/":
       "/workflows/observability/workflow-build-logs/",
     "/workflows/testing/":
-      "/workflows/testing/index/"
+      "/workflows/testing/preview-workflows/"
   },
   markdown: {
     rehypePlugins: [
