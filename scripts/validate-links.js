@@ -9,6 +9,48 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const distFolder = path.join(__dirname, "../dist");
+const astroConfigPath = path.join(__dirname, "../astro.config.mjs");
+
+// Function to extract redirect destinations from astro.config.mjs
+function getRedirectDestinations() {
+  try {
+    const configContent = fs.readFileSync(astroConfigPath, "utf-8");
+    
+    // Extract the redirects object using regex
+    const redirectsMatch = configContent.match(/redirects:\s*{([^}]+)}/s);
+    if (!redirectsMatch) {
+      console.log(chalk.yellow("No redirects found in astro.config.mjs"));
+      return [];
+    }
+    
+    const redirectsSection = redirectsMatch[1];
+    
+    // Extract all destination URLs (the values after the colons)
+    const destinationMatches = redirectsSection.match(/:\s*"([^"]+)"/g);
+    if (!destinationMatches) {
+      console.log(chalk.yellow("No redirect destinations found in astro.config.mjs"));
+      return [];
+    }
+    
+    // Clean up the matches to get just the URLs
+    const destinations = destinationMatches.map(match => {
+      // Remove the ': "' prefix and '"' suffix
+      return match.replace(/:\s*"/, '').replace(/"$/, '');
+    });
+    
+    console.log(chalk.blue(`Found ${destinations.length} redirect destinations`));
+    return destinations;
+    
+  } catch (error) {
+    console.error(chalk.red(`Error reading astro.config.mjs: ${error.message}`));
+    return [];
+  }
+}
+
+// Function to check if a URL is a redirect destination
+function isRedirectDestination(url, redirectDestinations) {
+  return redirectDestinations.includes(url);
+}
 
 // Function to read all HTML files from a directory
 function readHtmlFiles(dir) {
@@ -63,7 +105,7 @@ function anchorExists(html, anchor) {
 }
 
 // Function to validate links
-function validateLinks(htmlFiles) {
+function validateLinks(htmlFiles, redirectDestinations) {
   let invalidLinks = [];
 
   htmlFiles.forEach((file) => {
@@ -74,6 +116,13 @@ function validateLinks(htmlFiles) {
       // Split by the first occurrence of `#` to allow fragments with slashes
       const [pathWithoutHash, ...hashParts] = link.split("#");
       const hash = hashParts.length ? hashParts.join("#") : null;
+      
+      // Check if this is a redirect destination - if so, skip validation
+      if (isRedirectDestination(pathWithoutHash, redirectDestinations)) {
+        console.log(chalk.yellow(`Skipping redirect destination: ${pathWithoutHash}`));
+        return;
+      }
+      
       const resolvedPath = path.join(distFolder, pathWithoutHash);
       const normalizedPath = path.normalize(resolvedPath);
       const ext = path.extname(normalizedPath);
@@ -109,6 +158,9 @@ function validateLinks(htmlFiles) {
 
 // Main function
 function main() {
+  // Get redirect destinations from astro.config.mjs
+  const redirectDestinations = getRedirectDestinations();
+  
   const htmlFiles = readHtmlFiles(distFolder);
   const allLinks = new Set();
 
@@ -118,7 +170,7 @@ function main() {
     links.forEach((link) => allLinks.add(link));
   });
 
-  const invalidLinks = validateLinks(htmlFiles);
+  const invalidLinks = validateLinks(htmlFiles, redirectDestinations);
 
   if (invalidLinks.length > 0) {
     console.log(chalk.red("Invalid Links:"));
