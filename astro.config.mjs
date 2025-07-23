@@ -35,6 +35,7 @@ export default defineConfig({
     enabled: false
   },
   redirects: {
+    "/sitemap.xml": "/sitemap-0.xml",
     "/developer-tools/kinde-api/register-manage-apis/":
       "/developer-tools/your-apis/register-manage-apis/",
     "/developer-tools/kinde-api/protect-your-api/": 
@@ -325,7 +326,7 @@ export default defineConfig({
         // Include API pages
         if (page.includes('/kinde-apis/')) return true;
         // Exclude admin or private pages
-        if (page.includes('/admin/') || page.includes('/private/')) return false;
+        if (page.includes('/admin/')) return false;
         return true;
       },
       changefreq: 'weekly',
