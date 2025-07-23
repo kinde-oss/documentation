@@ -2,9 +2,68 @@
 import Default from "@astrojs/starlight/components/Head.astro";
 import type {Props} from "@astrojs/starlight/props";
 
+const { entry } = Astro.props;
 const hasCustomOGImage = Astro.props.entry.data.head.find((t) =>
   t.attrs.property === "og:image" ? true : false
 );
+
+// Extract metadata from frontmatter - now properly typed
+const metadata = entry.data.metadata || {};
+const keywords = metadata.keywords || [];
+const topics = metadata.topics || [];
+const audience = metadata.audience || [];
+const complexity = metadata.complexity;
+const updated = metadata.updated;
+const featured = metadata.featured;
+const deprecated = metadata.deprecated;
+const aiSummary = metadata['ai-summary'];
+
+// Combine keywords from different sources
+const allKeywords = [
+  ...keywords,
+  ...topics,
+  ...audience,
+  complexity && `complexity:${complexity}`,
+  featured && 'featured',
+  deprecated && 'deprecated'
+].filter(Boolean);
+
+// Generate structured data for search engines
+const structuredData: any = {
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": entry.data.title,
+  "description": entry.data.description || aiSummary,
+  "keywords": allKeywords.join(', '),
+  "author": {
+    "@type": "Organization",
+    "name": "Kinde"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Kinde",
+    "url": "https://kinde.com"
+  },
+  "datePublished": updated,
+  "dateModified": updated,
+  "url": Astro.url.href,
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": Astro.url.href
+  }
+};
+
+// Add audience and complexity info
+if (audience.length > 0) {
+  structuredData.audience = {
+    "@type": "Audience",
+    "audienceType": audience.join(', ')
+  };
+}
+
+if (complexity) {
+  structuredData.learningResourceType = complexity;
+}
 ---
 
 {
@@ -17,4 +76,51 @@ const hasCustomOGImage = Astro.props.entry.data.head.find((t) =>
   <slot />
 </Default>
 
+{/* Enhanced meta tags for better SEO */}
+{allKeywords.length > 0 && (
+  <meta name="keywords" content={allKeywords.join(', ')} />
+)}
+
+{topics.length > 0 && (
+  <meta name="article:section" content={topics.join(', ')} />
+)}
+
+{audience.length > 0 && (
+  <meta name="article:tag" content={audience.join(', ')} />
+)}
+
+{complexity && (
+  <meta name="article:difficulty" content={complexity} />
+)}
+
+{updated && (
+  <meta name="article:modified_time" content={updated} />
+)}
+
+{featured && (
+  <meta name="article:featured" content="true" />
+)}
+
+{deprecated && (
+  <meta name="article:deprecated" content="true" />
+)}
+
+{/* Enhanced Open Graph tags */}
+{entry.data.description && (
+  <meta property="og:description" content={entry.data.description} />
+)}
+
+{allKeywords.length > 0 && (
+  <meta property="og:keywords" content={allKeywords.join(', ')} />
+)}
+
+{/* Twitter Card enhancements */}
+{entry.data.description && (
+  <meta name="twitter:description" content={entry.data.description} />
+)}
+
+{/* Structured data for search engines */}
+<script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+
+{/* Default OG image if no custom one is set */}
 {!hasCustomOGImage && <meta property="og:image" content={`${Astro.url.href}og-image.png`} />}

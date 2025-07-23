@@ -318,7 +318,22 @@ export default defineConfig({
       applyBaseStyles: false
     }),
     icon(),
-    sitemap(),
+    sitemap({
+      filter: (page) => {
+        // Include all documentation pages
+        if (page.includes('/docs/')) return true;
+        // Include main pages
+        if (page === '' || page === '/') return true;
+        // Include API pages
+        if (page.includes('/kinde-apis/')) return true;
+        // Exclude admin or private pages
+        if (page.includes('/admin/') || page.includes('/private/')) return false;
+        return true;
+      },
+      changefreq: 'weekly',
+      priority: 0.7,
+      lastmod: new Date()
+    }),
     AutoImport({
       imports: [
         "./src/components/SDKSelector.astro",
