@@ -1,0 +1,121 @@
+---
+page_id: 4cb63554-d6b3-45cf-bdad-2fac4790d3aa
+title: Quick start
+description: Step-by-step quick start guide for creating and using M2M applications in Kinde including API authorization, scope assignment, and token generation
+sidebar:
+  order: 2
+relatedArticles:
+  - d2c841f1-78b4-47e0-b899-4d32ae857e0a
+  - 961dea3c-d8e2-47a0-8ab7-deabdb2d6a01
+  - 65d72460-e870-4d6a-a1ea-35740ca0e2cc
+topics:
+  - machine-to-machine-applications
+  - about-m2m
+sdk: []
+languages:
+  - bash
+  - json
+audience:
+  - developers
+  - admins
+complexity: beginner
+keywords:
+  - m2m quick start
+  - machine to machine
+  - api authorization
+  - client credentials
+  - scopes
+  - access tokens
+  - bearer token
+  - curl
+updated: 2024-01-15
+featured: false
+deprecated: false
+ai-summary: Step-by-step quick start guide for creating and using M2M applications in Kinde including API authorization, scope assignment, and token generation.
+---
+
+This guide shows you how to create a Machine-to-Machine (M2M) application in Kinde, authorize it for an API, and use the client credentials flow to get a token and make a secure API request.
+
+## Step 1: Create a machine-to-machine app
+
+1. Go to the **Applications** section on the Kinde homepage and select **Add application**.
+2. In the window that opens, enter a name for the application. 
+3. Select **Machine-to-machine (M2M)**.
+4. Select **Save**.
+
+## Step 2: Create an API in Kinde (if you don't have one)
+
+You can skip this step if you already have an API registered in Kinde.
+
+1. Go to **Settings > Environment > APIs**.
+2. Select **Add API**
+3. Enter a **Name** and **Audience**.
+4. Select **Save**.
+
+For more information, see [Register and manage APIs](/developer-tools/your-apis/register-manage-apis/).
+
+## Step 3: Authorize the app to access an API
+
+You need to authorize the API or else token requests will be rejected.
+
+1. Open your newly created app.
+2. Select **APIs** in the side menu.
+3. Find the API to authorize, and select the three dots menu on the right.
+4. Select **Authorize**.
+
+## Step 4: Add scopes (optional)
+
+Complete this step if your API uses scopes to define permissions.
+
+1. Go to **Settings > Environment > APIs**.
+2. Choose the API you’re protecting.
+3. Select **Scopes** from the menu.
+4. Select **Add scope** and enter a scope name and description, then select **Save**.
+5. Repeat for each scope you want to add, e.g. `read:users`, `write:flags`. 
+6. Go back to your M2M app and assign those scopes.
+
+For more information about how to assign scopes to an API, see [Define and manage API scopes](/developer-tools/your-apis/api-scopes-m2m-applications/).
+
+## Step 5: Get a token
+
+You can test the app in one of two ways:
+
+### Option A - Use the Test tab in Kinde
+
+1. Open your M2M app.
+2. Select **APIs** in the menu and then open the API you want to test.
+3. Select **Test** in the menu.
+4. Select the Authorized application and then **Get token**.
+5. Copy the generated token.
+
+### Option B - Use the client credentials flow directly
+
+```bash
+curl --request POST 'https://<your-subdomain>.kinde.com/oauth2/token' \
+  --header 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'grant_type=client_credentials' \
+  --data-urlencode 'client_id=your-client-id' \
+  --data-urlencode 'client_secret=your-client-secret' \
+  --data-urlencode 'audience=<your-api-audience>' \
+  --data-urlencode 'scope=read:users write:flags'
+```
+
+The response will include a bearer token you can use in requests:
+
+```json
+{
+  "access_token": "<token>",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}
+```
+
+## Step 6: Use the token in an API call
+
+Include the token in the `Authorization` header:
+
+```bash
+curl https://your-subdomain.kinde.com/v1/organizations \
+  -H "Authorization: Bearer <token>"
+```
+
