@@ -69,8 +69,6 @@ export default defineConfig({
       "/billing/about-billing/about-billing/",
     "/build/":
       "/build/applications/about-applications/",
-    "/contribute/":
-      "/contribute/",
     "/design/":
       "/design/brand/global-brand-defaults/",
     "/developer-tools/":
