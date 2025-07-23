@@ -35,6 +35,7 @@ export default defineConfig({
     enabled: false
   },
   redirects: {
+    "/sitemap.xml": "/sitemap-0.xml",
     "/developer-tools/kinde-api/register-manage-apis/":
       "/developer-tools/your-apis/register-manage-apis/",
     "/developer-tools/kinde-api/protect-your-api/": 
@@ -316,7 +317,12 @@ export default defineConfig({
       applyBaseStyles: false
     }),
     icon(),
-    sitemap(),
+    sitemap({
+      filter: (page) => !page.includes('404'),
+      customPages: [
+        'https://docs.kinde.com/'
+      ]
+    }),
     AutoImport({
       imports: [
         "./src/components/SDKSelector.astro",
