@@ -7,34 +7,42 @@ const hasCustomOGImage = Astro.props.entry.data.head.find((t) =>
   t.attrs.property === "og:image" ? true : false
 );
 
-// Extract metadata from frontmatter - now properly typed
+// Extract metadata from frontmatter - handle both patterns
+// Pattern 1: metadata wrapper object
+// Pattern 2: fields directly in frontmatter
 const metadata = entry.data.metadata || {};
-const keywords = metadata.keywords || [];
-const topics = metadata.topics || [];
-const audience = metadata.audience || [];
-const complexity = metadata.complexity;
-const updated = metadata.updated;
-const featured = metadata.featured;
-const deprecated = metadata.deprecated;
-const aiSummary = metadata['ai-summary'];
+const directFields = entry.data as any;
+
+// Combine both sources, with metadata wrapper taking precedence
+const keywords = metadata.keywords || directFields.keywords || [];
+const topics = metadata.topics || directFields.topics || [];
+const audience = metadata.audience || directFields.audience || [];
+const complexity = metadata.complexity || directFields.complexity;
+const updated = metadata.updated || directFields.updated;
+const featured = metadata.featured || directFields.featured;
+const deprecated = metadata.deprecated || directFields.deprecated;
+const aiSummary = metadata['ai-summary'] || directFields['ai-summary'];
+
+// Handle updated field - convert date to string if needed
+const updatedString = updated instanceof Date ? updated.toISOString() : updated;
 
 // Combine keywords from different sources
 const allKeywords = [
   ...keywords,
   ...topics,
   ...audience,
-  complexity && `complexity:${complexity}`,
-  featured && 'featured',
-  deprecated && 'deprecated'
+  complexity,
+  entry.data.title,
+  entry.data.description
 ].filter(Boolean);
 
-// Generate structured data for search engines
+// Create structured data for better SEO
 const structuredData: any = {
   "@context": "https://schema.org",
   "@type": "TechArticle",
   "headline": entry.data.title,
-  "description": entry.data.description || aiSummary,
-  "keywords": allKeywords.join(', '),
+  "description": entry.data.description,
+  "keywords": allKeywords.join(", "),
   "author": {
     "@type": "Organization",
     "name": "Kinde"
@@ -44,83 +52,65 @@ const structuredData: any = {
     "name": "Kinde",
     "url": "https://kinde.com"
   },
-  "datePublished": updated,
-  "dateModified": updated,
-  "url": Astro.url.href,
   "mainEntityOfPage": {
     "@type": "WebPage",
     "@id": Astro.url.href
+  },
+  "articleSection": topics.join(", "),
+  "articleBody": entry.data.description,
+  "wordCount": entry.data.description?.length || 0,
+  "dateModified": updatedString,
+  "inLanguage": "en-US",
+  "isAccessibleForFree": true,
+  "educationalLevel": complexity || "Beginner",
+  "audience": {
+    "@type": "Audience",
+    "audienceType": audience.join(", ")
   }
 };
 
-// Add audience and complexity info
-if (audience.length > 0) {
-  structuredData.audience = {
-    "@type": "Audience",
-    "audienceType": audience.join(', ')
+// Add featured/deprecated status if available
+if (featured !== undefined) {
+  structuredData.isPartOf = {
+    "@type": "CreativeWork",
+    "isFeatured": featured
   };
 }
 
-if (complexity) {
-  structuredData.learningResourceType = complexity;
+if (deprecated !== undefined) {
+  structuredData.isDeprecated = deprecated;
 }
 ---
 
-{
-  import.meta.env.PUBLIC_IS_ANALYTICS_ENABLED === "true" && (
-    <script data-domain="kinde.com" src="https://kinde.com/js/script.tagged-events.js" defer />
-  )
-}
+<Default {...Astro.props} />
 
-<Default {...Astro.props}>
-  <slot />
-</Default>
+<!-- Enhanced SEO Meta Tags -->
+<meta name="keywords" content={allKeywords.join(", ")} />
+<meta name="article:section" content={topics.join(", ")} />
+<meta name="article:tag" content={keywords.join(", ")} />
+<meta name="article:difficulty" content={complexity || "Beginner"} />
+{updatedString && <meta name="article:modified_time" content={updatedString} />}
+{featured && <meta name="article:featured" content={featured.toString()} />}
+{deprecated && <meta name="article:deprecated" content={deprecated.toString()} />}
 
-{/* Enhanced meta tags for better SEO */}
-{allKeywords.length > 0 && (
-  <meta name="keywords" content={allKeywords.join(', ')} />
-)}
+<!-- Enhanced Open Graph Tags -->
+<meta property="og:keywords" content={allKeywords.join(", ")} />
+<meta property="og:article:section" content={topics.join(", ")} />
+<meta property="og:article:tag" content={keywords.join(", ")} />
+{complexity && <meta property="og:article:difficulty" content={complexity} />}
+{updatedString && <meta property="og:article:modified_time" content={updatedString} />}
 
-{topics.length > 0 && (
-  <meta name="article:section" content={topics.join(', ')} />
-)}
+<!-- Enhanced Twitter Card Tags -->
+<meta name="twitter:description" content={entry.data.description} />
+{allKeywords.length > 0 && <meta name="twitter:keywords" content={allKeywords.join(", ")} />}
 
-{audience.length > 0 && (
-  <meta name="article:tag" content={audience.join(', ')} />
-)}
-
-{complexity && (
-  <meta name="article:difficulty" content={complexity} />
-)}
-
-{updated && (
-  <meta name="article:modified_time" content={updated} />
-)}
-
-{featured && (
-  <meta name="article:featured" content="true" />
-)}
-
-{deprecated && (
-  <meta name="article:deprecated" content="true" />
-)}
-
-{/* Enhanced Open Graph tags */}
-{entry.data.description && (
-  <meta property="og:description" content={entry.data.description} />
-)}
-
-{allKeywords.length > 0 && (
-  <meta property="og:keywords" content={allKeywords.join(', ')} />
-)}
-
-{/* Twitter Card enhancements */}
-{entry.data.description && (
-  <meta name="twitter:description" content={entry.data.description} />
-)}
-
-{/* Structured data for search engines */}
+<!-- Structured Data -->
 <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
 
-{/* Default OG image if no custom one is set */}
-{!hasCustomOGImage && <meta property="og:image" content={`${Astro.url.href}og-image.png`} />}
+<!-- AI Summary for enhanced search -->
+{aiSummary && <meta name="ai-summary" content={aiSummary} />}
+
+<!-- Custom OG Image if not already set -->
+{!hasCustomOGImage && entry.data.social_sharing_image_url && (
+  <meta property="og:image" content={entry.data.social_sharing_image_url} />
+)}
