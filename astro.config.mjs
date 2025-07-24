@@ -318,10 +318,20 @@ export default defineConfig({
     }),
     icon(),
     sitemap({
-      filter: (page) => !page.includes('404'),
-      customPages: [
-        'https://docs.kinde.com/'
-      ]
+      filter: (page) => {
+        // Include all documentation pages
+        if (page.includes('/docs/')) return true;
+        // Include main pages
+        if (page === '' || page === '/') return true;
+        // Include API pages
+        if (page.includes('/kinde-apis/')) return true;
+        // Exclude admin or private pages
+        if (page.includes('/admin/')) return false;
+        return true;
+      },
+      changefreq: 'weekly',
+      priority: 0.7,
+      lastmod: new Date()
     }),
     AutoImport({
       imports: [
