@@ -5,6 +5,10 @@ import type {Props} from "@astrojs/starlight/props";
 const hasCustomOGImage = Astro.props.entry.data.head.find((t) =>
   t.attrs.property === "og:image" ? true : false
 );
+
+// Extract frontmatter data for structured data
+const { entry } = Astro.props;
+const frontmatter = entry.data;
 ---
 
 {
@@ -18,3 +22,36 @@ const hasCustomOGImage = Astro.props.entry.data.head.find((t) =>
 </Default>
 
 {!hasCustomOGImage && <meta property="og:image" content={`${Astro.url.href}og-image.png`} />}
+
+{/* Add meta tags for the new fields */}
+{frontmatter.audience && (
+  <meta name="audience" content={Array.isArray(frontmatter.audience) ? frontmatter.audience.join(', ') : frontmatter.audience} />
+)}
+{frontmatter.complexity && (
+  <meta name="complexity" content={frontmatter.complexity} />
+)}
+{frontmatter.keywords && (
+  <meta name="keywords" content={frontmatter.keywords.join(', ')} />
+)}
+{frontmatter.ai_summary && (
+  <meta name="ai-summary" content={frontmatter.ai_summary} />
+)}
+
+{/* Add JSON-LD structured data */}
+<script type="application/ld+json" set:html={JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "name": frontmatter.title,
+  "description": frontmatter.description,
+  "keywords": frontmatter.keywords?.join(', '),
+  "audience": Array.isArray(frontmatter.audience) ? frontmatter.audience.join(', ') : frontmatter.audience,
+  "difficulty": frontmatter.complexity,
+  "abstract": frontmatter.ai_summary,
+  "url": Astro.url.href,
+  ...(frontmatter.updated && { "dateModified": typeof frontmatter.updated === 'string' ? frontmatter.updated : frontmatter.updated.toISOString() }),
+  "publisher": {
+    "@type": "Organization",
+    "name": "Kinde",
+    "url": "https://kinde.com"
+  }
+})} />
