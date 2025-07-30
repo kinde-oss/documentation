@@ -52,27 +52,20 @@ const frontmatter = entry.data;
 )}
 
 {/* Add JSON-LD structured data */}
-<script type="application/ld+json" set:html={JSON.stringify(Object.fromEntries(
-  Object.entries({
-    "@context": "https://schema.org",
-    "@type": "TechArticle",
-    "name": frontmatter.title,
-    "description": frontmatter.description,
-    "keywords": Array.isArray(frontmatter.keywords) ? frontmatter.keywords.join(', ') : undefined,
-    "audience": Array.isArray(frontmatter.audience) ? frontmatter.audience.join(', ') : frontmatter.audience,
-    "difficulty": frontmatter.complexity,
-    "abstract": frontmatter.ai_summary,
-    "url": Astro.url.href,
-    ...(frontmatter.updated && {
-      "dateModified":
-        typeof frontmatter.updated === 'string'
-          ? frontmatter.updated
-          : frontmatter.updated.toISOString()
-    }),
-    "publisher": {
-      "@type": "Organization",
-      "name": "Kinde",
-      "url": "https://kinde.com"
-    }
-  }).filter(([_, value]) => value !== undefined)
-))} />
+<script type="application/ld+json" set:html={JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "name": frontmatter.title,
+  "description": frontmatter.description,
+  "keywords": frontmatter.keywords?.join(', '),
+  "audience": Array.isArray(frontmatter.audience) ? frontmatter.audience.join(', ') : frontmatter.audience,
+  "difficulty": frontmatter.complexity,
+  "abstract": frontmatter.ai_summary,
+  "url": Astro.url.href,
+  ...(frontmatter.updated && { "dateModified": typeof frontmatter.updated === 'string' ? frontmatter.updated : frontmatter.updated.toISOString() }),
+  "publisher": {
+    "@type": "Organization",
+    "name": "Kinde",
+    "url": "https://kinde.com"
+  }
+})} />
