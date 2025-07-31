@@ -11,7 +11,10 @@ const sidebarData = [
     items: [
       {label: "Guides", autogenerate: {directory: "get-started/guides"}, collapsed: false},
       {
-        label: "Learn about Kinde", autogenerate: {directory: "get-started/learn-about-kinde"}, collapsed: false},
+        label: "Learn about Kinde",
+        autogenerate: {directory: "get-started/learn-about-kinde"},
+        collapsed: false
+      },
       {
         label: "Switch to Kinde",
         autogenerate: {directory: "get-started/switch-to-kinde"},
@@ -131,6 +134,11 @@ const sidebarData = [
       {
         label: "Social connections",
         autogenerate: {directory: "authenticate/social-sign-in"},
+        collapsed: false
+      },
+      {
+        label: "Device Authorization Flow",
+        autogenerate: {directory: "authenticate/device-authorization-flow"},
         collapsed: false
       }
     ]
@@ -282,13 +290,21 @@ const sidebarData = [
         autogenerate: {directory: "machine-to-machine-applications/organization-scoped-m2m-apps"},
         collapsed: false
       },
-      {label: "M2M token customization", autogenerate: {directory: "machine-to-machine-applications/m2m-token-customization"}, collapsed: false},
+      {
+        label: "M2M token customization",
+        autogenerate: {directory: "machine-to-machine-applications/m2m-token-customization"},
+        collapsed: false
+      },
       {
         label: "Automation",
         autogenerate: {directory: "machine-to-machine-applications/m2m-workflow-automation"},
         collapsed: false
       },
-      {label: "Troubleshooting", autogenerate: {directory: "machine-to-machine-applications/troubleshooting-m2m"}, collapsed: false}
+      {
+        label: "Troubleshooting",
+        autogenerate: {directory: "machine-to-machine-applications/troubleshooting-m2m"},
+        collapsed: false
+      }
     ]
   },
   {
@@ -331,11 +347,13 @@ const sidebarData = [
       {
         label: "About",
         autogenerate: {directory: "releases/about"},
-        collapsed: false},
+        collapsed: false
+      },
       {
         label: "Guides",
         autogenerate: {directory: "releases/guides"},
-        collapsed: false},
+        collapsed: false
+      },
       {
         label: "Feature flags",
         autogenerate: {directory: "releases/feature-flags"},
