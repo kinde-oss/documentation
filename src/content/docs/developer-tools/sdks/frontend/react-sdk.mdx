@@ -9,6 +9,8 @@ head:
     attrs:
       property: "og:image"
       content: "https://kinde.com/assets/images/open-graph/DOCS-SSI-SDK_react.png"
+tableOfContents:
+  maxHeadingLevel: 3
 topics:
   - developer-tools
   - sdks
@@ -38,15 +40,15 @@ ai_summary: Complete guide for React SDK including installation, provider setup,
 
 The Kinde React SDK allows developers to quickly and securely integrate a new or an existing React application to the Kinde platform.
 
-You can also view the [React package](https://github.com/kinde-oss/kinde-auth-react) and [React starter kit](https://github.com/kinde-starter-kits/react-starter-kit) in GitHub.
+You can also view the [React package](https://github.com/kinde-oss/kinde-auth-react) and [React starter kit](https://github.com/kinde-starter-kits/react-starter-kit) in GitHub.
 
-This new SDK (v5) is optmized to work with React version 18+.
+This new SDK (v5) is optimized to work with React version 18+.
 
 If you are currently using v4, refer to this [migration information](/developer-tools/sdks/frontend/react-sdk/#migration-from-v4-to-v5) to update to v5.
 
 ## **Register for Kinde**
 
-If you haven’t already got a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). Registering gives you a Kinde domain, which you need to get started, e.g. `yourapp.kinde.com`.
+If you haven’t already got a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). Registering gives you a Kinde domain, which you need to get started, e.g. `yourapp.kinde.com`.
 
 ## **Configure React**
 
@@ -61,11 +63,11 @@ Kinde uses a React Context Provider to maintain its internal state in your appli
 Import the Kinde Provider component and wrap your application in it.
 
 ```jsx
-import { KindeProvider } from "@kinde-oss/kinde-auth-react";
+import { KindeProvider } from '@kinde-oss/kinde-auth-react';
 const App = () => (
   <KindeProvider
-    clientId="<your_kinde_client_id>
-    domain="<your_kinde_domain>
+    clientId="<your_kinde_client_id>"
+    domain="<your_kinde_domain>"
     logoutUri={window.location.origin}
     redirectUri={window.location.origin}
   >
@@ -78,12 +80,12 @@ const App = () => (
 
 Set the URLs in Kinde so that after your user signs up, signs in, or signs out, they will be redirected back to your application.
 
-1. In Kinde, go to **Settings > Applications > [your app] > View details**.
-2. Replace the `your_kinde_client_id` and `your_kinde_domain` placeholders in the code block above with the the values from the **App keys** section.
+1. In Kinde, go to **Settings > Applications > [your app] > View details**.
+2. Replace the `your_kinde_client_id` and `your_kinde_domain` placeholders in the code block above with the the values from the **App keys** section.
 3. Add your callback URLs in the relevant fields. For example:
-   - Allowed callback URLs (also known as redirect URIs) - for example `https://localhost:3000/home/callback`
-   - Allowed logout redirect URLs - for example `https://localhost:3000`
-4. Select **Save**.
+   - Allowed callback URLs (also known as redirect URIs) - for example `https://localhost:3000/home/callback`
+   - Allowed logout redirect URLs - for example `https://localhost:3000`
+4. Select **Save**.
 
 Tip: Make sure there are no hidden spaces and remove any ‘/’ forward slashes from the end of URLs.
 
@@ -118,7 +120,7 @@ const { login, register } = useKindeAuth();
 To handle the result of auth there are three callback events. 
 
 - `onSuccess` - On Successful authentication, this includes the user authenticated along with the passed state and context to the Kinde hook
-- `onError` - When an error occors during authentication, this includes the error along with the passed state and context to the Kinde hook
+- `onError` - When an error occurs during authentication, this includes the error along with the passed state and context to the Kinde hook
 
 ```jsx
 <KindeProvider
@@ -167,24 +169,24 @@ import { LogoutLink } from '@kinde-oss/kinde-auth-react/components';
 
 ## Test sign up
 
-Register your first user by signing up yourself. You’ll see your newly registered user on the **Users** page in Kinde.
+Register your first user by signing up yourself. You’ll see your newly registered user on the **Users** page in Kinde.
 
 ### **View user profile**
 
 You can get an authorized user’s profile from any component using the Kinde React hook.
 
 ```jsx
-import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 const SayHello = () => {
   const { user } = useKindeAuth();
-  return <p>Hi {user.first_name}!</p>;
+  return <p>Hi {user.firstName}!</p>;
 };
 ```
 
-To be on the safe side we have also provided `isAuthenticated` and `isLoading` state to prevent rendering errors.
+To be on the safe side we have also provided `isAuthenticated` and `isLoading` state to prevent rendering errors.
 
 ```jsx
-import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 
 const UserProfile = () => {
   const { user, isAuthenticated, isLoading } = useKindeAuth();
@@ -205,9 +207,316 @@ const UserProfile = () => {
 };
 ```
 
+## Access control
+
+### Check if user is authenticated
+
+```jsx
+const { isAuthenticated } = useKindeAuth();
+```
+
+### Check user rights
+
+There are two ways to check if a user has a specific permission:
+
+- Using the `has` function from the `@kinde-oss/kinde-auth-react/utils` package
+- Using the `<ProtectedRoute>` component
+
+#### Using the `has` function
+
+The `has` function is a helper function that checks if a user has specific roles, permissions, feature flags, or billing entitlements. It returns a boolean value indicating whether the user meets all the specified criteria.
+
+```typescript
+import { has } from '@kinde-oss/kinde-auth-react/utils';
+
+// Basic usage - check multiple criteria at once
+const userHasAccess = has({
+  roles: ['admin'],
+  permissions: ['create:todos'],
+  featureFlags: ['theme'],
+  billingEntitlements: ['premium']
+});
+```
+
+**Parameters:**
+- `roles` (optional): Array of role names the user must have
+- `permissions` (optional): Array of permission names the user must have  
+- `featureFlags` (optional): Array of feature flag names the user must have
+- `billingEntitlements` (optional): Array of billing entitlement names the user must have
+
+**Return value:** `boolean` - `true` if user meets all criteria, `false` otherwise
+
+### API vs Token-based checks
+
+By default, the `has` function performs checks using the user's tokens. You can override this behavior by passing the `forceApi` option to perform server-side validation:
+
+```typescript
+// Force all checks to use API calls instead of tokens
+has({
+  roles: ['admin'],
+  permissions: ['create:todos'],
+  forceApi: true
+})
+
+// Force only specific checks to use API calls
+has({
+  roles: ['admin'],
+  permissions: ['create:todos'],
+  forceApi: { permissions: true } // Only permissions use API, roles use tokens
+})
+```
+
+### Advanced usage with conditions
+
+You can add custom conditions to any check by expanding the object structure:
+
+```typescript
+// Add custom conditions to role checks
+has({
+  roles: [{ 
+    role: 'admin', 
+    condition: (user) => user.isAdmin && user.isActive 
+  }],
+})
+
+// Add custom conditions to permission checks
+has({
+  permissions: [{ 
+    permission: 'create:todos', 
+    condition: (user) => user.organizationId === 'org123' 
+  }],
+})
+```
+
+### Feature flag value checking
+
+For feature flags, you can check both the flag's existence and its specific value:
+
+```typescript
+// Check if feature flag exists
+has({
+  featureFlags: ['theme']
+})
+
+// Check if feature flag has a specific value
+has({
+  featureFlags: [{ flag: 'theme', value: 'dark' }]
+})
+
+// Check multiple feature flags with values
+has({
+  featureFlags: [
+    { flag: 'theme', value: 'dark' },
+    { flag: 'beta_features', value: true }
+  ]
+})
+```
+
+### Complete example
+
+```typescript
+import { has } from '@kinde-oss/kinde-auth-react/utils';
+
+const checkUserAccess = () => {
+  const canAccessAdminPanel = has({
+    roles: ['admin', 'super_admin'],
+    permissions: ['read:users', 'write:users'],
+    featureFlags: ['admin_panel'],
+    billingEntitlements: ['enterprise_plan']
+  });
+
+  const canUseDarkTheme = has({
+    featureFlags: [{ flag: 'theme', value: 'dark' }],
+    permissions: ['customize:theme']
+  });
+
+  return { canAccessAdminPanel, canUseDarkTheme };
+};
+```
+
+### TypeScript type safety
+
+You can enhance type safety by declaring your specific roles, permissions, feature flags and billing entitlements. This provides autocomplete and compile-time checking for your access control.
+
+Create a type declaration file (e.g., `kinde-types.d.ts`) in your project:
+
+```typescript
+declare module "@kinde-oss/kinde-auth-react/utils" {
+  interface KindeConfig {
+    roles: ['admin', 'user', 'moderator', 'super_admin'];
+    permissions: ['read:users', 'write:users', 'delete:users', 'manage:settings'];
+    featureFlags: ['dark_mode', 'beta_features', 'admin_panel'];
+    billingEntitlements: ['basic', 'premium', 'enterprise'];
+  }
+}
+```
+
+**Note:** Make sure your `tsconfig.json` includes the type declaration file, or place it in a directory that TypeScript automatically includes (like `src/types/` or the root of your project).
+
+### Using the `<ProtectedRoute>` component
+
+**Note:** The `<ProtectedRoute>` component requires the `react-router-dom` package to be installed.
+
+The `<ProtectedRoute>` component is a wrapper component that checks if a user has specific permissions and renders the child component if they do. If the user doesn't have the required permissions, they are redirected to a fallback path.
+
+```jsx
+import { ProtectedRoute } from '@kinde-oss/kinde-auth-react/react-router';
+
+// Basic usage - protect a route with role-based access
+<ProtectedRoute has={{ roles: ['admin'] }} fallbackPath="/">
+  <div>You have access to this admin page</div>
+</ProtectedRoute>
+```
+
+**Props:**
+- `has` (required): Object containing the access requirements (same format as the `has` function)
+- `fallbackPath` (required): Path to redirect to if user doesn't have access
+- `children` (required): React components to render if user has access
+
+#### Basic examples
+
+```jsx
+// Protect with single role
+<ProtectedRoute has={{ roles: ['admin'] }} fallbackPath="/unauthorized">
+  <AdminDashboard />
+</ProtectedRoute>
+
+// Protect with multiple roles (user must have at least one)
+<ProtectedRoute has={{ roles: ['admin', 'moderator'] }} fallbackPath="/">
+  <ModeratorPanel />
+</ProtectedRoute>
+
+// Protect with permissions
+<ProtectedRoute has={{ permissions: ['read:users', 'write:users'] }} fallbackPath="/dashboard">
+  <UserManagement />
+</ProtectedRoute>
+
+// Protect with feature flags
+<ProtectedRoute has={{ featureFlags: ['beta_features'] }} fallbackPath="/">
+  <BetaFeatures />
+</ProtectedRoute>
+```
+
+#### Complex access control
+
+```jsx
+// Multiple criteria - user must have ALL specified requirements
+<ProtectedRoute 
+  has={{ 
+    roles: ['admin'],
+    permissions: ['manage:users'],
+    featureFlags: ['admin_panel'],
+    billingEntitlements: ['premium']
+  }} 
+  fallbackPath="/upgrade"
+>
+  <PremiumAdminPanel />
+</ProtectedRoute>
+
+// Using API-based checks for real-time validation
+<ProtectedRoute 
+  has={{ 
+    roles: ['admin'],
+    permissions: ['manage:users'],
+    forceApi: true
+  }} 
+  fallbackPath="/"
+>
+  <RealTimeAdminPanel />
+</ProtectedRoute>
+```
+
+#### Integration with React Router
+
+```jsx
+import { Routes, Route } from 'react-router-dom';
+import { ProtectedRoute } from '@kinde-oss/kinde-auth-react/react-router';
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route 
+        path="/admin" 
+        element={
+          <ProtectedRoute has={{ roles: ['admin'] }} fallbackPath="/">
+            <AdminPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/premium" 
+        element={
+          <ProtectedRoute 
+            has={{ billingEntitlements: ['premium'] }} 
+            fallbackPath="/upgrade"
+          >
+            <PremiumPage />
+          </ProtectedRoute>
+        } 
+      />
+    </Routes>
+  );
+}
+```
+
+#### Complete example with multiple protected routes
+
+```jsx
+import { Routes, Route } from 'react-router-dom';
+import { ProtectedRoute } from '@kinde-oss/kinde-auth-react/react-router';
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      
+      {/* Basic admin access */}
+      <Route 
+        path="/admin" 
+        element={
+          <ProtectedRoute has={{ roles: ['admin'] }} fallbackPath="/">
+            <AdminDashboard />
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Premium features */}
+      <Route 
+        path="/premium" 
+        element={
+          <ProtectedRoute 
+            has={{ billingEntitlements: ['premium'] }} 
+            fallbackPath="/upgrade"
+          >
+            <PremiumFeatures />
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Beta features with specific permissions */}
+      <Route 
+        path="/beta" 
+        element={
+          <ProtectedRoute 
+            has={{ 
+              featureFlags: ['beta_access'],
+              permissions: ['beta:test']
+            }} 
+            fallbackPath="/"
+          >
+            <BetaFeatures />
+          </ProtectedRoute>
+        } 
+      />
+    </Routes>
+  );
+}
+```
+
 ## Call your API
 
-The `getAccessToken` method lets you to securely call your API and pass the bearer token to validate that your user is authenticated.
+The `getAccessToken` method lets you to securely call your API and pass the bearer token to validate that your user is authenticated.
 
 ```jsx
 const { getAccessToken } = useKindeAuth();
@@ -232,7 +541,7 @@ We have a range of backend SDKs available to assist you in securing your back en
 
 ## Audience
 
-An `audience` is the intended recipient of an access token - for example the API for your application. The `audience` argument can be passed to the Kinde client to request an audience be added to the provided token.
+An `audience` is the intended recipient of an access token - for example the API for your application. The `audience` argument can be passed to the Kinde client to request an audience be added to the provided token.
 
 The audience of a token is the intended recipient of the token.
 
@@ -250,7 +559,7 @@ To request multiple audiences, pass them separated by white space.
 >
 ```
 
-For details on how to connect, see [Register an API](/developer-tools/your-apis/register-manage-apis/).
+For details on how to connect, see [Register an API](/developer-tools/your-apis/register-manage-apis/).
 
 ## Organizations
 
@@ -272,7 +581,7 @@ To sign up a user to a particular organization, you must pass the `orgCode` from
 <button onClick={() => login({orgCode: "org_1234"})} type="button">Sign in</button>
 ```
 
-Following authentication Kinde provides a json web token (jwt) to your application. Along with the standard information we also include the `org_code` and the `permissions` for that organization (this is important as a user can belong to multiple organizations and have different permissions for each). Example of a returned token:
+Following authentication Kinde provides a json web token (jwt) to your application. Along with the standard information we also include the `org_code` and the `permissions` for that organization (this is important as a user can belong to multiple organizations and have different permissions for each). Example of a returned token:
 
 ```json
 {
@@ -331,7 +640,7 @@ A practical example in code might look something like:
 
 ## **Feature flags**
 
-When a user signs in, the access token your project/application receives contains a custom claim called `feature_flags` which is an object detailing the feature flags for that user.
+When a user signs in, the access token your project/application receives contains a custom claim called `feature_flags` which is an object detailing the feature flags for that user.
 
 You can [set feature flags](/releases/feature-flags/add-feature-flag/) in your Kinde account. Here’s an example.
 
@@ -354,15 +663,15 @@ feature_flags: {
 
 In order to minimize the payload in the token we have used single letter keys / values where possible. The single letters represent the following:
 
-`t` = `type`
+`t` = `type`
 
-`v` = `value`
+`v` = `value`
 
-`s` = `string`
+`s` = `string`
 
-`b` = `boolean`
+`b` = `boolean`
 
-`i` = `integer`
+`i` = `integer`
 
 We provide helper functions to more easily access feature flags:
 
@@ -420,7 +729,7 @@ By default the JavaScript SDK requests the following scopes:
 - `offline`
 - `openid`
 
-You can override this by passing `scope` into the `<KindeProvider>`.
+You can override this by passing `scope` into the `<KindeProvider>`.
 
 ```jsx
 <KindeProvider
@@ -448,14 +757,14 @@ You will find that when you refresh the browser using a front-end based SDK that
 
 There are two ways to work around this.
 
-- (Recommended) use our [Custom Domains](/build/domains/pointing-your-domain/) feature which then allows us to set a secure, httpOnly first party cookie on your domain.
-- (Non-production solution only) If you’re not yet ready to add your custom domain, or for local development, we offer an escape hatch `<KindeProvider>` `useInsecureForRefreshToken`. This will use local storage to store the refresh token. DO NOT use this in production.
+- (Recommended) use our [Custom Domains](/build/domains/pointing-your-domain/) feature which then allows us to set a secure, httpOnly first party cookie on your domain.
+- (Non-production solution only) If you’re not yet ready to add your custom domain, or for local development, we offer an escape hatch `<KindeProvider>` `useInsecureForRefreshToken`. This will use local storage to store the refresh token. DO NOT use this in production.
 
 Once you implement one of the above, you don’t need to do anything else.
 
 ## **Persisting application state**
 
-The options argument passed into the `login` and `register` methods accepts an `state` key where you can pass in the current application state prior to redirecting to Kinde. This is then returned to you in the second argument of the `onSuccess` callback as seen above.
+The options argument passed into the `login` and `register` methods accepts an `state` key where you can pass in the current application state prior to redirecting to Kinde. This is then returned to you in the second argument of the `onSuccess` callback as seen above.
 
 A common use case is to allow redirects to the page the user was trying to access prior to authentication. This could be achieved as follows:
 
@@ -489,12 +798,12 @@ Redirect handler:
 
 ## **Token storage in the authentication state**
 
-By default the JWTs provided by Kinde are stored in memory. This protects you from both [CSRF](https://owasp.org/www-community/attacks/csrf) attacks (possible if stored as a client side cookie) and [XSS](https://owasp.org/www-community/attacks/xss/) attacks (possible if persisted in local storage).
+By default the JWTs provided by Kinde are stored in memory. This protects you from both [CSRF](https://owasp.org/www-community/attacks/csrf) attacks (possible if stored as a client side cookie) and [XSS](https://owasp.org/www-community/attacks/xss/) attacks (possible if persisted in local storage).
 
 The trade off with this approach however is that if a page is refreshed or a new tab is opened then the token is wiped from memory, and the sign in button would need to be clicked to re-authenticate. There are two ways to prevent this behaviour:
 
 1. Use the Kinde custom domain feature. We can then set a secure, httpOnly cookie against your domain containing only the refresh token which is not vulnerable to CSRF attacks.
-2. There is an escape hatch which can be used for local development: `useInsecureForRefreshToken`. This SHOULD NOT be used in production. We recommend you use a custom domain. This will store only the refresh token in local storage and is used to silently re-authenticate.
+2. There is an escape hatch which can be used for local development: `useInsecureForRefreshToken`. This SHOULD NOT be used in production. We recommend you use a custom domain. This will store only the refresh token in local storage and is used to silently re-authenticate.
 
 ```jsx
 <KindeProvider
@@ -579,7 +888,7 @@ Required: Yes
 
 ### **`domain`**
 
-Either your Kinde instance url or your custom domain. e.g `https://yourapp.kinde.com`
+Either your Kinde instance url or your custom domain. e.g `https://yourapp.kinde.com`
 
 Type: `string`
 
@@ -858,4 +1167,4 @@ Sample:
 "David";
 ```
 
-If you need any assistance with getting Kinde connected reach out to us at [support@kinde.com](mailto:support@kinde.com).
+If you need any assistance with getting Kinde connected reach out to us at [support@kinde.com](mailto:support@kinde.com).
