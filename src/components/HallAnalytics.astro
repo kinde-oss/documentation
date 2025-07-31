@@ -72,19 +72,35 @@ const HALL_API_KEY = import.meta.env.HALL_API_KEY;
         trackPageView();
       }
 
-      // Track navigation (for SPA-like behavior)
-      let currentPath = window.location.pathname;
-      const observer = new MutationObserver(() => {
-        if (window.location.pathname !== currentPath) {
-          currentPath = window.location.pathname;
-          setTimeout(trackPageView, 100); // Small delay to ensure new page is loaded
-        }
-      });
+      // Also track when body becomes available (fallback)
+      if (!document.body) {
+        const bodyObserver = new MutationObserver(() => {
+          if (document.body) {
+            bodyObserver.disconnect();
+            trackPageView();
+          }
+        });
+        bodyObserver.observe(document.documentElement, {
+          childList: true,
+          subtree: true
+        });
+      }
 
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true
-      });
+      // Track navigation (for SPA-like behavior) - only if document.body exists
+      if (document.body) {
+        let currentPath = window.location.pathname;
+        const observer = new MutationObserver(() => {
+          if (window.location.pathname !== currentPath) {
+            currentPath = window.location.pathname;
+            setTimeout(trackPageView, 100); // Small delay to ensure new page is loaded
+          }
+        });
+
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      }
 
     })();
   </script> 
