@@ -137,7 +137,7 @@ const sidebarData = [
         collapsed: false
       },
       {
-        label: "Device Authorization Flow",
+        label: "Device authorization flow",
         autogenerate: {directory: "authenticate/device-authorization-flow"},
         collapsed: false
       }
