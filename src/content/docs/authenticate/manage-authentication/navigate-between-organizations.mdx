@@ -65,8 +65,11 @@ You can now extract the `organizations` claim from ID tokens in the way you norm
 For example, in React you could use:
 
 ```jsx
-const {getClaim} = useKindeAuth();
-console.log(getClaim("organizations", "id_token").value);
+const { getClaim } = useKindeAuth()
+
+getClaim('organizations', 'idToken').then((organizations) => {
+  console.log('value:', organizations?.value)
+})
 ```
 
 ## Step 2: Build the switcher
@@ -76,18 +79,30 @@ To build a simple list of orgs, use something like the following React example. 
 In this example, we’ve also included a check to see if this is the current organization.
 
 ```jsx
-const {getClaim, getOrganization} = useKindeAuth();
+const { login, getClaim, getOrganization } = useKindeAuth()
+
+const [orgs, setOrgs] = useState<{ id: string; name: string }[]>([])
+const [currentOrgCode, setCurrentOrgCode] = useState<string | null>(null)
+
+useEffect(() => {
+  getClaim('organizations', 'idToken').then((organizations) => {
+    setOrgs(organizations?.value ?? [])
+  })
+  getOrganization().then((org) => {
+    setCurrentOrgCode(org)
+  })
+}, [getClaim, getOrganization])
 
 <ul>
-  {getClaim("organizations", "idToken").value.map((item) => (
+  {orgs.map((item) => (
     <li key={item.id}>
-      <button onClick={() => login({orgCode: item.id})} type="button">
+      <button onClick={() => login({ orgCode: item.id })} type='button'>
         {item.name}
-        {getOrganization().orgCode === item.id ? " (Current)" : null}
+        {currentOrgCode === item.id ? ' (Current)' : null}
       </button>
     </li>
   ))}
-</ul>;
+</ul>
 ```
 
 With some extra styling, a switcher might look something like this:
