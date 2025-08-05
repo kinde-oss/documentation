@@ -2,14 +2,40 @@
 page_id: e89d246a-5cdf-4993-9cee-94b31ec27583
 title: Import users in bulk
 sidebar:
-  order: 3
+  order: 2
 relatedArticles:
-  - 556c9ce6-477b-4a31-9ce1-75f612eb3740
-  - c4bc277a-5ec7-418c-ba1c-4d58c9ddfd7d
   - cb91d7a1-7306-4c58-9635-b0fe1b913b38
+  - 855b9b3b-2729-481f-a81b-231e8375fa59
 app_context:
   - m: users
-  - m: profile
+description: Comprehensive guide to importing users in bulk to Kinde including CSV format requirements, validation rules, and error handling for large-scale user management.
+topics:
+  - manage-users
+  - add-and-edit
+sdk: []
+languages:
+  - csv
+  - json
+  - ndjson
+audience:
+  - admins
+  - developers
+complexity: intermediate
+keywords:
+  - bulk import
+  - csv import
+  - auth0 migration
+  - user migration
+  - password import
+  - organization assignment
+  - roles and permissions
+  - hashed passwords
+  - external_organization_id
+  - username case sensitivity
+updated: 2024-01-15
+featured: false
+deprecated: false
+ai_summary: Comprehensive guide to importing users in bulk from CSV, JSON, or Auth0 including file requirements, data preparation, password handling, and organization assignment.
 ---
 
 You can import users in bulk, from CSV, JSON, or from other files provided by your previous authentication service, such as Auth0.
@@ -81,6 +107,12 @@ If you are migrating from Auth0, see the **Prepare JSON data (for Auth0 imports)
 - `email` or `phone` - minimum required identity information
 - `external_organization_id` - assign users to organizations, optional unless you are importing roles and permissions
 
+<Aside>
+
+There are special considerations if you are importing users who will share a phone number to authenticate via a mobile device. Contact support@kinde.com for advice on the best way to import users where the phone is the primary identity and numbers are shared. 
+
+</Aside>
+
 ### **Other user data**
 
 <Aside>
@@ -139,8 +171,8 @@ The more data that you include for import, the easier we can set up your users i
 ```text
 email,id,first_name,last_name,roles,permissions,external_organization_id
 
-jen@kinde.com,0001,"Jen","Smith","role_1","permission_1","ext_org_id_1,ext_org_id_2"
-elmo@kinde.com,0002,"Elmo","Smith","role_1","permission_2","ext_org_id_1,ext_org_id_2"
+jen@kinde.com,0001,"Jen","Smith","role_1","permission_1","ext_org_id_1,ext_org_id_2
+elmo@kinde.com,0002,"Elmo","Smith","role_1","permission_2","ext_org_id_1,ext_org_id_2
 ```
 
 ### Users with multiple orgs and multiple roles
@@ -150,8 +182,8 @@ If you’re importing users who belong to multiple organizations and they have d
 ```text
 email,id,first_name,last_name,roles,permissions,external_organization_id
 
-jen@kinde.com,0001,"Jen","Smith","role_1,role_2","permission_1,permission_2","ext_org_id_1"
-jen@kinde.com,0001,"Jen","Smith","role_3","permission_3,permission_4","ext_org_id_2,ext_org_id_3"
+jen@kinde.com,0001,"Jen","Smith","role_1,role_2","permission_1,permission_2","ext_org_id_1
+jen@kinde.com,0001,"Jen","Smith","role_3","permission_3,permission_4","ext_org_id_2,ext_org_id_3
 ```
 
 Alternatively, you can import your users first, then import their roles and organizations in a separate file:
@@ -160,14 +192,14 @@ Alternatively, you can import your users first, then import their roles and orga
 File 1
 email,id,first_name,last_name
 
-jen@kinde.com,0001,"Jen","Smith"
+jen@kinde.com,0001,"Jen","Smith
 ```
 
 ```text
 File 2
 id,roles,permissions,external_organization_id
-0001,"role_1,role_2","permission_1,permission_2","ext_org_id_1"
-0001,"role_3,role_4","permission_3,permission_4","ext_org_id_2"
+0001,"role_1,role_2","permission_1,permission_2","ext_org_id_1
+0001,"role_3,role_4","permission_3,permission_4","ext_org_id_2
 ```
 
 ## How to import users
