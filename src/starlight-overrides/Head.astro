@@ -5,6 +5,10 @@ import type {Props} from "@astrojs/starlight/props";
 const hasCustomOGImage = Astro.props.entry.data.head.find((t) =>
   t.attrs.property === "og:image" ? true : false
 );
+
+// Extract frontmatter data for meta tags
+const { entry } = Astro.props;
+const frontmatter = entry.data;
 ---
 
 {
@@ -18,3 +22,26 @@ const hasCustomOGImage = Astro.props.entry.data.head.find((t) =>
 </Default>
 
 {!hasCustomOGImage && <meta property="og:image" content={`${Astro.url.href}og-image.png`} />}
+
+{/* Add meta tags for the new fields */}
+{frontmatter.ai_summary && (
+  <meta name="ai-summary" content={frontmatter.ai_summary} />
+)}
+{frontmatter.keywords && (
+  <meta name="keywords" content={frontmatter.keywords.join(', ')} />
+)}
+{frontmatter.description && (
+  <meta name="description" content={frontmatter.description} />
+)}
+{frontmatter.sdk && (
+  <meta name="sdk" content={Array.isArray(frontmatter.sdk) ? frontmatter.sdk.join(', ') : frontmatter.sdk} />
+)}
+{frontmatter.languages && (
+  <meta name="languages" content={Array.isArray(frontmatter.languages) ? frontmatter.languages.join(', ') : frontmatter.languages} />
+)}
+{frontmatter.audience && (
+  <meta name="audience" content={Array.isArray(frontmatter.audience) ? frontmatter.audience.join(', ') : frontmatter.audience} />
+)}
+{frontmatter.complexity && (
+  <meta name="complexity" content={frontmatter.complexity} />
+)}
