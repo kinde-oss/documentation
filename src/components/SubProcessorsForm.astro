@@ -484,13 +484,18 @@
           const serviceKey = service.toLowerCase() as keyof typeof subProcessorsData;
           if (subProcessorsData[serviceKey]) {
             subProcessorsData[serviceKey].forEach((processor: any) => {
-              // Check if processor should be included based on conditions
-              if (processor.condition) {
-                const condition = processor.condition.replace('emailServices', `'${emailServices}'`);
-                if (!eval(condition)) {
+                          // Check if processor should be included based on conditions
+            if (processor.condition) {
+              if (processor.condition === "emailServices === 'Kinde default'") {
+                if (emailServices !== 'Kinde default') {
+                  return; // Skip this processor
+                }
+              } else if (processor.condition === "smsServices === 'Kinde default'") {
+                if (smsServices !== 'Kinde default') {
                   return; // Skip this processor
                 }
               }
+            }
               
               relevantSubProcessors.push({
                 service: processor.service,
