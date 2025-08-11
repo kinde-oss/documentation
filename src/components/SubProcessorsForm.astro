@@ -379,23 +379,23 @@
       const smsServicesInputs = form.querySelectorAll('input[name="smsServices"]:checked');
 
       const dataRegion = dataRegionInputs.length > 0 ? dataRegionInputs[0].value : '';
-      const services = Array.from(servicesInputs).map(input => input.value);
+      const services = Array.from(servicesInputs).map(input => input.value.toLowerCase());
       const emailServices = emailServicesInputs.length > 0 ? emailServicesInputs[0].value : '';
       const smsServices = smsServicesInputs.length > 0 ? smsServicesInputs[0].value : '';
 
       const urlParams = new URLSearchParams();
       
       if (dataRegion) {
-        urlParams.set('data-region', dataRegion.toLowerCase().replace(' ', '-'));
+        urlParams.set('data-region', dataRegion.toLowerCase().replace(/\s+/g, '-'));
       }
       if (services.length > 0) {
         urlParams.set('services', services.join(','));
       }
       if (emailServices) {
-        urlParams.set('email-services', emailServices.toLowerCase().replace(' ', '-'));
+        urlParams.set('email-services', emailServices.toLowerCase().replace(/\s+/g, '-'));
       }
       if (smsServices) {
-        urlParams.set('sms-services', smsServices.toLowerCase().replace(' ', '-'));
+        urlParams.set('sms-services', smsServices.toLowerCase().replace(/\s+/g, '-'));
       }
 
       const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
@@ -418,7 +418,7 @@
       }
 
       if (services) {
-        const serviceArray = services.split(',');
+        const serviceArray = services.toLowerCase().split(',');
         serviceArray.forEach(service => {
           const serviceValue = service.charAt(0).toUpperCase() + service.slice(1);
           const serviceInput = form.querySelector(`input[name="services"][value="${serviceValue}"]`);
