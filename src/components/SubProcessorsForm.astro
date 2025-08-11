@@ -371,6 +371,17 @@
       return urlParams.get(name);
     }
 
+    // Helper function to safely find input by name and value
+    function findInputByValue(name, value) {
+      const inputs = form.querySelectorAll(`input[name="${name}"]`);
+      for (const input of inputs) {
+        if (input.value === value) {
+          return input;
+        }
+      }
+      return null;
+    }
+
     // Function to update URL with current selections
     function updateUrl() {
       const dataRegionInputs = form.querySelectorAll('input[name="dataRegion"]:checked');
@@ -383,19 +394,29 @@
       const emailServices = emailServicesInputs.length > 0 ? emailServicesInputs[0].value : '';
       const smsServices = smsServicesInputs.length > 0 ? smsServicesInputs[0].value : '';
 
-      const urlParams = new URLSearchParams();
+      // Start with existing URL parameters to preserve other query params
+      const urlParams = new URLSearchParams(window.location.search);
       
+      // Update only the parameters this form controls
       if (dataRegion) {
         urlParams.set('data-region', dataRegion.toLowerCase().replace(/\s+/g, '-'));
+      } else {
+        urlParams.delete('data-region');
       }
       if (services.length > 0) {
         urlParams.set('services', services.join(','));
+      } else {
+        urlParams.delete('services');
       }
       if (emailServices) {
         urlParams.set('email-services', emailServices.toLowerCase().replace(/\s+/g, '-'));
+      } else {
+        urlParams.delete('email-services');
       }
       if (smsServices) {
         urlParams.set('sms-services', smsServices.toLowerCase().replace(/\s+/g, '-'));
+      } else {
+        urlParams.delete('sms-services');
       }
 
       const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
@@ -411,7 +432,7 @@
 
       if (dataRegion) {
         const dataRegionValue = dataRegion.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        const dataRegionInput = form.querySelector(`input[name="dataRegion"][value="${dataRegionValue}"]`);
+        const dataRegionInput = findInputByValue('dataRegion', dataRegionValue);
         if (dataRegionInput) {
           dataRegionInput.checked = true;
         }
@@ -421,7 +442,7 @@
         const serviceArray = services.toLowerCase().split(',');
         serviceArray.forEach(service => {
           const serviceValue = service.charAt(0).toUpperCase() + service.slice(1);
-          const serviceInput = form.querySelector(`input[name="services"][value="${serviceValue}"]`);
+          const serviceInput = findInputByValue('services', serviceValue);
           if (serviceInput) {
             serviceInput.checked = true;
           }
@@ -437,7 +458,7 @@
         } else {
           emailServicesValue = emailServices.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
-        const emailServicesInput = form.querySelector(`input[name="emailServices"][value="${emailServicesValue}"]`);
+        const emailServicesInput = findInputByValue('emailServices', emailServicesValue);
         if (emailServicesInput) {
           emailServicesInput.checked = true;
         }
@@ -452,7 +473,7 @@
         } else {
           smsServicesValue = smsServices.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
-        const smsServicesInput = form.querySelector(`input[name="smsServices"][value="${smsServicesValue}"]`);
+        const smsServicesInput = findInputByValue('smsServices', smsServicesValue);
         if (smsServicesInput) {
           smsServicesInput.checked = true;
         }
