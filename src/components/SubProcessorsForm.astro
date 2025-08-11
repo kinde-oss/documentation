@@ -356,9 +356,9 @@
   };
 
   document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('subProcessorsForm') as HTMLFormElement;
-    const results = document.getElementById('results') as HTMLElement;
-    const tableContainer = document.getElementById('subProcessorsTable') as HTMLElement;
+    const form = document.getElementById('subProcessorsForm');
+    const results = document.getElementById('results');
+    const tableContainer = document.getElementById('subProcessorsTable');
 
     if (!form || !results || !tableContainer) {
       console.error('Required form elements not found');
@@ -366,17 +366,17 @@
     }
 
     // Function to get URL parameter value
-    function getUrlParameter(name: string): string | null {
+    function getUrlParameter(name) {
       const urlParams = new URLSearchParams(window.location.search);
       return urlParams.get(name);
     }
 
     // Function to update URL with current selections
     function updateUrl() {
-      const dataRegionInputs = form.querySelectorAll('input[name="dataRegion"]:checked') as NodeListOf<HTMLInputElement>;
-      const servicesInputs = form.querySelectorAll('input[name="services"]:checked') as NodeListOf<HTMLInputElement>;
-      const emailServicesInputs = form.querySelectorAll('input[name="emailServices"]:checked') as NodeListOf<HTMLInputElement>;
-      const smsServicesInputs = form.querySelectorAll('input[name="smsServices"]:checked') as NodeListOf<HTMLInputElement>;
+      const dataRegionInputs = form.querySelectorAll('input[name="dataRegion"]:checked');
+      const servicesInputs = form.querySelectorAll('input[name="services"]:checked');
+      const emailServicesInputs = form.querySelectorAll('input[name="emailServices"]:checked');
+      const smsServicesInputs = form.querySelectorAll('input[name="smsServices"]:checked');
 
       const dataRegion = dataRegionInputs.length > 0 ? dataRegionInputs[0].value : '';
       const services = Array.from(servicesInputs).map(input => input.value);
@@ -411,7 +411,7 @@
 
       if (dataRegion) {
         const dataRegionValue = dataRegion.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        const dataRegionInput = form.querySelector(`input[name="dataRegion"][value="${dataRegionValue}"]`) as HTMLInputElement;
+        const dataRegionInput = form.querySelector(`input[name="dataRegion"][value="${dataRegionValue}"]`);
         if (dataRegionInput) {
           dataRegionInput.checked = true;
         }
@@ -421,7 +421,7 @@
         const serviceArray = services.split(',');
         serviceArray.forEach(service => {
           const serviceValue = service.charAt(0).toUpperCase() + service.slice(1);
-          const serviceInput = form.querySelector(`input[name="services"][value="${serviceValue}"]`) as HTMLInputElement;
+          const serviceInput = form.querySelector(`input[name="services"][value="${serviceValue}"]`);
           if (serviceInput) {
             serviceInput.checked = true;
           }
@@ -437,7 +437,7 @@
         } else {
           emailServicesValue = emailServices.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
-        const emailServicesInput = form.querySelector(`input[name="emailServices"][value="${emailServicesValue}"]`) as HTMLInputElement;
+        const emailServicesInput = form.querySelector(`input[name="emailServices"][value="${emailServicesValue}"]`);
         if (emailServicesInput) {
           emailServicesInput.checked = true;
         }
@@ -452,7 +452,7 @@
         } else {
           smsServicesValue = smsServices.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
-        const smsServicesInput = form.querySelector(`input[name="smsServices"][value="${smsServicesValue}"]`) as HTMLInputElement;
+        const smsServicesInput = form.querySelector(`input[name="smsServices"][value="${smsServicesValue}"]`);
         if (smsServicesInput) {
           smsServicesInput.checked = true;
         }
@@ -461,10 +461,10 @@
 
     // Function to check if all required fields are filled
     function checkFormCompletion() {
-      const dataRegionInputs = form.querySelectorAll('input[name="dataRegion"]:checked') as NodeListOf<HTMLInputElement>;
-      const servicesInputs = form.querySelectorAll('input[name="services"]:checked') as NodeListOf<HTMLInputElement>;
-      const emailServicesInputs = form.querySelectorAll('input[name="emailServices"]:checked') as NodeListOf<HTMLInputElement>;
-      const smsServicesInputs = form.querySelectorAll('input[name="smsServices"]:checked') as NodeListOf<HTMLInputElement>;
+      const dataRegionInputs = form.querySelectorAll('input[name="dataRegion"]:checked');
+      const servicesInputs = form.querySelectorAll('input[name="services"]:checked');
+      const emailServicesInputs = form.querySelectorAll('input[name="emailServices"]:checked');
+      const smsServicesInputs = form.querySelectorAll('input[name="smsServices"]:checked');
 
       const dataRegion = dataRegionInputs.length > 0 ? dataRegionInputs[0].value : '';
       const services = Array.from(servicesInputs).map(input => input.value);
@@ -473,29 +473,24 @@
 
       if (dataRegion && services.length > 0 && emailServices && smsServices) {
         // Get relevant sub-processors
-        const relevantSubProcessors: Array<{
-          service: string;
-          entityType: string;
-          link: string;
-          location: string;
-        }> = [];
+        const relevantSubProcessors = [];
         
         services.forEach(service => {
-          const serviceKey = service.toLowerCase() as keyof typeof subProcessorsData;
+          const serviceKey = service.toLowerCase();
           if (subProcessorsData[serviceKey]) {
-            subProcessorsData[serviceKey].forEach((processor: any) => {
-                          // Check if processor should be included based on conditions
-            if (processor.condition) {
-              if (processor.condition === "emailServices === 'Kinde default'") {
-                if (emailServices !== 'Kinde default') {
-                  return; // Skip this processor
-                }
-              } else if (processor.condition === "smsServices === 'Kinde default'") {
-                if (smsServices !== 'Kinde default') {
-                  return; // Skip this processor
+            subProcessorsData[serviceKey].forEach((processor) => {
+              // Check if processor should be included based on conditions
+              if (processor.condition) {
+                if (processor.condition === "emailServices === 'Kinde default'") {
+                  if (emailServices !== 'Kinde default') {
+                    return; // Skip this processor
+                  }
+                } else if (processor.condition === "smsServices === 'Kinde default'") {
+                  if (smsServices !== 'Kinde default') {
+                    return; // Skip this processor
+                  }
                 }
               }
-            }
               
               relevantSubProcessors.push({
                 service: processor.service,
@@ -539,12 +534,7 @@
       });
     });
 
-    function displayResults(processors: Array<{
-      service: string;
-      entityType: string;
-      link: string;
-      location: string;
-    }>) {
+    function displayResults(processors) {
       if (processors.length === 0) {
         tableContainer.innerHTML = '<p class="text-gray-600">No sub-processors found for your configuration.</p>';
       } else {
