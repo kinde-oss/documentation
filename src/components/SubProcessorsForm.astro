@@ -1,0 +1,604 @@
+---
+// Astro component for interactive sub-processors form
+---
+
+<div class="sub-processors-form">
+  <form id="subProcessorsForm" class="mb-8 p-6 bg-kinde-grey-50 dark:bg-kinde-grey-900 rounded-lg border dark:border-kinde-grey-800">
+    <h3 class="text-lg font-semibold mb-4">Configure your Kinde setup</h3>
+    
+    <table class="w-full">
+      <tr>
+        <td class="w-1/4 pr-3">
+          <label class="block text-sm font-medium mb-2">
+            Services Used *
+          </label>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <input type="checkbox" name="services" value="Authentication" class="mr-2">
+              <span class="text-sm">Authentication</span>
+            </label>
+            <label class="flex items-center">
+              <input type="checkbox" name="services" value="Billing" class="mr-2">
+              <span class="text-sm">Billing</span>
+            </label>
+          </div>
+        </td>
+        <td class="w-1/4 px-3">
+          <label class="block text-sm font-medium mb-2">
+            Data Region *
+          </label>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <input type="radio" name="dataRegion" value="Australia" required class="mr-2">
+              <span class="text-sm">Australia</span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="dataRegion" value="Canada" required class="mr-2">
+              <span class="text-sm">Canada</span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="dataRegion" value="Europe" required class="mr-2">
+              <span class="text-sm">Europe</span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="dataRegion" value="United Kingdom" required class="mr-2">
+              <span class="text-sm">United Kingdom</span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="dataRegion" value="United States" required class="mr-2">
+              <span class="text-sm">United States</span>
+            </label>
+          </div>
+        </td>
+        <td class="w-1/4 px-3">
+          <label class="block text-sm font-medium mb-2">
+            Email Services *
+          </label>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <input type="radio" name="emailServices" value="Kinde default" required class="mr-2">
+              <span class="text-sm">Kinde default</span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="emailServices" value="Custom SMTP" required class="mr-2">
+              <span class="text-sm">Custom SMTP</span>
+            </label>
+          </div>
+        </td>
+        <td class="w-1/4 pl-3">
+          <label class="block text-sm font-medium mb-2">
+            SMS Services *
+          </label>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <input type="radio" name="smsServices" value="Kinde default" required class="mr-2">
+              <span class="text-sm">Kinde default</span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="smsServices" value="Custom SMS" required class="mr-2">
+              <span class="text-sm">Custom SMS</span>
+            </label>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </form>
+
+  <div id="results" class="hidden">
+    <h3 class="text-lg font-semibold mb-4">Your Sub-processors</h3>
+    <div id="subProcessorsTable"></div>
+  </div>
+</div>
+
+<script>
+  // Sub-processors data
+  const subProcessorsData = {
+    authentication: [
+      {
+        service: "AWS",
+        entityType: "Public cloud hosting",
+        link: "https://aws.amazon.com/",
+        locations: {
+          "Australia": "Australia",
+          "Canada": "Canada", 
+          "Europe": "Ireland",
+          "United Kingdom": "United Kingdom",
+          "United States": "United States"
+        }
+      },
+      {
+        service: "AWS",
+        entityType: "Email services",
+        link: "https://aws.amazon.com/",
+        locations: {
+          "Australia": "Australia",
+          "Canada": "Australia",
+          "Europe": "Australia", 
+          "United Kingdom": "Australia",
+          "United States": "Australia"
+        },
+        condition: "emailServices === 'Kinde default'"
+      },
+      {
+        service: "AWS",
+        entityType: "SMS services",
+        link: "https://aws.amazon.com/",
+        locations: {
+          "Australia": "Australia",
+          "Canada": "Canada",
+          "Europe": "Ireland", 
+          "United Kingdom": "United Kingdom",
+          "United States": "United States"
+        },
+        condition: "smsServices === 'Kinde default'"
+      },
+      {
+        service: "Temporal",
+        entityType: "Webhooks",
+        link: "https://temporal.io/",
+        locations: {
+          "Australia": "Australia",
+          "Canada": "Canada",
+          "Europe": "Ireland", 
+          "United Kingdom": "United Kingdom",
+          "United States": "United States"
+        }
+      },
+      {
+        service: "Discord",
+        entityType: "Customer support",
+        link: "https://discord.com/",
+        locations: {
+          "Australia": "United States",
+          "Canada": "United States",
+          "Europe": "United States",
+          "United Kingdom": "United States", 
+          "United States": "United States"
+        }
+      },
+      {
+        service: "Google",
+        entityType: "Customer support",
+        link: "https://workspace.google.com/",
+        locations: {
+          "Australia": "United States",
+          "Canada": "United States",
+          "Europe": "United States",
+          "United Kingdom": "United States",
+          "United States": "United States"
+        }
+      },
+      {
+        service: "InKeep",
+        entityType: "Customer support", 
+        link: "https://inkeep.com/",
+        locations: {
+          "Australia": "United States",
+          "Canada": "United States",
+          "Europe": "United States",
+          "United Kingdom": "United States",
+          "United States": "United States"
+        }
+      },
+      {
+        service: "Microsoft",
+        entityType: "Customer support",
+        link: "https://www.microsoft.com/",
+        locations: {
+          "Australia": "United States",
+          "Canada": "United States", 
+          "Europe": "United States",
+          "United Kingdom": "United States",
+          "United States": "United States"
+        }
+      },
+      {
+        service: "Plain",
+        entityType: "Customer support",
+        link: "https://www.plain.com/",
+        locations: {
+          "Australia": "United Kingdom",
+          "Canada": "United Kingdom",
+          "Europe": "United Kingdom",
+          "United Kingdom": "United Kingdom",
+          "United States": "United Kingdom"
+        }
+      },
+      {
+        service: "Slack",
+        entityType: "Customer support",
+        link: "https://slack.com/",
+        locations: {
+          "Australia": "United States",
+          "Canada": "United States",
+          "Europe": "United States",
+          "United Kingdom": "United States",
+          "United States": "United States"
+        }
+      }
+    ],
+    billing: [
+      {
+        service: "AWS",
+        entityType: "Public cloud hosting",
+        link: "https://aws.amazon.com/",
+        locations: {
+          "Australia": "Australia",
+          "Canada": "Canada",
+          "Europe": "Ireland",
+          "United Kingdom": "United Kingdom", 
+          "United States": "United States"
+        }
+      },
+      {
+        service: "AWS",
+        entityType: "Email services",
+        link: "https://aws.amazon.com/",
+        locations: {
+          "Australia": "Australia",
+          "Canada": "Australia",
+          "Europe": "Australia",
+          "United Kingdom": "Australia",
+          "United States": "Australia"
+        },
+        condition: "emailServices === 'Kinde default'"
+      },
+      {
+        service: "AWS",
+        entityType: "SMS services",
+        link: "https://aws.amazon.com/",
+        locations: {
+          "Australia": "Australia",
+          "Canada": "Canada",
+          "Europe": "Ireland",
+          "United Kingdom": "United Kingdom",
+          "United States": "United States"
+        },
+        condition: "smsServices === 'Kinde default'"
+      },
+      {
+        service: "Stripe",
+        entityType: "Billing and invoicing",
+        link: "https://stripe.com/",
+        locations: {
+          "Australia": "United States",
+          "Canada": "United States",
+          "Europe": "United States",
+          "United Kingdom": "United States",
+          "United States": "United States"
+        }
+      },
+      {
+        service: "Temporal",
+        entityType: "Webhooks",
+        link: "https://temporal.io/",
+        locations: {
+          "Australia": "Australia",
+          "Canada": "Canada",
+          "Europe": "Ireland",
+          "United Kingdom": "United Kingdom",
+          "United States": "United States"
+        }
+      },
+      {
+        service: "Discord",
+        entityType: "Customer support",
+        link: "https://discord.com/",
+        locations: {
+          "Australia": "United States",
+          "Canada": "United States",
+          "Europe": "United States",
+          "United Kingdom": "United States",
+          "United States": "United States"
+        }
+      },
+      {
+        service: "Google",
+        entityType: "Customer support",
+        link: "https://workspace.google.com/",
+        locations: {
+          "Australia": "United States",
+          "Canada": "United States",
+          "Europe": "United States",
+          "United Kingdom": "United States",
+          "United States": "United States"
+        }
+      },
+      {
+        service: "InKeep",
+        entityType: "Customer support",
+        link: "https://inkeep.com/",
+        locations: {
+          "Australia": "United States",
+          "Canada": "United States",
+          "Europe": "United States",
+          "United Kingdom": "United States",
+          "United States": "United States"
+        }
+      },
+      {
+        service: "Microsoft",
+        entityType: "Customer support",
+        link: "https://www.microsoft.com/",
+        locations: {
+          "Australia": "United States",
+          "Canada": "United States",
+          "Europe": "United States",
+          "United Kingdom": "United States",
+          "United States": "United States"
+        }
+      },
+      {
+        service: "Plain",
+        entityType: "Customer support",
+        link: "https://www.plain.com/",
+        locations: {
+          "Australia": "United Kingdom",
+          "Canada": "United Kingdom",
+          "Europe": "United Kingdom",
+          "United Kingdom": "United Kingdom",
+          "United States": "United Kingdom"
+        }
+      },
+      {
+        service: "Slack",
+        entityType: "Customer support",
+        link: "https://slack.com/",
+        locations: {
+          "Australia": "United States",
+          "Canada": "United States",
+          "Europe": "United States",
+          "United Kingdom": "United States",
+          "United States": "United States"
+        }
+      }
+    ]
+  };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('subProcessorsForm');
+    const results = document.getElementById('results');
+    const tableContainer = document.getElementById('subProcessorsTable');
+
+    if (!form || !results || !tableContainer) {
+      console.error('Required form elements not found');
+      return;
+    }
+
+    // Function to get URL parameter value
+    function getUrlParameter(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    // Helper function to safely find input by name and value
+    function findInputByValue(name, value) {
+      const inputs = form.querySelectorAll(`input[name="${name}"]`);
+      for (const input of inputs) {
+        if (input.value === value) {
+          return input;
+        }
+      }
+      return null;
+    }
+
+    // Function to update URL with current selections
+    function updateUrl() {
+      const dataRegionInputs = form.querySelectorAll('input[name="dataRegion"]:checked');
+      const servicesInputs = form.querySelectorAll('input[name="services"]:checked');
+      const emailServicesInputs = form.querySelectorAll('input[name="emailServices"]:checked');
+      const smsServicesInputs = form.querySelectorAll('input[name="smsServices"]:checked');
+
+      const dataRegion = dataRegionInputs.length > 0 ? dataRegionInputs[0].value : '';
+      const services = Array.from(servicesInputs).map(input => input.value.toLowerCase());
+      const emailServices = emailServicesInputs.length > 0 ? emailServicesInputs[0].value : '';
+      const smsServices = smsServicesInputs.length > 0 ? smsServicesInputs[0].value : '';
+
+      // Start with existing URL parameters to preserve other query params
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      // Update only the parameters this form controls
+      if (dataRegion) {
+        urlParams.set('data-region', dataRegion.toLowerCase().replace(/\s+/g, '-'));
+      } else {
+        urlParams.delete('data-region');
+      }
+      if (services.length > 0) {
+        urlParams.set('services', services.join(','));
+      } else {
+        urlParams.delete('services');
+      }
+      if (emailServices) {
+        urlParams.set('email-services', emailServices.toLowerCase().replace(/\s+/g, '-'));
+      } else {
+        urlParams.delete('email-services');
+      }
+      if (smsServices) {
+        urlParams.set('sms-services', smsServices.toLowerCase().replace(/\s+/g, '-'));
+      } else {
+        urlParams.delete('sms-services');
+      }
+
+      const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+      window.history.replaceState({}, '', newUrl);
+    }
+
+    // Function to set form values from URL parameters
+    function setFormFromUrl() {
+      const dataRegion = getUrlParameter('data-region');
+      const services = getUrlParameter('services');
+      const emailServices = getUrlParameter('email-services');
+      const smsServices = getUrlParameter('sms-services');
+
+      if (dataRegion) {
+        const dataRegionValue = dataRegion.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const dataRegionInput = findInputByValue('dataRegion', dataRegionValue);
+        if (dataRegionInput) {
+          dataRegionInput.checked = true;
+        }
+      }
+
+      if (services) {
+        const serviceArray = services.toLowerCase().split(',');
+        serviceArray.forEach(service => {
+          const serviceValue = service.charAt(0).toUpperCase() + service.slice(1);
+          const serviceInput = findInputByValue('services', serviceValue);
+          if (serviceInput) {
+            serviceInput.checked = true;
+          }
+        });
+      }
+
+      if (emailServices) {
+        let emailServicesValue;
+        if (emailServices === 'custom-smtp') {
+          emailServicesValue = 'Custom SMTP';
+        } else if (emailServices === 'kinde-default') {
+          emailServicesValue = 'Kinde default';
+        } else {
+          emailServicesValue = emailServices.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+        const emailServicesInput = findInputByValue('emailServices', emailServicesValue);
+        if (emailServicesInput) {
+          emailServicesInput.checked = true;
+        }
+      }
+
+      if (smsServices) {
+        let smsServicesValue;
+        if (smsServices === 'custom-sms') {
+          smsServicesValue = 'Custom SMS';
+        } else if (smsServices === 'kinde-default') {
+          smsServicesValue = 'Kinde default';
+        } else {
+          smsServicesValue = smsServices.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+        const smsServicesInput = findInputByValue('smsServices', smsServicesValue);
+        if (smsServicesInput) {
+          smsServicesInput.checked = true;
+        }
+      }
+    }
+
+    // Function to check if all required fields are filled
+    function checkFormCompletion() {
+      const dataRegionInputs = form.querySelectorAll('input[name="dataRegion"]:checked');
+      const servicesInputs = form.querySelectorAll('input[name="services"]:checked');
+      const emailServicesInputs = form.querySelectorAll('input[name="emailServices"]:checked');
+      const smsServicesInputs = form.querySelectorAll('input[name="smsServices"]:checked');
+
+      const dataRegion = dataRegionInputs.length > 0 ? dataRegionInputs[0].value : '';
+      const services = Array.from(servicesInputs).map(input => input.value);
+      const emailServices = emailServicesInputs.length > 0 ? emailServicesInputs[0].value : '';
+      const smsServices = smsServicesInputs.length > 0 ? smsServicesInputs[0].value : '';
+
+      if (dataRegion && services.length > 0 && emailServices && smsServices) {
+        // Get relevant sub-processors
+        const relevantSubProcessors = [];
+        
+        services.forEach(service => {
+          const serviceKey = service.toLowerCase();
+          if (subProcessorsData[serviceKey]) {
+            subProcessorsData[serviceKey].forEach((processor) => {
+              // Check if processor should be included based on conditions
+              if (processor.condition) {
+                if (processor.condition === "emailServices === 'Kinde default'") {
+                  if (emailServices !== 'Kinde default') {
+                    return; // Skip this processor
+                  }
+                } else if (processor.condition === "smsServices === 'Kinde default'") {
+                  if (smsServices !== 'Kinde default') {
+                    return; // Skip this processor
+                  }
+                }
+              }
+              
+              relevantSubProcessors.push({
+                service: processor.service,
+                entityType: processor.entityType,
+                link: processor.link,
+                location: processor.locations[dataRegion]
+              });
+            });
+          }
+        });
+
+        // Remove duplicates - only remove if service, entity type, and link are identical
+        const uniqueProcessors = relevantSubProcessors.filter((processor, index, self) =>
+          index === self.findIndex(p => 
+            p.service === processor.service && 
+            p.entityType === processor.entityType &&
+            p.link === processor.link
+          )
+        );
+
+        // Display results
+        displayResults(uniqueProcessors);
+      } else {
+        // Hide results if not all fields are filled
+        results.classList.add('hidden');
+      }
+    }
+
+    // Initialize form from URL parameters
+    setFormFromUrl();
+
+    // Check form completion after loading URL parameters
+    checkFormCompletion();
+
+    // Add event listeners to all form inputs
+    const allInputs = form.querySelectorAll('input[type="radio"], input[type="checkbox"]');
+    allInputs.forEach(input => {
+      input.addEventListener('change', () => {
+        updateUrl();
+        checkFormCompletion();
+      });
+    });
+
+    function displayResults(processors) {
+      if (processors.length === 0) {
+        tableContainer.innerHTML = '<p class="text-gray-600">No sub-processors found for your configuration.</p>';
+      } else {
+        let tableHTML = `
+          <div class="overflow-x-auto">
+            <table class="min-w-full border border-gray-300">
+              <thead>
+                <tr class="bg-gray-50">
+                  <th class="px-4 py-2 text-left border-b">Service provider</th>
+                  <th class="px-4 py-2 text-left border-b">Entity type</th>
+                  <th class="px-4 py-2 text-left border-b">Link</th>
+                  <th class="px-4 py-2 text-left border-b">Location</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        processors.forEach(processor => {
+          tableHTML += `
+            <tr class="border-b">
+              <td class="px-4 py-2">${processor.service}</td>
+              <td class="px-4 py-2">${processor.entityType}</td>
+              <td class="px-4 py-2">
+                <a href="${processor.link}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">
+                  ${processor.link.replace(/^https?:\/\//, '')}
+                </a>
+              </td>
+              <td class="px-4 py-2">${processor.location}</td>
+            </tr>
+          `;
+        });
+
+        tableHTML += `
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        tableContainer.innerHTML = tableHTML;
+      }
+
+      results.classList.remove('hidden');
+      results.scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+</script> 
