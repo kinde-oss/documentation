@@ -274,6 +274,35 @@ const sidebarData = [
     ]
   },
   {
+    label: "API keys",
+    description: "Secure API access with organization and user-level keys",
+    collapsed: true,
+    icon: "authentication",
+    cardLink: "/api-keys/about-api-keys/",
+    items: [
+      {
+        label: "Overview",
+        autogenerate: {directory: "api-keys/about-api-keys"},
+        collapsed: false
+      },
+      {
+        label: "Setup and management",
+        autogenerate: {directory: "api-keys/api-key-setup"},
+        collapsed: false
+      },
+      {
+        label: "Organization and user keys",
+        autogenerate: {directory: "api-keys/key-types"},
+        collapsed: false
+      },
+      {
+        label: "Troubleshooting",
+        autogenerate: {directory: "api-keys/troubleshooting-api-keys"},
+        collapsed: false
+      }
+    ]
+  },
+  {
     label: "Machine-to-Machine (M2M)",
     description: "Build machine-to-machine applications",
     collapsed: true,
