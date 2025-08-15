@@ -1,0 +1,104 @@
+---
+page_id: 1c9f5b72-5c33-4e7c-9a0d-2b7d6e9a1c4f
+title: User-level API keys
+description: Learn how to create and use user-level API keys that carry a trusted user context for B2C apps and per-user integrations.
+sidebar:
+  order: 1
+relatedArticles:
+  - 8f7a2b1c-3d4e-4f6a-8b8c-9d0e1f2a3b4c
+  - 7d6c5b4a-3f2e-4a0b-8c8d-7e6f5a4b3c2d
+  - 3b2a1c0e-9d8f-4a7b-6c5d-3c2d1a0b9c8e
+topics:
+  - api-keys
+  - key-types
+sdk: []
+languages: []
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - user-level api keys
+  - b2c
+  - user isolation
+  - api key security
+updated: 2025-08-14
+featured: false
+deprecated: false
+ai_summary: Learn how to create and use user-level API keys that carry a trusted user context, including verification behavior, common use cases, and best practices.
+---
+
+User-level API keys are tied to an individual user account. When verified, these keys return a trusted user context so you can authorize requests on a per-user basis. This is ideal for B2C apps, personal automations, and integrations where actions should be attributed to a specific user.
+
+## What are user-level API keys?
+
+User-level API keys authenticate requests on behalf of a single user. The verification response includes that user's identifier so you can enforce user-specific authorization rules in your API.
+
+## Benefits of user-level API keys
+
+### Security
+
+- **Clear ownership**: Every call is attributed to a specific user.
+- **Fine-grained access**: Enforce per-user permissions and quotas.
+- **Auditability**: Attribute changes and access to a concrete user identity.
+
+### Simplicity
+
+- **Straightforward logic**: No need to infer user context from other signals.
+- **Consistent across services**: Portable for personal integrations and scripts.
+
+### Let users self-serve
+
+You can expose API key creation to users in the Kinde self-serve portal. See: [Self-serve API keys](/api-keys/api-key-setup/self-serve-api-keys/).
+
+## User context in verification
+
+When you verify a user-level API key, the response includes a non-null `user_id`:
+
+```json
+{
+  "code": "API_KEY_VERIFIED",
+  "message": "API key verified",
+  "is_valid": true,
+  "key_id": "api_key_123",
+  "status": "active",
+  "scopes": ["read:profile"],
+  "org_code": null,
+  "user_id": "kp_1234567890",
+  "last_verified_on": "2024-11-18T13:32:03+11",
+  "verification_count": 42
+}
+```
+
+Rely on the `user_id` for authorization and auditing within your API. If you need organization context, consider using [organization-level API keys](/api-keys/key-types/api-keys-for-organizations/) instead.
+
+## Use cases
+
+### B2C applications
+
+- **Personal data access**: Users access and manage their own data.
+- **Per-user rate limits**: Enforce limits per user account.
+
+### Personal automations and scripts
+
+- **Background jobs**: Users run scripts that act as them.
+- **Third-party tooling**: Allow integrations to operate within a single user's scope.
+
+### AI assistance
+
+- **User-specific retrieval**: Attribute AI actions and retrieval to a user.
+
+## Best practices
+
+### Key management
+
+- **Naming**: Include the user's name or ID in key names for clarity.
+- **Minimum scopes**: Grant only the scopes needed.
+- **Rotation**: Encourage periodic key rotation.
+- **Monitoring**: Track usage and anomalies per user.
+
+### Security considerations
+
+- **User validation**: Always validate `user_id` from verification before processing.
+- **Scope enforcement**: Enforce scopes server-side.
+- **Audit logging**: Log operations with the `user_id` for traceability.
