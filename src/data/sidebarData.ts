@@ -96,7 +96,7 @@ const sidebarData = [
   {
     label: "Manage your APIs",
     description: "Manage your API connections and API keys",
-    icon: "api",
+    icon: "webhooks",
     collapsed: true,
     cardLink: "/manage-your-apis/about-api-keys/",
     items: [
