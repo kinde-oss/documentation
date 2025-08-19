@@ -92,6 +92,8 @@ export default defineConfig({
       "/trust-center/agreements/terms-of-service/",
     "/workflows/":
       "/workflows/about-workflows/",
+    "manage-your-apis/":
+      "manage-your-apis/about-api-keys/index/",
     
     // Authenticate section subfolder redirects
     "/authenticate/about-auth/":
@@ -152,6 +154,14 @@ export default defineConfig({
       "/design/customize-with-code/connect-repo/",
     "/design/pages/":
       "/design/pages/page-layout/",
+
+    // Your APIs section subfolder redirects
+    "/manage-your-apis/about-api-keys/":
+      "/manage-your-apis/about-api-keys/index/",
+    "/manage-your-apis/add-manage-api-keys/":
+      "/manage-your-apis/add-manage-api-keys/create-an-api-key/",
+    "/manage-your-apis/troubleshoot-api-keys/":
+      "/manage-your-apis/troubleshoot-api-keys/common-api-key-errors/",
     
     // Developer tools section subfolder redirects
     "/developer-tools/about/":
