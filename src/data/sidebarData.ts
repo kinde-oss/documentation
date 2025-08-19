@@ -95,6 +95,27 @@ const sidebarData = [
     ]
   },
   {
+    label: "Manage your APIs",
+    description: "Manage your API connections and API keys",
+    icon: "webhooks",
+    collapsed: true,
+    cardLink: "/manage-your-apis/about-api-keys/",
+    items: [
+      {label: "Register and manage your APIs", autogenerate: {directory: "manage-your-apis/about-api-keys/"}, collapsed: false},
+      {
+        label: "About API keys",
+        autogenerate: {directory: "manage-your-apis/about-api-keys/"},
+        collapsed: false
+      },
+      {
+        label: "Add and manage API keys",
+        autogenerate: {directory: "manage-your-apis/add-manage-api-keys/"},
+        collapsed: false
+      },
+      {label: "Test and troubleshoot", autogenerate: {directory: "manage-your-apis/troubleshoot-api-keys/"}, collapsed: false}
+    ]
+  },
+  {
     label: "Auth and access",
     description: "Configure user sign up, sign in, and security verification",
     icon: "authentication",
