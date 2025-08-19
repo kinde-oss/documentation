@@ -74,13 +74,12 @@ API keys are immutable, so you can't update the scopes of an existing API key. Y
 When your application receives a token, validate that it has the required scopes:
 
 ```javascript
-function hasRequiredScope(token, requiredScope) {
-  const scopes = token.scope.split(" ");
-  return scopes.includes(requiredScope);
+function hasRequiredScope(scopes, requiredScope) {
+  return Array.isArray(scopes) && scopes.includes(requiredScope);
 }
 
-// Example usage
-if (!hasRequiredScope(decodedToken, "users:write")) {
-  return res.status(403).json({error: "Insufficient scope"});
+// Example usage (after verifying the API key)
+if (!hasRequiredScope(verification.scopes, "write:users")) {
+  return res.status(403).json({ error: "Insufficient scope" });
 }
 ```
