@@ -91,7 +91,6 @@ const sidebarData = [
         autogenerate: {directory: "developer-tools/account-api"},
         collapsed: false
       },
-      {label: "Your APIs", autogenerate: {directory: "developer-tools/your-apis"}, collapsed: false}
     ]
   },
   {
@@ -101,7 +100,7 @@ const sidebarData = [
     collapsed: true,
     cardLink: "/manage-your-apis/about-api-keys/",
     items: [
-      {label: "Register and manage your APIs", autogenerate: {directory: "manage-your-apis/about-api-keys/"}, collapsed: false},
+      {label: "Register and manage your APIs", autogenerate: {directory: "developer-tools/your-apis"}, collapsed: false},
       {
         label: "About API keys",
         autogenerate: {directory: "manage-your-apis/about-api-keys/"},
