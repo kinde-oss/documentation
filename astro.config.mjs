@@ -93,7 +93,7 @@ export default defineConfig({
     "/workflows/":
       "/workflows/about-workflows/",
     "manage-your-apis/":
-      "manage-your-apis/about-api-keys/",
+      "manage-your-apis/about-api-keys/api-keys-overview/",
     
     // Authenticate section subfolder redirects
     "/authenticate/about-auth/":
@@ -156,6 +156,8 @@ export default defineConfig({
       "/design/pages/page-layout/",
 
     // Your APIs section subfolder redirects
+    "/manage-your-apis/about-api-keys/":
+      "/manage-your-apis/about-api-keys/api-keys-overview/",
     "/manage-your-apis/add-manage-api-keys/":
       "/manage-your-apis/add-manage-api-keys/create-an-api-key/",
     "/manage-your-apis/troubleshoot-api-keys/":
