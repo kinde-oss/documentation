@@ -1,0 +1,179 @@
+---
+page_id: ffd4e4d8-2d6e-4001-94c6-91362cae2b5c
+title: Top questions about M2M applications
+description: A set of common a  popular questions about machine-to-machine applications in Kinde, including OAuth 2.0 client credentials flow, use cases, types, and best practices.
+sidebar:
+  order: 5
+relatedArticles:
+  - 4cb63554-d6b3-45cf-bdad-2fac4790d3aa
+  - 961dea3c-d8e2-47a0-8ab7-deabdb2d6a01
+  - 65d72460-e870-4d6a-a1ea-35740ca0e2cc
+  - 9f832d29-1b76-4bb2-b4dc-e4a9a9c327b3
+topics:
+  - machine-to-machine-applications
+  - about-m2m
+sdk: []
+languages: []
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - m2m
+  - machine to machine
+  - oauth 2.0
+  - client credentials
+  - access tokens
+  - api authentication
+  - automation
+  - ci/cd
+  - ai agents
+updated: 2024-01-22
+featured: false
+deprecated: false
+ai_summary: A set of common a  popular questions about machine-to-machine applications in Kinde, including OAuth 2.0 client credentials flow, use cases, types, and best practices.
+---
+
+Here’s some short answers to the most common M2M questions. Click on any question to expand the answer.
+
+<Aside title=”Ask the docs”>
+
+Type **@kindeAI** to access 24/7 global support in the **#ask-kinde-ai** channel in the Kinde [Slack](https://join.slack.com/t/thekindecommunity/shared_invite/zt-1vyq8qilj-jFH5V27jfFnHk~BuBSU0ZA) or [Discord](https://discord.gg/KdkCXRNTFn) communities.
+
+</Aside>
+
+## Core concepts and setup
+
+**What's the difference between machine-to-machine and regular user authentication in Kinde?**
+
+M2M authentication is designed for servers, APIs, and automated systems that need to communicate securely without human intervention. Unlike regular user auth where someone signs in with a password or social login, M2M uses the client credentials flow - your application authenticates using a client ID and secret to get an access token. Think of it like having a service account that can access your APIs 24/7 without anyone needing to sign in. This is perfect for microservices, background jobs, or third-party integrations that need to access your Kinde-protected resources.
+
+[About machine-to-machine applications](https://docs.kinde.com/machine-to-machine-applications/about-m2m-applications/)
+
+**How do I create and configure a machine-to-machine application in Kinde?**
+
+Setting up M2M is straightforward - create a new application in your Kinde dashboard and select "Machine to machine" as the type. You'll get a client ID and client secret (guard that secret with your life). The key difference from regular apps is that M2M applications don't need callback URLs since there's no user redirect flow. You will need to specify which APIs this M2M app can access and what scopes it needs. Start with minimal permissions and expand as needed - it's easier to add permissions than to figure out why something has too much access.
+
+[Create machine-to-machine application](https://docs.kinde.com/machine-to-machine-applications/create-m2m-application/)
+
+**What are the security best practices for storing Kinde M2M credentials?**
+
+Never, ever put M2M credentials directly in your code or version control - that's like posting your house keys on social media. Use environment variables, secret management services (AWS Secrets Manager, Azure Key Vault), or secure configuration systems. Rotate your client secrets regularly, especially if you suspect they might have been exposed. Consider using different M2M applications for different environments (development, staging, production) so a compromise in one doesn't affect others.
+
+[Machine-to-machine security guide](https://docs.kinde.com/machine-to-machine-applications/about-m2m-applications/)
+
+**When should I use multiple M2M applications versus one application with broad permissions?**
+
+Follow the principle of least privilege - create separate M2M applications for different services or use cases. Your email service might only need read access to user profiles, while your analytics service needs broader access to usage data. This compartmentalization means if one service gets compromised, the blast radius is limited. It also makes debugging easier when you can trace API calls back to specific applications. The slight overhead of managing multiple M2M apps is worth the security and operational benefits.
+
+[Create machine-to-machine application](https://docs.kinde.com/machine-to-machine-applications/create-m2m-application/)
+
+**How do I handle Kinde M2M token expiration in production systems?**
+
+M2M access tokens expire (usually after an hour), so your application needs to handle token refresh gracefully. Most Kinde SDKs handle this automatically, but if you're doing it manually, implement retry logic that gets a fresh token when you receive 401 responses. Cache tokens in memory and refresh them proactively before they expire rather than waiting for API calls to fail. For high-traffic systems, consider implementing token sharing across multiple processes to reduce the number of token requests.
+
+[About machine-to-machine applications](https://docs.kinde.com/machine-to-machine-applications/about-m2m-applications/)
+
+## API access and scopes
+
+**What Kinde API scopes do I need for different M2M use cases?**
+
+It depends on what your M2M application needs to do. For basic user management, you might need `read:users` and `write:users`. For organization management, add `read:organizations` and `write:organizations`. If you're syncing billing data, include relevant billing scopes. Here's the thing - start narrow and expand permissions as needed. It's much easier to debug "permission denied" errors than to figure out why an M2M app has access to everything. Check the Kinde Management API docs for the complete scope list and map them to your actual business needs.
+
+[Add APIs to machine-to-machine applications](https://docs.kinde.com/machine-to-machine-applications/add-m2m-api/)
+
+**How do I call Kinde APIs from my M2M application without getting rate limited?**
+
+Respect the rate limits and implement exponential backoff when you hit them. Batch your API calls when possible instead of making hundreds of individual requests. For high-volume operations like user imports, use bulk endpoints if available or spread the work over time. Cache data that doesn't change frequently - you probably don't need to fetch the same user profile 50 times per minute. If you're consistently hitting limits, it might be time to optimize your integration or contact Kinde about higher limits.
+
+[Machine-to-machine API reference](https://docs.kinde.com/machine-to-machine-applications/m2m-api-reference/)
+
+**What's the best way to handle Kinde Management API responses in M2M applications?**
+
+Always check HTTP status codes before processing response data - a 200 means success, anything else needs error handling. Parse the JSON response carefully and handle cases where expected fields might be missing. For paginated responses, implement proper pagination logic rather than just grabbing the first page. Log API responses (but never log credentials) for debugging purposes, and implement idempotent operations where possible so retrying failed requests doesn't cause duplicate data.
+
+[Management API integration](https://docs.kinde.com/developer-tools/kinde-management-api/about-management-api/)
+
+**How do I test Kinde M2M integrations safely without affecting production data?**
+
+Use separate M2M applications for development and production environments - this keeps your test data completely isolated. Create test organizations and users that you can safely experiment with. Set up your CI/CD pipeline to use development M2M credentials for automated testing. Mock the Kinde API responses in your unit tests rather than making real API calls every time. And please, test your error handling scenarios - what happens when the API is down or returns unexpected responses?
+
+[Create machine-to-machine application](https://docs.kinde.com/machine-to-machine-applications/create-m2m-application/)
+
+## Integration patterns
+
+**How should I structure Kinde M2M calls for microservices architecture?**
+
+Each microservice should have its own M2M application with only the permissions it needs - this follows the principle of least privilege and makes security auditing much easier. Consider creating a shared authentication service that handles token management for all your microservices, or use a service mesh that can inject tokens automatically. Don't pass M2M tokens between services - each service should authenticate directly with Kinde. This prevents token leakage and makes it easier to track which service is making which API calls.
+
+[About machine-to-machine applications](https://docs.kinde.com/machine-to-machine-applications/about-m2m-applications/)
+
+**What's the best way to sync user data between Kinde and my application using M2M?**
+
+Use webhooks for real-time updates when users change their profiles or organizations, then use M2M API calls to fetch detailed data when needed. Don't try to keep a complete mirror of Kinde data in your system - it's better to cache frequently accessed information and fetch fresh data for important operations. Implement proper error handling for sync operations, and consider implementing eventual consistency patterns where slight delays are acceptable.
+
+[Management API overview](https://docs.kinde.com/developer-tools/kinde-management-api/about-management-api/)
+
+**How do I handle Kinde organization management through M2M applications for multi-tenant SaaS?**
+
+M2M is perfect for automated organization provisioning when new customers sign up. You can create organizations, set up initial users, configure permissions, and even assign billing plans all through the Management API. Use consistent naming conventions for organizations (maybe map them to your internal customer IDs) and store the Kinde organization ID in your customer records for easy lookup. This automation means new customers can start using your product immediately without manual setup steps.
+
+[Add APIs to machine-to-machine applications](https://docs.kinde.com/machine-to-machine-applications/add-m2m-api/)
+
+**How can I use Kinde M2M applications to automate user provisioning workflows?**
+
+Set up M2M applications that can create users, assign them to organizations, and configure their initial permissions based on your business logic. This is particularly useful for enterprise customers who need automated onboarding from their HR systems or directory services. You can trigger these workflows from webhooks, scheduled jobs, or API events from other systems. Just make sure to handle edge cases like duplicate email addresses or organization limits gracefully.
+
+[Machine-to-machine API reference](https://docs.kinde.com/machine-to-machine-applications/m2m-api-reference/)
+
+## Troubleshooting and monitoring
+
+**Why is my Kinde M2M application getting authentication errors in production?**
+
+Check the obvious stuff first - are you using the right client ID and secret for your production environment? M2M credentials are environment-specific, so development credentials won't work in production. Look at the exact error message: "invalid_client" usually means wrong credentials, while "insufficient_scope" means you're trying to access APIs without the right permissions. If tokens were working before but suddenly stopped, check if credentials were rotated or if API scopes changed.
+
+[Create machine-to-machine application](https://docs.kinde.com/machine-to-machine-applications/create-m2m-application/)
+
+**How do I monitor and debug Kinde M2M API performance issues?**
+
+Implement proper logging that captures request/response times, error rates, and token refresh patterns. Monitor for increasing latency or higher error rates - these often signal capacity issues or misconfigurations. Use correlation IDs in your logs so you can trace requests across multiple services. Set up alerts for authentication failures or unusual API usage patterns. The Kinde dashboard shows some usage metrics, but you'll want your own monitoring for production applications.
+
+[About machine-to-machine applications](https://docs.kinde.com/machine-to-machine-applications/about-m2m-applications/)
+
+**What should I do when my Kinde M2M application needs higher rate limits?**
+
+First, optimize your current usage - are you making unnecessary API calls or missing opportunities to batch requests? Cache data that doesn't change frequently and implement proper pagination for large datasets. If you've optimized everything and still need higher limits, document your use case and expected traffic patterns when contacting Kinde support. They'll want to understand your business needs and ensure the higher limits won't impact system performance for other customers.
+
+[Machine-to-machine API reference](https://docs.kinde.com/machine-to-machine-applications/m2m-api-reference/)
+
+**How do I handle intermittent failures when calling Kinde APIs from M2M applications?**
+
+Network issues happen, so build resilience into your M2M integrations. Implement exponential backoff with jitter for retries, set reasonable timeouts on API calls, and have circuit breaker patterns for critical paths. Log failures with enough context to debug later, but don't spam your logs with retry attempts. For non-critical operations, consider using message queues so failed operations can be retried later without blocking your main application flow.
+
+[Add APIs to machine-to-machine applications](https://docs.kinde.com/machine-to-machine-applications/add-m2m-api/)
+
+## Advanced use cases
+
+**How can I use Kinde M2M applications for automated user lifecycle management?**
+
+M2M is perfect for automating the boring stuff - creating accounts when customers sign up through your sales process, deactivating users when they leave companies, or updating permissions based on role changes. Set up webhooks to trigger these workflows, then use M2M API calls to make the actual changes in Kinde. You can even automate organization setup for enterprise customers, complete with custom authentication requirements and user provisioning. Just make sure you have proper audit logging for compliance purposes.
+
+[Management API integration](https://docs.kinde.com/developer-tools/kinde-management-api/about-management-api/)
+
+**What's the best approach for using Kinde M2M in serverless functions and background jobs?**
+
+Serverless functions are actually perfect for M2M since you don't need to worry about long-lived token storage. Get a fresh token at the start of each function execution - the overhead is minimal and it's more secure than trying to cache tokens across function invocations. For background jobs, implement token caching with proper expiration handling. Remember that cold starts might affect initial authentication performance, so consider warming up critical functions if latency matters.
+
+[About machine-to-machine applications](https://docs.kinde.com/machine-to-machine-applications/about-m2m-applications/)
+
+**How do I implement Kinde M2M for data synchronization between multiple systems?**
+
+Design your sync jobs to be idempotent - running them multiple times should produce the same result without creating duplicates. Use the Management API to query for changes since your last sync, then update your systems accordingly. Implement proper error handling and retry logic since network issues happen. Consider using message queues or event streams for real-time sync requirements. And always, always test your sync logic with large datasets before going live - edge cases love to hide in bulk operations.
+
+[Machine-to-machine API reference](https://docs.kinde.com/machine-to-machine-applications/m2m-api-reference/)
+
+**How can I leverage Kinde M2M applications for compliance and audit requirements?**
+
+M2M applications are excellent for automated compliance workflows - you can programmatically generate user access reports, audit permission changes, or automatically revoke access for inactive accounts. Use the Management API to query user activities and organization changes, then format this data for compliance reporting. Set up scheduled jobs that check for policy violations or unusual access patterns. Remember to log all M2M operations for your own audit trail - knowing which automated system made which changes is crucial for compliance.
+
+[Management API overview](https://docs.kinde.com/developer-tools/kinde-management-api/about-management-api/)
