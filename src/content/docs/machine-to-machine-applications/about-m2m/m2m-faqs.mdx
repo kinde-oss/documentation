@@ -98,7 +98,7 @@ Always check HTTP status codes before processing response data - a 200 means suc
 
 Use separate M2M applications for development and production environments - this keeps your test data completely isolated. Create test organizations and users that you can safely experiment with. Set up your CI/CD pipeline to use development M2M credentials for automated testing. Mock the Kinde API responses in your unit tests rather than making real API calls every time. And please, test your error handling scenarios - what happens when the API is down or returns unexpected responses?
 
-[Create machine-to-machine application](/machine-to-machine-applications/create-m2m-application/)
+[Create machine-to-machine application](/machine-to-machine-applications/m2m-application-setup/create-an-m2m-application/)
 
 ## Integration patterns
 
@@ -106,25 +106,25 @@ Use separate M2M applications for development and production environments - this
 
 Each microservice should have its own M2M application with only the permissions it needs - this follows the principle of least privilege and makes security auditing much easier. Consider creating a shared authentication service that handles token management for all your microservices, or use a service mesh that can inject tokens automatically. Don't pass M2M tokens between services - each service should authenticate directly with Kinde. This prevents token leakage and makes it easier to track which service is making which API calls.
 
-[About machine-to-machine applications](/machine-to-machine-applications/about-m2m-applications/)
+[About machine-to-machine applications](/machine-to-machine-applications/about-m2m/)
 
 **What's the best way to sync user data between Kinde and my application using M2M?**
 
 Use webhooks for real-time updates when users change their profiles or organizations, then use M2M API calls to fetch detailed data when needed. Don't try to keep a complete mirror of Kinde data in your system - it's better to cache frequently accessed information and fetch fresh data for important operations. Implement proper error handling for sync operations, and consider implementing eventual consistency patterns where slight delays are acceptable.
 
-[Management API overview](/machine-to-machine-applications/m2m-token-customization/customize-m2m-tokens/)
+[Sync data in Kinde](/authenticate/manage-authentication/sync-with-kinde/)
 
 **How do I handle Kinde organization management through M2M applications for multi-tenant SaaS?**
 
 M2M is perfect for automated organization provisioning when new customers sign up. You can create organizations, set up initial users, configure permissions, and even assign billing plans all through the Management API. Use consistent naming conventions for organizations (maybe map them to your internal customer IDs) and store the Kinde organization ID in your customer records for easy lookup. This automation means new customers can start using your product immediately without manual setup steps.
 
-[Add APIs to machine-to-machine applications](/machine-to-machine-applications/add-m2m-api/)
+[M2M apps for organizations](/machine-to-machine-applications/organization-scoped-m2m-apps/m2m-applications-for-organizations/)
 
 **How can I use Kinde M2M applications to automate user provisioning workflows?**
 
 Set up M2M applications that can create users, assign them to organizations, and configure their initial permissions based on your business logic. This is particularly useful for enterprise customers who need automated onboarding from their HR systems or directory services. You can trigger these workflows from webhooks, scheduled jobs, or API events from other systems. Just make sure to handle edge cases like duplicate email addresses or organization limits gracefully.
 
-[Machine-to-machine API reference](/machine-to-machine-applications/m2m-api-reference/)
+[Machine-to-machine auth flow](/machine-to-machine-applications/about-m2m/authenticate-with-m2m/)
 
 ## Troubleshooting and monitoring
 
@@ -132,25 +132,25 @@ Set up M2M applications that can create users, assign them to organizations, and
 
 Check the obvious stuff first - are you using the right client ID and secret for your production environment? M2M credentials are environment-specific, so development credentials won't work in production. Look at the exact error message: "invalid_client" usually means wrong credentials, while "insufficient_scope" means you're trying to access APIs without the right permissions. If tokens were working before but suddenly stopped, check if credentials were rotated or if API scopes changed.
 
-[Create machine-to-machine application](/machine-to-machine-applications/create-m2m-application/)
+[M2M API scopes](/machine-to-machine-applications/m2m-application-setup/scopes-for-m2m-applications/)
 
 **How do I monitor and debug Kinde M2M API performance issues?**
 
 Implement proper logging that captures request/response times, error rates, and token refresh patterns. Monitor for increasing latency or higher error rates - these often signal capacity issues or misconfigurations. Use correlation IDs in your logs so you can trace requests across multiple services. Set up alerts for authentication failures or unusual API usage patterns. The Kinde dashboard shows some usage metrics, but you'll want your own monitoring for production applications.
 
-[About machine-to-machine applications](/machine-to-machine-applications/about-m2m-applications/)
+[Test API with M2M tokens](/developer-tools/your-apis/test-token-from-kinde/)
 
 **What should I do when my Kinde M2M application needs higher rate limits?**
 
 First, optimize your current usage - are you making unnecessary API calls or missing opportunities to batch requests? Cache data that doesn't change frequently and implement proper pagination for large datasets. If you've optimized everything and still need higher limits, document your use case and expected traffic patterns when contacting Kinde support. They'll want to understand your business needs and ensure the higher limits won't impact system performance for other customers.
 
-[Machine-to-machine API reference](/machine-to-machine-applications/m2m-api-reference/)
+[API rate limits](/developer-tools/kinde-api/api-rate-limits/)
 
 **How do I handle intermittent failures when calling Kinde APIs from M2M applications?**
 
 Network issues happen, so build resilience into your M2M integrations. Implement exponential backoff with jitter for retries, set reasonable timeouts on API calls, and have circuit breaker patterns for critical paths. Log failures with enough context to debug later, but don't spam your logs with retry attempts. For non-critical operations, consider using message queues so failed operations can be retried later without blocking your main application flow.
 
-[Add APIs to machine-to-machine applications](/machine-to-machine-applications/add-m2m-api/)
+[Troubleshoot M2M](/machine-to-machine-applications/troubleshooting-m2m/troubleshoot-m2m-token-errors/)
 
 ## Advanced use cases
 
@@ -164,13 +164,13 @@ M2M is perfect for automating the boring stuff - creating accounts when customer
 
 Serverless functions are actually perfect for M2M since you don't need to worry about long-lived token storage. Get a fresh token at the start of each function execution - the overhead is minimal and it's more secure than trying to cache tokens across function invocations. For background jobs, implement token caching with proper expiration handling. Remember that cold starts might affect initial authentication performance, so consider warming up critical functions if latency matters.
 
-[About machine-to-machine applications](/machine-to-machine-applications/about-m2m-applications/)
+[Example of using M2M for AI](/machine-to-machine-applications/organization-scoped-m2m-apps/using-m2m-apps-for-ai-applications/)
 
 **How do I implement Kinde M2M for data synchronization between multiple systems?**
 
 Design your sync jobs to be idempotent - running them multiple times should produce the same result without creating duplicates. Use the Management API to query for changes since your last sync, then update your systems accordingly. Implement proper error handling and retry logic since network issues happen. Consider using message queues or event streams for real-time sync requirements. And always, always test your sync logic with large datasets before going live - edge cases love to hide in bulk operations.
 
-[Machine-to-machine API reference](/machine-to-machine-applications/m2m-api-reference/)
+[Data sync in Kinde](/authenticate/manage-authentication/sync-with-kinde/)
 
 **How can I leverage Kinde M2M applications for compliance and audit requirements?**
 
