@@ -152,7 +152,7 @@ const sidebarData = [
         collapsed: false
       },
       {
-        label: "Self-serve connections",
+        label: "Self-serve SSO",
         autogenerate: {directory: "authenticate/self-serve-sso/"},
         collapsed: false
       },
