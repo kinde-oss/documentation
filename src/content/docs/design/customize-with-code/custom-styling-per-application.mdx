@@ -121,10 +121,14 @@ import Layout from '../../layout';
 const DefaultPage: React.FC<KindePageEvent> = async ({ context, request }) => {
   // 1. Access the client ID from the request object
   let clientId = request.authUrlParams?.clientId || null;
+  // Environment variables
+  const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
+  const CLIENT_ID_NEXT_APP = process.env.CLIENT_ID_NEXT_APP;
+  const CLIENT_ID_PYTHON_APP = process.env.CLIENT_ID_PYTHON_APP;
 
   // Example: Fetching dynamic content (optional)
   const res = await fetch(
-    'https://cdn.builder.io/api/v3/content/login-page-data?apiKey=c065718cfdf849a89015b311c8d3185e&sort.createdDate=-1>',
+    `https://cdn.builder.io/api/v3/content/login-page-data?apiKey=${BUILDER_API_KEY}&sort.createdDate=-1`,
     {
       headers: {},
       method: 'GET',
@@ -146,7 +150,7 @@ const DefaultPage: React.FC<KindePageEvent> = async ({ context, request }) => {
       props={res?.data?.results?.[0]?.data}
     >
       {/* 2. Use conditional rendering based on the client ID */}
-      {clientId == 'ca3c184c80c740bd842777bceee2df74' ? (
+      {clientId == CLIENT_ID_NEXT_APP ? (
         
         <div className='container'>
           {/* Content for the Next.js App */}
@@ -157,7 +161,7 @@ const DefaultPage: React.FC<KindePageEvent> = async ({ context, request }) => {
           </div>
         </div>
       
-      ) : clientId == 'c41376bd84c24244b3122dd41cd154ba' ? (
+      ) : clientId == CLIENT_ID_PYTHON_APP? (
         
         <div className='container-2'>
           {/* Content for the Python App */}
