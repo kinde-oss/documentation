@@ -1,0 +1,575 @@
+---
+page_id: f4810865-8db1-4478-975f-26138d68c5d9
+title: Use Kinde auth in an Electron app
+description: Step-by-step guide to integrating Kinde authentication with an Electron app, incorporating configuration via SDK, along with login, logout, and user profile access.
+sidebar:
+  order: 11
+relatedArticles:
+  - a07f8f6b-5d6a-4096-be52-7b13b4a3b0a5
+  - 1023d9f8-ae2d-4167-98e0-a4aa7b31e80c
+topics:
+  - integrate
+  - third-party-tools
+sdk:
+  - Node.js
+  - express.js
+languages:
+  - bash
+  - jsx
+  - json
+audience:
+  - developers
+  - designers
+complexity: intermediate
+keywords:
+  - electron
+  - OAuth
+  - express
+  - desktop app
+  - authentication
+  - callback urls
+  - client id
+  - client secret
+updated: 2025-09-01
+featured: false
+deprecated: false
+ai_summary: Step-by-step guide to integrating Kinde authentication with an Electron app, incorporating configuration via SDK, along with login, logout, and user profile access.
+---
+
+This guide shows you how to integrate **Kinde authentication** into a desktop app built with **Electron**. You’ll set up a basic Electron project, configure Kinde’s SDK, and implement login, logout, and user profile access.
+
+## What you need
+
+- Latest version of Node.js installed on your computer
+- A [Kinde](https://kinde.com/) account (Sign up for free)
+
+## Step 1: Create a Kinde application
+
+1. On the Kinde home page, select **Add application.**
+    1. Enter a name for your application.
+    2. Select **Back-end web** as the type.
+    3. Select **Save**. The **Quick start** page opens.
+2. In the **Quick Start** section, select **Node.js**, and then select **Save** to continue.
+3. On the **Starter kit** tab, select **Set** for both  **Set callback URL** and **Set logout URL** for your application.
+
+![Set callback and logout url](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/98f4af4c-cb40-423e-dc87-81549161e800/public)
+
+1. Scroll down and make a copy of the **environment variables**—you’ll need them in the next section.
+
+![env variables - electron app](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/de8eb34e-0e86-4e20-0cf9-34dddfc59600/public)
+
+## Step 2: Initialize an Electron app
+
+1. Open a terminal and run the following commands to create a new folder for your Electron app, and then navigate into it.
+    
+    ```bash
+    mkdir electron-kinde-auth
+    cd electron-kinde-auth
+    ```
+    
+2. Create a new `package.json` file:
+    
+    ```bash
+    touch package.json
+    ```
+    
+3. Open the newly created `package.json` file with your code editor and add the following:
+    
+    ```json
+    {
+      "name": "electron-kinde-auth",
+      "description": "A simple Electron app to authenticate with Kinde using OAuth",
+      "productName": "Electron Kinde Auth",
+      "version": "1.0.0",
+      "main": "main.js",
+      "scripts": {
+        "start": "electron ."
+      },
+      "keywords": [],
+      "author": "",
+      "license": "MIT"
+    }
+    
+    ```
+    
+4. Run the following command to install the required packages:
+    
+    ```bash
+    npm install @kinde-oss/kinde-node-express dotenv express pug
+    ```
+    
+5. Install the `electron` package as development dependency:
+    
+    ```bash
+    npm install --save-dev electron
+    ```
+    
+6. Create a `.env` file for environment variables:
+    
+    ```bash
+    touch .env
+    ```
+    
+7. Open it in your editor and paste the Kinde credentials copied from the Quick Start page.
+    
+    ```bash
+    KINDE_ISSUER_URL=https://<KINDE_DOMAIN>.kinde.com
+    KINDE_CLIENT_ID=<CLIENT_ID>
+    KINDE_CLIENT_SECRET=<CLIENT_SECRET>
+    KINDE_SITE_URL=http://localhost:3000
+    KINDE_LOGOUT_REDIRECT_URI=http://localhost:3000
+    KINDE_DOMAIN=https://<KINDE_DOMAIN>.kinde.com
+    KINDE_REDIRECT_URI=http://localhost:3000/callback
+    ```
+    
+8. Create a new `server.js` file:
+    
+    ```bash
+    touch server.js
+    ```
+    
+9. Add the following code into the `server.js` file. 
+    
+    This file:
+    
+    - imports all the required dependencies.
+    - creates the Express.js server for authentication.
+    - creates a Kinde client to authenticate users.
+    - creates the root and admin routes for the application.
+    
+    ```jsx
+    require("dotenv").config()
+    const express = require("express")
+    const path = require("path")
+    const {
+      setupKinde,
+      protectRoute,
+      getUser,
+      GrantType,
+    } = require("@kinde-oss/kinde-node-express")
+    
+    const app = express()
+    const port = 3000
+    
+    const config = {
+      clientId: process.env.KINDE_CLIENT_ID,
+      issuerBaseUrl: process.env.KINDE_ISSUER_URL,
+      siteUrl: process.env.KINDE_SITE_URL,
+      secret: process.env.KINDE_CLIENT_SECRET,
+      redirectUrl: process.env.KINDE_REDIRECT_URI,
+      postLogoutRedirectUrl: process.env.KINDE_LOGOUT_REDIRECT_URI,
+      unAuthorisedUrl: process.env.KINDE_SITE_URL,
+      grantType: GrantType.AUTHORIZATION_CODE,
+    }
+    
+    const client = setupKinde(config, app)
+    
+    app.set("view engine", "pug")
+    app.set("views", path.join(__dirname, "views"))
+    app.use(express.static(path.join(__dirname, "public")))
+    
+    app.get("/", async (req, res) => {
+      if (await client.isAuthenticated(req)) {
+        res.redirect("/admin")
+      } else {
+        res.render("index", { title: "Welcome", message: "Please log in" })
+      }
+    })
+    
+    app.get("/admin", protectRoute, getUser, (req, res) => {
+      res.render("admin", { title: "Dashboard", user: req.user })
+    })
+    
+    app.listen(port, () => {
+      console.log(`✅ Express server running on http://localhost:${port}`)
+    })
+    ```
+    
+10. Run the following to set up your project structure:
+    
+    ```bash
+    mkdir views public
+    ```
+    
+11. Create the necessary files:
+    
+    ```bash
+    touch public/style.css views/admin.pug views/index.pug views/layout.pug
+    ```
+    
+12. Add the following code to `views/layout.pug` file to create a base layout:
+    
+    ```html
+    doctype html
+    html(lang="en")
+        head
+            title Kinde Auth App
+            link(rel='stylesheet', href='/style.css')
+        body
+            block content
+    
+            footer.footer
+                .container
+                    strong.text-heading-2 KindeAuth
+                    p.footer-tagline.text-body-3='Visit our '
+                        a.link(href='https://kinde.com/docs') help center
+                    small.text-subtle &copy; 2025 KindeAuth, Inc. All rights reserved
+    
+    ```
+    
+13. Add the following code to `views/index.pug` file with sign-in/sign-up buttons.
+    
+    ```html
+    extends layout
+    
+    block content
+    
+            header
+                nav.nav.container
+                    h1.text-display-3 KindeAuth
+                    div
+                        a.btn.btn-ghost.sign-in-btn(href='/login') Sign in
+                        a.btn.btn-dark(href='/register') Sign up
+            main
+                .container
+                    .card.hero
+                        p.text-display-2.hero-title Let&apos;s start authenticating
+                        p.text-display-2.hero-title  with KindeAuth
+                        p.text-body-1.hero-tagline Configure your app
+                        a.btn.btn-light.btn-big(href='https://docs.kinde.com' target='_blank' rel='noreferrer') Go to docs
+    
+    ```
+    
+14. Add the following code to `views/admin.pug` file to create authenticated dashboard page.
+    
+    ```html
+    extends layout
+    
+    block content
+    
+        header
+            nav.nav.container
+                h1.text-display-3 KindeAuth
+                .profile-blob
+                    img.avatar(src=user.picture, alt=user.given_name)
+                    div
+                        p.text-heading-2 #{user.given_name} #{user.family_name}
+                        a.text-subtle(href='/logout') Sign out
+        main
+            .container
+                .card.start-hero
+                    p.text-body-2.start-hero-intro Woohoo!
+                    p.text-display-2 Your authentication is all sorted.
+                    p.text-display-2 Build the important stuff.
+                section.next-steps-section
+                    h2.text-heading-1 Next steps for you
+    
+    ```
+    
+15. Open `public/style.css` and paste the styles:
+    
+    ```css
+    :root {
+      --g-color-black: #000;
+      --g-color-white: #fff;
+    
+      --g-color-grey-50: #f6f6f6;
+      --g-color-grey-600: #636363;
+      --g-color-grey-700: #4d4d4d;
+      --g-color-grey-900: #0f0f0f;
+    
+      --g-box-shadow: 0px 6px 12px rgba(18, 20, 23, 0.06),
+        0px 15px 24px rgba(18, 20, 23, 0.07), 0px -4px 12px rgba(18, 20, 23, 0.05);
+    
+      --g-font-family: Helvetica, sans-serif;
+    
+      --g-font-size-x-small: 0.75rem; /* 12px */
+      --g-font-size-small: 0.875rem; /* 14px */
+      --g-font-size-base: 1rem; /* 16px */
+      --g-font-size-large: 1.25rem; /* 20x */
+      --g-font-size-x-large: 1.5rem; /* 24px */
+      --g-font-size-2x-large: 2rem; /* 32px */
+      --g-font-size-3x-large: 2.5rem; /* 40px */
+      --g-font-size-4x-large: 4rem; /* 64px */
+    
+      --g-font-weight-base: 400;
+      --g-font-weight-semi-bold: 500;
+      --g-font-weight-bold: 600;
+      --g-font-weight-black: 700;
+    
+      --g-border-radius-small: 0.5rem;
+      --g-border-radius-base: 1rem;
+      --g-border-radius-large: 1.5rem;
+    
+      --g-spacing-small: 0.5rem; /* 8px */
+      --g-spacing-base: 1rem; /* 16px */
+      --g-spacing-large: 1.5rem; /* 24px */
+      --g-spacing-x-large: 2rem; /* 32px */
+      --g-spacing-2x-large: 2.5rem; /* 40px */
+      --g-spacing-3x-large: 3rem; /* 48px */
+      --g-spacing-6x-large: 6rem; /* 96px */
+    }
+    
+    * {
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+    }
+    
+    html,
+    body {
+      font-family: var(--g-font-family);
+    }
+    
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+    
+    .text-subtle {
+      color: var(--g-color-grey-600);
+      font-size: var(--g-font-size-x-small);
+      font-weight: var(--g-font-weight-base);
+    }
+    
+    .text-body-1 {
+      font-size: var(--g-font-size-2x-large);
+      font-weight: var(--g-font-weight-base);
+    }
+    
+    .text-body-2 {
+      font-size: var(--g-font-size-x-large);
+      font-weight: var(--g-font-weight-base);
+    }
+    
+    .text-body-3 {
+      color: var(--g-color-grey-900);
+      font-size: var(--g-font-size-small);
+      font-weight: var(--g-font-weight-base);
+    }
+    
+    .text-display-1 {
+      font-size: var(--g-font-size-4x-large);
+      font-weight: var(--g-font-weight-black);
+      line-height: 1.2;
+    }
+    
+    .text-display-2 {
+      font-size: var(--g-font-size-3x-large);
+      font-weight: var(--g-font-weight-black);
+      line-height: 1.4;
+    }
+    
+    .text-display-3 {
+      font-size: var(--g-font-size-x-large);
+      font-weight: var(--g-font-weight-black);
+    }
+    
+    .text-heading-1 {
+      font-size: var(--g-font-size-large);
+      font-weight: var(--g-font-weight-semi-bold);
+    }
+    
+    .text-heading-2 {
+      font-size: var(--g-font-size-base);
+      font-weight: var(--g-font-weight-semi-bold);
+    }
+    
+    .container {
+      padding: 0 var(--g-spacing-6x-large);
+      margin: auto;
+    }
+    
+    .nav {
+      align-items: center;
+      display: flex;
+      justify-content: space-between;
+      padding-bottom: var(--g-spacing-x-large);
+      padding-top: var(--g-spacing-x-large);
+      width: 100%;
+    }
+    
+    .sign-in-btn {
+      margin-right: var(--g-spacing-small);
+    }
+    
+    .btn {
+      border-radius: var(--g-border-radius-small);
+      display: inline-block;
+      font-weight: var(--g-font-weight-bold);
+      padding: var(--g-spacing-base);
+    }
+    
+    .btn-ghost {
+      color: var(--g-color-grey-700);
+    }
+    
+    .btn-dark {
+      background-color: var(--g-color-black);
+      color: var(--g-color-white);
+    }
+    
+    .btn-light {
+      background: var(--g-color-white);
+      color: var(--g-color-black);
+      font-weight: 600;
+    }
+    
+    .btn-big {
+      font-size: var(--g-font-size-large);
+      padding: var(--g-font-size-large) var(--g-font-size-x-large);
+    }
+    
+    .hero {
+      align-items: center;
+      display: flex;
+      flex-direction: column;
+      height: 30rem;
+      justify-content: center;
+      text-align: center;
+    }
+    
+    .hero-title {
+      margin-bottom: var(--g-spacing-x-large);
+    }
+    
+    .hero-tagline {
+      margin-bottom: var(--g-spacing-x-large);
+    }
+    
+    .card {
+      background: var(--g-color-black);
+      border-radius: var(--g-border-radius-large);
+      box-shadow: var(--g-box-shadow);
+      color: var(--g-color-white);
+    }
+    
+    .link {
+      text-decoration: underline;
+      text-underline-offset: 0.2rem;
+    }
+    
+    .link:hover,
+    .link:focus {
+      background: #f1f2f4;
+    }
+    
+    .footer {
+      padding-bottom: var(--g-spacing-x-large);
+      padding-top: var(--g-spacing-x-large);
+    }
+    
+    .footer-tagline {
+      margin-bottom: var(--g-font-size-x-small);
+      margin-top: var(--g-font-size-x-small);
+    }
+    
+    .start-hero {
+      padding: var(--g-spacing-2x-large);
+      text-align: center;
+    }
+    
+    .start-hero-intro {
+      margin-bottom: var(--g-spacing-base);
+    }
+    
+    .avatar {
+      align-items: center;
+      background-color: var(--g-color-grey-50);
+      border-radius: var(--g-border-radius-large);
+      display: flex;
+      height: var(--g-spacing-3x-large);
+      justify-content: center;
+      text-align: center;
+      width: var(--g-spacing-3x-large);
+    }
+    
+    .profile-blob {
+      align-items: center;
+      display: grid;
+      gap: var(--g-spacing-base);
+      grid-template-columns: auto 1fr;
+    }
+    
+    .next-steps-section {
+      margin-top: var(--g-spacing-2x-large);
+    }
+    
+    ```
+    
+16. Run the following command to create your Electron entry point:
+    
+    ```bash
+    touch main.js
+    ```
+    
+17. Paste the following code into `main.js`.
+    
+    This script will:
+    
+    - Launch a new Electron app window.
+    - Spawn a Node child process to start the Express server you set up earlier.
+    
+    ```jsx
+    const { app, BrowserWindow } = require("electron")
+    const path = require("path")
+    const { spawn } = require("child_process")
+    
+    let serverProcess
+    let win
+    
+    function createWindow() {
+      win = new BrowserWindow({
+        width: 1000,
+        height: 770,
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true,
+        },
+      })
+    }
+    
+    app.whenReady().then(async () => {
+      serverProcess = spawn("node", [path.join(__dirname, "server.js")], {
+        cwd: __dirname,
+        shell: true,
+        env: process.env,
+        stdio: "inherit",
+      })
+    
+      createWindow()
+      try {
+        win.loadURL("http://localhost:3000")
+      } catch (err) {
+        console.error("❌ Server error:", err)
+        win.loadURL("data:text/html,<h1>❌ Failed to start server</h1>")
+      }
+    })
+    
+    app.on("window-all-closed", () => {
+      if (serverProcess) serverProcess.kill()
+      if (process.platform !== "darwin") app.quit()
+    })
+    ```
+    
+
+## Step 3: Run and test the Electron app
+
+1. To start your Electron application and Express server, run the following command in your terminal:
+    
+    ```bash
+    npm start
+    ```
+    
+    The Kinde app sign up screen opens.
+    
+    ![Electron app with kinde auth](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ca9076c5-3193-48f9-78bb-80ca2bc43b00/public)
+    
+2. Sign in or sign up for a new account and test the auth flow. You should be able to see your admin area, for example:
+    
+    ![Signed in to electron app](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4da712af-5ac0-4798-7260-3f5d9deb5f00/public)
+    
+
+### Finished!
+
+You’ve successfully built a full-stack Electron app with a Express.js backend, including user authentication and an admin area. This setup serves as a solid foundation for further development, allowing you to expand features, improve the user interface, or enhance security. You can now continue adding functionality or explore packaging the app for distribution.
