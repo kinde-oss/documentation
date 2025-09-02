@@ -147,8 +147,8 @@ function generateSectionFile(sectionName) {
     }
   }
 
-  // Write to file in the _llms directory
-  const outputPath = `public/_llms/llms-${sectionName}.txt`;
+  // Write to file in the _llms-txt directory
+  const outputPath = `public/_llms-txt/${sectionName}.txt`;
   fs.writeFileSync(outputPath, sectionContent);
   console.log(`Section documentation created: ${outputPath}`);
   console.log(`Processed ${results.length} files for ${sectionName}`);
@@ -175,5 +175,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     generateSectionFile(section);
   }
   
-  console.log('\nAll section documentation files have been generated in public/_llms/');
+  console.log('\nAll section documentation files have been generated in public/_llms-txt/');
 }

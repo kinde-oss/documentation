@@ -119,7 +119,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   
   // Write to file
-  fs.writeFileSync('llms-small.txt', abridgedContent);
-  console.log('Abridged documentation created: llms-small.txt');
+  fs.writeFileSync('public/llms-abridged.txt', abridgedContent);
+  console.log('Abridged documentation created: public/llms-abridged.txt');
   console.log(`Processed ${results.length} files`);
 }

@@ -141,7 +141,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   
   // Write to file
-  fs.writeFileSync('llms-full.txt', completeContent);
-  console.log('Complete documentation created: llms-full.txt');
+  fs.writeFileSync('public/llms-full.txt', completeContent);
+  console.log('Complete documentation created: public/llms-full.txt');
   console.log(`Processed ${results.length} files`);
 }
