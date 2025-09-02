@@ -1,0 +1,163 @@
+
+Kinde is built to support many types of SaaS models, for apps, sites, and projects.
+
+From straightforward models where you provide services directly to individuals, to multi-tenant setups for managing other business’s auth and user needs.
+
+This topic explains how to use organizations in Kinde to support your business model.
+
+## You provide services directly to customers (B2C)
+
+Users sign up directly to your business and you manage them in one large user group.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/3c8e194f-db16-44e9-691e-8cb6e3d7b300/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+For this business setup, configure everything at the Business and Environment level in Kinde, including:
+
+- [Authentication](/authenticate/about-auth/about-authentication/) (including signing up and in with third party providers like Google)
+- [Global brand and page design](/design/brand/global-brand-defaults/)
+- [Defining roles and permissions](/manage-users/roles-and-permissions/user-roles/)
+
+Kinde comes with a default organization, so if you only have one user group, they all belong to that default organization.
+
+## You provide services to companies (B2B)
+
+Each company your business services has their own organization in Kinde. Each organization can also have it’s own group of users.
+
+If you want, you can [allow organizations to be created when a new business signs up](/build/organizations/allow-org-create-on-signup/) to your service.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0b98bd9f-ad8c-498d-e194-d04ee99bf600/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+Configure these settings at the Business and Environment level for organizations to inherit:
+
+- [Authentication](/authenticate/about-auth/about-authentication/) (including enterprise auth such as [Entra ID](/authenticate/enterprise-connections/azure/) or [SAML](/authenticate/enterprise-connections/custom-saml/))
+- [Global brand and page design](/design/brand/global-brand-defaults/)
+- [Define roles and permissions](/manage-users/roles-and-permissions/user-roles/)
+
+Then you’ll set up organizations for each business you service, and in each organization:
+
+- [Manage how users sign up to organizations](/build/organizations/allow-user-signup-org/)
+- (optional) Set up individual [organization brand, including the sign up and sign in experience](/design/brand/apply-branding-for-an-organization/)
+- Define what [roles and permissions](/manage-users/roles-and-permissions/apply-roles-and-permissions-to-users/) apply for users of each organization
+- Enable special [feature access](/releases/about/about-feature-flags/#overriding-feature-flags) for individual organizations
+
+## You provide services to companies, and their customers (B2B2C)
+
+Each company your business services has their own organization in Kinde. And for each organization, there is a group of users who are managed separate to each other. In tech-speak, this is multi-tenanting.
+
+You will want to carefully manage [how users sign up to organizations](/build/organizations/allow-user-signup-org/) for this business model.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/adc65381-19f9-44bb-6db5-dbec7e5b0e00/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+You will configure most settings at the Business and Environment level, and then you can decide if you customize some settings per organization.
+
+You might set up the following for your business and in your applications:
+
+- Supported [Authentication](/authenticate/about-auth/about-authentication/) types, including custom auth for [SAML](/authenticate/enterprise-connections/custom-saml/), and [social sign in](/authenticate/social-sign-in/add-social-sign-in/)
+- [Global brand and page design](/design/brand/global-brand-defaults/)
+- Define the [roles and permissions](/manage-users/roles-and-permissions/user-roles/) that can be applied to users in each organization
+
+For each organization, you will want to:
+
+- Assign [user roles and permissions](/manage-users/roles-and-permissions/apply-roles-and-permissions-to-users/), including [default roles](/manage-users/roles-and-permissions/default-user-roles/) that apply when a user signs up
+- Enable special [feature access](/releases/about/about-feature-flags/#overriding-feature-flags) for individual organizations
+- (optional) Set up individual [organization brand, including the sign up and sign in experience](/design/brand/apply-branding-for-an-organization/)
+
+In this set up, you will likely need to [manage users across organizations](/manage-users/about/manage-users-across-organizations/) as well.
+
+## You’re a membership-type organization
+
+You’re a central organization, and you service related businesses, branches, locations, or clubs, who have members. This works a bit like a B2B2C, but the structure is usually more simple.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/5267537f-80e7-4208-464c-f0ee4d66da00/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+Membership organizations are typically branded at the org level, and authentication is kept fairly simple.
+
+You will configure most settings at the Business and Environment level, such as:
+
+- [Authentication](/authenticate/about-auth/about-authentication/) (including [passwordless](/authenticate/authentication-methods/passwordless-authentication/) and [social sign up](/authenticate/social-sign-in/add-social-sign-in/) to make things easy)
+- A base [global brand and page design](/design/brand/global-brand-defaults/)
+- [Defining simple sets of roles and permissions](/manage-users/roles-and-permissions/user-roles/)
+
+For each organization, you will want to:
+
+- Spend time setting up [brand and design](/design/brand/apply-branding-for-an-organization/)
+- Align [roles](/manage-users/roles-and-permissions/user-roles/) and [feature access](/releases/feature-flags/edit-feature-flag/#override-feature-flag-value-for-an-organization) within each organization to ensure different users see the right part of your application
+- Decide [how user’s are able to sign up to an org](/build/organizations/allow-user-signup-org/)
+
+## You’re a marketplace
+
+A marketplace usually combines a bit of B2C and B2B. This kind of business connects buyers with sellers, creators and audiences, businesses and consumers - you get the idea.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0ed1e797-10a0-4b18-f57e-b1184b4a0e00/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+A marketplace usually separates the different market participants, which can be done through organizations. This enables independent control of the parts of your app each organization can access, and how.
+
+Configure most settings at the Business and Environment level, such as:
+
+- A base [global brand and page design](/design/brand/global-brand-defaults/)
+- [Defining simple sets of roles and permissions](/manage-users/roles-and-permissions/user-roles/)
+
+For each organization, you will want to:
+
+- Set up [Authentication](/authenticate/about-auth/about-authentication/) per organization to enable different sign up and sign in methods, depending on user segment. For example, set password authentication with [multi-factor authentication](/authenticate/multi-factor-auth/enable-multi-factor-authentication/) for your supplier side users, and [easy social sign up](/authenticate/social-sign-in/add-social-sign-in/) for your consumer side users.
+- Align [roles](/manage-users/roles-and-permissions/user-roles/) and [feature access](/releases/feature-flags/edit-feature-flag/#override-feature-flag-value-for-an-organization) within each organization to ensure different users see the right part of your application
+- Decide [how user’s are able to sign up to an org](/build/organizations/allow-user-signup-org/)
+- (optional) Set up individual [organization brand, including the sign up and sign in experience](/design/brand/apply-branding-for-an-organization/)
+
+## You’re an agency
+
+This model is for enterprise-sized customers who really love Kinde. For example, an agency who sets up and runs multiple businesses and applications, on behalf of clients, using the Kinde platform.
+
+You’ll set up each of your client’s businesses according to what type of business model they are. See above for business structure recommendations.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/52f6adce-cd5e-4a2c-7639-9b7e32cdee00/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+Tip: You could adapt this model if you’re a large multi-location, multi-department, or multi-service enterprise.

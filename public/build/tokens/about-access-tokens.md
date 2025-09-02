@@ -1,0 +1,116 @@
+
+Access tokens are a secure way of authenticating users, and passing information about a user to to a system.
+
+## Access token standard claims
+
+- **Token Type** - indicates the type of access token being used. For example, `Bearer` is a common token type used in OAuth 2.0.
+- **Expiration Time** - `exp` **-** Access tokens come with an expiration time (also known as expiry or lifetime) after which it is no longer valid. The timestamp is usually represented in **seconds** and can be calculated using the [Epoch](https://www.epochconverter.com/) timestamp (UNIX) or other methods. More about [setting token expiry in Kinde](/build/tokens/configure-tokens/).
+- **Scopes** - `scp` - information about the scopes granted to the token holder. These scopes define what actions or resources the token can access. There can be multiple scope values, so the type of this claim is an `array`.
+- **Issuer -** the entity that issued the access token. This is often represented as the token's `iss` claim in JWT. Typically your kinde domain e.g. `https://<your_subdomain>.kinde.com`
+- **Subject** - subject of the token, i.e., the user or entity for which the token was issued. Represented as the token's `sub` claim in JWT. If this is an access token for a Kinde user this will be their ID e.g. `kp_xxxx`
+- **Audience** - intended recipient of the access token. Represented as the token's `aud` claim in JWT. There can be multiple audience values, so the type of this claim is an `array`.
+- **Issued At** - timestamp of when the access token was issued. Represented as the token's `iat` claim in JWT. The timestamp is usually represented in **seconds** and can be calculated using the [Epoch](https://www.epochconverter.com/) timestamp (UNIX) or other methods.
+- **Token ID** - `jti` - identifier for the access token, useful for tracking and validation purposes. See [this definition](https://www.rfc-editor.org/rfc/rfc7519#section-4.1.7).
+- **Custom Claims** - Available using the [Kinde Properties feature](/properties/work-with-properties/properties-in-tokens/).
+
+## Kinde additional claims
+
+- **Organization** - `org_code` claim for the organization they are accessing. Format is `org_xxxx`.
+- **Feature flags** - `feature_flags` claim. Access controls for what features the user can see and access. Format is:
+
+  ```json
+  "feature_flags": {
+      "analytics": {
+          "t": "b",
+          "v": true
+       },
+  	   "theme": {
+          "t": "s",
+          "v": "pink"
+       }
+  }
+  ```
+
+  We use short codes for the various keys in the feature flags claim such as `t` and `v` to keep the token size down.
+  `t` = `type`
+  `v` = `value`
+  `b` = `boolean`
+  `i`= `integer`
+  `s` = `strong`
+
+- **Permissions** - `permissions` claim controls for what the user can do in an app. This is an array. For example:
+
+  ```json
+  "permissions": [
+  	"create:competitions",
+  	"delete:competitions",
+  	"view:stats",
+  	"invite:users",
+  	"view:profile
+  ]
+  ```
+
+- **External provider ID** - The ID you use to identify the organization the user is authorized against
+
+- (MS Entra ID authentication only) Claims starting with `ext_` indicate that user details have come from a third party enterprise auth provider like Microsoft. For example:
+
+  ```jsx
+  "ext_groups": [
+      "group1",
+      "group2
+  ],
+  "ext_attributes": {
+  		"jobTitle": "engineer",
+      "mail": "engineer@kinde.com",
+      "preferredLanguage": "en",
+  }
+
+  ```
+
+## Example access token
+
+```jsx
+{
+  "aud": [
+    "myapp:prod-api
+  ],
+  "azp": "dee7f3c57b3c47e8b96edde2c7ecab7d",
+  "exp": 1693371599,
+  "feature_flags": {
+    "analytics": {
+      "t": "b",
+      "v": true
+    },
+    "theme": {
+      "t": "s",
+      "v": "pink"
+    }
+  },
+  "iat": 1693285199,
+  "iss": "https://<your_subdomain>.kinde.com",
+  "jti": "fbb6bc62-x64e-4256-8ea4-8fb9a645b123",
+  "org_code": "org_xxxxxxxxx",
+  "permissions": [
+    "create:competitions",
+    "delete:competitions",
+    "view:stats",
+    "invite:users",
+    "view:profile
+  ],
+  "scp": [
+    "openid",
+    "profile",
+    "email",
+    "offline
+  ],
+  "sub": "kp:_xxxxxxxxx" // your user id
+}
+```
+
+## Behaviour of Access Tokens on refresh
+
+When you use the `refresh_token` grant to refresh an access token, Kinde will return an existing access token if that existing access token is not expired. You will get a completely new access token if one (or more) of the following conditions are met:
+
+- You revoke your existing access token
+- Your user has signed out of their session, and your application has called the logout function in Kinde
+- Your existing access token has expired.

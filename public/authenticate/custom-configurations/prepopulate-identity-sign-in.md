@@ -1,0 +1,56 @@
+
+You can create a smoother sign-up and sign-in experience by passing a login_hint when users authenticate. When the user arrives at the sign-in page, their credentials are pre-filled, saving them time. This works for emails, phone numbers, and usernames.
+
+You might want to do this, for example, to reduce friction and make signing up extra easy.
+
+## Enable login_hint
+
+Add the `login_hint` parameter to the sign up/sign in request on your app or site. 
+
+### Email example
+
+```jsx
+<button
+  onClick={() =>
+    login({
+      authUrlParams: {
+        login_hint: "dave@kinde.com"
+      }
+    })
+  }
+>
+  Continue
+</button>
+```
+
+### Phone example
+
+```jsx
+<button
+  onClick={() =>
+    login({
+      authUrlParams: {
+        login_hint: "phone:+61444110110:au"
+      }
+    })
+  }
+>
+  Continue
+</button>
+```
+
+### Username example
+
+```jsx
+<button
+  onClick={() =>
+    login({
+      authUrlParams: {
+        login_hint: "username:Bob_the_dog"
+      }
+    })
+  }
+>
+  Continue
+</button>
+```

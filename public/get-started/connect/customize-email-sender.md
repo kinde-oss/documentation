@@ -1,0 +1,90 @@
+
+You can configure Kinde to send emails from your own preferred email provider. This means your users will receive communications from your business’s email address, and not Kinde’s.
+
+There are also other benefits, such as better control of email deliverability, analytics and tracking, scalability, email compliance, etc.
+
+## Emails that will be sent from you
+
+When you set your own email provider details, the following emails will be sent from your preferred email address:
+
+- Sign up and sign in emails
+- One-time passcode (OTP) emails
+- Password reset codes
+
+Emails will come from `no-reply@kinde.com` if you choose not to set this up.
+
+## Emails sent from Kinde
+
+Even if you enter custom sender details, these emails will still be sent from Kinde.
+
+- Invitation to join business team - triggered by manual or API addition of team member
+- Warnings and notifications of data export
+
+## Requirements and recommendations
+
+- You can only have one email sender set up in Kinde
+- You need to set up provider details before making your environment live
+- The provider must support user/password sign in and TLS
+- Check the limitations of your provider (e.g. Microsoft O365 has daily send limits). We recommend using bulk email service providers such as SendGrid, Mailgun, Mailchimp, Postmark, etc.
+
+## Add email sender SMTP details
+
+<Aside>
+
+Users who are in the process of signing in to your application when you enable this setting will not receive emails from the new address until they start a new authenticated session.
+
+</Aside>
+
+If you are setting this up and your production environment is already live, we recommend testing this in a staging or test environment first.
+
+1. In Kinde, go to **Settings > Email**.
+2. Enter a **Sender name**. This is usually your business name, but might be a specific person.
+3. Enable the **Use custom sender** switch. The SMTP details section opens.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d4c4b57d-9f1a-4b1c-638c-0a770c4fe400/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+4. Enter the **Sender email**. This is the address your users will receive emails from.
+5. Enter the SMTP details of your email provider:
+   - Server name - this will be something like `yourbusiness.smtp.providername.com`
+   - Port - use the one recommended by your email provider
+   - Sign-in details - Username and password
+6. Select **Send test email**. This sends a test email to the email address you are logged into Kinde with.
+7. If the test is successful, select **Save**.
+8. If the test is not successful, check the SMTP details (step 5) and try sending a test email again. If this does not work, see the troubleshooting section below.
+
+## Edit email sender
+
+We recommend testing any changes to SMTP details in a non-production environment first.
+
+1. In Kinde, go to **Settings > Email**.
+2. Change any of the details that you want.
+3. Select **Send test email**. This sends a test email to the email address you are logged into Kinde with.
+4. If the test is successful, select **Save**.
+
+## Reset email sender
+
+You should only do this if your environment is not live.
+
+1. In Kinde, go to **Settings > Email**.
+2. Disable the **Use custom sender** switch. This reverts back to use the default Kinde email address and removes SMTP details.
+3. Select **Save**.
+
+## Troubleshoot the SMTP provider connection
+
+Sometimes things go wrong with server connections and external provider configuration. There’s only so much we can assist with on our side, but if you get an SMTP error, check your provider documentation.
+
+Here’s a [list of errors](https://datatracker.ietf.org/doc/html/rfc2821#section-4.2.3) you might see (from the IETF), and here’s link to SMTP docs from some common providers.
+
+- [SendGrid](https://sendgrid.com/en-us/blog/smtp-server-response-codes-explained)
+- [Mailchimp](https://mailchimp.com/developer/transactional/docs/smtp-integration/)
+- [Postmark](https://postmarkapp.com/support/article/1114-what-are-smtp-codes-and-how-can-i-troubleshoot-them)
+- [MailerSend](https://www.mailersend.com/blog/smtp-codes)
+- [Mailgun](https://documentation.mailgun.com/docs/mailgun/user-manual/sending-messages)

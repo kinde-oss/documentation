@@ -1,0 +1,204 @@
+
+You can import users in bulk, from CSV, JSON, or from other files provided by your previous authentication service, such as Auth0.
+
+## File requirements
+
+- Non Auth0 data - User details and passwords need to be in UTF-8 encoded CSV format
+- Auth0 data - User details and passwords need to be in NDJSON (Newline Delimited JSON) format
+- File size up to 20MB supported
+
+If you’ve got large user sets (over 20MB) or are concerned about file size limits, you might consider importing in batches, or contact us for import support.
+
+## Before you import users
+
+- [Enable password authentication](/authenticate/authentication-methods/set-up-user-authentication/) before importing passwords
+- [Create organizations in Kinde](/build/organizations/add-and-manage-organizations/) - only if you use this function to support multi-tenancy (for example, in a B2B structure) or if you manage separate user groups this way.
+- Add [roles](/manage-users/roles-and-permissions/user-roles/) and [permissions](/manage-users/roles-and-permissions/user-permissions/) in Kinde, if you intend to import these details with users.
+
+**Note: Importing users from Azure** Set up the [MS Entra ID connection in Kinde](/authenticate/enterprise-connections/azure/) before you import your users. Then when you import, Kinde will match users to the relevant connection based on their email address.
+
+## Cases in usernames
+
+Kinde treats usernames as case-insensitive. In other words, we ignore case. We do this because it eliminates the possibility of auth issues and fraud when two usernames are identical in every aspect except the case of one of their letters. 
+
+We are happy to support users choosing an aesthetically pleasing username combination, like `RosyRose` or `BuilderBob`. We just don't also support separate identities for `rosYrosE` and `BUilderbob`. Before importing users, we recommend checking that all usernames are unique in more than just case.
+
+## Prepare NDJSON data (Auth0 imports)
+
+When you export user details from Auth0:
+
+- select all the default fields and add the `identities` field to the import list.
+- select the NDJSON file format for export.
+
+`Identities` data distinguishes the type of identity, specifically the `connection` attribute. e.g. username, phone, GitHub, Google, etc.
+
+### How Auth0 user identities are treated on import
+
+Social identities without an email can be imported, and are identified by the connection type. You can import users with multiple identities, these will be listed under the user’s profile.
+
+Kinde supports migrating the following authentication methods from Auth0: Usernames, Email, Phone, Google, Apple, Microsoft, Facebook, GitHub, Twitch, Bitbucket. Auth methods are shown in the `connection` attribute. These are represented as follows in the identity data:
+
+- Username-Password-Authentication
+- email
+- sms
+- google-oauth2
+- apple
+- microsoft
+- github
+- twitch
+- facebook
+- bitbucket
+- windowslive
+
+### Import options
+
+When importing users from Auth0 NDJSON files, you have three options:
+
+1. **Import users only** - choose this method if you want to allow users to reset their password or sign in another way.
+2. **Import passwords only** - only choose this if you have already imported users.
+
+## Prepare CSV files (other sources)
+
+When exporting data from another auth system or your own system via CSV, the file needs to be set up with specific headings and formats for the data you are importing. These are detailed below.
+
+If you are migrating from Auth0, see the **Prepare JSON data (for Auth0 imports)** section.
+
+### Required **data**
+
+- `email` or `phone` - minimum required identity information
+- `external_organization_id` - assign users to organizations, optional unless you are importing roles and permissions
+
+<Aside>
+
+There are special considerations if you are importing users who will share a phone number to authenticate via a mobile device. Contact support@kinde.com for advice on the best way to import users where the phone is the primary identity and numbers are shared. 
+
+</Aside>
+
+### **Other user data**
+
+<Aside>
+
+The more data that you include for import, the easier we can set up your users in Kinde. Kinde will not duplicate users with existing email addresses.
+
+</Aside>
+
+- `first_name` and `last_name`
+- `id` (also referred to as `provided_id`) - unique to the auth provider and helps us match records as they are imported.
+- `username` - if usernames are part of a user’s identity
+- `phone` - in the [E.164](https://en.wikipedia.org/wiki/E.164) format [+][country code][number]. For example, +6155511555. Required for phone authentication.
+- `phone_verified` - phone number verification status: TRUE or FALSE
+- `email` - the user’s email address
+- `email_verified` - email verification status: `TRUE` or `FALSE`. TRUE only applies if you are also importing the user's password. If they have not set a password and you set this to `TRUE`, they will be prompted to set one using a one-time code the first time they sign in. This verifies their identity.
+- `role_key` - the role key for the role a user will be assigned on import. If the user is to be assigned more than one role, use a comma separated list.
+- `permission_key` - the permissions key for the permission a user will be assigned (that is not included in their role). If the user is to be assigned more than one permission, use a comma separated list.
+- `external_organization_id` - your supplied 'external_id' for the organization that you want the user to be imported into. Optional unless you are importing roles and permissions with user data. If the user belongs to more than one organization, use a comma separated list wrapped in double quotes. If left empty the user will be assigned to the default organization, if the 'Add users to this organization if no organization is specified' policy is enabled.
+  
+  <Aside>
+
+  Note that this is NOT the same as the **Organization code** in Kinde, which is a Kinde-supplied ID. You can define your ID in the organization 'external_id' field.
+
+  </Aside>
+
+### Password data (optional)
+
+- `hashed_password` - the user’s password encrypted using a hashing method or algorithm.
+- `hashing_method` - the name of the algorithm used to encrypt the user’s password. Currently **crypt**, **bcrypt**, **sha256**, **md5**, and **wordpress** are supported. [Contact us](https://kinde-21631392.hs-sites.com/en-au/feature-request) if you need a different method.
+- `salt` - extra characters added to passwords to make them stronger
+- `salt_position` - position of salt in password string. E.g. prefix (before) or suffix (after).
+- `salt_format` - format of the salt, e.g. hex, string, etc.
+
+<Aside title="bcrypt $2b variant support:">
+
+  Please note if you are importing bcrypt hashes with the $2b variant, Kinde will substitute this for the $2a variant. These are interchangeable as long as you were not running OpenBSD at the time the hashes were generated.
+
+  </Aside>
+
+  <Aside title="sha256 support:">
+
+  Provide the hash in hex format. Import the salt using the `salt` column. For the `salt_format`, specify how the salt should be interpreted: e.g. **hex** for a hex-encoded string (68656c6c6f for hello). By default, the salt is treated as a plain string, and escape sequences (like \n or \v) are treated as literal characters.
+
+  </Aside>
+
+  | Hashing method | Salt     | Salt position             |
+  | -------------- | -------- | ------------------------- |
+  | md5            | Optional | required if salt included |
+  | bcrypt         |          |                           |
+  | crypt          | Optional |                           |
+  | wordpress      | Optional |                           |
+  | sha256         | Optional | required if salt included |
+
+### **Example simple csv import**
+
+```text
+email,id,first_name,last_name,roles,permissions,external_organization_id
+
+jen@kinde.com,0001,"Jen","Smith","role_1","permission_1","ext_org_id_1,ext_org_id_2
+elmo@kinde.com,0002,"Elmo","Smith","role_1","permission_2","ext_org_id_1,ext_org_id_2
+```
+
+### Users with multiple orgs and multiple roles
+
+If you’re importing users who belong to multiple organizations and they have different roles in those organizations, you can set up the CSV to duplicate the user on a separate line for each organization they belong to, with the relevant roles to match. For example:
+
+```text
+email,id,first_name,last_name,roles,permissions,external_organization_id
+
+jen@kinde.com,0001,"Jen","Smith","role_1,role_2","permission_1,permission_2","ext_org_id_1
+jen@kinde.com,0001,"Jen","Smith","role_3","permission_3,permission_4","ext_org_id_2,ext_org_id_3
+```
+
+Alternatively, you can import your users first, then import their roles and organizations in a separate file:
+
+```text
+File 1
+email,id,first_name,last_name
+
+jen@kinde.com,0001,"Jen","Smith
+```
+
+```text
+File 2
+id,roles,permissions,external_organization_id
+0001,"role_1,role_2","permission_1,permission_2","ext_org_id_1
+0001,"role_3,role_4","permission_3,permission_4","ext_org_id_2
+```
+
+## How to import users
+
+1. In Kinde, go to **Users**, then select **Import users**.
+2. Select the option for your situation:
+   - Custom CSV
+   - From Auth0 (choose this for Azure AD users)
+3. Follow the on-screen prompts to import the data.
+4. If there are any [errors with the import](/manage-users/add-and-edit/troubleshoot-user-import-errors/), you will be able to view them afterwards.
+5. Most import errors can be fixed by editing the CSV or JSON file and then re-importing into Kinde. Any records that have already been imported, will be ignored.
+
+## Impact on end-users
+
+Importing all your existing users and passwords should mean that your end users won’t notice anything when they next sign in. This is the optimal experience. However:
+
+- If a user changes their password after the user export and while the migration is in progress, they will be prompted to reset their password on the next sign in.
+- If you have set up a new authentication method as part of the user migration (for instance, going passwordless) your users will be prompted to use the new method on sign in.
+- If you add or remove roles or permissions, they may gain/lose access to parts of your system.
+
+## Weak passwords are not rejected on import
+
+When you import passwords via CSV, Kinde does not check for password strength. However, if you do not also include a `TRUE` in the `password_verified` column of the CSV, Kinde will send a one-time password to the user the first time they try to sign in, in order to verify their identity.
+
+In future, we may add the ability to check password strength and initiate a password change if it's deemed to weak by standard password criteria.
+
+## Re-importing does not update user info
+
+If you add a user via import and they start authenticating via Kinde, and then you import their records again with changes - for example, a name change or a new email - that information will not be updated in Kinde.
+
+Similarly, if a user has changed the spelling of their name or has new permissions, and you import data from a CSV containing outdated information, the older data will NOT override their current record in Kinde.
+
+We recommend managing updates to user information via the Kinde admin, or via API.
+
+## Communication to users
+
+Kinde does not send any notifications or invitations to users when they are added to Kinde via import. The idea is that your users have a seamless experience that feels (almost) like it always has in your app.
+
+Similarly, if you add users via API, Kinde does not send an email or notification to the user.
+
+If you’ve made changes to their sign in experience — for example adding multi-factor authentication — then consider contacting your users to let them know their sign in experience will be changed.

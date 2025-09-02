@@ -1,0 +1,55 @@
+
+Feature flags let you control user access to specific features in your app or site. Typically, feature flags are used to restrict feature access while a feature is being built.
+
+You can incrementally roll the feature out by giving beta access to specific users, organizations, or environments, and then remove the flag when the feature is ready for global release.
+
+Once a flag is created, you can only edit the name, description and default value.
+
+If you’re not familiar with feature flags, you might want to read up about feature flags first.
+
+## Find a feature flag
+
+You can search feature flags by name or key.
+
+1. Go to **Releases > Feature flags**.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d5b6da7f-3e05-45d7-b39f-2d88df6eb600/public"
+  alt="The Feature flags page in Kinde"
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+2. Click a column heading to sort the list.
+3. Type a flag name in the search bar above the list to find a specific flag.
+4. Press **Enter** to show results.
+5. Clear the list by deleting the search term and pressing **Enter**.
+
+## Edit a feature flag
+
+You can only change the name, description, and default value of a feature flag. This changes the default value for all users that inherit the flag value.
+
+<Aside type="danger" title="You cannot edit the key, type, or override definitions of a feature flag">
+
+Editing these fields in a feature flag that is in use will cause breaking changes in your code, which is why we don’t allow it. We suggest you create a new flag in cases where you make an error when you create a flag, or if you want to re-purpose a flag.
+
+</Aside>
+
+1. Go to **Releases > Feature flags**.
+2. Select the three dots menu on the flag entry, and select **Edit feature flag**.
+3. Edit the **Name** or **Description**.
+4. Edit the **Default value**.
+5. Select **Save**. The changes will apply to all environments, organizations, and users that inherit the flag value.
+
+If you just want to edit the flag value in a specific environment or for a particular organization or user, see [Override feature flag values](/releases/feature-flags/edit-feature-flag/).
+
+## Delete a feature flag
+
+You can delete a feature flag in Kinde. Deleting also removes any flag value overrides in environments, organizations, and for users. This action is not reversible.
+
+1. Go to **Releases > Feature flags**.
+2. Select the three dots menu on the flag entry, and select **Delete feature flag**.
+3. In the confirmation window that appears, select **Delete feature flag**.

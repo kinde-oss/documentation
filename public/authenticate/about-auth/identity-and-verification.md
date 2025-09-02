@@ -1,0 +1,107 @@
+
+A key part of making authentication secure, is through verification of user identities. Verification usually happens at sign up, to ensure the person signing up exists and is the intended person gaining access to your app or project.
+
+This topic is a conceptual overview of how identity works in Kinde. There are two parts to a user’s identity in Kinde:
+
+- Kinde profile - first name, last name, and picture
+- Identity details - information a user can sign in with: Email, phone, social, enterprise. This is explained in more detail below.
+
+## Identity
+
+When we use the term ‘identity’, we’re referring to a unique identifier that allows a user to sign in and be verified. An email, phone number, SSO provider, etc.
+
+When a user tries to access a system or service, they provide their identity along with additional credentials (e.g. password, one-time password OTP) to verify their identity and gain access.
+
+## Types of identities
+
+### Identity credentials
+
+This refers to an email, phone number, or username. Identity credentials are created for a user when they first sign up with an email address, phone number, or username. If it’s the first identity to be added, it will be marked as primary.
+
+You can [manually add these user identities](/manage-users/add-and-edit/add-manage-user-identities/).
+
+### Social
+
+A social identity is created when a user signs up with a social account or when they sign in with a trusted provider, who supplies a verified email that matches an existing email identity in Kinde.
+
+If a user signs up with a trusted social provider that provides us a verified email, and an email identity does not exist for the user, Kinde creates an email identity with this email. They can use this email to sign in with (if an email authentication method is enabled for your application).
+
+### Enterprise
+
+An enterprise identity is created when a user signs up via an enterprise connection, or when they sign in via a trusted provider who supplies a verified email that matches an existing email identity.
+
+Users with enterprise identities in Kinde can't also have other identity types in Kinde. E.g. a user can have an email identity and a social identity. But if a user has an enterprise identity, they cannot have other identities. In this case, identity information is sourced with the identity provider and is managed via the identity provider, not in Kinde.
+
+## Trusting emails from providers
+
+### Trusted emails
+
+A trusted email provider is one that guarantees the email they issue is verified and also does not allow the user to change their primary email address.
+
+Currently Google is the only provider we treat as trusted by default. But you can choose to trust emails from any provider when you configure them in Kinde (See below). You can also choose not to trust Google emails if you want.
+
+**Google example**
+
+1. When a user signs up, the Kinde profile first name, last name and picture are populated from Google.
+2. If Google is a trusted provider, we create a social identity and an email identity.
+3. The user can sign in with either Google or their email (if this auth method is allowed).
+
+### Untrusted emails
+
+This isn’t to say that other email providers are not trustworthy, this purely relates to email addresses and the guarantee that it will not change.
+
+**LinkedIn example**
+
+1. When a user signs up, the Kinde profile first name, last name and picture are populated from LinkedIn.
+2. If LinkedIn is an untrusted email provider, we only create a social identity.
+3. At this stage the user can only sign in with their LinkedIn account.
+
+### Trust an untrusted provider
+
+When you set up an enterprise connection or a social connection, you can select the option to trust them. For example, go to **Settings > Authentication > Social connections** and select **Configure** on a tile. You’ll see the **Trust this connection** switch. Switch on or off as you like.
+
+## Email sign up flow example
+
+1. When a user signs up with email, the Kinde profile first name, last name are populated by the user (if you ask for it as part of the sign up flow). Their picture will be populated from Gravatar if it exists.
+2. Kinde creates a primary contact email using the address they signed up with. They can only sign in with this email address.
+3. If the same user returns and signs in with a trusted connection, e.g. Google, Kinde recognises that a user exists and the email address is from a trusted provider, so we add a Google identity to their profile.
+4. The Kinde profile first name, last name and picture are updated by Google (if profile syncing is also turned on).
+5. The user can sign in using either email or Google.
+
+## Keeping identities in sync
+
+### Social provider syncing
+
+If a social provider gives us a new first name, last name or picture for a user, Kinde updates these fields in the user profile to match those supplied to us.
+
+This is on by default, but you can turn it off if you wish to keep a static profile. [About profile sync](/manage-users/about/).
+
+If you have syncing off at an environment level but turned on at a social connection level we will honor the request for the social connection to sync.
+
+### Enterprise connection syncing
+
+If an enterprise provider gives us a new first name, last name, or picture for a user, Kinde updates these fields in the user profile to match those supplied to us.
+
+This is on by default, but you can turn it off if you wish to keep a static profile. [About profile sync](/manage-users/about/).
+
+If you have syncing off at an environment level but turned on at an enterprise connection level we will honor the request for the enterprise connection to sync.
+
+## Identity verification
+
+Verification is an authentication security measure that checks the person seeking system access is who they say they are. In addition, an up to date identity provides a secure method to contact a user. Email identity details are required, for example, to reset a user’s password (requested or forced), and are needed to reliably send OTPs and trigger other auth mechanisms, like auth apps.
+
+## Username identities must have an email
+
+At Kinde, we don’t treat username identities the same as phone and email identities. If you want users to sign in and authenticate with usernames, they still need to verify themselves (if only once) via email.
+
+## Cases in usernames
+
+Kinde treats usernames as case-insensitive. In other words, we ignore case. We do this because it eliminates the possibility of auth issues and fraud when two usernames are identical in every aspect except the case of one of their letters. 
+
+We are happy to support users choosing an aesthetically pleasing username combination, like `RosyRose` or `BuilderBob`. We just don't also support separate identities for `rosYrosE` and `BUilderbob`. 
+
+## When an identity changes
+
+For security reasons, you can’t edit a user’s verified identity. But we know it still needs to be possible. People change emails, change names, get new phone numbers, etc.
+
+You can update identities by adding a new identity and deleting the old one. See [Add and manage user identities](/manage-users/add-and-edit/add-manage-user-identities/), or [via the Kinde API](/kinde-apis/management/).

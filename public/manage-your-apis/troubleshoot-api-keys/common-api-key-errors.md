@@ -1,0 +1,346 @@
+
+Although we hope nothing goes awry with API keys, it can happen. This guide will help you identify, diagnose, and resolve problems that could arise when using API keys.
+
+## Perform regular maintenance to prevent errors with API keys
+
+It's always better to prevent errors than have to deal with them in a moment of crisis. Here's some tips for long-term API key management.
+
+- **Rotate API keys**: Periodically rotate keys for security. See [Rotate API keys](/manage-your-apis/add-manage-api-keys/rotate-api-keys/)
+- **Revoke unused keys**: Clean up keys that are no longer needed. See [Revoke API keys](/manage-your-apis/add-manage-api-keys/revoke-api-keys/)
+- **Review scopes**: Regularly audit and update API key permissions. See [Scopes for API keys](/manage-your-apis/add-manage-api-keys/scopes-for-api-keys/)
+- **Monitor usage**: Track API key usage patterns and anomalies. See [Verify API keys](/manage-your-apis/add-manage-api-keys/verify-api-keys-in-your-api/)
+
+## Common error types
+
+Here's a summary of some of the most common errors and the type of errors that can occur.
+
+### Authentication errors
+
+- Invalid API key
+- Expired tokens
+- Malformed requests
+- Missing authentication headers
+
+### Authorization errors
+
+- Insufficient scopes
+- Organization access denied
+- Rate limit exceeded
+- Geographic restrictions
+
+### Configuration errors
+
+- Missing properties
+- Invalid scopes
+- Organization mismatch
+- Workflow failures
+
+See below for full explanations and de-bugging assistance.
+
+## Authentication errors
+
+### "Invalid API key" error
+
+**Symptoms:**
+
+- HTTP 401 Unauthorized response
+- Error message: "Invalid API key" or "Authentication failed"
+
+**Common causes:**
+
+1. **API key copied incorrectly**: Missing or extra characters
+2. **API key revoked**: Key was deleted or deactivated
+3. **Wrong environment**: Using production key in test environment
+4. **Malformed request**: Incorrect header format
+
+**Solutions:**
+
+```bash
+# Verify API key format
+# Should look like: k_live_1234567890abcdef...
+
+# Check header format
+curl -X GET https://your-domain.kinde.com/api/users \
+  -H "Authorization: Bearer YOUR_API_KEY"  # Note: "Bearer " prefix
+
+# Verify key is active
+# Go to Settings > API Keys and check if key is enabled
+```
+
+**Debugging steps:**
+
+1. Copy the API key again from the dashboard.
+2. Check if the key is still active in your dashboard.
+3. Ensure you're using the correct domain.
+
+### "Token expired" error
+
+**Symptoms:**
+
+- HTTP 401 Unauthorized response
+- Error message: "Token expired" or "Invalid token"
+
+**Common causes:**
+
+1. **Access token expired**: Tokens typically expire after 1 hour
+2. **Clock skew**: Server time differs from client time
+3. **Cached expired token**: Application using old token
+
+**Solutions:**
+
+```javascript
+// Implement token refresh logic
+async function getValidToken(apiKey) {
+  try {
+    const response = await fetch("https://your-domain.kinde.com/oauth2/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: "grant_type=client_credentials&scope=openid profile"
+    });
+
+    const data = await response.json();
+    return data.access_token;
+  } catch (error) {
+    throw new Error("Failed to obtain access token");
+  }
+}
+
+// Use in your application
+let accessToken = await getValidToken(apiKey);
+let tokenExpiry = Date.now() + 3600000; // 1 hour
+
+// Check if token needs refresh
+if (Date.now() >= tokenExpiry) {
+  accessToken = await getValidToken(apiKey);
+  tokenExpiry = Date.now() + 3600000;
+}
+```
+
+**Debugging steps:**
+
+1. Check your system clock for accuracy.
+2. Implement proper token caching with expiration.
+3. Add logging to track token refresh cycles.
+4. Verify token expiration time in response.
+
+### "Malformed request" error
+
+**Symptoms:**
+
+- HTTP 400 Bad Request response
+- Error message: "Malformed request" or "Invalid request format"
+
+**Common causes:**
+
+1. **Missing Authorization header**: No Bearer token provided
+2. **Incorrect header format**: Wrong header name or value
+3. **Invalid request body**: Malformed JSON or form data
+
+**Solutions:**
+
+```javascript
+// Ensure proper header format
+const headers = {
+  Authorization: `Bearer ${apiKey}`,
+  "Content-Type": "application/json"
+};
+
+// For token exchange
+const formData = new URLSearchParams();
+formData.append("grant_type", "client_credentials");
+formData.append("scope", "openid profile");
+
+const response = await fetch("https://your-domain.kinde.com/oauth2/token", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/x-www-form-urlencoded",
+    Authorization: `Bearer ${apiKey}`
+  },
+  body: formData
+});
+```
+
+## Authorization errors
+
+### "Insufficient scope" error
+
+**Symptoms:**
+
+- HTTP 403 Forbidden response
+- Error message: "Insufficient scope" or "Access denied"
+
+**Common causes:**
+
+1. **Missing required scopes**: API key doesn't have necessary permissions
+2. **Scope mismatch**: Requested scope not granted to key
+3. **Organization restrictions**: Key scoped to different organization
+
+**Solutions:**
+
+```bash
+# Check current scopes
+# Go to the relevant user or organization > API Keys > [Your Key] > View
+# Verify required scopes are assigned
+
+```
+
+**Debugging steps:**
+
+1. Review the API key's assigned scopes.
+2. Check what scopes your endpoint requires.
+3. Verify organization scoping if applicable.
+4. Update API key scopes if needed.
+
+### "Organization access denied" error
+
+**Symptoms:**
+
+- HTTP 403 Forbidden response
+- Error message: "Organization access denied" or "Invalid organization"
+
+**Common causes:**
+
+1. **Wrong organization scope**: API key scoped to different organization
+2. **Organization not found**: Organization doesn't exist or is inactive
+3. **Cross-organization access**: Attempting to access different organization's data
+
+**Solutions:**
+
+```javascript
+// Verify organization in token
+function validateOrganizationAccess(token, requiredOrgCode) {
+  if (!token.org_code) {
+    throw new Error("Organization-scoped token required");
+  }
+
+  if (token.org_code !== requiredOrgCode) {
+    throw new Error("Access denied: organization mismatch");
+  }
+
+  return true;
+}
+
+// Use in your API endpoint
+app.get("/api/users/:userId", async (req, res) => {
+  try {
+    const token = extractTokenFromRequest(req);
+    const user = await getUserById(req.params.userId);
+
+    // Validate organization access
+    validateOrganizationAccess(token, user.organization_code);
+
+    res.json(user);
+  } catch (error) {
+    res.status(403).json({error: error.message});
+  }
+});
+```
+
+**Debugging steps:**
+
+1. Check if your API key is organization-scoped.
+2. Verify the organization code in the token.
+3. Ensure you're not trying to access cross-organization data.
+4. Check the organization status in the dashboard.
+
+### "Rate limit exceeded" error
+
+**Symptoms:**
+
+- HTTP 429 Too Many Requests response
+- Error message: "Rate limit exceeded" or "Too many requests"
+
+**Common causes:**
+
+1. **High request volume**: Exceeding API key rate limits
+2. **Burst requests**: Too many requests in short time
+3. **Shared rate limits**: Multiple applications using same key
+
+**Solutions:**
+
+```javascript
+// Implement rate limiting in your application
+class RateLimiter {
+  constructor(limit, window) {
+    this.limit = limit;
+    this.window = window;
+    this.requests = new Map();
+  }
+
+  async checkLimit(key) {
+    const now = Date.now();
+    const windowStart = now - this.window;
+
+    // Clean old entries
+    if (this.requests.has(key)) {
+      this.requests.set(
+        key,
+        this.requests.get(key).filter((timestamp) => timestamp > windowStart)
+      );
+    }
+
+    const currentRequests = this.requests.get(key) || [];
+
+    if (currentRequests.length >= this.limit) {
+      return false; // Rate limited
+    }
+
+    currentRequests.push(now);
+    this.requests.set(key, currentRequests);
+    return true;
+  }
+}
+
+// Usage
+const rateLimiter = new RateLimiter(100, 60000); // 100 requests per minute
+
+if (!(await rateLimiter.checkLimit(apiKey))) {
+  throw new Error("Rate limit exceeded. Please try again later.");
+}
+```
+
+**Debugging steps:**
+
+1. Check your API key's rate limit settings.
+2. Monitor request frequency in your application.
+3. Implement proper request throttling.
+4. Consider using separate API keys for different services.
+
+## Configuration errors
+
+### "Invalid scopes" error
+
+**Symptoms:**
+
+- API key creation fails
+- Error message: "Invalid scope" or "Scope not found"
+
+**Common causes:**
+
+1. **Scope doesn't exist**: Requested scope not defined
+2. **Scope name typo**: Incorrect scope name
+3. **Scope not available**: Scope not enabled for your plan
+
+**Solutions:**
+
+```bash
+# Check available scopes
+# Go to Settings > APIs > Scopes
+# Verify scope names and availability
+
+# Common standard scopes:
+# Common standard scopes:
+# - openid
+# - profile
+# - email
+# - offline_access
+
+**Debugging steps:**
+
+1. Review available scopes in dashboard.
+2. Check scope spelling and format.
+3. Verify scope availability for your plan.
+4. Create custom scopes if needed.

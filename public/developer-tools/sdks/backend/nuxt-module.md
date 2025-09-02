@@ -1,0 +1,311 @@
+
+The Nuxt Kinde module allows developers to integrate Kinde authentication into their existing Nuxt projects.
+
+For new projects, you can also find our [Starter Kit on GitHub](https://github.com/kinde-starter-kits/nuxt-starter-kit).
+
+## Supported versions
+
+Nuxt 3+.
+
+## Register with Kinde
+
+If you haven’t already got a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). Registering gives you a Kinde domain, which you need to get started, e.g. **yourapp.kinde.com**.
+
+## Install the module
+
+Install the `@nuxtjs/kinde` dependency using your package manager of choice.
+
+```bash
+npx nuxi@latest module add kinde
+```
+
+## Integrate with your app
+
+Add `@nuxtjs/kinde` to the modules section of your `nuxt.config.ts`.
+
+```jsx
+export default defineNuxtConfig({
+  modules: ["@nuxtjs/kinde"]
+});
+```
+
+Add the following values to your `.env` file. If you don't have one create a file in the root of your project.
+
+```bash
+NUXT_KINDE_CLIENT_ID=<your_kinde_client_id>
+NUXT_KINDE_CLIENT_SECRET=<your_kinde_client_secret>
+NUXT_KINDE_AUTH_DOMAIN=https://<your_kinde subdomain>.kinde.com
+NUXT_KINDE_REDIRECT_URL=http://localhost:3000/api/callback
+NUXT_KINDE_LOGOUT_REDIRECT_URL=http://localhost:3000
+NUXT_KINDE_PASSWORD=<a random password which will be used to encrypt the session cookie>
+NUXT_KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000/dashboard
+```
+
+Replace [`http://localhost:3000`](http://localhost:3000/) with the URL where your project is running.
+
+## Set callback URLs
+
+For your app to work with Kinde, you need to set callback and logout redirect URLs.
+
+Replace the values you see in `<code brackets>` with your own values.
+
+1. In Kinde, go to **Settings > Applications.**
+2. Select **View details** on your app.
+3. Scroll down to the **Callback URLs** section.
+4. Add in the callback URLs for your project, which might look something like this:
+   - Allowed callback URLs (also known as Redirect URIs)- `<http://localhost:3000>/api/callback>`
+   - Allowed logout redirect URLs - `<http://localhost:3000>`
+5. Select **Save**.
+
+**Tip**: Make sure there are no hidden spaces in URLs and remove the ‘/’ backslash at the end.
+
+## Environments
+
+If you would like to use different Environments as part of your development process, you will need to [add them within your Kinde business](/build/environments/environments/) first. You will also need to add the Environment subdomain to the code block above.
+
+## Login and register
+
+Kinde supports an easy to implement login / register flow.
+
+Use the button examples below to redirect your users to Kinde, where they authenticate before being redirected back to your site.
+
+```jsx
+
+<LoginLink to="/api/login" external>
+	Sign in
+</LoginLink>
+
+<RegisterLink to="/api/register" external>
+	Sign up
+</RegisterLink>
+```
+
+## R**edirect after authentication**
+
+After your user has authenticated they will be redirected to the URL set in your `.env` file
+
+```bash
+NUXT_KINDE_POST_LOGIN_REDIRECT_URL=<where_your_project_is_running>
+```
+
+## Protecting pages
+
+It’s likely that your project will have both pages that are publicly available and private ones which should only be available to logged in users. 
+
+Route protection is set up in within the `routeRules` in `nuxt.config.ts`
+
+In the below example,
+
+- `/**` - This protected all routes redirecting the login route. 
+- `/dashboard` - route is protected for users with `admin` permissions.
+- `/public` - this is flagged as a public route and will be open to all visitors.
+
+```jsx
+routeRules: {
+  '/**': {
+    appMiddleware: ['auth-logged-in'],
+    kinde: {
+      redirectUrl: '/api/login',
+      external: true,
+    },
+  },
+  '/dashboard': {
+    appMiddleware: ['auth-logged-in'],
+    kinde: {
+      // list of permissions that are required to access the route
+      permissions: {
+        admin: true,
+      },
+      redirectUrl: '/api/login',
+      external: true,
+    },
+  },
+  '/public': {
+    appMiddleware: ['auth-logged-in'],
+    kinde: {
+      public: true,
+    },
+  },
+},
+```
+
+## Getting all permissions for the current user
+
+Once a user has been verified, your project or app returns the JWT token with an array of permissions for that user. Configure your app to read permissions and unlock the respective functions.
+
+[Set permissions](/manage-users/roles-and-permissions/user-permissions/) in your Kinde account. Here’s an example set of permissions.
+
+```jsx
+const permissions = [
+  "create:todos",
+  "update:todos",
+  "read:todos",
+  "delete:todos",
+  "create:tasks",
+  "update:tasks",
+  "read:tasks",
+  "delete:tasks
+];
+```
+
+We provide helper functions to more easily access the permissions claim, example of usage:
+
+```jsx
+const client = useKindeClient();
+
+const {data: permissions} = await useAsyncData(async () => {
+  const {permissions} = (await client?.getPermissions()) ?? {};
+  return permissions;
+});
+// { orgCode: 'org_1234', permissions: ['create:todos', 'update:todos', 'read:todos'] }
+
+const {data: hasAccess} = await useAsyncData(async () => {
+  return (await client?.getPermission("create:todos")) ?? {};
+});
+// { orgCode: 'org_1234', isGranted: true }
+```
+
+## Feature flags
+
+When a user signs in, the access token your project/application receives contains a custom claim called `feature_flags` which is an object detailing the feature flags for that user.
+
+You can [set feature flags](/releases/feature-flags/add-feature-flag/) in your Kinde account. Here’s an example.
+
+```jsx
+feature_flags: {
+  theme: {
+      "t": "s",
+      "v": "pink"
+ },
+ is_dark_mode: {
+      "t": "b",
+      "v": true
+  },
+ competitions_limit: {
+      "t": "i",
+      "v": 5
+  }
+}
+```
+
+We have provided a helper to grab any feature flag. For example:
+
+```jsx
+const getFeatureFlag = async (feature: string) => {
+  return await client?.getFlag(feature);
+}
+```
+
+You can find specific `string`, `boolean` and `integer` helpers in the [TypeScript SDK ](/developer-tools/sdks/backend/typescript-sdk/#feature-flags)docs.
+
+## Check if the user is authenticated
+
+You can check if a user is logged in with the `$auth.loggedIn` context.
+
+```jsx
+<p v-if="$auth.loggedIn">
+	I'm signed in!
+</p>
+<p v-else>
+ I'm signed out :(
+</p>
+```
+
+## Logout
+
+This is implemented in much the same way as signing up or signing in.
+
+```jsx
+<NuxtLink to="/api/logout" external>
+  Sign out
+</NuxtLink>
+```
+
+## Test sign up
+
+Register your first user by signing up yourself. You’ll see your newly registered user on the **Users** page in Kinde.
+
+## Get user information
+
+### User profile
+
+User details can be found on the `$auth.user` object
+
+```jsx
+{{ $auth.user }}
+
+// returns
+{
+	id: "kp_12345556666",
+	given_name: "Sally",
+	family_name: "Smith",
+	email: "sally.smith@example.com",
+	picture: "https://lh3.googleusercontent.com/a/1234",
+	updated_at: 1697769735
+}
+```
+
+## Organizations
+
+### Create an organization
+
+To have a new organization created within your project, you can use the register api end point and pass `is_create_org="true"`. This will redirect the user to Kinde and create an organization with them as a member.
+
+```jsx
+<NuxtLink to="/api/register?is_create_org=true" external>
+  Register and create org
+</NuxtLink>
+```
+
+### Sign users up or in to an organization
+
+When a user signs up or in to an organization, the `org_code` needs to be passed with the request. The `org_code` refers to the one created automatically in Kinde when the organization was created.
+
+Here’s an helper function for registering or signing in below using `org_0e9f496742ae` as an example:
+
+```jsx
+<NuxtLink to="/api/login?org_code=org_0e9f496742ae" external>
+	Sign in to org
+</NuxtLink>
+
+<NuxtLink to="/api/register?org_code=org_0e9f496742ae" external>
+	Sign up to org
+</NuxtLink>
+```
+
+Because a user can belong to multiple organizations, and because they may have different permissions for the different organizations, we will pass you both the `org_code` and `permissions` back in the token when authentication is initiated like this.
+
+## Health check
+
+To check your configuration, the SDK exposes an endpoint with your settings.
+
+`/api/health`
+
+**Note**: The client secret will indicate only if the secret is set or not set correctly.
+
+To enable set the debug property within the Kinde config.
+
+```jsx
+export default defineNuxtConfig({
+  kinde: {
+    debug: true
+  }
+});
+```
+
+```jsx
+{
+	"apiPath": "https://<your_kinde subdomain>.kinde.com",
+	"redirectURL": "http://localhost:3000/api/callback",
+	"postLoginRedirectURL": "http://localhost:3000/dashboard",
+	"logoutRedirectURL": "http://localhost:3000",
+	"clientID": "<your_kinde_client_id>",
+	"clientSecret": "Set correctly"
+}
+```
+
+## Kinde Management API
+
+To use our management API please see [@kinde/management-api-js](https://github.com/kinde-oss/management-api-js)
+
+If you need help using Kinde, please contact us at [support@kinde.com](mailto:support@kinde.com) or join the Kinde community on [Discord](https://discord.com/invite/tw5ng5tK6V) or [Slack](https://join.slack.com/t/thekindecommunity/shared_invite/zt-2k5i0aeet-d6Z_2qYphcNCpj0bFa4oCg).

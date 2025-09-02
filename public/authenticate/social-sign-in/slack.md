@@ -1,0 +1,51 @@
+
+You can enable users to sign up and sign in using their Slack credentials. To enable this, you’ll need some technical know-how and a Slack app.
+
+<Aside type="warning" title="Social sign in for production environments">
+
+Before you make your production environment live, you must add your own social app's Client ID and Client secret in the Kinde connection (as per below). Do not use Kinde's app credentials by leaving the fields blank, as this poses a security and performance risk, and makes it difficult to change auth providers without service disruptions for your users.
+
+</Aside>
+
+## **Copy the callback URL from Kinde**
+
+1. In Kinde, go to **Settings** > **Authentication**.
+2. If you have not yet added the Slack social connection, select **Add connection** in the **Social authentication** section.
+3. Select Slack, then **Next**.
+4. In the **Callback URL** section:
+   1. If you use Kinde’s domain as your default, copy the **Kinde domain** URL.
+   2. If you use custom domains, select the Use custom domain instead switch.
+   3. If you have only one custom domain, copy the Custom domain URL. If you have custom domains for multiple organizations, select each one from the list and copy the callbacks for each. You need to enter all custom domain callbacks in the Slack app.
+5. Select **Save**.
+6. Use the copied Callback URL to set up the app, see below.
+
+## **Create a Slack app**
+
+1. Go to [Slack API Applications](https://api.slack.com/apps) and log in to your workspace.
+2. Select **Create an App**. The **Create an app** window opens.
+3. Choose how you’d like to configure your app’s scopes and settings.
+4. If you are not sure, choose the **From scratch** option.
+5. Enter your **App Name** and **Select a workspace**.
+6. Click **Create App**. Your app is created.
+7. Scroll to the **App Credentials** section and copy the **Client ID** and **Client Secret** and paste them in a text file or somewhere you can easily copy them.
+
+### **Configure your Slack app**
+
+1. In your Slack app, go to the **OAuth & Permissions** section.
+2. Scroll to the **Redirect URLs** area and add the callback URLs you got from Kinde, then select **Save URLs**. Add additional entries for all your organization custom domain callbacks, e.g. account.customdomainone.com/login/callback, account.customdomaintwo.com/login/callback, etc.
+3. To define what info will be shared when a user signs up or signs in with Slack, scroll to the **Scopes** section.
+4. In the **User Token Scopes** area, select **Add an OAuth Scope** and from the dropdown menu choose **users.profile:read**.
+5. Scroll up to the **OAuth Tokens for Your Workspace** section and select **Install to Workspace**. And when prompted, select **Allow**.
+6. Select **Manage distribution** on the left and go to the **Share Your App with Other Workspaces** section.
+7. Select **Remove Hard Coded Information** and in the area that appears, select the **I’ve reviewed and removed any hard-coded information** option.
+8. Select **Activate Public Distribution**. Your app is now ready to use.
+
+### **Add Slack credentials to Kinde**
+
+1. In Kinde, go to **Settings** > **Authentication**.
+2. On the Slack tile, select **Configure**.
+3. Paste the **Client ID** and **Client secret** from the Slack app into the relevant fields.
+4. Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified. We recommend leaving this off for maximum security.
+5. Add any [upstream params](/authenticate/auth-guides/pass-params-idp/) that you want to pass to the IdP.
+6. Select which applications will allow Slack SSO.
+7. Select **Save**. Users will now see Slack as an option to sign up and sign in to the selected applications.

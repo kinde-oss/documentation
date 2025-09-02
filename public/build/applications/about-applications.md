@@ -1,0 +1,70 @@
+
+Applications in Kinde facilitate the receipt of access tokens in your application’s code. Kinde applications use OAuth 2.0 flows to securely pass tokens.
+
+See [Section 4 of the OAuth 2.0 Authorization Framework](https://datatracker.ietf.org/doc/html/rfc6749#section-4) for details on Authorization flows.
+
+We support the following applications and flows.
+
+## Back-end / server-side apps
+
+Use for server-rendered web applications. Suitable for confidential applications (such as Regular Web Applications) because the application's authentication methods are included in the exchange and must be kept secure.
+
+### Secured with Authorization Code Flow
+
+This application uses the Authorization Code Flow to exchange an authorization code for a token.
+
+For security, a client secret is required to request an access token. The client secret is known only to the application and the authorization server. So when the application makes a request for an access token, it includes the client secret as a form of authentication. This ensures that the authorization server can verify the identity of the client application.
+
+The use of client secrets protects sensitive data from being accessed by unauthorized users and systems.
+
+<Aside>
+
+If the Client secret field is empty in your Kinde app it’s because client secrets are only available for back-end/server-side apps. You may have created a front-end/client-server app (that has no client secret) by mistake.
+
+</Aside>
+
+### SDKs and compatible frameworks
+
+Apollo GraphQL, Elixir, ExpressJS, Express GraphQL, Java, .NET, Next.js, NodeJS, Nuxt, PHP, Python, Ruby, TypeScript.
+
+[View Kinde SDKs](/developer-tools/about/our-sdks/)
+
+## Front-end / client-side apps
+
+Use for client-side web applications, single page web applications, and mobile applications. Authentication methods are different for these apps because they run in unsecured systems, such as web browsers.
+
+### Secured with Authorization Code Flow and PKCE
+
+This application uses the Authorization Code Flow with Proof Key for Code Exchange (PKCE).
+
+Client-side applications, such as single-page web apps, are typically unable to securely store a client secret due to the inherent exposure of client-side code. That’s why OAuth 2.0 recommends the Implicit Flow or PKCE (Proof Key for Code Exchange) to provide security without relying on a client secret.
+
+<Aside>
+
+**Kinde does not support the Implicit Flow** method for front-end apps as it has some security vulnerabilities. We support Authorization Code Flow with PKCE instead.
+
+</Aside>
+
+### SDKs and compatible frameworks
+
+JavaScript, React, TypeScript, Android, iOS, React Native, Expo, Flutter, Node/Apollo GraphQL, Node/Express GraphQL.
+
+[View Kinde SDKs](/developer-tools/about/our-sdks/)
+
+## Machine to machine (M2M) apps
+
+Use for your backend services that require access to an API. This includes accessing the Kinde management API. Other use cases include CLIs, daemons and IoT devices. You can create as many M2M apps as you require. See [Add a machine to machine application for API access](/developer-tools/kinde-api/connect-to-kinde-api/).
+
+### Secured with Client Credentials
+
+M2M applications are secured through an initial exchange of each application’s Client ID and Client Secret. This identifies each application as authorized for token exchange.
+
+Each access token request must include the `Client Credentials` grant type. Typically, a request includes scopes, which define the type of information that can be requested in the exchange.
+
+### Access to Kinde's Management API is managed via scopes
+
+When you set up an M2M application that you will use with Kinde's Management API, you need to select the scopes that your application will need to access. For example, you'll select `read`, `create`, `update`, and `delete` actions.
+
+### Add properties to M2M tokens
+
+If you want, you can [add custom properties to an M2M application](/properties/work-with-properties/manage-properties/) and then [include these properties in M2M tokens](/properties/work-with-properties/properties-in-tokens/). This is helpful if you want to include special information when you pass M2M tokens between systems.

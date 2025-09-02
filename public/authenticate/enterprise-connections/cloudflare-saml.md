@@ -1,0 +1,97 @@
+
+If you use Cloudflare to centralize authentication and authorization in your business, you can integrate Kinde as a service provider for these processes. This gives you the benefits of Kinde’s robust auth capabilities, while keeping the familiar Cloudflare structure.
+
+You need to set up an enterprise connection in Kinde for this, and add a Cloudflare application. We recommend setting up and testing the connection in a non-production environment before making available to users.
+
+## Advanced configurations
+
+Depending on your SAML set up, you may need to include advanced configurations for your connection. See [Advanced SAML configurations](/authenticate/enterprise-connections/advanced-saml-configurations/)
+
+## Step 1: Add the connection in Kinde
+
+<Aside>
+
+You can make a connection available only to a specific organization, or you can create it so it can be used across any organization in your business. 
+
+</Aside>
+
+### Add a connection for a specific organization
+
+1. Go to **Organizations** and open the organization. 
+2. In the menu, select **Authentication**, then select **Add connection**.
+3. In the **Add connection** window, select **New enterprise connection**, then click **Next**.
+4. Select the Cloudflare connection and then select **Next**. 
+5. Next: 'Step 2: Configure the connection'.
+
+### Add a connection that can be shared across multiple organizations
+
+1. Go to **Settings > Environment > Authentication**.
+2. Scroll to the **Enterprise connection** section and select **Add connection**. The **Add connection** window opens.
+3. Select the Cloudflare connection and then select **Next**.
+4. Next: 'Step 2: Configure the connection'.
+
+## Step 2: Configure the connection
+
+1. Enter a name for the connection. It should match the connection name in Cloudflare.
+2. Enter a random string value for Entity ID, for e.g. `870sa9fbasfasdas23aghkhc12zasfnasd`.
+3. Enter the **IdP metadata URL**. This URL comes from your identity provider.
+
+   ![optional fields for saml](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4f1851db-5c34-496b-ced1-07c1cd272b00/public)
+
+4. Enter a **sign in URL** if your IdP requires a specific URL.
+5. If you want, select the **Sign request algorithm** and **Protocol binding**. The options you choose will depend on what your identity provider prefers or requires.
+6. Select a **Name ID** format. This helps identify and link user identities between your IdP and Kinde. 
+7. Enter an **Email key attribute**. This is the attribute in the SAML token that contains the user’s email. Setting this value ensures that the email address returned in the SAML response is correctly retrieved. We do not recommend leaving this field blank, but if you do we will set ‘email’ as the attribute.
+8. (Optional) Add a first name and last name key attribute.
+
+   ![Home realm domains in SAML configuration](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/dbdccca5-2e6c-4dd8-eaec-e029574daf00/public)
+
+9. Enter any relevant **Home realm domains**. This is how SAML recognizes a user’s credentials and routes them to the correct sign in page. Note that home realm domains need to be unique across all connections in an environment. [Read more about home realm domains](/authenticate/enterprise-connections/home-realm-discovery/).
+10. If you use home realm domains, the sign in button is hidden on the auth screen by default. To show the SSO button, select the **Always show sign-in button** option. 
+
+    ![ACS URL and custom domain option](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/885eda9c-ca4f-4340-db17-224023b8c300/public)
+
+11. Copy the relevant reply URL: 
+    1. If you don't use a custom domain, copy the **ACS URL**.
+    2. If you do use a custom domain, select the **Use custom domain instead** option and copy the custom domain URL. 
+    Later, add this URL to your identity provider configuration.
+12. If you want to enable just-in-time (JIT) provisioning for users, select the **Create a user record in Kinde** option. This saves time adding users manually or via API later.
+
+    ![Provisioning configuration for SAML](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/947baea7-bfd4-48b7-de2d-5b041b8c8300/public)
+
+13. (Temporary feature) Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified.
+14. (Optional) In the **Sign SAML request** section, paste in the **Signed certificate** and **Private key**. You may have got these from your IdP or you may have generated yourself (see procedure above).
+15. Enter any [upstream params](/authenticate/enterprise-connections/advanced-saml-configurations/#upstream-parameters) that you want to pass to the identity provider. Not all providers support this, so check their documentation first.
+16. Select **Save**.
+
+## Step 3: Add and configure your Cloudflare application
+
+1. Sign in to your Cloudflare account.
+2. In the menu, select **Zero trust**.
+3. Go to **Access > Applications**, then select **Add an application**.
+4. Select SaaS as the type of application. The **Add application** window opens.
+
+   ![Application settings](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7a600656-63c7-42a1-73c6-8780c6d4f400/public)
+
+5. Enter an application name or select an application.
+6. Choose **Select SAML** for the authentication protocol.
+7. Select **Add Application**. The **Configure application** page opens.
+
+   ![Configure application in Cloudflare](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/64549f6e-4a94-41a0-7018-0fb7b7becf00/public)
+
+7. Add the **Entity ID** and **ACS URL** from Kinde.
+8. Copy the **SAML Metadata endpoint** to your clipboard. You'll need to enter this back in Kinde.
+9. Scroll through the other sections and then select **Save configuration**. The **Add policies** page opens.
+10. Add a policy to define who can access your application. You might do this via an allowlist and groups, or other strategy.
+11. Complete any other relevant sections of the window, and then select **Done**.
+
+   ![Screen shot of Application list in Cloudflare](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c11f72f1-22ff-428c-a7db-a13493ea5f00/public)
+
+## Step 4: Finish setting up your Cloudflare connection
+
+1. Open the connection in Kinde. Via **Organization > Authentication** or via **Settings > Authentication**.
+2. Scroll to the **IdP metadata URL** field and paste the **Metadata URL** you copied from your Cloudflare app.
+3. Switch on the connection. This will make it instantly available to users if this is your production environment.
+   1. For environment-level connections, scroll down and select the apps that will use the auth method.
+   2. For organization-level connections, scroll down and select if you want to switch this on for the org. 
+4. Select **Save**.

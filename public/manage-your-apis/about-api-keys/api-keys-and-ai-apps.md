@@ -1,0 +1,436 @@
+
+API keys are ideal for people building AI products. They allow developers to securely connect apps to third-party services (like OpenAI) and to manage access to AI models or data. For example, a SaaS app might use API keys to let users generate AI-powered content, analyze data, or automate workflows. 
+
+API keys also provide secure authentication, usage tracking, and control over access, making it easier to safely expose AI capabilities to end-users without exposing underlying system credentials.
+
+This guide shows you how to implement secure AI integrations for both B2C (user-level) and B2B (organization-level) products while maintaining proper data isolation.
+
+## Why use API keys for AI (B2C and B2B)?
+
+### B2C (user-level) benefits
+
+- **Clear user context**: Every AI action is attributed to a specific user (`user_id`).
+- **Trusted verification**: The `user_id` in verification responses is verified and cannot be tampered with.
+- **Audit trail**: Attribute model actions, prompts, and results to a user.
+
+### B2B (organization-level) benefits
+
+- **Clear organization context**: AI applications are associated with specific organizations (`org_code`).
+- **Trusted verification**: The `org_code` in verification responses is verified and cannot be tampered with.
+- **Audit trail**: Track which organization each AI operation affects.
+
+### Use case examples (both)
+
+- **Customer AI assistants**: Respond using a user's or organization's data.
+- **AI-powered analytics**: Analyze personal or organization datasets.
+- **Automated workflows**: Perform tasks within user or organization boundaries.
+- **Intelligent integrations**: Connect to customer systems with the right context.
+
+## Choose the right API key type
+
+- Use user-level API keys for B2C features, personal assistants, or per-user automations.
+- Use organization-level API keys for multi-tenant B2B features, shared datasets, or team automations.
+
+Learn more: user-level keys (/manage-your-apis/key-types/api-keys-for-users/), organization-level keys (/manage-your-apis/key-types/api-keys-for-organizations/)
+
+## Setting up AI applications with API keys
+
+### Step 1a: Create organization-level API keys (B2B)
+
+```bash
+# Create an API key for each customer's AI integration
+curl -X POST https://your-domain.kinde.com/api/v1/api_keys \
+  -H "Authorization: Bearer YOUR_M2M_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "AI Assistant for Customer ABC",
+    "api_id": "api_customer_data",
+    "scope_ids": ["read:users", "read:analytics", "read:support"],
+    "org_code": "org_customer_abc"
+  }'
+```
+
+### Step 1b: Create user-level API keys (B2C)
+
+```bash
+# Create an API key for a user's personal AI assistant
+curl -X POST https://your-domain.kinde.com/api/v1/api_keys \
+  -H "Authorization: Bearer YOUR_M2M_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Personal AI Assistant for Jane Doe",
+    "api_id": "api_user_data",
+    "scope_ids": ["read:profile", "read:history"],
+    "user_id": "kp_1234567890"
+  }'
+```
+
+### Step 2: Configure your API scopes
+
+- Define scopes for your AI endpoints in your API settings. For example:
+  - `read:ai_chats`
+  - `write:ai_chat`
+  - `read:ai_analytics`
+  - `write:ai_analytics`
+  - `read:ai_workflows`
+- Assign the appropriate `scope_ids` when creating keys (see step 1a/1b above).
+- Enforce scopes at runtime when handling requests:
+
+```javascript
+// After verifying the API key
+const requiredScopes = ["read:ai_chats"]; // adjust per endpoint
+for (const scope of requiredScopes) {
+  if (!verification.scopes.includes(scope)) {
+    return res.status(403).json({error: `Insufficient scope: ${scope}`});
+  }
+}
+```
+
+Learn more: Scopes for API keys (/manage-your-apis/api-key-setup/scopes-for-api-keys/), Secure your API using scopes (/manage-your-apis/your-apis/custom-api-scopes/)
+
+### Step 3: Implement AI logic with trusted context
+
+```javascript
+class AIApplication {
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+    this.organization = null; // For org-level keys
+    this.userId = null; // For user-level keys
+  }
+
+  async authenticate() {
+    const verification = await this.verifyApiKey();
+    this.organization = verification.org_code || null;
+    this.userId = verification.user_id || null;
+    return verification;
+  }
+
+  async verifyApiKey() {
+    const response = await fetch("https://your-domain.kinde.com/api/v1/api_keys/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        api_key: this.apiKey
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error("API key verification failed");
+    }
+
+    return response.json();
+  }
+
+  async processAIRequest(prompt, context = {}) {
+    // Ensure we have some trusted context
+    if (!this.organization && !this.userId) {
+      throw new Error("AI application not authenticated");
+    }
+
+    // Add context (user or organization) to the prompt
+    const enhancedPrompt = `
+      ContextOwner: ${this.organization ? `org:${this.organization}` : `user:${this.userId}`}
+      Context: ${JSON.stringify(context)}
+      User Request: ${prompt}
+    `;
+
+    // Process with AI provider
+    const aiResponse = await this.callAIProvider(enhancedPrompt);
+
+    return {
+      response: aiResponse,
+      organization: this.organization,
+      user_id: this.userId,
+      context
+    };
+  }
+}
+```
+
+## Common AI integration patterns
+
+### AI support or help assistant (handles both)
+
+```javascript
+app.post("/ai/support", async (req, res) => {
+  try {
+    const apiKey = extractApiKey(req);
+    const verification = await verifyApiKey(apiKey);
+
+    if (!verification.is_valid) {
+      return res.status(401).json({error: "Invalid API key"});
+    }
+
+    // Restrict data to either the user or organization context
+    const contextOwner = verification.org_code
+      ? {org: verification.org_code}
+      : {user: verification.user_id};
+    if (!contextOwner.org && !contextOwner.user) {
+      return res
+        .status(403)
+        .json({error: "Trusted context required (user-level or org-level API key)"});
+    }
+
+    // Fetch only allowed data for that context
+    const supportHistory = contextOwner.org
+      ? await getOrgSupportHistory(contextOwner.org)
+      : await getUserSupportHistory(contextOwner.user);
+    const profile = contextOwner.org
+      ? await getOrgProfile(contextOwner.org)
+      : await getUserProfile(contextOwner.user);
+
+    // Process AI request with context
+    const aiResponse = await processSupportRequest(
+      req.body.message,
+      supportHistory,
+      profile,
+      contextOwner
+    );
+
+    res.json({
+      response: aiResponse,
+      organization: verification.org_code || null,
+      user_id: verification.user_id || null,
+      data_sources: ["support_history", "profile"]
+    });
+  } catch (error) {
+    console.error("AI support error:", error);
+    res.status(500).json({error: "Internal server error"});
+  }
+});
+```
+
+### AI-powered analytics dashboard
+
+```javascript
+app.get("/ai/analytics", async (req, res) => {
+  try {
+    const apiKey = extractApiKey(req);
+    const verification = await verifyApiKey(apiKey);
+
+    if (!verification.is_valid) {
+      return res.status(401).json({error: "Invalid API key"});
+    }
+
+    // If it's org-level, analyze org data; otherwise analyze per-user analytics
+    const analyticsData = verification.org_code
+      ? await getOrgAnalyticsData(verification.org_code)
+      : await getUserAnalyticsData(verification.user_id);
+
+    // Generate AI insights
+    const insights = await generateAnalyticsInsights(
+      analyticsData,
+      verification.org_code || verification.user_id
+    );
+
+    res.json({
+      insights,
+      organization: verification.org_code || null,
+      user_id: verification.user_id || null,
+      data_summary: {
+        total_records: analyticsData.length,
+        date_range: analyticsData.dateRange
+      }
+    });
+  } catch (error) {
+    console.error("AI analytics error:", error);
+    res.status(500).json({error: "Internal server error"});
+  }
+});
+```
+
+### AI workflow automation
+
+```javascript
+app.post("/ai/workflow", async (req, res) => {
+  try {
+    const apiKey = extractApiKey(req);
+    const verification = await verifyApiKey(apiKey);
+
+    if (!verification.is_valid) {
+      return res.status(401).json({error: "Invalid API key"});
+    }
+
+    // Execute within the allowed boundary (user or organization)
+    const workflowData = verification.org_code
+      ? await getOrgWorkflowData(verification.org_code)
+      : await getUserWorkflowData(verification.user_id);
+    const permissions = verification.org_code
+      ? await getOrgPermissions(verification.org_code)
+      : await getUserPermissions(verification.user_id);
+
+    // Execute AI workflow
+    const result = await executeAIWorkflow(
+      req.body.workflow,
+      workflowData,
+      permissions,
+      verification.org_code || verification.user_id
+    );
+
+    res.json({
+      result,
+      organization: verification.org_code || null,
+      user_id: verification.user_id || null,
+      workflow_id: result.id,
+      execution_time: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("AI workflow error:", error);
+    res.status(500).json({error: "Internal server error"});
+  }
+});
+```
+
+## AI-specific security considerations
+
+### Rate limiting for AI applications
+
+```javascript
+const rateLimit = require("express-rate-limit");
+
+// Stricter rate limiting for AI endpoints
+const aiRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // Limit each API key to 50 AI requests per window
+  message: {
+    error: "AI rate limit exceeded",
+    code: "AI_RATE_LIMITED"
+  },
+  keyGenerator: (req) => {
+    // Use API key as rate limit key
+    return req.apiKey?.key_id || req.ip;
+  }
+});
+
+app.use("/ai/*", aiRateLimiter);
+```
+
+### AI prompt security
+
+```javascript
+function sanitizeAIInput(input) {
+  // Remove potentially harmful content
+  const sanitized = input
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/javascript:/gi, "")
+    .replace(/on\w+\s*=/gi, "");
+
+  // Limit input length
+  if (sanitized.length > 10000) {
+    throw new Error("Input too long");
+  }
+
+  return sanitized;
+}
+
+app.post("/ai/process", async (req, res) => {
+  try {
+    const sanitizedInput = sanitizeAIInput(req.body.input);
+
+    // Process with AI...
+    const result = await processWithAI(sanitizedInput);
+
+    res.json({result});
+  } catch (error) {
+    res.status(400).json({error: error.message});
+  }
+});
+```
+
+### AI response validation
+
+```javascript
+function validateAIResponse(response) {
+  // Check for potentially harmful content
+  const harmfulPatterns = [
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+    /javascript:/gi,
+    /on\w+\s*=/gi
+  ];
+
+  for (const pattern of harmfulPatterns) {
+    if (pattern.test(response)) {
+      throw new Error("AI response contains potentially harmful content");
+    }
+  }
+
+  // Check response length
+  if (response.length > 50000) {
+    throw new Error("AI response too long");
+  }
+
+  return response;
+}
+```
+
+## Monitoring AI applications
+
+### Track AI usage patterns
+
+```javascript
+function logAIUsage(apiKey, organization, endpoint, inputLength, responseLength) {
+  logger.info("AI usage", {
+    api_key: apiKey,
+    organization,
+    endpoint,
+    input_length: inputLength,
+    response_length: responseLength,
+    timestamp: new Date().toISOString()
+  });
+}
+
+// Usage in endpoints
+app.post("/ai/chat", async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    // ... AI processing logic ...
+
+    // Log usage
+    logAIUsage(
+      req.apiKey.key_id,
+      req.apiKey.org_code || req.apiKey.user_id,
+      "/ai/chat",
+      req.body.message.length,
+      response.length
+    );
+
+    res.json({response});
+  } catch (error) {
+    // Log errors too
+    logger.error("AI chat error", {
+      error: error.message,
+      context: req.apiKey?.org_code || req.apiKey?.user_id
+    });
+    res.status(500).json({error: "Internal server error"});
+  }
+});
+```
+
+### AI performance monitoring
+
+```javascript
+function monitorAIPerformance(organization, endpoint, duration, success) {
+  // Track response times
+  if (duration > 5000) {
+    // 5 seconds
+    logger.warn("Slow AI response", {
+      organization,
+      endpoint,
+      duration,
+      threshold: 5000
+    });
+  }
+
+  // Track success rates
+  if (!success) {
+    logger.error("AI request failed", {
+      organization,
+      endpoint,
+      duration
+    });
+  }
+}
+```

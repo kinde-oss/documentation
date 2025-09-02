@@ -1,0 +1,105 @@
+
+You can configure a self-serve portal to enable authorized organization members to be able to self-manage functions provided by Kinde. Authorized org members can update:
+
+- [Business details](/manage-your-account/business-information/update-your-details/)
+- [Payment details](/manage-your-account/profile-and-plan/update-kinde-payment/) (if you have billing set up)
+- [API Keys](/manage-your-apis/add-manage-api-keys/self-serve-api-keys/)
+- [Members and roles](/get-started/team-and-account/add-team-members/)
+- Multi-factor auth settings (coming soon)
+- SSO enterprise connections (almost here)
+
+A self-serve portal means your customers can make account changes without contacting you for support. This can save you both time.
+
+If you are on the Kinde Scale plan, you can configure the [portal per organization](/build/organizations/self-serve-portal-per-org/). E.g. allow some functions for some customers and not others.
+
+## Configure the organization self-serve portal
+
+1. Go to **Settings > Environment > Self-serve portal**.
+   ![Settings for self-serve portal for orgs](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/81169031-611b-402a-20f7-47c84f53b600/public)
+2. Enter the **Return URL** that you want users to land on when they exit the portal, e.g. your app dashboard.
+3. Add an **Organization alias** to represent how your customers are referred to in your business, e.g. Account, Partner, Workspace, etc. This will be visible in the interface in the portal.
+4. In the **Organization profile** section, select the functions you want organization admins to be able to manage.
+   ![Options for showing hiding settings for org members](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/13cf1ec6-bbe1-4059-4c78-b97d94b2b200/public)
+5. Select **Save**.
+
+## Portal access control with system permissions
+
+Each core function within the self-serve portal is governed by a corresponding system permission. For example, the `org:write:billing` permission allows users to update billing details.
+
+These permissions can be included in your custom roles and assigned to organization members.
+
+We recommend creating custom roles with varying levels of portal access, which you can then assign as needed. For instance, you might create a role that allows members to view billing details but not update them. You can select these permissions within your existing roles, or when you create them.
+
+![Roles with system permissions for self-serve portal](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/1e90e72e-00d5-4063-8d34-79d1a9b8f000/public)
+
+When [configuring org roles](/billing/get-started/add-billing-role/), you can specify whether it should be:
+
+- Automatically assigned to all new organization members.
+- Automatically assigned to the organization creator.
+
+## Generate the self-serve portal link
+
+Access to the portal is granted via a one-time link. You then use the link on an 'account' or 'profile' button in your app to open the Kinde portal screens. 
+
+There are two main ways to generate this link:
+
+- **Using the user's access token** (recommended)
+- **Using the Kinde Management API**
+
+### Include the self-serve portal link in the user's access token
+
+This method is ideal when you want to generate the portal link on the fly—for example, when a user clicks an "Account" button in your app.
+
+### Generate a self-serve portal link with a Kinde SDK
+
+If you're using the Kinde React SDK, you can use the `<PortalLink />` component, which both generates the link and redirects the user:
+
+```jsx
+import {PortalLink} from "@kinde-oss/kinde-auth-react";
+
+<PortalLink>Account</PortalLink>;
+```
+
+### Generate a self-serve portal link without a Kinde SDK
+
+If you're not using a Kinde SDK, you can manually call the Account API:
+
+```js
+const response = await fetch("/account_api/v1/portal_link", {
+  headers: {
+    Authorization: `Bearer ${userAccessToken}`
+  }
+});
+const data = await response.json();
+window.location = data.url;
+```
+
+Optional parameters:
+
+- `return_url` – where to redirect the user after exiting the portal.
+- `sub_nav` – specify the portal section to open (e.g., `organization_billing`, `profile`).
+
+### Manage the self-serve portal link using the Kinde Management API
+
+This option is useful for server-side applications or if you're using Kinde billing features without Kinde Authentication.
+
+Make a request to the `POST /api/v1/portal/generate_url` endpoint using an M2M token.
+
+**Request body**
+
+```js
+{
+  "user_id": "kp_1234567890", // The ID of the user for whom you want to generate the portal link
+  "organization_code": "org_123456789", // Optional: the organization code for which the portal link is generated
+  "return_url": "https://yourapp.com/dashboard", // Optional: where to redirect the user after exiting the portal
+  "sub_nav": "profile" // Optional: specify the portal section to open (e.g., `organization_billing`, `profile`)
+}
+```
+
+This will return a one-time portal link for the specified user.
+
+## How the self-serve portal looks
+
+When the user clicks the link you've added to your app, the portal opens. The default design is shown below, and we are working on allowing you to style this yourself. The options a member sees depends on their role and what you have chosen to display.
+
+![Self-serve portal in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/fb38548b-e530-4dfa-68b3-29ef2f287700/public)

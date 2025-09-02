@@ -1,0 +1,37 @@
+
+Billing is big step for a business, so it’s a good idea to review the process before you start.
+
+## Overview of billing setup
+
+1. [Set up billing roles and permissions (B2B)](/billing/get-started/add-billing-role/)
+2. [Connect to Stripe and set billing policies](/billing/get-started/connect-to-stripe/) 
+3  [Set currency](/billing/get-started/default-billing-currency/) - you can’t change this once your first plan is published
+4. [Build plans](/billing/manage-plans/create-plans/)
+5. [Publish plans](/billing/get-started/publish-plans/)
+6. Enable subscription self-serve (optional)
+    1. [Create a plan selector](/billing/billing-user-experience/plan-selection/)
+    2. [Enable self-serve portal](/build/set-up-options/self-serve-portal-for-orgs/)
+7. [Update your code and registration URLs](/billing/billing-user-experience/add-billing-to-url-sdk/)
+8. Test the setup and get your first subscriber!
+
+## ⚠️ Test in a non-production environment
+
+If you are using billing for the first time, make sure you use a Kinde non-production environment to test out the billing features. 
+
+When you use a non-production environment, Stripe automatically creates a test Stripe environment. This test environment allows you to create customers and billing subscriptions without actually charging customers. You can also use Stripe’s test credit card details.
+
+When using a Kinde test environment and a test Stripe account, you will not incur any billing-related fees from Stripe or Kinde.
+
+## Watch a video about creating and publishing plans, and building pricing tables
+
+<YoutubeVideo videoId="M3hX3JwhEY8" videoTitle="Manage plans, features, and pricing in Kinde"/>
+
+## Tip: Before setting up billing
+
+- Make a list of all your app’s features - with names, descriptions, prices, metered rates, limits, inclusions, etc. You might consider doing this in a spreadsheet to make it easier and faster to add features in the Kinde plan builder. Include plan variations for prices, limits, etc.
+    
+    ![example of a spreadsheet of plans](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/401ff633-c6c8-45ba-9502-1a29274b4400/public)
+    
+- (B2B) make sure your Kinde business is set up to [create an organization on sign up](https://docs.kinde.com/build/organizations/orgs-for-developers/#new-organization-self-sign-up).
+
+Follow the numbered steps in this section to set up billing in your business.

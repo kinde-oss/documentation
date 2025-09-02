@@ -1,0 +1,103 @@
+
+You can enable users to sign up and sign in using their Facebook credentials. To enable this, you’ll need a Facebook app and some developer know-how.
+
+<Aside type="warning" title="Social sign in for production environments">
+
+Before you make your production environment live, you must add your own social app's Client ID and Client secret in the Kinde connection (as per below). Do not use Kinde's app credentials by leaving the fields blank, as this poses a security and performance risk, and makes it difficult to change auth providers without service disruptions for your users.
+
+</Aside>
+
+## **Copy the callback URL from Kinde**
+
+1. In Kinde, go to **Settings** > **Authentication**.
+2. If you have not yet added the Facebook social connection, select **Add connection** in the **Social authentication** section.
+3. Select **Facebook**, then **Next**.
+4. In the **Callback URL** section:
+   1. If you use Kinde’s domain as your default, copy the **Kinde domain** URL.
+   2. If you use custom domains, select the **Use custom domain instead** switch.
+   3. If you have only one custom domain, copy the Custom domain URL. If you have custom domains for multiple organizations, select each one from the list and copy the callbacks for each. You need to enter all custom domain callbacks in the Meta app.
+5. Select **Save**.
+6. Use the copied Callback URLs to set up the app, see below.
+
+<Aside>
+
+If you use Facebook Login for Business, some of the app creation and configuration steps might be different than those outlined below. See [Meta's documentation](https://developers.facebook.com/docs/facebook-login/facebook-login-for-business/) for detailed guidance.
+
+</Aside>
+
+## **Create a Meta app**
+
+The following steps were correct when we published this, but third-party providers sometimes change things. [Here’s the Meta Developer docs](https://developers.facebook.com/docs/facebook-login/) in case you get stuck.
+
+1. Go to the [Facebook/Meta developer space](https://developers.facebook.com/) and select **My apps**, then **Create app**.
+2. On the **Business portfolio** page, select **Next**.
+3. On the **Use cases** page, select **Authenticate and request data from users with Facebook Login** option and then select **Next.**
+4. Follow the prompts and enter the app details, then select **Create app**.
+5. In the confirmation window that appears, select **View dashboard**.
+6. Under **App settings**, select **Basic** and copy the client ID and client Secret (labeled as **App ID** and **App Secret**) and paste them in a text file or somewhere you can easily copy them.
+
+## **Configure the Meta app**
+
+The following steps were correct when we published this, but third party providers sometimes changes things. [Here’s the Meta Developer docs](https://developers.facebook.com/docs/facebook-login/) in case you get stuck.
+
+1. In your Meta app dashboard, select **Use cases** then select **Configure** on the **Authentication and account creation** tile.
+2. On the **Permissions** tab, make sure `email` and `public_profile` are selected.
+3. On the **Settings** tab, add your callback URL in the **Redirect URI** field. E.g. `https://domain.kinde.com/login/callback`
+4. Select **Save changes** at the bottom of the screen.
+5. Go back to the Dashboard page (home icon). 
+6. In **App settings**, select **Basic**.
+   1. Paste your Kinde domain URL in the **App domains** field, but **do not** include the https/http or path. For example, paste `yourdomain.kinde.com`.
+   2. Add other details such as app icon, category, terms of service and privacy policy link.
+   3. Select **Save changes**.
+7. Go to **Settings** > **Advanced.**
+8. Under **Domain manager**, select **Add a domain** to add your Kinde domain.
+   1. When you add the domain here (include the https/http part of the URL).
+   2. Under the **Security** section, ensure the **Require app secret** switch is turned off.
+   3. Add any other relevant information.
+   4. Select **Save changes**.
+9. Next, you'll need to complete the preparation tasks and submit your app for approval. Note that this requires providing business documentation, contacts, etc. See the **Review** area for more information.
+10. Once the approval process is complete, you can publish the app.
+
+See the [Meta/Facebook docs](https://developers.facebook.com/docs/development/create-an-app/) for more information about apps.
+
+## **Create a product in your Meta app**
+
+The following steps were correct when we published this, but third party providers sometimes changes things. [Here’s the Meta Developer docs](https://developers.facebook.com/docs/facebook-login/) in case you get stuck.
+
+1. In your app dashboard, select **Add product**.
+2. Select the **Opt in Facebook Login for Business** prompt**.**
+3. When prompted, select **Switch to Facebook Login for business**.
+4. In the confirmation window, select **Certain permissions aren’t available with this product** as the reason.
+5. In the **Select the permissions you require** field that appears, select **email** and **public_profile**.
+6. Select **Switch to Facebook Login**.
+7. Enter the Kinde callback URLs in the **Valid OAuth Redirect URLs field**. Add entries for all your organization custom domain callbacks, e.g. account.customdomainone.com/login/callback, account.customdomaintwo.com/login/callback, etc.
+8. Select **Save Changes**.
+9. In the red warning message at the top of the page, select **Get Advanced Access**. The **Permissions and Features** page opens.
+10. Next to the **email** entry:
+    1. Select **Request advanced access**.
+    2. In the confirmation window, select the checkbox and enter your facebook password.
+    3. Select **Submit**.
+11. Next to the **public_profile** entry:
+    1. Select **Request advanced access**.
+    2. In the confirmation window, select the checkbox and enter your Facebook password.
+    3. Select **Submit**.
+
+## **Add Facebook credentials to Kinde**
+
+1. In Kinde, go to **Settings** > **Authentication**.
+2. On the **Facebook** tile, select **Configure**.
+3. Paste the **Client ID** and **Client secret** from the Facebook app into the relevant fields.
+4. Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified. We recommend leaving this off for maximum security.
+5. Add any [upstream params](/authenticate/auth-guides/pass-params-idp/) that you want to pass to the IdP.
+6. Select which applications will allow Facebook SSO.
+7. Select **Save**.
+
+Users will now see Facebook as an option to sign up and sign in to the selected applications.
+
+### When an email is not provided
+
+Facebook does not require an email for sign up, but Kinde does. So if a user signs up with Facebook and an email is not detected, we will ask for one.
+
+The user only needs to provide their email once, then they can sign in via Facebook without disruption.
+
+If the email they provide is already detected in Kinde, we will automatically link the accounts so as not to duplicate.

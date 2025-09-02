@@ -1,0 +1,116 @@
+
+A very common architecture is to use a decoupled front-end / back-end with a standalone front-end and separate REST API for the back end.
+
+This topic runs through a scenario for authenticating a SPA. In our scenario, you have a React front-end and a NodeJS based API. This is a pretty common set up we see at Kinde, however, the guiding principles are the same regardless of the technologies you use.
+
+There are a couple of ways you can use Kinde to authenticate this style of application.
+
+## Option 1: Client side authentication
+
+This authentication option takes place in the browser and when you want to call your API, you send the access token you received from Kinde to your API in the **Bearer header**.
+
+### Front end setup
+
+1. In Kinde, go to **Settings > Applications > Add application** and choose **Front-end and mobile** application.
+
+  <Aside>
+
+This application type does not have a client secret as authentication takes place in the browser and there is no place to securely store secrets. Instead it uses the Authorization Code Flow with Proof Key for Code Exchange (PKCE) extension which you can read more about [here](/build/tokens/oath-scopes/#oauth-flows).
+
+  </Aside>
+
+2. Follow the **Quick Start** guide for your chosen technology to get set up. This can be found in the menu when you view details of the application in Kinde.
+3. Once you are up and running, call your API with code similar to the below - replacing `<your_api_endpoint>` with the API you are trying to call.
+4. This sample is from a React application, but it will be very similar for any frontend technology.
+
+   ```jsx
+   const { getAccessToken } = useKindeAuth();
+
+   const fetchData = async () => {
+     try {
+       const accessToken = await getAccessToken();
+       const res = await fetch(`<your_api_endpoint>`, {
+         headers: {
+           Authorization: `Bearer ${accessToken}`
+         }
+       });
+       const {data} = await res.json();
+       console.log({data});
+     } catch (err) {
+       console.error(err);
+     }
+   };
+   ```
+
+### Back end setup
+
+You do not need to set up a back-end application in Kinde. The request sent to your API will include the access token, which gets validated when you receive it on your back end.
+
+Validation checks the token has not expired and that the token has originated from Kinde, as well as various other checks. While it is possible to write code to check this yourself, it can be easy to miss something and accidentally introduce serious security vulnerabilities. Here's our recommendations:
+
+- Use the Kinde JWT verifier for your chosen technology (if available). Our Node package is available [here](https://www.npmjs.com/package/@kinde/jwt-validator).
+
+OR
+
+- Use any existing middleware for your web framework
+
+OR
+
+- Choose a third-party library, for example the OpenID Foundation has [a list of libraries for working with JWT tokens](https://openid.net/developers/jwt/).
+
+#### Audience
+
+To further protect your project, we recommend you [register your API](/developer-tools/your-apis/register-manage-apis/) in Kinde and make sure it is enabled for your front end application.
+
+You will then need to [request the audience](/developer-tools/your-apis/register-manage-apis/#request-an-audience-be-added-to-a-token) from your front end to make sure it is included in the `access_token` when your user authenticates with Kinde.
+
+This is an additional check in the JWT validation above, which should be handled by the verifier you are using.
+
+## Option 2 - Server side authentication with API routes
+
+In this approach your API deals with the authentication side and shares a session cookie with your front end. It is important to note that in order for this to work securely, both your API and front-end need to be hosted on the same domain.
+
+1. In Kinde, go to **Settings > Applications > Add application** and choose **Back-end web** application.
+2. Follow the **Quick start** guide for your respective technology to initiate the Kinde client. This can be found in the menu when you view details of the application in Kinde.
+3. Implement `/login` and `/register` and `/callback` routes on your API.
+
+   For example in Express this might look something like:
+
+   ```typescript
+   const app = express();
+
+   app.get("/login", async (req, res) => {
+     const loginUrl = await kindeClient.login(sessionManager);
+     return res.redirect(loginUrl.toString());
+   });
+
+   app.get("/register", async (req, res) => {
+     const registerUrl = await kindeClient.register(sessionManager);
+     return res.redirect(registerUrl.toString());
+   });
+   ```
+
+4. In your front-end SPA, your login and register buttons will point to the API endpoints you set up above - e.g `[api.myapp.com/login](<http://api.myapp.com/login>)`
+
+   ```jsx
+   <a href="https://<api.myapp.com>/login">Sign in</a>
+   ```
+
+   This will handle the redirect to Kinde where your user will authenticate.
+
+5. You will also need an API route to handle the callback - again using Express as an example:
+
+   ```jsx
+   app.get("/callback", async (req, res) => {
+     const url = new URL(`${req.protocol}://${req.get("host")}${req.url}`);
+     await kindeClient.handleRedirectToApp(sessionManager, url);
+
+     // Code to creates a stateful session goes here
+
+     return res.redirect("/");
+   });
+   ```
+
+   Your API should create a stateful session which is shared with your front end via a `secure`, `same-site`, `httpOnly` cookie. As previously mentioned, for this to be secure it should be on the same domain.
+
+   In this architecture the user is only authenticated with your API which means your frontend SPA doesn't know their identity. For this reason it is a good idea to create a `/profile` route on your API to fetch the identity of the user after authentication.
