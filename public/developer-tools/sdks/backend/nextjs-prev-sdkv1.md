@@ -1,0 +1,600 @@
+
+This SDK is for developers already using the Next.js Pages Router SDK. This document is out of date for new users, use this document instead: [Next.js Pages Router](/developer-tools/sdks/backend/nextjs-prev-sdk/).
+
+## Next.js 13 and App Router support
+
+We highly recommend using our dedicated [Next.js App Router SDK](/developer-tools/sdks/backend/nextjs-sdk/) with App Router instead of this one.
+
+Whilst technically this SDK is compatible with Next.js 13, it isn’t optimal. It leverages the `use client;` escape hatch, which we don’t love. It also requires a single API file to be stored in the legacy `pages` directory.
+
+## **Installation**
+
+<PackageManagers pkg="@kinde-oss/kinde-auth-nextjs@1" />
+
+## **Set callback URLs**
+
+1. In Kinde, go to **Settings > Applications > [Your app] > View details**.
+2. Add your callback URLs in the relevant fields. For example:
+   - Allowed callback URLs (also known as redirect URIs) - for example [`http://localhost:3000/api/auth/kinde_callback`](http://localhost:3000/api/auth/kinde_callback)
+   - Allowed logout redirect URLs - for example `http://localhost:3000`
+3. Select **Save**.
+
+## **Environments**
+
+If you would like to use our Environments feature as part of your development process. You will need to create them first [within your Kinde account](/build/environments/environments/). In this case you would use the Environment subdomain in the code block above.
+
+## **Configuring your app**
+
+### **Environment variables**
+
+Put these variables in your .env file. You can find these variables on your Kinde Settings -> App keys page.
+
+- `KINDE_SITE_URL` - where your app is running
+- `KINDE_ISSUER_URL` - your kinde domain
+- `KINDE_POST_LOGOUT_REDIRECT_URL` - where you want users to be redirected to after logging out. Make sure this URL is under your allowed logout redirect URLs.
+- `KINDE_POST_LOGIN_REDIRECT_URL` - where you want users to be redirected to after authenticating.
+- `KINDE_CLIENT_ID` - you can find this on the Application details page
+- `KINDE_CLIENT_SECRET` - you can find this on the Application details page
+
+```jsx
+KINDE_SITE_URL=http://localhost:3000
+KINDE_ISSUER_URL=https://your_kinde_domain.kinde.com
+KINDE_POST_LOGOUT_REDIRECT_URL=http://localhost:3000
+KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000/dashboard
+KINDE_CLIENT_ID=your_kinde_client_id
+KINDE_CLIENT_SECRET=your_kinde_client_secret
+```
+
+### **API endpoints**
+
+Create the following file `/pages/api/auth/[...kindeAuth].js` inside your Next.js project. Inside the file `[...kindeAuth].js` put this code:
+
+```jsx
+import {handleAuth} from "@kinde-oss/kinde-auth-nextjs";
+export default handleAuth();
+```
+
+This will handle Kinde Auth endpoints in your Next.js app.
+
+- `/api/auth/me` - this endpoint will get user information
+- `/api/auth/login` - will redirect you to login at the KindeAuth server
+- `/api/auth/logout` - will log you out of the app
+- `/api/auth/register` - will redirect you to register at the KindeAuth server.
+
+Our SDK relies on this file existing in this location specified above. This includes Next.js 13 projects.
+
+## **Integrate with your app**
+
+### **Kinde Provider**
+
+Kinde uses a React Context Provider to maintain its internal state in your application.
+
+Import the `KindeProvider` component and wrap your application in it.
+
+**Next.js 13:** we suggest you include this in `app/layout.tsx`
+
+```jsx
+// Next.js 13
+
+"use client";
+import { KindeProvider } from "@kinde-oss/kinde-auth-nextjs";
+import Auth from "./auth";
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <KindeProvider>
+      <html lang="en">
+        <body>
+          <Auth>{children}</Auth>
+        </body>
+      </html>
+    </KindeProvider>
+  );
+}
+```
+
+In the example above, there is a custom Auth component which handles routing depending on if the user is authenticated. Here is an example [Auth component](https://github.com/kinde-starter-kits/nextjs-starter-kit/blob/0ce95ff775677697b5eafd096469cc6007f2334c/src/app/auth.tsx) from our Starter Kit.
+
+**Next.js 12 and below:** we suggest you include this in the root file of your application in `_app.js`
+
+```jsx
+// Next.js 12 and below
+import {KindeProvider} from "@kinde-oss/kinde-auth-nextjs";
+function MyApp({Component, pageProps}) {
+  return (
+    <KindeProvider>
+      <Component {...pageProps} />
+    </KindeProvider>
+  );
+}
+export default MyApp;
+```
+
+## Sign up and sign in
+
+The SDK ships with predefined API routes to generate the auth urls for sign up and sign in.
+
+**Next.js 13**
+
+Link prefetching causes issues with preflight options, so we need to use standard `<a>` tags for our links. So the build doesn’t break you’ll want to disable the linting that comes with Next as per the sample below:
+
+```jsx
+// Next.js 13
+"use client";
+
+export default function MainNav() {
+  return (
+    <ul>
+      <li>
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a href="/api/auth/login">Sign in</a>
+      </li>
+      <li>
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a href="/api/auth/register">Sign up</a>
+      </li>
+    </ul>
+  );
+}
+```
+
+**Next.js 12 and below**
+
+You can use the `<Link>` component that ships with earlier versions of Next.
+
+```jsx
+// Next.js 12 and below
+import Link from "next/link";
+
+export default function MainNav() {
+  return (
+    <ul>
+      <li>
+        <Link href="/api/auth/login">
+          <a>Sign in</a>
+        </Link>
+      </li>
+      <li>
+        <Link href="/api/auth/register">
+          <a>Sign up</a>
+        </Link>
+      </li>
+    </ul>
+  );
+}
+```
+
+## Log out
+
+This is implemented in much the same way as signing up or signing in. An API route is provided for you
+
+```jsx
+// Next.js 13
+{/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+<a href="/api/auth/logout">
+   Sign out
+</a>
+
+// Next.js 12 or below
+<Link href="/api/auth/logout">
+    <a>Sign out</a>
+</Link>
+```
+
+### Test sign up
+
+Register your first user by signing up yourself. You’ll see your newly registered user on the **Users** page in Kinde.
+
+## **View user profile**
+
+You can get an authorized user’s profile from any component using the Kinde Next.js hoo
+
+```jsx
+import {useKindeAuth} from "@kinde-oss/kinde-auth-nextjs";
+
+const SayHello = () => {
+  const {user} = useKindeAuth();
+  return <p>Hi {user.given_name}!</p>;
+};
+```
+
+To be on the safe side we have also provided `isAuthenticated` and `isLoading` state to prevent rendering errors.
+
+```jsx
+"use client";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
+
+const UserProfile = () => {
+	const { user, isAuthenticated, isLoading } = useKindeAuth();
+
+	if (isLoading) {
+		return <p>Loading</p>;
+	}
+
+	return (
+		{
+			isAuthenticated ?
+				<div>
+					<h2>{user.given_name}</h2>
+					<p>{user.email}</p>
+				</div> :
+				<p>Please sign in or register!</p>
+		}
+	);
+};
+```
+
+## Call your API
+
+The `getToken` method lets you to securely call your API and pass the bearer token to validate that your user is authenticated.
+
+```jsx
+const {getToken} = useKindeAuth();
+
+const fetchData = async () => {
+  try {
+    const accessToken = await getToken();
+    const res = await fetch(`<your-api>`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    });
+    const {data} = await res.json();
+    console.log({data});
+  } catch (err) {
+    console.log(err);
+  }
+};
+```
+
+We recommend using JWT verification middleware on your back end to verify the
+token and protect your endpoints.
+
+## **Audience**
+
+An `audience` is the intended recipient of an access token - for example the API for your application. The `audience` argument can be set against `KINDE_AUDIENCE` in your environment variables.
+
+The audience of a token is the intended recipient of the token.
+
+```jsx
+// .env file
+
+KINDE_AUDIENCE = your_audience;
+```
+
+For details on how to connect, see [Register an API](/developer-tools/your-apis/register-manage-apis/).
+
+## **User Permissions**
+
+Once a user has been verified as login in, your product/application will be returned the JWT token with an array of permissions for that user. You will need to configure your product/application to read permissions and unlock the respective functions.
+
+You set Permissions in your Kinde account (see help article), the below is an example set of permissions.
+
+```json
+"permissions":[
+    "create:todos",
+    "update:todos",
+    "read:todos",
+    "delete:todos",
+    "create:tasks",
+    "update:tasks",
+    "read:tasks",
+    "delete:tasks
+]
+```
+
+We provide helper functions to more easily access permissions:
+
+```jsx
+const {getPermission, getPermissions} = useKindeAuth();
+
+getPermission("create:todos");
+// {orgCode: "org_1234", isGranted: true}
+
+getPermissions();
+// {orgCode: "org_1234", permissions: ["create:todos", "update:todos", "read:todos"]}
+```
+
+A practical example in code might look something like:
+
+```jsx
+{
+  getPermission("create:todos").isGranted ? <button>Create todo</button> : null;
+}
+```
+
+## **Feature flags**
+
+When a user signs in the Access token your product/application receives contains a custom claim called `feature_flags` which is an object detailing the feature flags for that user.
+
+You can set feature flags in your Kinde account. Here’s an example.
+
+```jsx
+feature_flags: {
+  theme: {
+      "t": "s",
+      "v": "pink"
+ },
+ is_dark_mode: {
+      "t": "b",
+      "v": true
+  },
+ competitions_limit: {
+      "t": "i",
+      "v": 5
+  }
+}
+```
+
+In order to minimize the payload in the token we have used single letter keys / values where possible. The single letters represent the following:
+
+`t` = `type`
+
+`v` = `value`
+
+`s` = `string`
+
+`b` = `boolean`
+
+`i` = `integer`
+
+We provide helper functions to more easily access feature flags:
+
+```jsx
+/**
+  * Get a flag from the feature_flags claim of the access_token.
+  * @param {string} code - The name of the flag.
+  * @param {obj} [defaultValue] - A fallback value if the flag isn't found.
+  * @param {'s'|'b'|'i'|undefined} [flagType] - The data type of the flag (integer / boolean / string).
+  * @return {object} Flag details.
+*/
+const { getFlag } = useKindeAuth();
+
+/* Example usage */
+getFlag('theme');
+/*{
+//   "code": "theme",
+//   "type": "string",
+//   "value": "pink",
+//   "is_default": false // whether the fallback value had to be used
+*/}
+
+getFlag('create_competition', {defaultValue: false});
+/*{
+      "code": "create_competition",
+      "value": false,
+      "is_default": true // because fallback value had to be used
+}*/
+```
+
+A practical example in code might look something like:
+
+```jsx
+const {getFlag} = useKindeAuth();
+
+{
+  getFlag("create_competition").value ? <button>Create competition</button> : null;
+}
+```
+
+We also require wrapper functions by type which should leverage `getFlag` above.
+
+Booleans:
+
+```jsx
+/**
+ * Get a boolean flag from the feature_flags claim of the access_token.
+ * @param {string} code - The name of the flag.
+ * @param {bool} [defaultValue] - A fallback value if the flag isn't found.
+ * @return {bool}
+ */
+const {getBooleanFlag} = useKindeAuth();
+
+/* Example usage */
+getBooleanFlag("is_dark_mode");
+// true
+
+getBooleanFlag("is_dark_mode", false);
+// true
+
+getBooleanFlag("new_feature", false);
+// false (flag does not exist so falls back to default)
+```
+
+Strings and integers work in the same way as booleans above:
+
+```jsx
+/**
+ * Get a string flag from the feature_flags claim of the access_token.
+ * @param {string} code - The name of the flag.
+ * @param {string} [defaultValue] - A fallback value if the flag isn't found.
+ * @return {string}
+ */
+const {getStringFlag} = useKindeAuth();
+
+/**
+ * Get an integer flag from the feature_flags claim of the access_token.
+ * @param {string} code - The name of the flag.
+ * @param {int} [defaultValue] - A fallback value if the flag isn't found.
+ * @return {int}
+ */
+const {getIntegerFlag} = useKindeAuth();
+```
+
+A practical example in code might look something like:
+
+```jsx
+const {getBooleanFlag, getStringFlag} = useKindeAuth();
+
+{
+  getBooleanFlag("create_competition") ? (
+    <button className={`theme-${getStringFlag("theme")}`}>Create competition</button>
+  ) : null;
+}
+```
+
+## **Organizations**
+
+### **Creating an organization**
+
+To have a new organization created within your application, you will need to run a similar function to below:
+
+**Next.js 13**
+
+```jsx
+// Next.js 13
+{/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+<a href={`/api/auth/create_org?org_name=${<org_name>}`}>
+	Create org
+</a>
+```
+
+**Next.js 12 and below**
+
+```jsx
+// Next.js 12 and below
+<Link
+  href={{
+    pathname: "/api/auth/create_org",
+    query: {
+      org_name: "Organization name"
+    }
+  }}
+>
+  Create org
+</Link>
+```
+
+### Register and log in users to organizations
+
+Every organization in Kinde has a unique code. To sign up a new user into a particular organization you will need to pass through this code in the `register` method.  (See where to find it).
+
+**Next.js 13**
+
+```jsx
+// Next.js 13
+{/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+<a href={`/api/auth/register?org_code=${<org_code>}`}>
+	Create org
+</a>
+```
+
+**Next.js 12 and below**
+
+```jsx
+// Next.js 12 and below
+<Link
+  href={{
+    pathname: "/api/auth/register",
+    query: {
+      org_code: "org_af9078366f4"
+    }
+  }}
+>
+  Register org
+</Link>
+```
+
+This code should also be passed along with the `login` method if you wish for a user to be logged into a specific organization.
+
+**Next.js 13**
+
+```jsx
+// Next.js 13
+{/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+<a href={`/api/auth/login?org_code=${<org_code>}`}>
+	Sign in
+</a>
+```
+
+**Next.js 12 and below**
+
+```jsx
+// Next.js 12 and below
+<Link
+  href={{
+    pathname: "/api/auth/login",
+    query: {
+      org_code: "org_af9078366f4"
+    }
+  }}
+>
+  Sign in to Org
+</Link>
+```
+
+For general information about how organizations work in Kinde, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
+
+## Customising the API path
+
+If your Next.js application uses a custom base path for your API. The default path is `/api/auth` but to override this setting you can change this in your .`env` file as follows:
+
+```bash
+KINDE_AUTH_API_PATH="/my/custom/path
+```
+
+## Kinde Management API
+
+You need to enable the application’s access to the Kinde Management API. You can do this in Kinde by going to **Settings > APIs > Kinde Management API** and then toggling on your Next.js application under the **Applications** tab.
+
+To use our management API please see [@kinde/management-api-js](https://github.com/kinde-oss/management-api-js)
+
+### Troubleshooting
+
+**`undefined`** **cannot be serialized as JSON**
+
+This happens when the API returns an object with a property that is undefined and we try to return that object from `getServerSideProps`.
+
+You can use this workaround to avoid this error:
+
+```jsx
+...
+const users = await client.usersApi.getUsers();
+
+return {
+	props: {
+    users: JSON.parse(JSON.stringify(users))
+  }
+}
+...
+```
+
+## Persisting app state
+
+If you want your project to remember which url your user was intending to visit before they were asked to authenticate, you can pass an additional parameter in the `/login` and `/register` links.
+
+After the user has completed authentication at your defined callback url they will be redirected to the path you define here. This value does not need to be added to your allowed callback urls in Kinde.
+
+**Next.js 13**
+
+```jsx
+// Next.js 13
+{
+  /* eslint-disable-next-line @next/next/no-html-link-for-pages */
+}
+<a href="api/auth/login?post_login_redirect_url=/dashboard">Sign in</a>;
+```
+
+**Next.js 12 and below**
+
+```jsx
+// Next.js 12 and below
+<Link
+  href={{
+    pathname: "/api/auth/login",
+    query: {
+      post_login_redirect_url: "/dashboard"
+    }
+  }}
+>
+  Sign in
+</Link>
+```
+
+Note: the value of `post_login_redirect_url` should either be a url on the same origin or a relative path.
+
+If you need any assistance with getting Kinde connected reach out to us at [support@kinde.com](mailto:support@kinde.com).

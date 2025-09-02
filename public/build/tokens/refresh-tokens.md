@@ -1,0 +1,60 @@
+
+Refresh tokens are used to request new access tokens.
+
+Access tokens are issued when a user makes an authentication request or a call is made to an API. An access token gives permission to enter and interact with a system.
+
+## How refresh tokens work
+
+Access tokens usually have an intentionally short lifetime. However, rather than having a user need to re-authenticate frequently, a refresh token can be used to request a new access token. Refresh tokens operate without user intervention, extending session access without the same security risk as requesting a new access token.
+
+Refresh tokens can be used a finite amount of times before re-authentication is required.
+
+## How to get a refresh token
+
+To get a refresh token, you need to include the `offline` scope when you initiate an authentication request through the `https://<your_subdomain>.kinde.com/oauth2/auth` endpoint. You also need to initiate Offline Access in your API.
+
+Details on how to do this is provided in [our SDKs](/developer-tools/about/our-sdks/), but here’s how to do it yourself.
+
+Below is an example using the Authorization Code grant, with the `offline` scope being one of the scopes passed to the authentication request.
+
+```jsx
+curl -X POST -H "Content-Type: application/x-www-form-urlencoded" \
+    -d "response_type=code&client_id=your_client_id&redirect_uri=your_redirect_uri&scope=offline%20email%20openid%20profile&grant_type=authorization_code" \
+    https://<yoursubdomain>.kinde.com/oauth2/auth
+```
+
+Refresh tokens are stored in sessions. When a session needs to be refreshed (for example, a pre-defined time has passed), the app uses the refresh token on the backend to obtain a new access token, using the `https://<your_subdomain>.kinde.com/oauth2/token` endpoint with `grantType=refresh_token`.
+
+**Example of a refresh token response**
+
+```jsx
+{
+	"access_token": "hju76F...P8rTh63Ute",
+	"refresh_token": "VOe264go...oLp2dC6",
+	"token_type": "Bearer"
+}
+```
+
+## Refresh token rotation
+
+Kinde always rotates refresh tokens. When you use an existing refresh token to request a new access token, a new refresh token is also generated and provided with your new access token. The old refresh token becomes immediately invalid.
+
+## Auto-update of refresh tokens
+
+Kinde allows a small overlap period when both a previous and new refresh token is valid. This is to account for retries and bad network connections. You can [set the lifetime of a refresh token](/build/tokens/configure-tokens/) in Kinde. It needs to be longer than the life of an access token.
+
+## Refresh tokens when you are not using an SDK
+
+You should store the refresh token you get with your initial `/token` request. Otherwise, your user will need to go through the sign in process again, to get a new access token.
+
+## Refresh tokens when you are using a front-end SDK
+
+If you’re using a front-end SDK like [JavaScript](/developer-tools/sdks/frontend/javascript-sdk/) or [React](/developer-tools/sdks/frontend/react-sdk/), the `getToken` function stores an in-memory cache of the access token, which it returns by default. If the token is about to expire it will use a refresh token to get a new access token from Kinde silently in the background so additional network requests to Kinde are only made when absolutely necessary.
+
+## Token security recommendations
+
+Token security can be approached in a number of ways. We recommend at least covering the basics of:
+
+- keeping the number of refresh tokens within a manageable limit to keep credentials safe and secure.
+- storing refresh tokens securely in the back-end of your application because they essentially allow a user to remain authenticated forever.
+- employing refresh token rotation and automatic reuse detection for added security.

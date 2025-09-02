@@ -1,0 +1,40 @@
+
+Kinde supports shared authenticated sessions across applications. For example, in a scenario where you have multiple apps running on separate subdomains, and you want to share a session between apps without prompting the user to sign in again.
+
+## Session cookies
+
+On the first sign in, Kinde creates an SSO cookie for the authenticated user. Until this cookie expires or you request that the user signs in again (using the [prompt parameter](/developer-tools/about/using-kinde-without-an-sdk/#prompt)), all your apps can initiate sign in requests without prompting.
+
+## Offline scopes and refresh tokens
+
+If you include an `offline` scope in your request, you can maintain long-running sessions via refresh tokens. This works both in back-end apps and in web apps.
+
+Kinde supports short-lived refresh and refresh token rotation for increased security of browser-based and mobile apps. In this case, on page reload, the SDK will resume the session via the refresh token exchange.
+
+[About refresh tokens](/build/tokens/refresh-tokens/)
+
+See also [multi-domain authentication](/authenticate/about-auth/about-authentication/#multi-domain-authentication).
+
+## Set up overview
+
+1. Create two or more Kinde apps.
+2. Enable the same authentication method for both apps.
+3. In each app, create a link to the other app using the applicable `login` method. You might do this using an application switcher, for example.
+4. Sign in to one app.
+5. Select a link to sign in to the second app. You should be signed in to the second app without re-authentication.
+
+## Example
+
+Say you are signed into your **Admin app** and want to switch to the **Employee app**. Here’s how it might look.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6a56c72a-21ea-4bc7-6b6d-f79efd1bda00/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+As long as an authenticated session exists, users should be able to move seamlessly between applications.

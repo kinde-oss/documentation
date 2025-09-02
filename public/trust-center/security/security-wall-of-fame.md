@@ -1,0 +1,68 @@
+
+Kinde sends out huge thanks and massive props to the security researchers who responsibly disclose vulnerabilities that help secure our systems.
+
+The list also includes testers who take part in our security challenges each year.
+
+Everyone listed on this page has submitted one or more valid vulnerabilities, and they consented to their information being published.
+
+Love your work!
+
+## 2025
+
+### Disclosures
+
+[Vorombetech Solutions](https://www.vorombetech.com/)
+
+[cyberritzzz](https://www.linkedin.com/in/prerit-yaduvanshi)
+
+[Nahid Hasan Limon](https://x.com/nh___limon)
+
+[Andrew Rauber](https://www.linkedin.com/in/andrew-rauber/)
+
+## 2024
+
+### Disclosures
+
+[August Lilleaas](https://www.linkedin.com/in/augustlilleaas/)
+
+[Lindit Ajvazaj](https://www.linkedin.com/in/lindit-ajvazaj/)
+
+[Muhammad Naseem](https://www.linkedin.com/in/muhammad-naseem-746363229/)
+
+[Jonas Arnfred](https://www.linkedin.com/in/jonasarnfred/)
+
+## 2023
+
+### Strike security challenge
+
+[Agustin Aguirre](https://www.linkedin.com/in/agus1/)
+
+[Genaro Franceschelli](https://www.linkedin.com/in/g-franceschelli/)
+
+[jav0x](https://www.linkedin.com/in/javier-bernardo-210b70178/)
+
+[Lemonoftroy](https://www.linkedin.com/in/apedrazzoli)
+
+[Luis Eduardo Jácome Valencia](https://www.linkedin.com/in/mortalpoison/)
+
+MrWhite
+
+[Yatin Sirpaul](https://in.linkedin.com/in/yatin-sirpaul-7a323674)
+
+### Disclosures
+
+[Ayush Jaiswal](https://www.linkedin.com/in/jaiswal-ayush/)
+
+[Nicolas Hedger](https://www.linkedin.com/in/nhedger/)
+
+## 2022
+
+### Disclosures
+
+[Hamza Farooqi](https://www.linkedin.com/in/hamza-farooqi-a87509204)
+
+[Niket Popat](https://twitter.com/niketatbar)
+
+[Sachin Kalkumbe](https://www.linkedin.com/in/sachin-kalkumbe-462824201/)
+
+[Karan Rathod](https://www.linkedin.com/in/karan-rathod-35aa951b1)

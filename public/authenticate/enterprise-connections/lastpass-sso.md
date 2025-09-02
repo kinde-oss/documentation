@@ -1,0 +1,126 @@
+
+If you use LastPass to centralize authentication and authorization in your business, you can integrate Kinde as a service provider for these processes. This gives you the benefits of Kinde’s robust auth capabilities, while keeping the familiar LastPass structure.
+
+## Before you begin
+
+Here's what you need to do before you add the connection:
+
+- Sign up for a LastPass business account to add a LastPass application.
+- Generate a SAML Metadata XML file as LastPass does not support hosting this for you (more information below).
+
+## Recommendations 
+
+- Open the Kinde Enterprise connection in one browser tab, and the LastPass app configuration in another tab, as you will need to copy connection information across between them.
+- Set up and testing the connection in a non-production environment before making available to users.
+
+## Advanced configurations
+
+Depending on your SAML set up, you may need to include advanced configurations for your connection. See [Advanced SAML configurations](/authenticate/enterprise-connections/advanced-saml-configurations/)
+
+## Step 1: Add the connection in Kinde
+
+<Aside>
+
+You can make a connection available only to a specific organization, or you can create it so it can be used across any organization in your business. 
+
+</Aside>
+
+### Add a connection for a specific organization
+
+1. Go to **Organizations** and open the organization. 
+2. In the menu, select **Authentication**, then select **Add connection**.
+3. In the **Add connection** window, select **New enterprise connection**, then click **Next**.
+4. Select the LastPass connection and then select **Next**. 
+5. Next: 'Step 2: Configure the connection'.
+
+### Add a connection that can be shared across multiple organizations
+
+1. Go to **Settings > Environment > Authentication**.
+2. Scroll to the **Enterprise connection** section and select **Add connection**. The **Add connection** window opens.
+3. Select the LastPass connection and then select **Next**.
+4. Next: 'Step 2: Configure the connection'.
+
+## Step 2: Configure the connection
+
+1. Enter a name for the connection. It should match the connection name in LastPass.
+2. Enter a random string value for Entity ID, for e.g. `870sa9fbasfasdas23aghkhc12zasfnasd`.
+3. Enter the **IdP metadata URL**. This URL comes from your identity provider.
+
+   ![optional fields for saml](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4f1851db-5c34-496b-ced1-07c1cd272b00/public)
+
+4. Enter a **sign in URL** if your IdP requires a specific URL.
+5. If you want, select the **Sign request algorithm** and **Protocol binding**. The options you choose will depend on what your identity provider prefers or requires.
+6. Select `Email` as the **Name ID** format. This helps identify and link user identities between your IdP and Kinde. 
+7. Enter `emailAddress` as the **Email key attribute**. This is the attribute in the SAML token that contains the user’s email. Setting this value ensures that the email address returned in the SAML response is correctly retrieved. 
+8. (Optional) Add a first name and last name key attribute. This is not necessary for LastPass.
+
+   ![Home realm domains in SAML configuration](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/dbdccca5-2e6c-4dd8-eaec-e029574daf00/public)
+
+9. Enter any relevant **Home realm domains**. This is how SAML recognizes a user’s credentials and routes them to the correct sign in page. Note that home realm domains need to be unique across all connections in an environment. [Read more about home realm domains](/authenticate/enterprise-connections/home-realm-discovery/).
+10. If you use home realm domains, the sign in button is hidden on the auth screen by default. To show the SSO button, select the **Always show sign-in button** option. 
+
+    ![ACS URL and custom domain option](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/885eda9c-ca4f-4340-db17-224023b8c300/public)
+
+11. Copy the relevant reply URL: 
+    1. If you don't use a custom domain, copy the **ACS URL**.
+    2. If you do use a custom domain, select the **Use custom domain instead** option and copy the custom domain URL. 
+    Later, add this URL to the LastPass configuration.
+12. If you want to enable just-in-time (JIT) provisioning for users, select the **Create a user record in Kinde** option. This saves time adding users manually or via API later.
+
+    ![Provisioning configuration for SAML](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/947baea7-bfd4-48b7-de2d-5b041b8c8300/public)
+
+13. (Temporary feature) Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified.
+14. (Optional) In the **Sign SAML request** section, paste in the **Signed certificate** and **Private key**. You may have got these from your IdP or you may have generated yourself (see procedure above).
+15. Enter any [upstream params](/authenticate/enterprise-connections/advanced-saml-configurations/#upstream-parameters) that you want to pass to the identity provider. Not all providers support this, so check their documentation first.
+16. Select **Save**.
+
+## Step 3: Add and configure your LastPass application
+
+View the [LastPass docs](https://support.lastpass.com/s/document-item?language=en_US&bundleId=lastpass&topicId=LastPass/uac_applications_sso_apps.html&_LANG=enus) for the full procedure.
+
+1. Sign in to your LastPass business account.
+2. In the menu, select **AdminConsole**.
+3. Go to **Applications**, then select **SSO apps**.
+4. Select **Search the catalogue**. A side panel slides out.
+
+   ![Initialize SAML keys in LastPass](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b11e3815-b261-4960-e4c3-6d26ce297800/public)
+   
+6. Follow the prompt to initialize SAML keys. This will take up to 15 minutes to process.
+7. Refresh the page and select **Search the catalogue** again. The side panel slides out showing a list.
+8. Scroll and select **Custom service**.
+9. Select **Add a new domain** if prompted. The configuration panel opens.
+
+   ![Add app name](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c87f07cb-3284-4ddd-f346-7e8b2dfd8400/public)
+
+10. Enter a **Name** and select which groups will be able to sign in using this SSO connection.
+11. At the top of the **Configuration section** select **Export SAML IdP Metadata**.
+12. Select Copy or download, then select **OK**.
+
+    ![Configure application in LastPass](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/bf384b65-ff19-490d-974d-34d807519700/public)
+
+13. In the **Service Provider entity ID** field, enter the random ID you generated for the **Entity ID** in Kinde.
+14. In the **Assertion consumer service** field, enter the **ACS URL** or your custom domain, from Kinde.
+15. Make sure the **Name ID format** is `emailAddress` and the **Name ID** is `Email address'.
+16. Enter any custom attributes required.
+
+    ![Custom attributes in LastPass](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/cd749576-b884-42e9-d7cb-caf6bca32400/public)
+
+17. Select **View key** under the **Key field**.
+18. Copy the key. You will need this to finishe setting up the Kinde connection.
+19. Make sure the **Service is enabled** option is selected.
+20. Select **Save**.
+
+## Step 4: Finish setting up your LastPass connection in Kinde
+
+1. Open the connection in Kinde. Go to **Organization > Authentication** or via **Settings > Authentication**.
+2. In the **IdP metadata URL** field paste the **IDP Entity ID** you copied from LastPass.
+3. In the **Sign-in URL** field paste the **Single Sign-on URL** you copied from LastPass.
+4. In the **Signing certificate** field paste the **IDP Metadata XML** file content. [@Viv not sure about this - is this where hosting the certificate is advised??]
+5. In the **Private key** field paste in the **Key** you copied from LastPass.
+6. Switch on the connection. This will make it instantly available to users if this is your production environment.
+   1. For environment-level connections, scroll down and select the apps that will use the auth method.
+   2. For organization-level connections, scroll down and select if you want to switch this on for the org. Note that it will be automatically available for all apps if you choose this option.
+7. Select **Save**.
+
+Test the connection works by trying to sign in to your test environment using this method. 
+Re-test when you deploy the option to users. 

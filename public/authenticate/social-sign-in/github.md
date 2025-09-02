@@ -1,0 +1,61 @@
+
+You can enable users to sign up and sign in using their GitHub credentials. To enable this, you’ll need some technical know-how and a [GitHub app](https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps) and credentials.
+
+<Aside type="warning" title="Social sign in for production environments">
+
+Before you make your production environment live, you must add your own social app's Client ID and Client secret in the Kinde connection (as per below). Do not use Kinde's app credentials by leaving the fields blank, as this poses a security and performance risk, and makes it difficult to change auth providers without service disruptions for your users.
+
+</Aside>
+
+## **Get the Kinde callback URL**
+
+1. In Kinde, go to **Settings** > **Authentication**.
+2. In the **Social Connections** section, select **Add connection**.
+3. In the window that appears, select **GitHub**, then select **Next**.
+4. In the **Callback URL** section:
+   1. If you use Kinde’s domain as your default, copy the **Kinde domain** URL.
+   2. If you use custom domains, select the **Use custom domain instead** switch.
+   3. If you have only one custom domain, copy the Custom domain URL. If you have custom domains for multiple organizations, select each one from the list and copy the callbacks for each. You need to enter all custom domain callbacks in the provider app.
+5. Select **Save**.
+6. Use the copied Callback URL to set up the app, see below.
+
+## **Create GitHub app**
+
+1. Sign in to your GitHub account, select the **Account** dropdown menu at the top right corner, and choose **Settings**.
+2. From the menu on the left, select **Developer settings**. ([https://github.com/settings/apps](https://github.com/settings/apps))
+3. Select **GitHub Apps** and then select **New GitHub app**.
+4. Give the app a name.
+5. Enter your app’s **Homepage URL**.
+6. Enter or paste the Kinde callback URLs you copied earlier, into the **Authorization callback URL** field. Add entries for all your organization custom domain callbacks, e.g. account.customdomainone.com/login/callback, account.customdomaintwo.com/login/callback, etc.
+7. Select the **Request user authorization (OAuth) during installation** option**.**
+8. In the **Webhooks** section, deselect the Webhook **Active** option (unless you want to add webhook URL details).
+9. (Recommended) In the **Permissions** section, open the **Account permissions** options and change the **Email addresses** access to **Read only**. This enables Kinde to more easily match up user accounts with access to all the users' email addresses.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/91a0d647-35d8-450b-26d2-21b5c8dca400/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+10. Select **Create GitHub App**. The app is created.
+
+## Copy Client ID and Client secret
+
+1. On the App you just created, select **Edit**.
+2. Copy the **Client ID.**
+3. Select **Generate a new client secret**.
+4. Copy these values to a text file or other temporary and secure place for adding to Kinde.
+
+## **Add GitHub credentials to Kinde**
+
+1. In Kinde, go to **Settings** > **Authentication**.
+2. On the GitHub tile, select **Configure**.
+3. Paste the **Client ID** and **Client secret** into the relevant fields.
+4. Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified. We recommend leaving this off for maximum security.
+5. Add any [upstream params](/authenticate/auth-guides/pass-params-idp/) that you want to pass to the IdP.
+6. Select which applications will use GitHub sign in.
+7. Select **Save**. Users will now see GitHub as an option to sign up and sign in to your product.

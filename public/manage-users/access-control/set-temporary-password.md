@@ -1,0 +1,75 @@
+
+If you have set up [password authentication](/authenticate/authentication-methods/password-authentication/) for your users, you might want to set or update their password. Kinde lets you set a single-use, temporary password to enable authentication. There are a number of reasons why you might need to do this, for example:
+
+- You don’t allow self-sign-up, so you provide sign in and password details to all new users
+- You don’t have a valid email for the user
+- The user cannot access their email or phone, to receive a reset password code
+
+When you set a temporary password, you’ll need to communicate it to the user via your own method. Kinde cannot send a temporary password via email or SMS.
+
+## Security warning
+
+Setting a temporary password is not a very secure way of helping a user sign in. The password might be overheard or intercepted after you send it, and it could be misused and make your systems vulnerable.
+
+If you have an email for the user, we recommend triggering a [password reset](/manage-users/access-control/reset-user-password/) instead.
+
+## Signing in with a temporary password
+
+To use a temporary password, the user signs in with their email, or other identity credential, and uses the temporary password. They will be immediately prompted to set a new password of their own creation. Once used, the temporary password becomes invalid.
+
+## Set a temporary password in Kinde
+
+1. In Kinde, go to **Users**, then open the profile of the user.
+2. Scroll to the bottom of the page to the **Admin actions** section.
+3. In the **Manage passwords** area, select **Set temporary password**.
+4. In the window that appears, enter a password.
+
+   <Aside>
+
+   The password must be more than 8 characters, not common or guessable (e.g. not `Password123`). We recommend a mix of alphanumeric characters in upper and lowercase. Special characters are optional.
+
+   </Aside>
+
+5. To view the password, select the ‘eye’ icon.
+6. Select **Set temporary password**.
+7. Communicate the password to the user.
+
+## Set or update a password via Kinde API
+
+The [Set user password API](/kinde-apis/management#tag/users/put/api/v1/users/{user_id}/password) allows you to supply a hashed password for a user. If you pass the `is_temporary_password: true` to the API it will set a password as being single-use.
+
+<Aside type="warning">
+
+We only accept password hashes and will never allow plain text passwords
+
+</Aside>
+
+Include the following information for the password API:
+
+- `hashed_password` - the user’s password encrypted using a hashing method or algorithm
+- `hashing_method` - the name of the algorithm used to encrypt the user’s password. Currently **crypt**, **bcrypt**, **md5**, **SHA256**, and **wordpress** are supported.
+
+    <Aside title="bcrypt $2b variant support">
+
+  If you are importing bcrypt hashes with the $2b variant, Kinde will substitute this for the $2a variant. These are interchangeable as long as you were not running OpenBSD at the time the hashes were generated.
+
+    </Aside>
+
+    <Aside title="sha256 support:">
+
+  Provide the hash in hex format. For the `salt_format`, specify how the salt should be interpreted: e.g. **hex** for a hex-encoded string (68656c6c6f for hello). By default, the salt is treated as a plain string, and escape sequences (like \n or \v) are treated as literal characters.
+
+    </Aside>
+
+- `salt` - extra characters added to passwords to make them stronger
+- `salt_position` - position of salt in password string. Prefix (before) or suffix (after).
+
+  | Hashing method | Salt     | Salt position             |
+  | -------------- | -------- | ------------------------- |
+  | md5            | Optional | required if salt included |
+  | bcrypt         |          |                           |
+  | crypt          | Optional |                           |
+  | wordpress      | Optional |                           |
+  | SHA256         | Optional | required if salt included |
+
+- `is_temporary_password` - indicates a single use password, the user will be prompted to set a new password after the first time they use it.

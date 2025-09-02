@@ -1,0 +1,64 @@
+
+You can take advantage of Cloudflare’s advanced security features such as their WAF and bot mitigation tools by proxying your Kinde hosted auth pages through Cloudflare.
+
+## What you need
+
+- A Cloudflare account
+- A domain managed in Cloudflare
+
+## Set up the custom domain
+
+1. Set up a custom domain in your Kinde business, see [Use your own custom domain](/build/domains/pointing-your-domain/).
+2. Set up DNS records for the domain in Cloudflare. We will change this from DNS once the records have been validated. DNS validation confirms the record before we set the proxy.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/11ab78a6-3b68-4424-2228-b45806f1a400/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+## Set up the proxy
+
+Once you receive the email that the custom domain has been set up in Kinde, go to Cloudflare and change the custom domain record from **DNS only** to **Proxied**.
+
+<Aside type="warning" title="Important">
+
+Leave the ACME challenge record as DNS. This is used to verify domain ownership each time the certificate needs to be renewed and cannot be proxied.
+
+</Aside>
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/1c91bc73-5252-4062-2bb0-af877e945200/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+<Aside type="warning" title="Important">
+
+Ensure your encryption mode in the Cloudflare dashboard is set to either **Full** or **Full (strict)**. For security purposes, Kinde enforces HTTPS on it's web services, which means **Flexible** or **Off** will not work.
+
+</Aside>
+
+## Create a Cloudflare Managed Challenge
+
+To test the proxied domain, create a WAF rule to show a Cloudflare Managed Challenge on all incoming requests.
+
+For example, create a rule to match the hostname of the custom domain used in Kinde and the request originating from Australia. The action is to show a **Managed Challenge**.
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/2aba2c16-a345-4179-3075-52485a126c00/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>

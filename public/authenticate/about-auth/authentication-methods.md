@@ -1,0 +1,83 @@
+
+Kinde supports the following authentication methods.
+
+For instructions on how to switch on each method for your apps, see [Set up user authentication](/authenticate/authentication-methods/set-up-user-authentication/).
+
+## Email authentication
+
+### Password
+
+You can set up authentication so users can authenticate via email using a [password](/authenticate/authentication-methods/password-authentication/).
+
+The password needs to be at least 8 characters and popular passwords are blocked. If allowing this method, you should encourage users to use a password manager to increase security.
+
+Users will be prompted to verify their email address when they first sign up, using a one time code.
+
+<Aside type="warning">
+
+If you switch your users from passwordless to password, Kinde will first check if a password exists for the user when they next sign in. If a password doesn't exist, we verify the email address and ask user to set the password. The next time they sign in, they will use the email + password. Note that they enter their password on a different screen to their email.
+
+</Aside>
+
+### Passwordless
+
+<Aside>
+
+Email + passwordless is switched on for all new Kinde businesses by default
+
+</Aside>
+
+For [passwordless](/authenticate/authentication-methods/passwordless-authentication/) authentication, set up authentication so users can authenticate via email or username using a one time code.
+
+When you activate this option, users will be sent a one-time password (OTP) to confirm their identity when they sign in. This option is more secure than using passwords, which need to be stored and protected by the user.
+
+Users will be prompted to verify their email address when they first sign up, also using an OTP.
+
+Kinde does not currently support magic links as a passwordless authentication method, as they are less secure than an OTP.
+
+## Phone authentication
+
+<Aside>
+
+You need to have a [Twilio](https://www.twilio.com/en-us) account set up before implementing phone authentication in your production environment. See [Set up phone authentication](/authenticate/authentication-methods/phone-authentication/) for more information.
+
+</Aside>
+
+You can allow users to authenticate using their phone number as their sign in identity. This is a passwordless method. Once set up, users enter their phone number on the sign in screen and then enter a one-time passcode (sent via SMS) on the next screen.
+
+### Passwordless via SMS
+
+For users to receive a sign in code via SMS, you need to set up a connection to [Twilio](https://www.twilio.com/en-us), who offer a messaging service for authenticating via SMS. You will need a Twilio account to set up this auth option in Kinde. See [Set up phone authentication](/authenticate/authentication-methods/phone-authentication/).
+
+Once set up, users will receive a one time code via SMS that enables them to complete the sign up process to your application or site.
+
+If you’re switching to Kinde from another auth provider, you can [import phone numbers with other user details](/manage-users/add-and-edit/import-users-in-bulk/) (such as email, first name, last name, etc.) to support authentication.
+
+### OTP message format
+
+The SMS message that users receive through Kinde auth complies with OTP best practice. Here’s an example:
+
+<aside>
+
+123456 is your one-time code to sign in to  
+xxxx@login.xxx.au #123456
+
+</aside>
+
+The content and format of the OTP SMS message is not editable.
+
+You’ll notice that the last part of the message includes a duplication of the OTP - `@bound_domain.xxx.dk #OTP_CODE` in the last line of the message. This keeps the OTP secured to the specified domain and allows browsers to reliably extract the OTP.
+
+The reason the OTP is included at the start of the message as well, is so that it can be read easily from a short notification popup.
+
+## Social authentication
+
+You can let users sign up and sign in using social profiles. This requires some admin setup work and developer skills.
+
+**Returning users matched by email** Unlike some other authentication providers, Kinde automatically matches some accounts on sign up by matching verified email addresses. This means that if a user signs up with Google the first time, and they come back and sign up again with Slack, and the same email is detected (and the emails are verified), then the accounts get linked.
+
+See the [individual social sign in](/authenticate/social-sign-in/add-social-sign-in/) instructions.
+
+## Enterprise authentication
+
+Kinde supports the use of [Microsoft Entra ID](/authenticate/enterprise-connections/azure/) and [SAML](/authenticate/enterprise-connections/custom-saml/) as an enterprise-level single sign on (SSO) authentication methods. These methods are more suited to big corporate and government organizations.

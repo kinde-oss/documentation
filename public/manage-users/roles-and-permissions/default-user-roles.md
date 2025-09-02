@@ -1,0 +1,41 @@
+
+When users first sign up to your app or service, you can automatically assign them roles and permissions. This means users are able to interact with your application immediately - in the way you define - without waiting for additional access. For example, you might assign everyone a role for basic access permissions, and assign more advanced functions on request.
+
+You can also set up default roles in organizations if you are on the Kinde [Scale plan](https://kinde.com/pricing/). 
+
+This topic covers default roles for applications and for organizations.
+
+[permissions](/manage-users/roles-and-permissions/user-permissions/) 
+[roles](/manage-users/roles-and-permissions/user-roles/) 
+
+## Create a new role and enable it as default
+
+1. Go to **Settings** > **Roles**. If you already have roles set up, these are shown here.
+2. Select **Add role**. The **Add role** window opens.
+  ![Addrole window in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7030c2ab-6b59-4e99-b5d1-5f4d0c204700/public)
+3. Give the role a **Name**. Keep it short and descriptive, so you can easily understand what it is for. For example, ‘Basic access’.
+4. Enter a **Description**. Describe what a user with this role can do. For example ‘Allows anyone assigned this role basic system access.’
+5. Enter a **Key**. The key is how your code references the role in Kinde. Ideally, it’s a word that is easy to reference in code and match in your product. You should also follow a naming convention to help maintain your code. E.g. `basic-system-access`.
+6. Select the **Assign to new users** option.
+7. Select the permissions that are included in the role by switching them on.
+8. Select **Save**. All new users who sign up to your application will be assigned this role.
+9. If you want to make this a default role in an organization, see the procedure below.
+
+## Make an existing role a default role
+
+This procedure assumes you have roles and permissions set up already.
+
+1. Go to **Settings > User management > Roles**.
+2. Find the role you want to make default, select the three dots menu then **Edit role**.
+3. In the dialog that opens, switch on the **Assign to new users** option. 
+4. Select **Save**.
+
+## Enable default roles in an organization
+
+This procedure assumes you have roles and permissions set up already, that you are on a [Scale](https://kinde.com/pricing/) plan, and have activated the [advanced features](/authenticate/custom-configurations/advanced-organization/) for the target organization.
+
+1. Go to **Organizations** and view the details of the organization you want to edit.
+2. Select **Policies**. 
+3. In the **Default roles** section, switch on the roles you want to be assigned by default when users join the organization.
+![Default roles in org screen shot](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6fc3e960-8bfe-427e-1e34-051b515aa600/public)
+4. Select **Save**.

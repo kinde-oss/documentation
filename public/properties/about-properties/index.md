@@ -1,0 +1,66 @@
+
+Properties are a way for you to add custom data to Kinde, and then use that data for custom claims and in tokens.
+
+Kinde comes with a standard set of properties that make up business, user, application, and organization profiles, but you can also [add custom properties](/properties/work-with-properties/manage-properties/) to capture any data you like.
+
+For example, you might want to record a billing address separate to a delivery address, or capture screen names, job titles, or other customer information.
+
+Properties can also be used to create custom claims.
+
+## Properties can be passed in tokens
+
+You can choose to make a property ‘public’ so it can be made available to be passed via a token. This is essentially a way of creating a custom claim, enabling data to be transferred system to system, via API. For more information see [Add and manage properties in tokens](/properties/work-with-properties/properties-in-tokens/).
+
+## Kinde-included properties
+
+To get you started, we’ve included a set of common properties. You can easily identify these as the code key starts with `kp-` meaning Kinde-provided. You cannot edit or delete these properties.
+
+## Custom properties
+
+The needs of every business are different, that’s why you can create your own properties and use them any way you want. For example, you might want to create a property to collect marketing information, identifiers from your app, or customer relationship data.
+
+## Property categories
+
+Properties can be organized using [property categories](/properties/work-with-properties/property-groups/). When you create a category, it becomes a heading in a user, application, or organization record. Property categories ensure similar fields are grouped together for easier display. 
+
+### Organization properties example
+
+| Category             | Properties                                         | For          |
+| -------------------- | -------------------------------------------------- | ------------ |
+| Billing information  | Billing contact, Billing address, Billing phone    | Organization |
+| Delivery information | Delivery contact, Delivery address, Delivery phone | Organization |
+
+### User properties example
+
+| Category         | Properties         | For  |
+| ---------------- | ------------------ | ---- |
+| Accounts contact | Name, email, phone | User |
+| Next of kin      | Name, email, phone | User |
+
+### Application properties example
+
+A common use case for application properties is to correlate M2M apps with organizations.
+
+| Category         | Properties         | For         |
+| -----------      | ------------       | ----        |
+| Application org  | Organization ID    | Application |
+| External ID      | External ID        | Application |
+
+
+## How properties are displayed in Kinde
+
+The way you label and group properties impacts how the data is displayed in Kinde. Here’s an example of how properties are displayed:
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8250f7ea-f6a2-4c47-2e40-a824ef4f4800/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+## Properties can be added and edited via API
+
+You need to [set up an M2M application to access the Kinde Management API](/developer-tools/kinde-api/connect-to-kinde-api/), and then create and edit properties using [dedicated endpoints](/kinde-apis/management#tag/properties). 

@@ -1,0 +1,25 @@
+
+You can prevent users from signing up to your business, and only add users selectively.
+
+You might do this if you only want to give access to employees or members.
+
+Disabling sign-ups applies across an environment. Depending on your Kinde plan, you may can also [manage sign-ups per organization](/build/organizations/allow-user-signup-org/).
+
+## Disable self sign-up for your business
+
+1. Go to **Settings > Environment > Policies**.
+2. Switch off the **Allow self-sign up** option.
+
+You can then [import users](/manage-users/add-and-edit/import-users-in-bulk/), [add them manually](/manage-users/add-and-edit/add-and-edit-users/), or add them [via the Kinde API](/kinde-apis/management#tag/users/post/api/v1/user).
+
+## Disable self sign-up to an organization
+
+You can disable self sign-up per organization.
+
+However, if you allow self sign-up in your business (and have not disabled it as per the above procedure), at least one organization must allow sign-ups.
+
+1. Go to **Organizations**.
+2. Select the organization you want to disable sign-ups for.
+3. Go to **Policies**.
+4. Switch off the **Allow org members to be auto-added** option.
+5. Select **Save**.

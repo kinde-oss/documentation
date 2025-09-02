@@ -1,0 +1,126 @@
+
+You can set up SAML to work with your Google Workspace.
+
+## Hosting the SAML metadata XML file
+
+Google does not support hosting your SAML metadata XML file on their web services, but Kinde requires access to the file via URL so that certificates are always up to date. We recommend you host the file on a public web service that can be accessed by Kinde. For example, you could use an [AWS S3](https://aws.amazon.com/s3/) bucket, [Cloudflare R2](https://developers.cloudflare.com/r2/), or public website.
+
+## Advanced configurations
+
+Depending on your SAML set up, you may need to include advanced configurations for your connection. See [Advanced SAML configurations](/authenticate/enterprise-connections/advanced-saml-configurations/).
+
+## Step 1: Add Google Workspace SAML in Kinde
+
+You can make a connection available only to a specific organization, or you can create it so it can be used across any organization in your business. 
+
+### Add a connection for a specific organization
+
+1. Go to **Organizations** and open the organization. 
+2. In the menu, select **Authentication**, then select **Add connection**.
+3. In the **Add connection** window, select **New enterprise connection**, then click **Next**.
+4. Select the connection type you want and then select **Next**.  
+5. Next: 'Step 2: Configure the connection'.
+
+### Add a connection that can be shared across multiple organizations
+
+1. Go to **Settings > Environment > Authentication**.
+2. Scroll to the **Enterprise connection** section and select **Add connection**. The **Add connection** window opens.
+3. Select the connection type you want and then select **Next**. 
+4. Next: 'Step 2: Configure the connection'.
+
+## Step 2: Configure the connection
+
+1. Enter the **Connection name**. This name is what will appear on the button on the authentication screen. We will call it ‘Google Workspace’ for this example.
+2. Enter an **Entity ID**. This field can be any mix of numbers and letters, as long as it matches your IdP configuration. Copy this somewhere you can access it later.
+3. If you are adding this connection to a live environment, you will be prompted to enter an **IdP Metadata URL** before you can save. If you are not sure of the file location, enter any URL and we will update this later.
+
+   ![connection window](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4fa556a1-7f8e-4926-d7ef-a274409e7700/public)
+
+4. Enter a **sign in URL** if your IdP requires a specific URL.
+5. If you want, select the **Sign request algorithm** and **Protocol binding**. The options you choose will depend on what your identity provider prefers or requires.
+6. Select a **Name ID** format. This helps identify and link user identities between your IdP and Kinde. 
+7. Enter an **Email key attribute**. This is the attribute in the SAML token that contains the user’s email. Setting this value ensures that the email address returned in the SAML response is correctly retrieved. We do not recommend leaving this field blank, but if you do we will set ‘email’ as the attribute.
+8. (Optional) Add a first name and last name key attribute.
+
+   ![Home realm domains in SAML configuration](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/dbdccca5-2e6c-4dd8-eaec-e029574daf00/public)
+
+9. Enter any relevant **Home realm domains**. This is how SAML recognizes a user’s credentials and routes them to the correct sign in page. Note that home realm domains need to be unique across all connections in an environment. [Read more about home realm domains](/authenticate/enterprise-connections/home-realm-discovery/).
+10. If you use home realm domains, the sign in button is hidden on the auth screen by default. To show the SSO button, select the **Always show sign-in button** option. 
+
+    ![ACS URL and custom domain option](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/885eda9c-ca4f-4340-db17-224023b8c300/public)
+
+11. Copy the relevant reply URL: 
+    1. If you don't use a custom domain, copy the **ACS URL**.
+    2. If you do use a custom domain, select the **Use custom domain instead** option and copy the custom domain URL. 
+    Later, add this URL to your identity provider configuration.
+12. If you want to enable just-in-time (JIT) provisioning for users, select the **Create a user record in Kinde** option. This saves time adding users manually or via API later.
+
+    ![Provisioning configuration for SAML](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/947baea7-bfd4-48b7-de2d-5b041b8c8300/public)
+
+13. (Temporary feature) Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified.
+14. (Optional) In the **Sign SAML request** section, paste in the **Signed certificate** and **Private key**. You may have got these from your IdP or you may have generated yourself (see procedure above).
+15. Enter any [upstream params](/authenticate/enterprise-connections/advanced-saml-configurations/#upstream-parameters) that you want to pass to the identity provider. Not all providers support this, so check their documentation first.
+16. Select **Save**.
+
+
+## Step 3: Configure Google Workspace Admin Console
+
+1. Sign in to your [Google Workspace Admin Console](https://admin.google.com/).
+2. In the main menu, go to **Apps > Web and Mobile Apps**.
+3. Select **Add App > Add custom SAML app.**
+
+  ![adding custom saml app](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d02e7219-70e1-437c-41b3-b60263568900/public)
+
+4. Complete the **App details** window:
+
+   1. Enter a name in the **App name** field.
+   2. Enter a **Description** for the app.
+   3. If you want, upload an icon for the app.
+   4. Select **Continue**.
+
+   ![identity details](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/859218b5-4ca0-4fab-2475-3146088dc700/public)
+    
+5. Copy the **Google Identity Provider details** by selecting **DOWNLOAD METADATA** under Option 1. This is the file you will need to upload to a file storage location and provide a URL to finish setting up in Kinde.
+6. Select **Continue**.
+
+  ![Service provider details](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/91f8d1a9-bcd0-4b11-702e-c4593ac73d00/public)
+
+7. Enter the **Service provider details**:
+   1. Enter or paste in the **ACS URL** you copied from Kinde earlier.
+   2. Enter or paste the **Entity ID**, this needs to match what was entered in Kinde earlier.
+   3. Set the **Name ID format** as **EMAIL**.
+   4. Select **Continue**.
+8. On the **Attribute mapping** page, select **Finish**.
+9. If you want to grant access to other users, select the chevron in the right corner of the **User access** panel. This opens additional options.
+
+  ![user access panel](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c7e3c185-e1db-49b2-8e02-25ca7320cf00/public)
+
+10. If you want, you can change the access to suit your organization’s needs. You can do this per Organizational unit or switch **ON for everyone.**
+11. Select **Save**.
+
+## Step 4: Upload metadata file
+
+As mentioned at the start, you need to upload the **metadata file** that you downloaded, to somewhere publicly accessible. This is because Google does not provide a publicly available URL for the metadata file.
+
+1. Upload the metadata file to your storage location.
+2. Copy the URL for the file.
+
+## Step 5: Complete Kinde configuration
+
+1. Open the connection's configuration page in Kinde.
+2. In the **IdP metadata URL** field, paste the URL for the metadata file.
+3. Switch on the connection. This will make it instantly available to users if this is your production environment.
+   1. For environment-level connections, scroll down and select the apps that will use the auth method.
+   2. For organization-level connections, scroll down and select if you want to switch this on for the org. 
+4. Select **Save**.
+
+## Test the connection
+
+Once you have completed the above steps, you should be able to see a **Google Workspace** sign-in button on your product’s authentication screen. Note: if you gave the enterprise connection a different name in Kinde, the button will have the name you entered.
+
+If you can’t see the button:
+
+- Check that the metadata URL and other connection details are correct in Kinde.
+- Check that user access is set up in your app, in the Google Workspace Console.
+
+Try to sign in and hopefully - success!!

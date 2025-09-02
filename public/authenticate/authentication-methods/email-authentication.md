@@ -1,0 +1,57 @@
+
+The most common application signup and sign in method for users is email. Kinde supports a number of approaches to email authentication.
+
+You can set up email authentication so that:
+
+- users sign up with their preferred email, but don’t need a password
+- users sign up with their preferred email and set their own password
+- only [users you invite](/authenticate/custom-configurations/disable-sign-up/) can sign up and sign in using email
+
+## Verification code email from Kinde to your users
+
+To verify a user, Kinde sends a verification code to the email they sign up with. If you’ve also enabled passwordless authentication, this is also where the one time code is sent each time they sign in.
+
+The verification email has limited customizations.
+
+- You can add your own logo
+- You can change the sender name, but you cannot change the sender email address
+- You cannot edit the email content
+- Email content references your [business] name in Kinde. For example:
+
+<img
+  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c38710e9-889e-440e-5b6d-3421bb377900/public"
+  alt=""
+  width="672px"
+  height="auto"
+  fetchpriority="low"
+  loading="lazy"
+  decoding="async"
+/>
+
+## All email sign-ups must verify their email address
+
+If your authentication method requires users to sign up with an email, they will be prompted to verify their email address using a one time code. Even if they subsequently sign on using their own password, the user must verify their email the first time by entering a one time code.
+
+If a user signs up via a social provider that does not require an email (such as Twitter or Apple), or via another OAuth2 protocol that does not pass the email to us, they will be prompted to enter an email address so their account can be verified.
+
+<Aside>
+
+The exception for the above is if you import users and the `email_verified` parameter is `true`.
+
+</Aside>
+
+## Kinde automatically links accounts with verified emails
+
+Unlike some other authentication providers, Kinde automatically matches accounts on sign up by matching verified email addresses.
+
+This means that if a user signs up with Google the first time, and they come back and sign up again with Slack, and the same email is detected (and we know they are both verified), then the accounts get linked. This reduces duplication and creates a better experience for users.
+
+## Pre-populate the email field on sign in
+
+If you only allow users that you invite to sign up or sign in to your app, you can pre-populate the email field in the sign in window. This can only be achieved by including the `login_hint` parameter as part of the `login` method. It cannot be set in the Kinde UI.
+
+When your project knows which user it is trying to authenticate, it can provide their email in this parameter as a hint to Kinde. Passing this hint pre-fills the email box on the sign-up and sign-in screens.
+
+## How profile pictures are passed to Kinde
+
+Typically, Kinde receives user profile pictures via the email provider, e.g. Google. If no picture is attached to a profile, Kinde sets the picture to use a Gravatar URL instead. See also [Switch off Gravatar fallback](/authenticate/custom-configurations/authentication-experience/#switch-off-gravatar-fallback-for-profile-pictures). 

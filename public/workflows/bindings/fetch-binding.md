@@ -1,0 +1,64 @@
+
+The `kinde.fetch` binding allows you to make external API calls including to the Kinde Management API.
+
+If you are passing sensitive data we recommend you instead use [kinde.secureFetch](/workflows/bindings/secure-fetch-binding/) where the POST body is encrypted.
+
+## Available in workflows
+
+- [user:pre_registration](/workflows/example-workflows/pre-user-registration-workflow/)
+- [user:post_authentication](/workflows/example-workflows/workflow-user-post-auth/)
+- [m2m:token_generation](/workflows/example-workflows/m2m-token-generation-workflow/)
+- [user:new_password_provided](/workflows/example-workflows/new-password-provided-workflow/)
+- [user:existing_password_provided](/workflows/example-workflows/existing-password-provided-workflow/)
+- [user:tokens_generation](/workflows/example-workflows/user-token-generation/)
+- [user:pre_mfa](/workflows/example-workflows/pre-mfa-workflow/)
+- [user:plan_selection](/workflows/example-workflows/plan-selection-workflow/)
+- [user:plan_cancellation_request](/workflows/example-workflows/plan-cancellation-request-workflow/)
+
+## Configuration
+
+```js
+export const workflowSettings = {
+  // ...other settings
+  bindings: {"kinde.fetch": {}}
+};
+```
+
+## Usage
+
+### Using the Kinde infrastructure library (recommended)
+
+The [Kinde infrastructure library](https://github.com/kinde-oss/infrastructure) provides a type-safe fetch helper.
+
+Note: you will also need the [url](/workflows/bindings/url-binding/) binding enabled for the workflow as this is used under the hood.
+
+```js
+import {fetch} from "@kinde/infrastructure";
+
+export default async function Workflow(event) {
+  const {data: ipDetails} = await fetch(
+    `https://ipinfo.io/${event.request.ip}`,
+    {
+      method: "GET",
+      responseFormat: "json",
+      headers: {"Content-Type": "application/json"}
+    }
+  );
+
+  console.log(ipDetails);
+}
+```
+
+### Using the low-level API
+
+If you're not using the infrastructure library, you can call the underlying API directly:
+
+```js
+const res = await kinde.fetch(`https://ipinfo.io/${event.request.ip}`, {
+  method: "GET",
+  responseFormat: "json",
+  headers: {"Content-Type": "application/json"}
+});
+const {json} = res;
+console.log(json);
+```
