@@ -1,0 +1,206 @@
+---
+page_id: a10aee46-af87-4ad1-b996-61ee6206c9eb
+title: Create a to-do app with Kinde and Supabase
+description: A walkthough example on how to create a to-do list app using Kinde and Supabase, as previously set up.
+sidebar:
+  order: 8
+relatedArticles:
+  - a07f8f6b-5d6a-4096-be52-7b13b4a3b0a5
+  - 1023d9f8-ae2d-4167-98e0-a4aa7b31e80c
+topics:
+  - integrate
+  - third-party-tools
+sdk:
+  - nextjs-sdk
+languages:
+  - typescript
+  - javascript
+  - sql
+  - bash
+audience:
+  - developers
+complexity: advanced
+keywords:
+  - supabase
+  - postgresql
+  - row level security
+  - rls
+  - nextjs
+  - jwt
+  - authentication
+  - database
+  - todo app
+updated: 2025-09-01
+featured: false
+deprecated: false
+ai_summary: A walkthough example on how to create a to-do list app using Kinde and Supabase, as previously set up.
+---
+
+User authentication and secure data access are critical components of modern web applications. Kinde simplifies the process by handling user authentication, managing session tokens, and offering robust user management features.
+
+When combined with Supabase's powerful database management and PostgreSQL’s Row-Level Security (RLS) policies, you can create a secure, scalable application that ensures user-specific data access.
+
+In this guide, we will walk through building a personalized and secure to-do application. We’ll use Next.js as the application framework.
+
+### What you need
+
+- A Kinde & Supabase project built [using this guide](/integrate/third-party-tools/kinde-supabase/)
+
+## Step 1: Create to-do table in Supabase
+
+1. Sign in to your Supabase dashboard and go to **SQL Editor.**
+2. Select the **plus “+” icon**, and then **Create a new snippet**.
+    
+    ![Create Snippet in Supabase](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ee3d1db7-9029-4ea1-9d76-f573af311b00/public)
+    
+3. Paste the following SQL code into the command window and select **Run**:
+    
+    ```sql
+    -- Create the table
+    CREATE TABLE todos (
+      id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+      task TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      completed_state BOOLEAN DEFAULT FALSE
+    );
+    
+    -- Insert some sample data into the table
+    INSERT INTO todos (task, user_id, completed_state)
+    VALUES
+      ('Finish writing blog post', 'kp_123', FALSE),
+      ('Buy groceries', 'kp_456', TRUE),
+      ('Work out at the gym', 'kp_789', FALSE),
+      ('Read 10 pages of a book', 'kp_101', TRUE);
+    
+    -- Enable row-level security
+    ALTER TABLE todos ENABLE ROW LEVEL SECURITY;
+    ```
+    
+    This command creates a `todos` table with the following columns:
+    
+    - **`task`**: with a type of **text**.
+    - **`user_id`**: with a type of **text**.
+    - **`completed_state`**: with a type of **boolean**. We use boolean because the completed state of each item is either true or false.
+    
+    It also inserts four sample todo items. We will need this for later.
+    
+4. Create another new snippet and run the following SQL statement to enable the row-level policy.
+    
+    ```sql
+    create policy "users can read only their todos" on public.todos
+    for select to public
+    using (get_user_id() = user_id);
+    ```
+    
+
+Your database policy is now set up to ensure that only the authenticated user's to-do items are displayed. In the next step, you'll update your table rows to include user IDs.
+
+## **Step 2: Build a simple to-do app**
+
+1. Open the `/components/hero.tsx` file with your favorite code editor.
+2. Add the following code to `hero.tsx` which is a basic to-do list table:
+    
+    ```tsx
+    import { createClient } from "@/lib/supabase/server"
+    
+    export async function Hero() {
+    const supabase = await createClient()
+    const { data: todos } = await supabase.from("todos").select()
+    
+    return (
+      <div className="flex flex-col gap-16 items-center">
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              <th
+                style={{
+                  border: "1px solid #ddd",
+                  padding: "8px",
+                  textAlign: "left",
+                  backgroundColor: "#f2f2f2",
+                }}
+              >
+                ID
+              </th>
+              <th
+                style={{
+                  border: "1px solid #ddd",
+                  padding: "8px",
+                  textAlign: "left",
+                  backgroundColor: "#f2f2f2",
+                }}
+              >
+                Task
+              </th>
+              <th
+                style={{
+                  border: "1px solid #ddd",
+                  padding: "8px",
+                  textAlign: "left",
+                  backgroundColor: "#f2f2f2",
+                }}
+              >
+                Is Complete
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {todos?.map((row) => (
+              <tr key={row.id}>
+                <td style={{ border: "1px solid #ddd", padding: "8px" }}>
+                  {row.id}
+                </td>
+                <td style={{ border: "1px solid #ddd", padding: "8px" }}>
+                  {row.task}
+                </td>
+                <td style={{ border: "1px solid #ddd", padding: "8px" }}>
+                  {String(row.completed_state)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+    }
+    ```
+    
+3. Run the project with the following terminal command:
+    
+    ```bash
+    npm run dev
+    ```
+    
+4. Go to [http://localhost:3000](http://localhost:3000/), sign in/sign up, and preview the page. You won’t see any to-do items because we haven’t set any user ID yet.
+    
+    ![Empty to do list](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/a7a2213e-a5db-43cd-7d12-b33bb2cc6100/public)
+    
+
+## **Step 3: Link Kinde ID to to-do items**
+
+1. Sign in to your Kinde dashboard and select **Users** to view the user list.
+2. Locate the user registered with your Supabase to-do app (e.g: Tamal Chowdhury) and select their name to view their profile.
+    
+    [List of Kinde users](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9a063bd4-4aaf-4f7d-d4d2-2e9425a06f00/public)
+    
+3. Copy the unique **Kinde profile ID** displayed on their profile page.
+    
+    [Kinde profile ID](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8ca5c4de-0a28-4f1a-8baa-e960d79c3e00/public)
+    
+4. Go to **Table Editor** in your Supabase project, and open the **todos** table.
+5. Locate the rows corresponding to your to-do items and update the `user_id` column with the Kinde ID you copied. Save your changes.
+    
+    ![to-do items](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/bf7a1ea7-0cb8-4512-3935-55b5d03f1e00/public)
+    
+6. In the Kinde project, log in with the same user you signed up with. Verify that the to-do items linked to this user are now visible on the **to-do page** of your app.
+    
+    ![to-do list finished](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/fc135833-78c1-4277-e3d1-6f92cfcad600/public)
+    
+
+This step links the Kinde user ID to specific to-do items, enabling the app to filter and display tasks based on the authenticated users.
+
+## Excellent work!
+
+You’ve successfully built a secure and personalized to-do app using Kinde for authentication and Supabase for database management.
+
+With this foundation, your app is now equipped to manage user authentication and personalized data securely. You can extend this project further by adding features like task creation, deletion, updates, or even real-time collaboration.
