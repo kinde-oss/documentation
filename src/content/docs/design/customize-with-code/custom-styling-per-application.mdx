@@ -1,6 +1,6 @@
 ---
 page_id: 9dce4055-d19a-4528-8a1a-c8bffb5ce044
-title: How to apply custom styling per application
+title: Apply custom styling per application
 description: "How to apply custom styling per application using the Client ID attribute and conditional rendering."
 relatedArticles:
   - 66f83c18-d261-48b8-a517-648ed1b7b064
@@ -33,15 +33,11 @@ deprecated: false
 ai_summary: The guide explains how to use an application's clientId to conditionally render unique styles for multiple apps from a single code repository.
 ---
 
-## Overview
-
-You can apply unique HTML and CSS styling to each Kinde application within the same business account. Although you can only connect one Git repository for your custom UI pages, you can use conditional rendering to serve different designs based on which application is being accessed.
+You can apply unique HTML and CSS styling to each Kinde application within the same business account. Although you can only connect one Git repository for your custom pages, you can use conditional rendering to serve different designs based on which application is being accessed.
 
 This guide will walk you through how to use the application's **Client ID** to render unique styles and layouts. This doc is based on the tests and implementation we ran and provides example code, folder layout, and implemention checklist. 
 
 The **clientID** is a unique identifier assigned to each application in Kinde. This value distinguishes one app from another, allowing your template code to detect which application is active and render the appropriate HTML and CSS for each app accordingly. 
-
----
 
 ## Solution: Conditional rendering
 
@@ -49,21 +45,13 @@ The key to this solution is the `clientId`, a unique identifier assigned to ever
 
 This process happens server-side, so there's no performance loss for your users.
 
----
-
 ## Before you begin
 
-Before you start, make sure you have:
+- Set up a [custom domain](/build/domains/pointing-your-domain/) for your Kinde business.
+- Connect a [Git repository](/design/customize-with-code/connect-repo/) to manage your custom pages.
+- Make sure your custom design files are already working. Follow [this guide](/design/customize-with-code/customize-with-css-html/) for more details.
 
-- Set up a [custom domain](https://kinde.com/docs/config/custom-domains/) for your Kinde business.
-- Connected a [Git repository](https://docs.kinde.com/design/customize-with-code/connect-repo/) to manage your custom UI pages.
-- Make sure to already have your custom design files working. You can follow [this guide](https://docs.kinde.com/design/customize-with-code/customize-with-css-html/) for more details.
-
-## Implementation
-
-Follow these steps to set up conditional styling for your Kinde applications.
-
-### 1. File Structure
+## Step 1: Set up file structure
 
 Your repository needs to follow a specific structure for Kinde to recognize the files. For this example, we are using the simplest structure with the `(default)` folder to act as a fallback and a `page.tsx` file within it. This file will contain your conditional logic.
 
@@ -81,9 +69,9 @@ myApp/
 └── kinde.json
 ```
 
-**Note:** For this specific example, we focus on the default design, but you can use this for your sign up and sign pages. 
+For this specific example, we focus on the default design, but you can use this for your sign up and sign pages as well. 
 
-### 3. Access the Client ID
+## Step 2: Find the Client ID
 
 In your `page.tsx` file, you can access the `clientId` from the `request` object that is passed to your page component.
 
@@ -97,9 +85,9 @@ const DefaultPage: React.FC<KindePageEvent> = async ({ context, request }) => {
 
 ```
 
-### 4. Implement the Conditional Logic
+## Step 3: Implement the conditional logic
 
-Use the `clientId` variable to build your conditional logic. You can use an `if/else` statement, a `switch` statement, or a ternary operator to render different JSX for each application.
+Now you can use the `clientId` variable to build your conditional logic. For example, you can use an `if/else` statement, a `switch` statement, or a ternary operator to render different JSX for each application.
 
 The following example shows how to render different content for three separate applications (Next.js, Python, and Nuxt.js), with a default fallback.
 
@@ -208,23 +196,21 @@ export default async function Page(event: KindePageEvent): Promise<string> {
 
 ```
 
-**Note:** The custom CSS for classes like `.container` and `.container-2` would typically be defined in your `layout.tsx` file or in a separate CSS file.
+The custom CSS for classes like `.container` and `.container-2` would typically be defined in your `layout.tsx` file or in a separate CSS file.
 
----
+## Expected output for custom designs per application
 
-## Expected output
+When a user authenticates through each of your applications, they will see a different page design based on your conditional logic. The examples below are not over-designed, but you could make them as distinct as you want.
 
-When a user authenticates through each of your applications, they will see a different page design based on your conditional logic.
-
-- **Next.js App (`clientId`: `ca3c184c80c740bd842777bceee2df74`)**
+- **Next.js App (`clientId`: `ca3c184c80c740bd842777bceee2xxxx`)**
     - The user will see the content inside the first block, with the heading "Styling for the First App - Next.js".
-    ![An image of how the page for the Next.js app looks after the conditional rendering is applied](@assets/images/design/custom_ui_app_01.png)
-- **Python App (`clientId`: `c41376bd84c24244b3122dd41cd154ba`)**
+    ![An image of how the page for the Next.js app looks after the conditional rendering is applied](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b78f5a38-8c84-4b2c-5759-9df24aa61700/public)
+
+- **Python App (`clientId`: `c41376bd84c24244b3122dd41cd1xxxx`)**
     - The user will see the second block, with the heading "Styling for the Second App - Python" and a custom HTML table.
-    ![An image of how the page for the Python app looks after the conditional rendering is applied](@assets/images/design/custom_ui_app_02.png)
+    ![An image of how the page for the Python app looks after the conditional rendering is applied](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b161fbec-4144-4975-8561-a4fb6b1d8500/public)
 
-- **Nuxt.js App or any other app (`clientId`: `730c34be02c945248e206ec07cd591f3`)**
+- **Nuxt.js App or any other app (`clientId`: `730c34be02c945248e206ec07cd5xxxx`)**
     - Since this ID doesn't match the first two conditions, the user will see the final fallback block with the heading "Default Kinde Authentication Page".
-    ![An image of how the page for any other app (default) would look after the conditional rendering is applied](@assets/images/design/custom_ui_default.png)
+    ![An image of how the page for any other app (default) would look after the conditional rendering is applied](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9aacda1b-2583-4226-48c7-3dcd09981100/public)
 
-  
