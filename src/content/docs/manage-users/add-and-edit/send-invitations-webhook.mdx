@@ -1,5 +1,5 @@
 ---
-page_id: b0ad8aa8-92e8-4bc8-9976-2ba50ced5725
+page_id: beac642f-cd55-4dd2-b26e-a7123ba4c5d2
 title: Send user invitations with webhooks
 sidebar:
   order: 7
@@ -39,8 +39,24 @@ If you add users to your Kinde business manually or via API, you can send them a
 
 ## Prepare to receive the webhook
 
-- Set up the email template you want to send via the hook. The email needs to come from your email server and should contain a link to the sign in screen.
-- Filter the webhook data when it hits the endpoint, to identify if the user was created manually or by API. The `source` is either `admin` or `api` . It's up to you if you treat these differently.
+- Set up the email template you want to send via the webhook. The email should be sent from your email server and contain a link to the sign-in screen.
+- Verify the webhook signature before processing to ensure the request is authentic.
+- Respond with a 2xx quickly after queuing work; use retries and make processing idempotent (e.g., de-duplicate by event ID).
+- Filter the webhook payload to determine whether the user was created manually or via API. The `source` field is `admin` or `api`. Treat these differently if needed.
+
+Payload example:
+
+```json
+{
+  "type": "user.created",
+  "id": "evt_123",
+  "data": {
+    "user_id": "usr_abc",
+    "email": "new.user@example.com",
+    "source": "admin"
+  }
+}
+```
 
 ## Test the webhook
 
