@@ -121,10 +121,13 @@ KINDE_AUDIENCE=myapp.kinde.com/api
 
 **Android Setup**
 
+**Build.gradle Configuration**
+
 Go to the `build.gradle` file in the **Android > App** folder for your Android app.
 
 Specify the custom scheme similar to the following, but replace `<your_custom_scheme>` with your own value.
 
+**For build.gradle (Groovy):**
 ```groovy
   android {
     ...
@@ -136,6 +139,81 @@ Specify the custom scheme similar to the following, but replace `<your_custom_s
     }
 }
 ```
+
+**For build.gradle.kts (Kotlin DSL):**
+```kotlin
+android {
+    ...
+    defaultConfig {
+        ...
+        manifestPlaceholders["appAuthRedirectScheme"] = "<your_custom_scheme>"
+    }
+}
+```
+
+**Understanding `appAuthRedirectScheme`:**
+
+The `appAuthRedirectScheme` is a custom URL scheme that uniquely identifies your app for OAuth redirects. When users complete authentication with Kinde in their browser, this scheme tells Android to redirect them back to your specific app.
+
+**Important:** This scheme must match exactly what you configure in:
+1. Your Kinde dashboard callback URLs
+2. Your Flutter app's environment variables (`KINDE_LOGIN_REDIRECT_URI`, `KINDE_LOGOUT_REDIRECT_URI`)
+
+**AndroidManifest.xml Configuration**
+
+Go to the `AndroidManifest.xml` file in the **Android > App > Src > Main** folder, ensure the following configuration is included to avoid OAuth authorization errors:
+
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    
+    <application
+        android:label="your_app_name"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+        
+        <!-- Main Activity Configuration -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity="${applicationId}"
+            android:theme="@style/LaunchTheme">
+            <!-- ... other configuration ... -->
+        </activity>
+        
+        <!-- OAuth Redirect Handler -->
+        <activity
+            android:name="net.openid.appauth.RedirectUriReceiverActivity"
+            android:theme="@style/Theme.AppCompat.Translucent.NoTitleBar"
+            android:exported="true"
+            tools:node="replace">
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="${appAuthRedirectScheme}" 
+                      android:host="kinde_callback" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="${appAuthRedirectScheme}" 
+                      android:host="kinde_logoutcallback" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+```
+
+**Key Configuration Points:**
+
+- Add the `tools` namespace to the manifest root
+- Set `taskAffinity="${applicationId}"` for the main activity  
+- Include the `RedirectUriReceiverActivity` with proper intent filters for both login and logout callbacks
+- The `${appAuthRedirectScheme}` in the manifest gets replaced with your custom scheme from build.gradle
+- Intent filters handle both `kinde_callback` (login) and `kinde_logoutcallback` (logout) URLs
 
 **iOS Setup**
 
@@ -228,6 +306,30 @@ await sdk.logout()
 ### Test sign up
 
 Register your first user by signing up yourself. You’ll see your newly registered user on the **Users** page in Kinde.
+
+## Billing URL Parameters
+
+When directing users to authentication flows with billing context, you can now pass additional parameters to indicate pricing interests:
+
+```dart
+// During login with billing context
+final token = await sdk.login(
+  context: context,
+  additionalParameters: AdditionalParameters(
+    planInterest: 'premium',           // Plan the user showed interest in
+    pricingTableKey: 'pricing_table_1' // Pricing table key for reference
+  ),
+);
+
+// During registration with billing context
+await sdk.register(
+  context: context,
+  additionalParameters: AdditionalParameters(
+    planInterest: 'starter',
+    pricingTableKey: 'pricing_table_2'
+  ),
+);
+```
 
 ## Get user information
 
@@ -491,6 +593,82 @@ sdk.getUserOrganizations();
 ```
 
 To shift users between organizations visit [user-management.](/manage-users/about/)
+
+## Portal URL Generation
+
+The Kinde Flutter SDK now supports generating authenticated portal URLs that allow users to access specific pages within your Kinde portal. This feature is useful for directing users to billing pages, profile settings, organization management, and other portal functions.
+
+### Create Portal URL
+
+The `createPortalUrl()` method generates a secure, authenticated URL that redirects users to a specific page in the Kinde portal.
+
+```dart
+Future<void> generatePortalUrl() async {
+  try {
+    final portalUrl = await sdk.createPortalUrl(
+      returnUrl: 'https://yourapp.com/dashboard',
+      subNav: PortalPage.profile, // optional, defaults to profile
+    );
+    
+    // Open the portal URL in browser or WebView
+    print('Portal URL: $portalUrl');
+  } catch (error) {
+    print('Error generating portal URL: $error');
+  }
+}
+```
+
+### Portal Page Navigation
+
+You can specify which page in the portal the user should be directed to using the `PortalPage` enum:
+
+```dart
+// Available portal pages
+PortalPage.profile                    // User profile (default)
+PortalPage.organizationDetails        // Organization details
+PortalPage.organizationMembers        // Organization members
+PortalPage.organizationPlanDetails    // Organization plan details
+PortalPage.organizationPaymentDetails // Organization payment details
+PortalPage.organizationPlanSelection  // Organization plan selection
+PortalPage.paymentDetails            // Personal payment details
+PortalPage.planSelection             // Personal plan selection
+PortalPage.planDetails               // Personal plan details
+```
+
+### Examples
+
+**Navigate to billing/plan selection:**
+
+```dart
+Future<void> openBillingPage() async {
+  final billingUrl = await sdk.createPortalUrl(
+    returnUrl: 'https://yourapp.com/settings',
+    subNav: PortalPage.planSelection,
+  );
+  
+  // Launch URL in browser or WebView
+  await launchUrl(Uri.parse(billingUrl));
+}
+```
+
+**Navigate to organization management:**
+
+```dart
+Future<void> openOrgManagement() async {
+  final orgUrl = await sdk.createPortalUrl(
+    returnUrl: 'https://yourapp.com/organization',
+    subNav: PortalPage.organizationMembers,
+  );
+  
+  // Launch URL in browser or WebView
+  await launchUrl(Uri.parse(orgUrl));
+}
+```
+
+### Requirements
+
+- User must be authenticated before calling `createPortalUrl()`
+- The `returnUrl` parameter must be an absolute URL
 
 ## Scopes
 
@@ -835,6 +1013,37 @@ Constructs redirect url and sends user to Kinde to sign up and create a new org 
 ```dart
 sdk.createOrg(
   org_name: "org_1234"
+);
+```
+
+### `createPortalUrl`
+
+Generates an authenticated portal URL to redirect users to specific pages within the Kinde portal.
+
+**Arguments:**
+
+```dart
+createPortalUrl({
+  required String returnUrl,
+  PortalPage subNav = PortalPage.profile
+})
+```
+
+- `returnUrl`: The absolute URL where users will be redirected after portal interaction
+- `subNav`: The specific portal page to navigate to (optional, defaults to profile)
+
+**Usage:**
+
+```dart
+// Navigate to user profile
+final profileUrl = await sdk.createPortalUrl(
+  returnUrl: 'https://yourapp.com/dashboard'
+);
+
+// Navigate to billing page
+final billingUrl = await sdk.createPortalUrl(
+  returnUrl: 'https://yourapp.com/settings',
+  subNav: PortalPage.planSelection
 );
 ```
 
