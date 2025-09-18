@@ -1,3 +1,34 @@
+---
+page_id: 3f4a5b6c-7d8e-9f0a-1b2c-3d4e5f6a7b8c
+title: Kinde Documentation - Design
+description: "Complete documentation for Kinde's design section containing titles, descriptions, keywords, topics, and full content from all documentation files in this section for LLM training"
+sidebar:
+  order: 1
+topics:
+  - llm
+  - documentation
+  - training
+  - design
+sdk: []
+languages:
+  - markdown
+  - text
+audience: developers
+complexity: beginner
+keywords:
+  - llm training
+  - documentation
+  - design
+  - section
+  - frontmatter
+  - metadata
+  - kinde
+updated: 2025-09-18
+featured: false
+deprecated: false
+ai_summary: "Complete documentation for Kinde's design section containing titles, descriptions, keywords, topics, and full content from all documentation files in this section for LLM training"
+---
+
 # Kinde Documentation - Design
 
 This is the complete documentation for Kinde's design section containing titles, descriptions, keywords, topics, and full content from all documentation files in this section.
@@ -91,6 +122,15 @@ custom code logs, sync log, build log, runtime log, debugging, deployment errors
 design, customize-with-code, logs, debugging
 
 There are several logs that can be checked when something goes wrong. ## Sync log Check to see if your code is syncing to Kinde and is able to be deployed. Issues with sync logs are most commonly associated with missing files or other directory issues. Go to **Settings > Git repo > Sync log**. ## Build log A build log is generated for each deployment. It provides details on the deployment checks, showing a success or fail message. 1. Go to **Design > Custom code**. 2. Select **Deployments** in the menu. 3. Select the specific deployment you want to view. 4. Scroll to the **Build log** section. For each page included in the deployment, open the dropdown to view the build details. We recommend fixing all the errors detected during this process and syncing your code again. This generates a new deployment and new code check. ## Runtime log Runtime logs record events that occur when your code is running. When something goes wrong, you can check runtime logs to see what happened. 1. Go to **Design > Custom code**. 2. Select **Runtime logs** in the menu. 3. Select the runtime ID to open a details page. 4. Scan the logs for errors.
+
+# Design - Customize with code - Apply custom styling per application
+
+> How to apply custom styling per application using the Client ID attribute and conditional rendering.
+
+custom CSS, custom HTML, conditional rendering, custom domain
+design, customize-with-code, css, styling
+
+You can apply unique HTML and CSS styling to each Kinde application within the same business account. Although you can only connect one Git repository for your custom pages, you can use conditional rendering to serve different designs based on which application is being accessed. This guide will walk you through how to use the application's **Client ID** to render unique styles and layouts. This doc is based on the tests and implementation we ran and provides example code, folder layout, and implemention checklist. The **clientID** is a unique identifier assigned to each application in Kinde. This value distinguishes one app from another, allowing your template code to detect which application is active and render the appropriate HTML and CSS for each app accordingly. ## Solution: Conditional rendering The key to this solution is the `clientId`, a unique identifier assigned to every application you create in Kinde. This ID is passed in the `request` object to your custom pages. By checking the value of the `clientId`, your code can determine which application is active and render the corresponding HTML and CSS. This process happens server-side, so there's no performance loss for your users. ## Before you begin - Set up a [custom domain](/build/domains/pointing-your-domain/) for your Kinde business. - Connect a [Git repository](/design/customize-with-code/connect-repo/) to manage your custom pages. - Make sure your custom design files are already working. Follow [this guide](/design/customize-with-code/customize-with-css-html/) for more details. ## Step 1: Set up file structure Your repository needs to follow a specific structure for Kinde to recognize the files. For this example, we are using the simplest structure with the `(default)` folder to act as a fallback and a `page.tsx` file within it. This file will contain your conditional logic. ``` myApp/ ├── kindeSrc/ │ └── environment/ │ └── pages/ │ └── (kinde)/ │ └── (default)/ │ └── page.tsx │ └── layout.tsx ├── package.json └── kinde.json ``` For this specific example, we focus on the default design, but you can use this for your sign up and sign pages as well. ## Step 2: Find the Client ID In your `page.tsx` file, you can access the `clientId` from the `request` object that is passed to your page component. ```js const DefaultPage: React.FC<KindePageEvent> = async ({ context, request }) => { let clientId = request.authUrlParams?.clientId || null; // ... rest of your code };` ``` ## Step 3: Implement the conditional logic Now you can use the `clientId` variable to build your conditional logic. For example, you can use an `if/else` statement, a `switch` statement, or a ternary operator to render different JSX for each application. The following example shows how to render different content for three separate applications (Next.js, Python, and Nuxt.js), with a default fallback. ### `kindeSrc/environment/pages/(kinde)/(default)/page.tsx` ```js 'use server'; import { getKindeWidget, fetch, type KindePageEvent, } from '@kinde/infrastructure'; import React from 'react'; import { renderToString } from 'react-dom/server.browser'; import Layout from '../../layout'; const DefaultPage: React.FC<KindePageEvent> = async ({ context, request }) => { // 1. Access the client ID from the request object let clientId = request.authUrlParams?.clientId || null; // Environment variables const BUILDER_API_KEY = process.env.BUILDER_API_KEY; const CLIENT_ID_NEXT_APP = process.env.CLIENT_ID_NEXT_APP; const CLIENT_ID_PYTHON_APP = process.env.CLIENT_ID_PYTHON_APP; // Example: Fetching dynamic content (optional) const res = await fetch( `https://cdn.builder.io/api/v3/content/login-page-data?apiKey=${BUILDER_API_KEY}&sort.createdDate=-1`, { headers: {}, method: 'GET', } ); const { loginPageImage, signInFormTextTop, signupFormTextTop, signInFormTextBottom, signupFormTextBottom, } = res?.data?.results?.[0]?.data || {}; const isUserOnLoginOrRegisterPage = request?.route?.flow; return ( <Layout context={context} request={request} props={res?.data?.results?.[0]?.data} > {/* 2. Use conditional rendering based on the client ID */} {clientId == CLIENT_ID_NEXT_APP ? ( <div className='container'> {/* Content for the Next.js App */} <h1>Styling for the First App - Next.js</h1> <h2>Client ID: {clientId}</h2> <div className='login-form-wrapper'> {getKindeWidget()} </div> </div> ) : clientId == CLIENT_ID_PYTHON_APP? ( <div className='container-2'> {/* Content for the Python App */} <h1>Styling for the Second App - Python</h1> <h2>Client ID: {clientId}</h2> <table> <tr> <th>Company</th> <th>Contact</th> <th>Country</th> </tr> <tr> <td>Alfreds Futterkiste</td> <td>Maria Anders</td> <td>Germany</td> </tr> </table> <div className='login-form-wrapper'> {getKindeWidget()} </div> </div> ) : ( <div className='container-default'> {/* Fallback content for any other app (e.g., Nuxt app) */} <h1>Default Kinde Authentication Page</h1> <h2>Client ID: {clientId || 'Not available'}</h2> <div className='login-form-wrapper'> {getKindeWidget()} </div> </div> )} </Layout> ); }; // Page Component export default async function Page(event: KindePageEvent): Promise<string> { const page = await DefaultPage(event); return renderToString(page); } ``` The custom CSS for classes like `.container` and `.container-2` would typically be defined in your `layout.tsx` file or in a separate CSS file. ## Expected output for custom designs per application When a user authenticates through each of your applications, they will see a different page design based on your conditional logic. The examples below are not over-designed, but you could make them as distinct as you want. - **Next.js App (`clientId`: `ca3c184xxxxxxd842777bc***xxxx`)** - The user will see the content inside the first block, with the heading "Styling for the First App - Next.js". ![An image of how the page for the Next.js app looks after the conditional rendering is applied](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b78f5a38-8c84-4b2c-5759-9df24aa61700/public) - **Python App (`clientId`: `c41376xxxxxx244b3122dd***xxxx`)** - The user will see the second block, with the heading "Styling for the Second App - Python" and a custom HTML table. ![An image of how the page for the Python app looks after the conditional rendering is applied](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b161fbec-4144-4975-8561-a4fb6b1d8500/public) - **Nuxt.js App or any other app (`clientId`: `730c34be0xxxxxxe206ec07***xxxx`)** - Since this ID doesn't match the first two conditions, the user will see the final fallback block with the heading "Default Kinde Authentication Page". ![An image of how the page for any other app (default) would look after the conditional rendering is applied](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9aacda1b-2583-4226-48c7-3dcd09981100/public)
 
 # Design - Customize with code - Custom UI examples
 

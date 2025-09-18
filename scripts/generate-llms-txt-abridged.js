@@ -74,12 +74,50 @@ export function extractFrontmatter() {
   return results.sort((a, b) => a.path.localeCompare(b.path));
 }
 
+// Function to generate frontmatter
+function generateFrontmatter() {
+  const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  
+  return `---
+page_id: 7f8a9b2c-4d5e-6f7a-8b9c-0d1e2f3a4b5c
+title: Kinde Documentation - Abridged
+description: "Abridged version of Kinde documentation containing titles, descriptions, keywords, and topics from all documentation files for LLM training"
+sidebar:
+  order: 1
+topics:
+  - llm
+  - documentation
+  - training
+  - abridged
+sdk: []
+languages:
+  - markdown
+  - text
+audience: developers
+complexity: beginner
+keywords:
+  - llm training
+  - documentation
+  - abridged
+  - frontmatter
+  - metadata
+  - kinde
+updated: ${currentDate}
+featured: false
+deprecated: false
+ai_summary: "Abridged version of Kinde documentation containing titles, descriptions, keywords, and topics from all documentation files for LLM training"
+---
+
+`;
+}
+
 // Run the extraction if this script is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   const results = extractFrontmatter();
   
-  // Create the abridged documentation content
-  let abridgedContent = '# Kinde Documentation - Abridged\n\n';
+  // Create the abridged documentation content with frontmatter
+  let abridgedContent = generateFrontmatter();
+  abridgedContent += '# Kinde Documentation - Abridged\n\n';
   abridgedContent += 'This is an abridged version of the Kinde documentation containing titles, descriptions, keywords, and topics from all documentation files.\n\n';
   
   let currentSection = '';

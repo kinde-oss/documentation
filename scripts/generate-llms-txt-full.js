@@ -101,12 +101,51 @@ export function extractCompleteDocs() {
   return results.sort((a, b) => a.path.localeCompare(b.path));
 }
 
+// Function to generate frontmatter
+function generateFrontmatter() {
+  const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  
+  return `---
+page_id: 8a9b0c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d
+title: Kinde Documentation - Complete
+description: "Complete documentation for Kinde containing titles, descriptions, keywords, topics, and full content from all documentation files for LLM training"
+sidebar:
+  order: 1
+topics:
+  - llm
+  - documentation
+  - training
+  - complete
+sdk: []
+languages:
+  - markdown
+  - text
+audience: developers
+complexity: beginner
+keywords:
+  - llm training
+  - documentation
+  - complete
+  - full content
+  - frontmatter
+  - metadata
+  - kinde
+updated: ${currentDate}
+featured: false
+deprecated: false
+ai_summary: "Complete documentation for Kinde containing titles, descriptions, keywords, topics, and full content from all documentation files for LLM training"
+---
+
+`;
+}
+
 // Run the extraction if this script is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   const results = extractCompleteDocs();
   
-  // Create the complete documentation content
-  let completeContent = '# Kinde Documentation - Complete\n\n';
+  // Create the complete documentation content with frontmatter
+  let completeContent = generateFrontmatter();
+  completeContent += '# Kinde Documentation - Complete\n\n';
   completeContent += 'This is the complete documentation for Kinde containing titles, descriptions, keywords, topics, and full content from all documentation files.\n\n';
   
   for (const result of results) {
