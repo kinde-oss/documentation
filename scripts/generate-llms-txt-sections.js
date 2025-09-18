@@ -209,8 +209,12 @@ function generateSectionFile(sectionName) {
     }
   }
 
+  // Ensure the _llms-txt directory exists
+  const outputDir = 'public/_llms-txt';
+  fs.mkdirSync(outputDir, { recursive: true });
+  
   // Write to file in the _llms-txt directory
-  const outputPath = `public/_llms-txt/${sectionName}.txt`;
+  const outputPath = `${outputDir}/${sectionName}.txt`;
   fs.writeFileSync(outputPath, sectionContent);
   console.log(`Section documentation created: ${outputPath}`);
   console.log(`Processed ${results.length} files for ${sectionName}`);
