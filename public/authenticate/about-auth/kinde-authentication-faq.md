@@ -259,7 +259,7 @@ Upstream parameters let you send extra data during authentication - either the s
 We store tokens in memory for security - it protects against both CSRF and XSS attacks, which is definitely worth the trade-off. But yeah, it means page refreshes wipe the tokens. The best fix? Use our Custom Domains feature, which lets us set secure httpOnly cookies on your domain. 
 
 For local development, there's an escape hatch called `is_dangerously_use_local_storage`, but seriously, don't use that in production - the name isn't kidding about the danger part.
-[JavaScript SDK guide](m/developer-tools/sdks/frontend/javascript-sdk/) | [React SDK guide](/developer-tools/sdks/frontend/react-sdk/)
+[JavaScript SDK guide](/developer-tools/sdks/frontend/javascript-sdk/) | [React SDK guide](/developer-tools/sdks/frontend/react-sdk/)
 </details>
 
 <details>
