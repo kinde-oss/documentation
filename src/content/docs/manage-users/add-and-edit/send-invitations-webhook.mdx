@@ -1,0 +1,62 @@
+---
+page_id: 28ed3700-9ee4-4525-9b5d-1fefe4f89dcd
+title: Send user invitations with webhooks
+sidebar:
+  order: 7
+relatedArticles:
+  - cb91d7a1-7306-4c58-9635-b0fe1b913b38
+  - a069c507-73e3-4968-8ae4-7739030884cd
+description: Describes several methods for sending invitations to end users, including from one organization member to another.
+sdk: []
+languages: []
+audience:
+  - admins
+  - developers
+complexity: beginner, intermediate
+keywords:
+  - users
+  - user invitations
+  - add users
+  - invite users
+  - welcome email
+updated: 2025-09-10
+featured: false
+deprecated: false
+ai_summary: Describes several mthods for sending invitations to end users, including from one org member to another.
+---
+
+If you add users to your Kinde business manually or via API, you can send them a welcome or invitation email using a webhook. 
+
+## Use webhooks to send an invitation or welcome email
+
+1. Go to **Settings > Webhooks** and select **Add webhook**.
+2. Fill in the name and details, and select an endpoint for receiving the hook. This might be in your product.
+3. Choose the `user.created` event trigger.
+4. Select **Save**.
+
+## Prepare to receive the webhook
+
+- Set up the email template you want to send via the webhook. The email should be sent from your email server and contain a link to the sign-in screen.
+- Verify the webhook signature before processing to ensure the request is authentic.
+- Respond with a 2xx quickly after queuing work; use retries and make processing idempotent (e.g., de-duplicate by event ID).
+- Filter the webhook payload to determine whether the user was created manually or via API. The `source` field is `admin` or `api`. Treat these differently if needed.
+
+Payload example:
+
+```json
+{
+  "type": "user.created",
+  "id": "evt_123",
+  "data": {
+    "user_id": "usr_abc",
+    "email": "new.user@example.com",
+    "source": "admin"
+  }
+}
+```
+
+## Test the webhook
+
+1. Add a fake user to an organization either manually or via the Kinde Management API using an email address you can access.
+2. Check that the hook works and the email is sent.
+3. When the user goes to sign in for the first time with the same email address, they should automatically be synced by Kinde with the invited profile.

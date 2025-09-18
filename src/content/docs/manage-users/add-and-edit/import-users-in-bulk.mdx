@@ -1,14 +1,15 @@
 ---
 page_id: e89d246a-5cdf-4993-9cee-94b31ec27583
-title: Import users in bulk
+title: Import users via CSV or JSON
 sidebar:
-  order: 2
+  order: 3
 relatedArticles:
+  - 18068c09-bd63-409e-a792-d63528379135
   - cb91d7a1-7306-4c58-9635-b0fe1b913b38
   - 855b9b3b-2729-481f-a81b-231e8375fa59
 app_context:
   - m: users
-description: Comprehensive guide to importing users in bulk to Kinde including CSV format requirements, validation rules, and error handling for large-scale user management.
+description: Comprehensive guide to importing users in bulk to Kinde including custom CSV and NDJSON format requirements, validation rules, and error handling for large-scale user management.
 topics:
   - manage-users
   - add-and-edit
@@ -32,18 +33,18 @@ keywords:
   - hashed passwords
   - external_organization_id
   - username case sensitivity
-updated: 2024-01-15
+updated: 2025-09-02
 featured: false
 deprecated: false
-ai_summary: Comprehensive guide to importing users in bulk from CSV, JSON, or Auth0 including file requirements, data preparation, password handling, and organization assignment.
+ai_summary: Comprehensive guide to importing users in bulk to Kinde from CSV and JSON, including file requirements, data preparation, password handling, and organization assignment.
 ---
 
-You can import users in bulk, from CSV, JSON, or from other files provided by your previous authentication service, such as Auth0.
+You can import users in bulk, from CSV or JSON. If you are moving to Kinde from Auth0, see [this guide](/manage-users/add-and-edit/import-users-from-auth0/) instead.
 
 ## File requirements
 
-- Non Auth0 data - User details and passwords need to be in UTF-8 encoded CSV format
-- Auth0 data - User details and passwords need to be in NDJSON (Newline Delimited JSON) format
+- CSV - User details and passwords need to be in UTF-8 encoded CSV format
+- JSON - User details and passwords need to be in NDJSON (Newline Delimited JSON) format
 - File size up to 20MB supported
 
 If you’ve got large user sets (over 20MB) or are concerned about file size limits, you might consider importing in batches, or contact us for import support.
@@ -54,7 +55,7 @@ If you’ve got large user sets (over 20MB) or are concerned about file size lim
 - [Create organizations in Kinde](/build/organizations/add-and-manage-organizations/) - only if you use this function to support multi-tenancy (for example, in a B2B structure) or if you manage separate user groups this way.
 - Add [roles](/manage-users/roles-and-permissions/user-roles/) and [permissions](/manage-users/roles-and-permissions/user-permissions/) in Kinde, if you intend to import these details with users.
 
-**Note: Importing users from Azure** Set up the [MS Entra ID connection in Kinde](/authenticate/enterprise-connections/azure/) before you import your users. Then when you import, Kinde will match users to the relevant connection based on their email address.
+**Note: Importing users from Entra ID (formerly Azure)** Set up the [MS Entra ID connection in Kinde](/authenticate/enterprise-connections/azure/) before you import your users. Then when you import, Kinde will match users to the relevant connection based on their email address.
 
 ## Cases in usernames
 
@@ -62,41 +63,254 @@ Kinde treats usernames as case-insensitive. In other words, we ignore case. We d
 
 We are happy to support users choosing an aesthetically pleasing username combination, like `RosyRose` or `BuilderBob`. We just don't also support separate identities for `rosYrosE` and `BUilderbob`. Before importing users, we recommend checking that all usernames are unique in more than just case.
 
-## Prepare NDJSON data (Auth0 imports)
+## Prepare NDJSON data
 
-When you export user details from Auth0:
+Before importing, make sure that you set up data that you want user records to be linked to, e.g. roles, permissions, organizations. Organizations are linked based on the 'external_organization_id' field , the value of which needs to be added against the organization object with 'external_id' in your import file. 
 
-- select all the default fields and add the `identities` field to the import list.
-- select the NDJSON file format for export.
+Using the NDJSON format you can import users with the following user data:
 
-`Identities` data distinguishes the type of identity, specifically the `connection` attribute. e.g. username, phone, GitHub, Google, etc.
+- Permissions
+- Roles
+- Property values
+- Identities
+- Feature flags
+- Scopes
+- Profiles
 
-### How Auth0 user identities are treated on import
+NDJSON files are line separated JSON objects with each JSON object representing a user.
+The following schema can be used for importing NDJSON files, note this schema represents one line within the file.
 
-Social identities without an email can be imported, and are identified by the connection type. You can import users with multiple identities, these will be listed under the user’s profile.
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "User",
+  "description": "A user object for importing",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "A unique external identifier for the user (e.g., 'your_external_user_id_001')."
+    },
+    "password": {
+      "type": "object",
+      "description": "Password metadata including salt, hash, and algorithm used.",
+      "properties": {
+        "salt": {
+          "type": ["string", "null"],
+          "description": "The salt value used when hashing the password, if applicable."
+        },
+        "salt_format": {
+          "type": ["string", "null"],
+          "enum": ["hex", "string", null],
+          "description": "Format of the salt value. Can be 'hex', 'string', or null if not used."
+        },
+        "salt_position": {
+          "type": ["string", "null"],
+          "enum": ["prefix", "suffix", null],
+          "description": "Position of the salt relative to the password. Can be 'prefix', 'suffix', or null."
+        },
+        "hashed_password": {
+          "type": "string",
+          "description": "The resulting hashed password string."
+        },
+        "hashing_algorithm": {
+          "type": "string",
+          "enum": ["crypt", "bcrypt", "sha256", "md5", "wordpress"],
+          "description": "The algorithm used to hash the password."
+        }
+      }
+    },
+    "first_name": {
+      "type": "string",
+      "description": "The user's first name."
+    },
+    "last_name": {
+      "type": "string",
+      "description": "The user's last name."
+    },
+    "identities": {
+      "type": "array",
+      "description": "A list of identity records such as email, username, or social.",
+      "items": {
+        "type": "object",
+        "description": "An identity record associated with the user.",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "The type of identity.",
+            "enum": [
+              "email",
+              "phone",
+              "username",
+              "oauth2:slack",
+              "oauth2:apple",
+              "oauth2:github",
+              "oauth2:facebook",
+              "oauth2:twitter",
+              "oauth2:twitch",
+              "oauth2:gitlab",
+              "oauth2:xero",
+              "oauth2:linkedin",
+              "oauth2:discord",
+              "oauth2:bitbucket",
+              "oauth2:stripe",
+              "oauth2:microsoft",
+              "oauth2:clever",
+              "oauth2:roblox"
+            ]
+          },
+          "identity": {
+            "type": "string",
+            "description": "The actual identifier value (e.g., email address, username, or provider user ID)."
+          },
+          "is_verified": {
+            "type": "boolean",
+            "description": "Whether this identity has been verified."
+          },
+          "provider": {
+            "type": "string",
+            "description": "The name of the provider (e.g., 'google') for OAuth identities."
+          },
+          "profile": {
+            "type": "object",
+            "description": "Optional key/value pairs returned from the provider.",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "properties": {
+      "type": "array",
+      "description": "Custom metadata key-value pairs associated with the user.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The name of the property."
+          },
+          "value": {
+            "type": "string",
+            "description": "The value of the property."
+          }
+        }
+      }
+    },
+    "feature_flags": {
+      "type": "array",
+      "description": "A list of feature flags for the user.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The name of the feature flag."
+          },
+          "value": {
+            "type": "string",
+            "description": "The value of the flag."
+          }
+        }
+      }
+    },
+    "organizations": {
+      "type": "array",
+      "description": "Organizations this user is associated with, including roles, permissions and api scopes.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "external_id": {
+            "type": "string",
+            "description": "An external identifier for the organization (e.g., 'your_external_org_id_001')."
+          },
+          "roles": {
+            "type": "array",
+            "description": "List of roles assigned to the user within the organization.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "description": "List of specific permissions granted to the user within the organization.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scopes": {
+            "type": "array",
+            "description": "API scopes assigned to the user for this organization.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "audience": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "The audience or API this scope applies to (e.g., 'https://your-api.com')."
+                },
+                "scope": {
+                  "type": "string",
+                  "description": "The name of the scope (e.g., 'scope_1')."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
 
-Kinde supports migrating the following authentication methods from Auth0: Usernames, Email, Phone, Google, Apple, Microsoft, Facebook, GitHub, Twitch, Bitbucket. Auth methods are shown in the `connection` attribute. These are represented as follows in the identity data:
+Here's an single-line example:
 
-- Username-Password-Authentication
-- email
-- sms
-- google-oauth2
-- apple
-- microsoft
-- github
-- twitch
-- facebook
-- bitbucket
-- windowslive
+```txt
 
-### Import options
+{"id":"your_external_user_id_001","password":{"salt":null,"salt_format":null,"salt_position":null,"hashed_password":"$2a$10$t8Jz3hJCCTFk/Acja7bw3OpamB3xuLPhpJlRHb31bXIjfzeTfn8rq","hashing_algorithm":"bcrypt"},"last_name":"One","first_name":"User","identities":[{"type":"username","identity":"userone"},{"type":"email","identity":"userone@example.com","is_verified":true},{"type":"oauth2:google","profile":{"custom_provider_fields":"custom key/values from google"},"identity":"123456","provider":"google","is_verified":true}],"properties":[{"key":"property_1","value":"false"}],"feature_flags":[{"key":"feature_flag_1","value":"true"}],"organizations":[{"external_id":"your_external_org_id_001","roles":["admin","member"],"permissions":["read","write"],"scopes":[{"audience":"https://your-api.com","scope":"scope_1"}]}]}
 
-When importing users from Auth0 NDJSON files, you have three options:
+```
 
-1. **Import users only** - choose this method if you want to allow users to reset their password or sign in another way.
-2. **Import passwords only** - only choose this if you have already imported users.
+Example, but a bit easier to read.
 
-## Prepare CSV files (other sources)
+```jsx
+{
+  "id": "your_external_user_id_001",
+  "password": {
+    "salt": null,
+    "salt_format": null,
+    "salt_position": null,
+    "hashed_password": "$2a$10$t8Jz3hJCCTFk/Acja7bw3OpamB3xuLPhpJlRHb31bXIjfzeTfn8rq",
+    "hashing_algorithm": "bcrypt"
+  },
+  "last_name": "One",
+  "first_name": "User",
+  "identities": [
+    { "type": "username", "identity": "userone" },
+    { "type": "email", "identity": "userone@example.com", "is_verified": true },
+    {
+      "type": "oauth2:google",
+      "profile": {
+        "custom_provider_fields": "custom key/values from google"
+      },
+      "identity": "123456",
+      "provider": "google",
+      "is_verified": true
+    }
+  ],
+  "properties": [{ "key": "property_1", "value": "false" }],
+  "feature_flags": [{ "key": "feature_flag_1", "value": "true" }],
+  "organizations": [
+    {
+      "external_id": "your_external_org_id_001",
+      "roles": ["admin", "member"],
+      "permissions": ["read", "write"],
+      "scopes": [{ "audience": "https://your-api.com", "scope": "scope_1" }]
+    }
+  ]
+}
+```
+
+## Prepare CSV files 
 
 When exporting data from another auth system or your own system via CSV, the file needs to be set up with specific headings and formats for the data you are importing. These are detailed below.
 
@@ -113,7 +327,7 @@ There are special considerations if you are importing users who will share a pho
 
 </Aside>
 
-### **Other user data**
+### Other user data
 
 <Aside>
 
@@ -207,10 +421,10 @@ id,roles,permissions,external_organization_id
 1. In Kinde, go to **Users**, then select **Import users**.
 2. Select the option for your situation:
    - Custom CSV
-   - From Auth0 (choose this for Azure AD users)
+   - Custom NDJSON
 3. Follow the on-screen prompts to import the data.
 4. If there are any [errors with the import](/manage-users/add-and-edit/troubleshoot-user-import-errors/), you will be able to view them afterwards.
-5. Most import errors can be fixed by editing the CSV or JSON file and then re-importing into Kinde. Any records that have already been imported, will be ignored.
+5. Most import errors can be fixed by editing the CSV or NDJSON file and then re-importing into Kinde. Any records that have already been successfully imported, will be ignored.
 
 ## Impact on end-users
 
