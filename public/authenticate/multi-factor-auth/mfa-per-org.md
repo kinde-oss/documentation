@@ -23,10 +23,10 @@ In Kinde, go to **Settings > Environment > Multi-factor auth**.
 
 - Select **No** - If you want MFA to be applied in only some organizations or for some connections in your business. You will then need to set MFA in each organization separately.
 
-- Select **Yes** or **Optional** - If you want everyone, in every organization to use MFA’. Note that if you select **Yes** here, MFA will apply in all organizations regardless of what you set at the organization level.
+- Select **Yes** – Enforce MFA for all users in all organizations. This overrides any organization‑level settings.
+- Select **Optional** – Allow MFA but do not require it globally. Organization‑level settings can require MFA per org.
 
 Whatever you select here, you can still exempt roles from MFA per organization.
-
 ## Switch on MFA for an organization
 
 MFA methods selected here will replace those selected at the environment level.
