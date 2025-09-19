@@ -1,0 +1,120 @@
+---
+page_id: custom-oauth2-connection-001
+title: Custom OAuth2 connection
+sidebar:
+  order: 20
+description: Step-by-step guide to setting up custom OAuth2 connections including OAuth provider setup, credentials configuration, and Kinde integration.
+metadata:
+  topics: [authenticate]
+  sdk: []
+  languages: []
+  audience: [developer, integration-engineer]
+  complexity: advanced
+  keywords: [custom OAuth2, OAuth provider, client ID, client secret, callback URL, custom connection, identity provider]
+  updated: 2025-01-16
+featured: false
+deprecated: false
+---
+
+You can enable users to sign up and sign in using their credentials from any OAuth2-compatible identity provider. To set this up, you need access to your OAuth2 provider's developer console and a little technical know-how.
+
+<Aside type="warning" title="Custom OAuth2 connections for production environments">
+
+Before you make your production environment live, you must add your own OAuth2 app's Client ID and Client secret in the Kinde connection (as per below). Do not use Kinde's app credentials by leaving the fields blank, as this poses a security and performance risk, and makes it difficult to change auth providers without service disruptions for your users.
+
+</Aside>
+
+Custom OAuth2 connections allow you to integrate with any OAuth2-compatible identity provider that isn't natively supported by Kinde. This includes custom identity providers, enterprise solutions, or specialized authentication services.
+
+<Aside title="OAuth2 provider requirements">
+
+Before connecting your custom OAuth2 provider, ensure it supports the OAuth2 authorization code flow and can provide user profile information including email address. The provider must also support HTTPS for all endpoints.
+
+</Aside>
+
+## **Before you begin**
+
+1. Access your OAuth2 provider's developer console or admin panel.
+2. Create a new OAuth2 application or client.
+3. Get your custom connection credentials (see below).
+
+### **Get the Kinde Callback URL**
+
+1. Sign in to Kinde.
+2. Go to the **Settings** page and select **Authentication**.
+3. In the **Social connections** section, select **Add connection.**
+4. In the window that opens, select **Custom OAuth2**, then select **Next**.
+5. In the **Callback URL** section:
+   1. If you use Kinde's domain as your default, copy the Kinde domain URL.
+   2. If you use custom domains, select the **Use custom domain instead** switch.
+   3. If you have only one custom domain, copy the Custom domain URL. If you have custom domains for multiple organizations, select each one from the list and copy the callbacks for each. You need to enter all custom domain callbacks in your OAuth2 app.
+6. Select **Save**.
+7. Use the copied Callback URL to set up your OAuth2 app, see below.
+
+## **Get your custom connection credentials**
+
+1. Navigate to your OAuth2 provider's developer console or admin panel.
+2. Create a new OAuth2 application or client.
+3. Configure your OAuth2 application settings:
+   1. Set the application type to **Web Application** or **Confidential Client**.
+   2. Add your **Authorized redirect URIs**. These are the Callback URLs you copied in the previous procedure. Add entries for all your organization custom domain callbacks, e.g. `account.customdomainone.com/login/callback`, `account.customdomaintwo.com/login/callback`, etc.
+   3. Configure the required OAuth2 scopes. At minimum, you'll need scopes to access user profile information and email address.
+   4. Set any additional configuration options required by your provider.
+
+<Aside title="Required OAuth2 scopes">
+
+Your custom OAuth2 provider must support scopes that allow access to:
+- User profile information (name, etc.)
+- User email address
+- Any additional user attributes you want to capture
+
+Common scope examples: `openid`, `profile`, `email`, `user:read`, or provider-specific equivalents.
+
+</Aside>
+
+4. Complete all the required application details (noting that you may need to go through a verification process depending on your provider).
+5. Save your application configuration.
+6. Copy your **Client ID** and **Client Secret** from the application details.
+
+## **Add your custom connection credentials to Kinde**
+
+1. In Kinde, go to **Settings** and select **Authentication**.
+2. On the Custom OAuth2 tile, select the **Configure** link.
+3. Enter your OAuth2 provider details:
+   - **Provider Name**: A descriptive name for your connection
+   - **Authorization URL**: The OAuth2 authorization endpoint URL
+   - **Token URL**: The OAuth2 token endpoint URL
+   - **User Info URL**: The endpoint to retrieve user profile information
+   - **Client ID**: Your OAuth2 application's client ID
+   - **Client Secret**: Your OAuth2 application's client secret
+4. Configure the user profile mapping:
+   - **Email Field**: The field name in the user info response that contains the email address
+   - **First Name Field**: The field name for the user's first name
+   - **Last Name Field**: The field name for the user's last name
+   - **ID Field**: The field name for the unique user identifier
+5. Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified. We recommend leaving this off for maximum security.
+6. Add any [upstream params](/authenticate/auth-guides/pass-params-idp/) that you want to pass to your OAuth2 provider.
+7. Select which applications to switch this on for.
+8. Select **Save**. Your users will now be able to sign in using their credentials from your custom OAuth2 provider.
+
+<Aside title="Testing your custom OAuth2 connection">
+
+After configuring your custom OAuth2 connection, test it thoroughly in a non-production environment before going live. Verify that:
+- Users can successfully authenticate
+- User profile information is correctly mapped
+- Email addresses are properly captured
+- Any custom claims or attributes are accessible
+
+</Aside>
+
+## **Troubleshooting custom OAuth2 connections**
+
+If you encounter issues with your custom OAuth2 connection:
+
+1. **Verify endpoint URLs**: Ensure all OAuth2 endpoint URLs are correct and accessible
+2. **Check scopes**: Confirm that your OAuth2 provider supports the required scopes
+3. **Validate callback URLs**: Ensure all callback URLs are properly configured in your OAuth2 application
+4. **Review user info response**: Verify that the user info endpoint returns data in the expected format
+5. **Check field mappings**: Ensure the field names for user profile data match what your provider returns
+
+For additional support, contact Kinde support or refer to your OAuth2 provider's documentation.
