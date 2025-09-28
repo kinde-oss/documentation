@@ -63,7 +63,129 @@ Method: Decrypt the request body in your .NET API:
 
 The payload structure includes the nonce (IV), tag, and ciphertext. These will be provided in the encrypted request payload, so your code should parse them out before decrypting.
 
-[Insert code example]
+```csharp
+using System;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+
+public class WorkflowPayloadDecryptor
+{
+    private readonly byte[] _encryptionKey;
+
+    public WorkflowPayloadDecryptor(string base64EncryptionKey)
+    {
+        _encryptionKey = Convert.FromBase64String(base64EncryptionKey);
+    }
+
+    public string DecryptPayload(string encryptedPayload)
+    {
+        try
+        {
+            // Step 1: Base64 decode the incoming payload
+            byte[] encryptedData = Convert.FromBase64String(encryptedPayload);
+
+            // Step 2: Parse the payload structure
+            // The payload contains: nonce (12 bytes) + tag (16 bytes) + ciphertext
+            const int nonceLength = 12;
+            const int tagLength = 16;
+
+            if (encryptedData.Length < nonceLength + tagLength)
+            {
+                throw new ArgumentException("Invalid encrypted payload structure");
+            }
+
+            // Extract components
+            byte[] nonce = new byte[nonceLength];
+            byte[] tag = new byte[tagLength];
+            byte[] ciphertext = new byte[encryptedData.Length - nonceLength - tagLength];
+
+            Array.Copy(encryptedData, 0, nonce, 0, nonceLength);
+            Array.Copy(encryptedData, nonceLength, tag, 0, tagLength);
+            Array.Copy(encryptedData, nonceLength + tagLength, ciphertext, 0, ciphertext.Length);
+
+            // Step 3: Decrypt using AES-GCM
+            using (var aesGcm = new AesGcm(_encryptionKey))
+            {
+                byte[] decryptedBytes = new byte[ciphertext.Length];
+                aesGcm.Decrypt(nonce, ciphertext, tag, decryptedBytes);
+
+                // Convert decrypted bytes to string
+                return Encoding.UTF8.GetString(decryptedBytes);
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Failed to decrypt workflow payload", ex);
+        }
+    }
+}
+
+// Example usage in an ASP.NET Core controller
+[ApiController]
+[Route("api/[controller]")]
+public class WorkflowController : ControllerBase
+{
+    private readonly WorkflowPayloadDecryptor _decryptor;
+
+    public WorkflowController(IConfiguration configuration)
+    {
+        // Get the encryption key from configuration
+        string encryptionKey = configuration["KindeWorkflowEncryptionKey"];
+        _decryptor = new WorkflowPayloadDecryptor(encryptionKey);
+    }
+
+    [HttpPost("webhook")]
+    public async Task<IActionResult> HandleWorkflowWebhook()
+    {
+        try
+        {
+            // Read the encrypted payload from the request body
+            using var reader = new StreamReader(Request.Body);
+            string encryptedPayload = await reader.ReadToEndAsync();
+
+            // Decrypt the payload
+            string decryptedJson = _decryptor.DecryptPayload(encryptedPayload);
+
+            // Parse the decrypted JSON
+            var workflowData = JsonSerializer.Deserialize<WorkflowData>(decryptedJson);
+
+            // Process the decrypted data
+            // ... your business logic here ...
+
+            return Ok(new { message = "Workflow payload processed successfully" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = "Failed to process workflow payload", details = ex.Message });
+        }
+    }
+}
+
+// Example data model for the decrypted payload
+public class WorkflowData
+{
+    public string UserId { get; set; }
+    public string EventType { get; set; }
+    public Dictionary<string, object> Data { get; set; }
+}
+```
+
+### Configuration
+
+Add your workflow encryption key to your `appsettings.json`:
+
+```json
+{
+  "KindeWorkflowEncryptionKey": "your-base64-encoded-encryption-key-here"
+}
+```
+
+Or set it as an environment variable:
+
+```bash
+KindeWorkflowEncryptionKey=your-base64-encoded-encryption-key-here
+```
 
 ## Update an encryption key
 
