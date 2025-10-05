@@ -252,6 +252,11 @@ const sidebarData = [
         collapsed: false
       },
       {
+        label: "Workflow tutorials",
+        autogenerate: {directory: "workflows/workflow-tutorials"},
+        collapsed: false
+      },
+      {
         label: "Configuration",
         autogenerate: {directory: "workflows/configuration"},
         collapsed: false
