@@ -1,0 +1,413 @@
+---
+page_id: 56db51a5-5542-4631-8bc6-36339a813a85
+title: Tutorial: Customize tokens using workflows
+sidebar:
+  order: 1
+relatedArticles:
+  - 62fafade-5d33-4f85-9fd2-712c533db3d0
+  - f499ebb0-d7f5-4244-bf92-6bf0f6082b62
+description: Learn how to customize tokens using workflows, to help distinguish customer types.
+topics:
+  - "workflows"
+  - "example-workflows"
+  - "authentication"
+sdk: "kinde infrastructure"
+languages:
+  - "TypeScript"
+  - "JavaScript"
+audience:
+  - "developers"
+complexity: "intermediate"
+keywords:
+  - "pre-registration"
+  - "user registration"
+  - "IP checks"
+  - "disposable emails"
+  - "spam prevention"
+  - "authentication triggers"
+updated: "2025-10-06"
+featured: false
+deprecated: false
+ai_summary: "Learn how to customize tokens using workflows, to help distinguish customer types."
+---
+
+The Kinde user token generation workflow lets you customize the access token. In this article, we’ll walk through a scenario where we store a custom user value in the token.
+
+## Background
+
+Our fictional SaaS product offers a lifetime membership option. Users who purchase the lifetime membership get full access to our product. In this article, we’ll build a project that stores extra data in a third-party Supabase database. 
+
+We'll check whether the user is a `lifetime_subscriber` and pass that data into the Kinde access token. This way, the information stays available for the lifetime of the token, and your app won’t need to make an API request every time it’s required.
+
+## What you need?
+
+- A [Kinde](https://kinde.com/) account (sign up for free)
+- A [Supabase](http://supabase.com/) account (sign up for free)
+- A [GitHub](https://github.com/) account (sign up for free)
+- A running Kinde application or a starter kit such as the [Next.js starter kit](https://github.com/kinde-starter-kits/kinde-nextjs-app-router-starter-kit)
+
+## Step 1: Set up your Supabase database
+
+1. Sign in to your [Supabase dashboard](https://supabase.com/).
+2. Select **New Project.**
+    1. Enter a project name.
+    2. Set a secure password for your database.
+    3. Select a database region that best suits your application. 
+    4. Select **Create new project**.
+        
+        ![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/6108d6df-5299-4335-974c-e148a51dfa48/d8e63473-4e7f-408d-a361-f00a07ca7a16/image.png)
+        
+3. In the project **Settings**, go to **Configuration** > **Data API.** Copy the following:
+    1. **Project URL**.
+    2. **Project API Keys** `anon`  `public`.
+    
+    ![anon public.png](attachment:b0a540b2-5683-4e14-a56b-c60b85966da5:anon_public.png)
+    
+4. Navigate to a **SQL Editor** and paste the following SQL code into the command window and select **Run**:
+    
+    ```sql
+    -- Create the table
+    CREATE TABLE profiles (
+    	id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    	kinde_id TEXT NOT NULL,
+    	lifetime_subscriber BOOLEAN DEFAULT FALSE
+    );
+    ```
+    
+    This command creates a `profiles` table with the following columns:
+    
+    - **`kinde_id`**: with a type of **text**.
+    - **`lifetime_subscriber`**: with a type of **boolean**. We use boolean because the lifetime subscription is either true or false.
+5. Install the Supabase dependency by running the following command in your project terminal.
+    
+    ```bash
+    npm install @supabase/ssr
+    ```
+    
+6. Create the necessary Supabase files by running.
+    
+    ```bash
+    mkdir -p src/utils/supabase
+    touch src/utils/supabase/server.ts
+    ```
+    
+7. Open the newly created `server.ts` file and paste the following code. This sets up Supabase integration for your Next.js project.
+    
+    ```tsx
+    import { createServerClient } from "@supabase/ssr";
+    import { cookies } from "next/headers";
+    
+    export async function createClient() {
+      const cookieStore = await cookies();
+    
+      return createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll() {
+              return cookieStore.getAll();
+            },
+            setAll(cookiesToSet) {
+              try {
+                cookiesToSet.forEach(({ name, value, options }) =>
+                  cookieStore.set(name, value, options)
+                );
+              } catch {
+                // The `setAll` method was called from a Server Component.
+                // This can be ignored if you have middleware refreshing
+                // user sessions.
+              }
+            },
+          },
+        }
+      );
+    }
+    
+    ```
+    
+8. Open your `.env.local` file and add the Supabase project URL and public anon key. You can find these in your Supabase dashboard under **Project Settings > Data API**.
+    
+    ```
+    NEXT_PUBLIC_SUPABASE_URL=https://<supabase_project_id>.supabase.co
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=<supabase_anon_public_key>
+    ```
+    
+9. Create a new directory called `success` inside `src/app/api/auth/`, and add a `route.ts` file by running the following code.
+    
+    ```bash
+    mkdir src/app/api/auth/success
+    touch src/app/api/auth/success/route.ts
+    ```
+    
+    This file will act as a GET endpoint that handles authenticated user data.
+    
+10. Open the `route.ts` file in your code editor, paste the following code, and save the file.
+    
+    When this code runs, it retrieves the authenticated user, checks if the user already exists in the Supabase database, and inserts a new record if not.
+    
+    ```tsx
+    import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+    import { NextResponse } from "next/server";
+    import { createClient } from "@/utils/supabase/server";
+    
+    export async function GET() {
+      const supabase = await createClient();
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+    
+      if (!user || user == null || !user.id)
+        throw new Error("something went wrong with authentication" + user);
+    
+      let { data: dbUser } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("kinde_id", user.id);
+    
+      // write the user to the database if it doesn't exist
+      if (dbUser && dbUser.length > 0) {
+        dbUser = dbUser[0];
+      } else {
+        const { data, error } = await supabase
+          .from("profiles")
+          .insert({
+            kinde_id: user.id,
+          })
+          .select("*");
+        if (error) {
+          console.error("Error inserting user into database:", error);
+        }
+      }
+    
+      return NextResponse.redirect("http://localhost:3000");
+    }
+    ```
+    
+11. Update your `.env.local` file to set the `KINDE_POST_LOGIN_REDIRECT_URL` to point to the new success route:
+    
+    ```
+    KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000/api/auth/success
+    ```
+    
+12. Start your development server by running the following:
+    
+    ```bash
+    npm run dev
+    ```
+    
+13. Open your browser and visit [http://localhost:3000](http://localhost:3000/). 
+14. Sign up or sign in with a new user account.
+15. Go to your Supabase dashboard, navigate to **Table Editor > profiles**, and confirm that the new user information has been stored.
+    
+    ![image.png](attachment:c73a1cf0-13dc-4269-9a6c-50c8295cd55d:image.png)
+    
+
+## Step 2: Configure your Kinde workflow
+
+You can use any JavaScript or TypeScript project for your workflow code. In this guide, we're using the same Next.js project for both the main project and the workflow code.
+
+1. Start by installing the Kinde infrastructure package with this command.
+    
+    ```bash
+    npm install @kinde/infrastructure
+    ```
+    
+2. Create a configuration file for your workflow by running this command.
+    
+    ```bash
+    touch kinde.json
+    ```
+    
+3. Open the `kinde.json` file and paste the following code. This configuration defines the version of your workflow and the root directory where your custom code will live. 
+    
+    If you haven’t set up a GitHub repository yet, [create one here](https://github.com/new) and follow the instructions GitHub provides to manage local code.
+    
+    ```json
+    {
+      "version": "1.0.0",
+      "rootDir": "kindeSrc"
+    }
+    ```
+    
+4. Create the folder structure Kinde requires for workflows.
+    
+    ```bash
+    mkdir -p kindeSrc/environment/workflows
+    ```
+    
+5. Inside that folder, create a new file for your workflow. Kinde looks for workflow files using the `[name]Workflow.ts` naming pattern, for example:
+    
+    ```json
+    touch kindeSrc/environment/workflows/supabaseWorkflow.ts
+    ```
+    
+6. Open the new file and paste in the following code. 
+    
+    ```tsx
+    import {
+      onUserTokenGeneratedEvent,
+      accessTokenCustomClaims,
+      WorkflowSettings,
+      WorkflowTrigger,
+      fetch,
+      getEnvironmentVariable,
+    } from "@kinde/infrastructure";
+    
+    export const workflowSettings: WorkflowSettings = {
+      id: "addAccessTokenClaim",
+      name: "Add access token claim",
+      trigger: WorkflowTrigger.UserTokenGeneration,
+      bindings: {
+        "kinde.accessToken": {},
+        "kinde.localization": {},
+        "kinde.fetch": {},
+        "kinde.env": {},
+        url: {},
+      },
+    };
+    
+    export default async function SupabaseWorkflow(
+      event: onUserTokenGeneratedEvent
+    ) {
+      const SUPABASE_ANON_KEY = getEnvironmentVariable("SUPABASE_ANON_KEY")?.value;
+      const SUPABASE_URL = getEnvironmentVariable("SUPABASE_URL")?.value;
+    
+      const accessToken = accessTokenCustomClaims<{
+        lifetime_subscriber: boolean;
+      }>();
+    
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/profiles?kinde_id=eq.${event.context.user.id}`,
+        {
+          method: "GET",
+          headers: {
+            apiKey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    
+      if (response.data.length > 0) {
+        const profile = response.data[0];
+        accessToken.lifetime_subscriber = profile?.lifetime_subscriber;
+      }
+    }
+    
+    ```
+    
+    This workflow runs when a new user token is generated. It fetches profile data from Supabase and attaches a custom property (`lifetime_subscriber`) to the access token if it's available:
+    
+7. To verify the token and view your new custom claim, update your `page.tsx` file inside `src/app/` with the following code.
+    
+    ```tsx
+    import Link from "next/link";
+    import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+    
+    export default async function Home() {
+      const { getAccessToken } = getKindeServerSession();
+      const token = await getAccessToken();
+    
+      return (
+        <div className="container">
+          <pre className="p-4 rounded-lg bg-slate-900 text-lime-200">
+            <code>{JSON.stringify(token, null, 2)}</code>
+          </pre>
+    
+          <div className="card hero">
+            <p className="text-display-1 hero-title">
+              Let’s start authenticating <br /> with KindeAuth
+            </p>
+            <p className="text-body-1 hero-tagline">Configure your app</p>
+    
+            <Link
+              href="https://kinde.com/docs/sdks/nextjs-sdk"
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-light btn-big"
+            >
+              Go to docs
+            </Link>
+          </div>
+        </div>
+      );
+    }
+    ```
+    
+8. Once you're happy with the setup, push your changes to GitHub.
+    
+    ```bash
+    git add .
+    git commit -m "Add Kinde workflow code"
+    git push origin main
+    ```
+    
+
+## Step 3: Deploy and test the workflow
+
+1. Sign into your [Kinde dashboard](https://kinde.com/) and select **Workflows.**
+2. If you already have your workflow repo connected, go straight to step 4.
+3. Select **Connect repo > Connect GitHub** and follow the onboarding flow to authorize Kinde to access your GitHub account.
+    
+    ![image.png](attachment:b1f049b7-a239-4110-8d21-e5f8386f6c7f:image.png)
+    
+4. From the drop-down, select your GitHub repository that contains the Kinde workflow code, choose the `main` branch, and click **Next**.
+    
+    If you already have a repo connected and want to change it, go to **Settings > Git repo** and select **Change repo.**
+    
+    ![image.png](attachment:0f64b4ad-b5ed-429a-ab51-8fcdcbe63e18:image.png)
+    
+5. Select **Sync code** to pull your latest workflow code from GitHub into your Kinde project. 
+You’ll now see your workflow listed inside the dashboard. 
+    
+    ![image.png](attachment:3cb25686-4cb3-4761-90b4-c9a966ea9d2e:image.png)
+    
+6. Go to **Settings > Env variables** and add the following variables you got from your **Supabase Project > Data API:**
+    - `SUPABASE_ANON_KEY`
+    - `SUPABASE_URL`
+        
+        These environment variables are securely stored in Kinde and used by your workflow code.
+        
+        ![image.png](attachment:12d928d4-eb9a-4c75-a4fb-5af0e52added:image.png)
+        
+        ![image.png](attachment:9cb16c51-9797-41ba-a89f-39cb3075dd7b:image.png)
+        
+7. Run your local development server with the following command.
+    
+    ```bash
+    npm run dev
+    ```
+    
+8. Visit `http://localhost:3000` in your browser. Log in or sign up to view the access token.
+    
+    ![image.png](attachment:fc1ba484-dc4e-4824-821c-3e97263f424f:image.png)
+    
+
+The access token will now include your custom `lifetime_subscriber` property if the user exists in your Supabase `profiles` table. 
+
+This token can now be used throughout your application to conditionally show or hide content based on your user's subscription status.
+
+## Troubleshooting tips and best practices
+
+- After making changes to your workflow code, push the updates to GitHub by running the following commands in your terminal:
+    
+    ```bash
+    git add .
+    git commit -m "Your commit message"
+    git push origin main
+    ```
+    
+- Go to **Workflows** and click **Sync code** to pull in the latest changes from your GitHub repo.
+    
+    ![image.png](attachment:3099609c-f863-4bbb-9396-c9669853615b:image.png)
+    
+- To view logs or debug your code, click the **three dots** next to your workflow, then select **Manage workflow**, then select **Runtime logs**. Use `console.log()` in your workflow file to output logs. This is helpful for debugging and checking your variables or API responses.
+    
+    ![image.png](attachment:58501aec-174c-48e1-a2cf-7e09c1663334:image.png)
+    
+    ![image.png](attachment:3c409723-c237-4c97-a0f4-7252be266322:image.png)
+    
+
+### **You did it!**
+
+You’ve successfully implemented a Kinde user token generation workflow. Now you’ve got superpowers like custom claims, dynamic logic, and all the flexibility to personalize your app experience.
