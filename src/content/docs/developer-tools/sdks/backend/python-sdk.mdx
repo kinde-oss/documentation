@@ -73,9 +73,6 @@ The Kinde Python SDK uses environment variables for configuration. Here are all 
 - `KINDE_AUDIENCE` - The intended recipient of the access token (for API access)
 - `KINDE_CALLBACK_URL` - Alternative name for KINDE_REDIRECT_URI
 - `LOGOUT_REDIRECT_URL` - Where users are redirected after logout
-- `SITE_HOST` - Your application's host (default: `127.0.0.1`)
-- `SITE_PORT` - Your application's port (default: `5000`)
-- `SITE_URL` - Your application's base URL
 - `CODE_VERIFIER` - Required for PKCE flow (auto-generated if not provided)
 
 **Session management variables** (core SDK features):
@@ -87,25 +84,30 @@ The Kinde Python SDK uses environment variables for configuration. Here are all 
 - `TEMPLATES_AUTO_RELOAD` - Whether to auto-reload templates (default: `True`)
 
 **Management API variables** (only needed if using Management API features):
-- `MGMT_API_CLIENT_ID` - Management API client ID
-- `MGMT_API_CLIENT_SECRET` - Management API client secret
+- `KINDE_MANAGEMENT_CLIENT_ID` - Management API client ID
+- `KINDE_MANAGEMENT_CLIENT_SECRET` - Management API client secret
 
 Example `.env` file:
 ```bash
-KINDE_CLIENT_ID=your_client_id
-KINDE_CLIENT_SECRET=your_client_secret
-KINDE_REDIRECT_URI=http://localhost:5000/api/auth/kinde_callback
+# Core SDK configuration
+KINDE_CLIENT_ID=YOUR_CLIENT_ID
+KINDE_CLIENT_SECRET=YOUR_CLIENT_SECRET
+KINDE_REDIRECT_URI=http://YOUR_HOST:5000/callback
 KINDE_HOST=https://yourdomain.kinde.com
+KINDE_AUDIENCE=
+LOGOUT_REDIRECT_URL=http://YOUR_HOST:5000/api/auth/logout
+KINDE_CALLBACK_URL=http://localhost:5000/callback
 KINDE_ISSUER_URL=https://yourdomain.kinde.com
 GRANT_TYPE=AUTHORIZATION_CODE_WITH_PKCE
-SITE_HOST=localhost
-SITE_PORT=5000
-SITE_URL=http://localhost:5000
-LOGOUT_REDIRECT_URL=http://localhost:8000
-SECRET_KEY=your_secret_key
+CODE_VERIFIER=YOUR_CODE_VERIFIER
+TEMPLATES_AUTO_RELOAD=True
 SESSION_TYPE=filesystem
 SESSION_PERMANENT=False
-TEMPLATES_AUTO_RELOAD=True
+SECRET_KEY=YOUR_SECRET_KEY
+
+# Management API configuration (only needed if using Management API features)
+KINDE_MANAGEMENT_CLIENT_ID=YOUR_M2M_CLIENT_ID
+KINDE_MANAGEMENT_CLIENT_SECRET=YOUR_M2M_CLIENT_SECRET
 ```
 
 ### Set callback URLs
@@ -124,25 +126,36 @@ Kinde comes with a production environment, but you can set up other environments
 
 The OAuth client is now automatically configured based on the framework you're using. Simply import the OAuth class from the auth module and create an instance:
 
+<Tabs>
+<TabItem label="Flask">
+
 ```python
 from kinde_sdk.auth.oauth import OAuth
-
-# For Flask applications
 from flask import Flask
+
 app = Flask(__name__)
 oauth = OAuth(
     framework="flask",
     app=app  # optional: pass your Flask app instance
 )
+```
 
-# For FastAPI applications
+</TabItem>
+<TabItem label="FastAPI">
+
+```python
+from kinde_sdk.auth.oauth import OAuth
 from fastapi import FastAPI
+
 app = FastAPI()
 oauth = OAuth(
     framework="fastapi",
     app=app  # optional: pass your FastAPI app instance
 )
 ```
+
+</TabItem>
+</Tabs>
 
 The SDK will automatically detect and configure the appropriate framework implementation based on the framework parameter and app instance you provide.
 
@@ -159,7 +172,10 @@ The Kinde client provides methods for easy sign in and sign up. You can add butt
 
 ### Automatic Route Registration
 
-The framework wrapper can automatically register all necessary routes. For Flask:
+The framework wrapper can automatically register all necessary routes.
+
+<Tabs>
+<TabItem label="Flask">
 
 ```python
 from kinde_sdk.auth.oauth import OAuth
@@ -172,7 +188,8 @@ oauth = OAuth(
 )
 ```
 
-For FastAPI:
+</TabItem>
+<TabItem label="FastAPI">
 
 ```python
 from kinde_sdk.auth.oauth import OAuth
@@ -185,11 +202,15 @@ oauth = OAuth(
 )
 ```
 
+</TabItem>
+</Tabs>
+
 ### Manual route implementation
 
 If you prefer to implement the routes manually, here's how you can do it:
 
-For Flask:
+<Tabs>
+<TabItem label="Flask">
 
 ```python
 import asyncio
@@ -267,7 +288,8 @@ def get_user():
         return f"Failed to get user info: {str(e)}", 400
 ```
 
-For FastAPI:
+</TabItem>
+<TabItem label="FastAPI">
 
 ```python
 from fastapi import FastAPI, Request
@@ -302,6 +324,9 @@ async def get_user(request: Request):
         return RedirectResponse(url=await oauth.login())
     return oauth.get_user_info(request)
 ```
+
+</TabItem>
+</Tabs>
 
 The manual implementation gives you more control over the authentication flow and allows you to add custom logic like session management, error handling, and logging. Note that Flask requires special handling of async methods using `asyncio` since it doesn't natively support async/await like FastAPI does.
 
@@ -684,6 +709,42 @@ You don't need to manually manage tokens or sessions - the SDK handles this auto
 
 ## Management API
 
+Before using the Management API, you must configure a Machine-to-Machine (M2M) application in Kinde and set the required environment variables as described below.
+
+### Machine-to-Machine (M2M) Applications
+
+The Kinde Python SDK supports Machine-to-Machine (M2M) applications, which allow server-to-server communication without user interaction. M2M applications use client credentials flow and are required for Management API access.
+
+#### Environment setup for M2M
+
+For M2M applications, you'll need additional environment variables:
+
+```bash
+# M2M Management API credentials
+KINDE_MANAGEMENT_CLIENT_ID=your_m2m_client_id
+KINDE_MANAGEMENT_CLIENT_SECRET=your_m2m_client_secret
+```
+
+#### Create and configure M2M application
+
+1. **Create M2M Application**:
+   - In your Kinde dashboard, go to **Settings > Applications**
+   - Click **Add application**
+   - Select **Machine to machine (M2M)** as the application type
+   - Give your application a name (e.g., "Management API Client")
+   - Click **Create application**
+
+2. **Authorize Management API Access**:
+   - Click the three dots (...) next to your M2M application
+   - Select **Authorize application**
+   - Choose the **Kinde Management API** from the list
+   - Select the required scopes (e.g., `read:users`, `write:users`, `read:organizations`)
+   - Click **Authorize**
+
+3. **Copy Credentials**:
+   - Note the **Client ID** and **Client Secret** from your M2M application
+   - Add them to your `.env` file as shown in the example above
+
 The Kinde Python SDK provides a Management API client for interacting with Kinde's management endpoints. This allows you to programmatically manage users, organizations, and other resources.
 
 ### Getting started
@@ -777,13 +838,4 @@ The Management API client has its own token management system for API authentica
 
 You don't need to manually manage Management API tokens - the client handles this for you. This is different from the core SDK's user session token management, which handles user authentication tokens automatically.
 
-### Best practices
-
-1. Always use async/await when calling Management API methods
-2. Handle API errors appropriately
-3. Cache results when appropriate to reduce API calls
-4. Use appropriate error handling for production environments
-5. Keep your client credentials secure
-
 For more information about the Management API endpoints and capabilities, see the [Kinde Management API documentation](https://docs.kinde.com/kinde-apis/management/).
-
