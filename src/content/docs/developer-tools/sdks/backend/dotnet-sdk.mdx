@@ -98,41 +98,13 @@ Add this to your `.csproj` file:
 
 ## Connect to Kinde
 
-### Set up environment variables
-
-The following environment variables are required for connecting to Kinde. This will enable the development of a M2M client service.
-
-```bash
-export KINDE_DOMAIN=https://<replace>.kinde.com # This is the domain you setup at kinde
-export KINDE_CLIENT_ID=<replace> # the id for the client connecting to Kinde
-export KINDE_CLIENT_SECRET=<replace> # the secret used to authenticate the client against Kinde
-```
-
-Provide a redirect URI, so a user's login can be validated against Kinde.
-
-```bash
-export KINDE_REDIRECT_URI=http://localhost:5000/auth/callback
-```
-
-The redirect URI/URL is used post successful login. It is the URL that the PKCE client CODE will be set to. A query parameter of `?code='value'` must be processed.
-
 ### Set up configuration
 
-The Kinde library supports multiple configuration methods. You can use environment variables, appsettings.json, or programmatic configuration.
+The Kinde .NET SDK requires programmatic configuration. You can configure it using appsettings.json with dependency injection or by creating configuration objects directly.
 
-#### Core server example
+#### Using appsettings.json with dependency injection
 
-To make a M2M server token request onto Kinde, set up the environment variables.
-
-#### By shell export
-
-Run these exports before running your service.
-
-```bash
-export KINDE_DOMAIN=https://<replace>.kinde.com # This is the domain you setup at kinde
-export KINDE_CLIENT_ID=<replace> # the id for the client connecting to Kinde
-export KINDE_CLIENT_SECRET=<replace> # the secret used to authenticate the client against Kinde
-```
+The recommended approach is to use appsettings.json with dependency injection as shown in the starter kit.
 
 #### By appsettings.json config
 
@@ -183,16 +155,16 @@ The example below details how to implement a server-level token request. This is
 // Create application configuration for management API
 var appConfig = new ApplicationConfiguration
 {
-    Domain = Environment.GetEnvironmentVariable("KINDE_DOMAIN"),
+    Domain = "https://<replace>.kinde.com",
     ForceApi = true // This is important for management API
 };
 
 // Create client credentials configuration
 var clientCredentialsConfig = new ClientCredentialsConfiguration(
-    Environment.GetEnvironmentVariable("KINDE_CLIENT_ID"),
-    Environment.GetEnvironmentVariable("KINDE_SCOPES"),
-    Environment.GetEnvironmentVariable("KINDE_CLIENT_SECRET"),
-    Environment.GetEnvironmentVariable("KINDE_AUDIENCE")
+    "<replace>", // clientId
+    "<replace>", // scopes
+    "<replace>", // clientSecret
+    "<replace>"  // audience
 );
 
 // Create client credentials flow directly
@@ -215,16 +187,6 @@ var token = await clientCredentialsFlow.GetOrRefreshToken(httpClient);
 
 To authenticate a user on the client-side, configure as follows.
 
-#### By shell export
-
-Run these exports before running your service.
-
-```bash
-export KINDE_DOMAIN=https://<replace>.kinde.com # This is the domain you setup at kinde
-export KINDE_CLIENT_ID=<replace> # the id for the client connecting to Kinde
-export KINDE_CLIENT_SECRET=<replace> # the secret used to authenticate the client against Kinde
-export KINDE_REDIRECT_URI=http://localhost:5000/auth/callback # the open id
-```
 
 #### By appsettings.json config
 
@@ -870,20 +832,9 @@ builder.Services.Configure<KindeManagementApiConfiguration>(
     builder.Configuration.GetSection("KindeManagementApi"));
 ```
 
-### Environment configuration
+### Configuration
 
-Configuration can either be performed by environment variables or through the `appsettings.json` file.
-
-#### Environment Variables
-
-```bash
-export KINDE_DOMAIN=https://<replace>.kinde.com # This is the domain you set up at kinde
-export KINDE_CLIENT_ID=<replace> # the ID for the client connecting to Kinde
-export KINDE_CLIENT_SECRET=<replace> # the secret used to authenticate the client against Kinde
-export KINDE_REDIRECT_URI=http://localhost:5000/auth/callback
-```
-
-#### appsettings.json
+Configuration is handled through the `appsettings.json` file and dependency injection.
 
 ```json
 {
@@ -952,29 +903,17 @@ NuGet automatically downloads the dependency from the NuGet repository and makes
 
 ### Library usage
 
-#### Set up environment variables
-
-The following basic environment variables are required at a minimum for connecting to the Kinde Management API.
-
-```bash
-export KINDE_DOMAIN=https://<replace>.kinde.com # This is the domain you setup at kinde
-export KINDE_CLIENT_ID=<replace> # the id for the client connecting to Kinde
-export KINDE_CLIENT_SECRET=<replace> # the secret used to authenticate the client against Kinde
-export KINDE_SCOPES=openid # the scope as we are using an OpenID connection
-export KINDE_AUDIENCE=https://<replace>.kinde.com/api # the audience we need access to
-```
-
 #### Set up appsettings.json
 
 Create an `appsettings.json` file in your project root:
 
 ```json
 {
-  "Kinde": {
+  "KindeManagementApi": {
     "Domain": "https://<replace>.kinde.com",
     "ClientId": "<replace>",
     "ClientSecret": "<replace>",
-    "Scopes": "openid",
+    "Scope": "create:users create:user_identities read:users read:user_identities",
     "Audience": "https://<replace>.kinde.com/api"
   }
 }
@@ -982,16 +921,21 @@ Create an `appsettings.json` file in your project root:
 
 #### Programmatic configuration
 
-If you want to pass in configuration programmatically, the `KindeClientBuilder` supports the following approach.
+If you want to pass in configuration programmatically, create the configuration objects directly:
 
 ```csharp
-var kindeClient = new KindeClientBuilder()
-    .WithDomain("<replace>")
-    .WithClientId("<replace>")
-    .WithClientSecret("<replace>")
-    .WithScope("<replace>")
-    .WithAudience("https://<replace>.kinde.com/api")
-    .Build();
+var appConfig = new ApplicationConfiguration
+{
+    Domain = "https://<replace>.kinde.com",
+    ForceApi = true
+};
+
+var clientCredentialsConfig = new ClientCredentialsConfiguration(
+    "<replace>", // clientId
+    "<replace>", // scopes
+    "<replace>", // clientSecret
+    "<replace>"  // audience
+);
 ```
 
 ##### Get an `ApiClient`
