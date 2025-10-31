@@ -33,7 +33,7 @@ keywords:
   - ios setup
   - pkce flow
   - custom schemes
-updated: 2024-01-15
+updated: 2025-10-31
 featured: false
 deprecated: false
 ai_summary: Complete guide for Flutter SDK including authentication setup, Android/iOS configuration, PKCE flow, and mobile app integration for Flutter 3.10+ applications.
@@ -110,8 +110,8 @@ KINDE_AUDIENCE=<your_kinde_audience>
 ```bash
 KINDE_AUTH_DOMAIN=https://myapp.kinde.com
 KINDE_AUTH_CLIENT_ID=clientid
-KINDE_LOGIN_REDIRECT_URI=myapp://kinde_callback
-KINDE_LOGOUT_REDIRECT_URI=myapp://kinde_logoutcallback
+KINDE_LOGIN_REDIRECT_URI=com.kinde.myapp://kinde_callback
+KINDE_LOGOUT_REDIRECT_URI=com.kinde.myapp://kinde_logoutcallback
 KINDE_AUDIENCE=myapp.kinde.com/api
 ```
 
@@ -151,13 +151,13 @@ Specify the custom scheme similar to the following but replace `<your_custom_sc
         <string>Editor</string>
         <key>CFBundleURLSchemes</key>
         <array>
-            <string><your_custom_scheme>://</string>
+            <string><your_custom_scheme></string>
         </array>
     </dict>
 </array>
 ```
 
-**Note:** `<your_custom_scheme>` has been defined previously as [`myapp`](http://com.kinde.app/) You can define your own custom scheme to correspond to the app name.
+**Note:** `<your_custom_scheme>` has been defined previously as `com.kinde.myapp`. You can define your own custom scheme to correspond to your app's package name.
 
 ## Set callback URLs
 
@@ -173,8 +173,8 @@ Replace the values you see in `<code brackets>` with your own values.
    - Allowed logout redirect URLs: `<your_custom_scheme>://kinde_logoutcallback`
 
 ```dart
-  loginRedirectUri: myapp://kinde_callback,
-  logoutRedirectUri: myapp://kinde_logoutcallback,
+  loginRedirectUri: "com.kinde.myapp://kinde_callback",
+  logoutRedirectUri: "com.kinde.myapp://kinde_logoutcallback",
 ```
 
 5. Select **Save**.
@@ -704,6 +704,10 @@ int getTeamCount() {
 }
 ```
 
+## Limitations
+
+- **WebView authentication on mobile:** When using the Flutter SDK on mobile platforms (iOS/Android), users will need to authenticate separately when accessing content in in-app WebViews. This occurs because the SDK uses ephemeral web authentication sessions for security, which do not share authentication state with WebViews. Authentication tokens are stored in native secure storage (Keychain/KeyStore) and are not accessible to WebView contexts, which maintain separate cookie storage. For applications requiring seamless authentication between native and web contexts, contact [support@kinde.com](mailto:support@kinde.com) for guidance.
+
 ## SDK API Reference
 
 ### `authDomain`
@@ -846,7 +850,7 @@ Extract the provided claim from the provided token type in the current session, 
 
 ```dart
 claim: "string", 
-tokenKey?: TokenType "access_token" | "id_token
+tokenKey?: TokenType "access_token" | "id_token"
 ```
 
 **Usage:**
@@ -862,7 +866,7 @@ Returns the state of a given permission.
 **Arguments:**
 
 ```dart
- key: "string
+ key: "string"
 ```
 
 **Usage:**
@@ -1049,7 +1053,7 @@ Get a string flag from the feature_flags claim of the `access_token`
 
 ```dart
 code : "string"
-defaultValue? :  "string
+defaultValue? :  "string"
 ```
 
 **Usage:**
