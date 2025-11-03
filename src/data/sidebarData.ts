@@ -153,6 +153,11 @@ const sidebarData = [
         collapsed: false
       },
       {
+        label: "Self-serve SSO",
+        autogenerate: {directory: "authenticate/self-serve-sso/"},
+        collapsed: false
+      },
+      {
         label: "Multi-factor auth",
         autogenerate: {directory: "authenticate/multi-factor-auth"},
         collapsed: false
