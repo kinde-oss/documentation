@@ -7,21 +7,143 @@ interface Props {
 const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props;
 ---
 
+<div id="api-reference" data-spec-url={specURL} data-proxy-url={proxyURL || ''}></div>
 <script
-  id="api-reference"
-  data-url={specURL}
-  data-proxy-url={proxyURL}
-  data-configuration='{"theme": "deepSpace", "hideDarkModeToggle": "true", "searchHotKey": "j"}'
-></script>
-<script
+  type="module"
   src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.23.5/dist/browser/standalone.min.js"
 ></script>
 
-<script>
-  import waitForElement from "@utils/waitForElement";
+<script type="module">
+  // Inline waitForElement function
+  function waitForElement(selector, callback) {
+    const element = document.querySelector(selector);
+    if (element) {
+      callback(element);
+    } else {
+      setTimeout(() => waitForElement(selector, callback), 100);
+    }
+  }
+
+  // Get variables from data attributes
+  const container = document.getElementById("api-reference");
+  const specURL = container?.dataset.specUrl || '';
+  const proxyURL = container?.dataset.proxyUrl || '';
+
+  // Configuration for Scalar API Reference
+  const targetServers = [
+    {
+      url: "https://{your_kinde_subdomain}.kinde.com",
+      variables: {
+        your_kinde_subdomain: {
+          default: "your_kinde_subdomain"
+        }
+      }
+    }
+  ];
+
+  // Initialize Scalar API Reference programmatically
+  async function initScalar() {
+    if (!container) {
+      console.error('API reference container not found');
+      return;
+    }
+
+    // Wait for Scalar to be available (check multiple ways)
+    let retries = 0;
+    const maxRetries = 30;
+    let Scalar = null;
+    
+    while (retries < maxRetries && !Scalar) {
+      // Check different ways Scalar might be exposed
+      if (typeof window !== 'undefined') {
+        Scalar = window.Scalar || window.ScalarApiReference || (window.default && window.default.Scalar);
+      }
+      if (typeof globalThis !== 'undefined' && !Scalar) {
+        Scalar = globalThis.Scalar || globalThis.ScalarApiReference;
+      }
+      
+      if (!Scalar) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries++;
+      }
+    }
+
+    // If Scalar is still not available, use data-attribute fallback
+    if (!Scalar) {
+      console.warn('Scalar API Reference not found, using data-attribute initialization');
+      container.setAttribute('data-url', specURL);
+      if (proxyURL) {
+        container.setAttribute('data-proxy-url', proxyURL);
+      }
+      container.setAttribute('data-configuration', JSON.stringify({
+        theme: "deepSpace",
+        hideDarkModeToggle: true,
+        searchHotKey: "j",
+        servers: targetServers
+      }));
+      container.id = 'api-reference';
+      return;
+    }
+
+    // Create API Reference instance with configuration
+    const config = {
+      target: container,
+      url: specURL,
+      configuration: {
+        theme: "deepSpace",
+        hideDarkModeToggle: true,
+        searchHotKey: "j",
+        servers: targetServers
+      }
+    };
+
+    // Add proxy if provided
+    if (proxyURL) {
+      config.proxy = proxyURL;
+    }
+
+    // Try different API methods based on Scalar version
+    let apiReference;
+    try {
+      if (Scalar.createApiReference) {
+        apiReference = Scalar.createApiReference(config);
+      } else if (Scalar.ApiReference) {
+        apiReference = new Scalar.ApiReference(config);
+      } else if (Scalar.default && Scalar.default.createApiReference) {
+        apiReference = Scalar.default.createApiReference(config);
+      } else {
+        throw new Error('No valid Scalar API method found');
+      }
+
+      // Store reference for potential updates later
+      if (typeof window !== 'undefined') {
+        window.__scalarApiReference = apiReference;
+      }
+    } catch (error) {
+      console.error('Error initializing Scalar API Reference:', error);
+      // Fallback to data-attribute initialization
+      container.setAttribute('data-url', specURL);
+      if (proxyURL) {
+        container.setAttribute('data-proxy-url', proxyURL);
+      }
+      container.setAttribute('data-configuration', JSON.stringify({
+        theme: "deepSpace",
+        hideDarkModeToggle: true,
+        searchHotKey: "j",
+        servers: targetServers
+      }));
+    }
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initScalar);
+  } else {
+    initScalar();
+  }
 
   // Wait for subdomain input to be ready, then focus and select text on focus, making it easier for users to enter their Kinde subdomain
-  waitForElement("#variable-subdomain", (inputElement: HTMLInputElement) => {
+  waitForElement("#variable-subdomain", (inputElement) => {
     inputElement.addEventListener("focus", () => {
       inputElement.select();
     });
@@ -31,7 +153,7 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
     });
   });
 
-  waitForElement('.authentication-content label', (element: HTMLLabelElement) => {
+  waitForElement('.authentication-content label', (element) => {
     if (window.location.pathname.includes('management')) {
       element.textContent = "M2M Token"
     }
@@ -40,20 +162,20 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
       element.textContent = "User access token"
     }
 
-    const authenticationLabel = document.querySelector('.security-scheme-label')  as HTMLDivElement;
+    const authenticationLabel = document.querySelector('.security-scheme-label');
 
     if (authenticationLabel) {
       authenticationLabel.textContent = "Authentication";
     }
   })
 
-  function updateURL(urlParams: URLSearchParams) {
+  function updateURL(urlParams) {
     // update url params
     const newUrl = urlParams.toString() ? window.location.pathname + '?' + urlParams.toString() : window.location.pathname;
     history.replaceState(null, '', newUrl);
 
     // remove params from links
-    const links: NodeListOf<HTMLAnchorElement> = document.querySelectorAll('.sidebar-group a');
+    const links = document.querySelectorAll('.sidebar-group a');
     links.forEach((link) => {
         const url = new URL(link.href, window.location.origin);
         url.searchParams.delete('token');
@@ -62,9 +184,8 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
     });
   }
 
-  function checkSubdomain(subdomainElement: HTMLInputElement) {
-
-    const parentEl = subdomainElement.parentElement as HTMLElement;
+  function checkSubdomain(subdomainElement) {
+    const parentEl = subdomainElement.parentElement;
 
     if (subdomainElement.value === "your_kinde_subdomain" || subdomainElement.value.trim() === "") {
       parentEl.style.animation = `pulse 1s linear infinite`;
@@ -73,20 +194,16 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
     }
   }
 
-  waitForElement(".introduction-card", (parentEl: HTMLDivElement) => {
-    const subdomainInputElement = parentEl.querySelector(
-      "input#variable-subdomain"
-    ) as HTMLInputElement;
-    const tokenInputElement = parentEl.querySelector(
-      ".authentication-content input"
-    ) as HTMLInputElement;
+  waitForElement(".introduction-card", (parentEl) => {
+    const subdomainInputElement = parentEl.querySelector("input#variable-subdomain");
+    const tokenInputElement = parentEl.querySelector(".authentication-content input");
     const urlParams = new URLSearchParams(window.location.search);
     
 
     // Check for "token" in URL params
     if (urlParams.has('token')) {
         const token = urlParams.get('token');
-        tokenInputElement.value = token as string;
+        tokenInputElement.value = token;
         tokenInputElement.dispatchEvent(new Event("input"));
         urlParams.delete('token');
     }
@@ -94,8 +211,8 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
     // Check for "subdomain" in URL params
     if (urlParams.has('subdomain')) {
         const subdomain = urlParams.get('subdomain');
-        sessionStorage.setItem('subdomain', subdomain as string);
-        subdomainInputElement.value = subdomain as string;
+        sessionStorage.setItem('subdomain', subdomain);
+        subdomainInputElement.value = subdomain;
         subdomainInputElement.dispatchEvent(new Event("input"));
         urlParams.delete('subdomain');
     } else {
@@ -112,7 +229,7 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
 
     // Update sessionStorage on subdomain input change
     subdomainInputElement.addEventListener('input', (event) => {
-        const subdomain = (event.target as HTMLInputElement).value;
+        const subdomain = event.target.value;
         sessionStorage.setItem('subdomain', subdomain);
         checkSubdomain(subdomainInputElement)
     });
@@ -121,15 +238,19 @@ const {specURL, proxyURL = import.meta.env.PUBLIC_KINDE_PROXY_URL} = Astro.props
   // Detect when api client overlay is up, so we can add a class to the body and then control body overflow, header z-index and position (from fixed to static)
   const observer = new MutationObserver((mutationsList) => {
     mutationsList.forEach((mutation) => {
-      mutation.addedNodes.forEach((node: any) => {
-        if (node.nodeType === 1 && node.classList.contains("api-client-drawer")) {
-          document.body?.classList.add("api-client-drawer-open");
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType === 1 && node.classList && node.classList.contains("api-client-drawer")) {
+          if (document.body) {
+            document.body.classList.add("api-client-drawer-open");
+          }
         }
       });
 
-      mutation.removedNodes.forEach((node: any) => {
-        if (node.nodeType === 1 && node.classList.contains("api-client-drawer")) {
-          document.body?.classList.remove("api-client-drawer-open");
+      mutation.removedNodes.forEach((node) => {
+        if (node.nodeType === 1 && node.classList && node.classList.contains("api-client-drawer")) {
+          if (document.body) {
+            document.body.classList.remove("api-client-drawer-open");
+          }
         }
       });
     });
