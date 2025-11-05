@@ -1,0 +1,255 @@
+---
+page_id: 2256b7a6-70e6-4261-b381-4be5feeaac36
+title: Tutorial - Check plan cancellation eligibility
+sidebar:
+  order: 61
+relatedArticles:
+  - 62fafade-5d33-4f85-9fd2-712c533db3d0
+  - f499ebb0-d7f5-4244-bf92-6bf0f6082b62
+description: Use Kinde billing and workflows to manage cancellation eligibility across different plan types.
+topics:
+  - "workflows"
+  - "example-workflows"
+  - "authentication"
+  - "billing"
+sdk: "kinde infrastructure"
+languages:
+  - "TypeScript"
+  - "JavaScript"
+audience:
+  - "developers"
+complexity: "intermediate"
+keywords:
+  - "billing"
+  - "billing plan"
+  - "billing workflow"
+  - "stripe billing"
+  - "pricing table"
+updated: "2025-11-05"
+featured: false
+deprecated: false
+ai_summary: "Use Kinde billing and workflows to manage cancellation eligibility across different plan types."
+---
+
+When users downgrade or cancel plans, you want to check that they are able to do so without exceeding usage limits of the plan they are downgrading to.
+
+In this tutorial, we’ll focus on how to deny cancelations for Enterprise plans, ensuring that customers who have signed legal agreements can only cancel by contacting support - while still allowing self-serve cancelation for other plans.
+
+### What you need
+
+- A [Kinde account](https://kinde.com/) (Sign up for free)
+- A [GitHub account](https://github.com/) (Sign up for free)
+- A [Stripe account](https://stripe.com/) (Sign up for free)
+- A running Kinde project, such as the [Kinde NextJS starter kit](https://github.com/kinde-starter-kits/kinde-nextjs-app-router-starter-kit)
+
+## Step 1: Set up Kinde billing
+
+### Part 1: Set up plans
+
+1. Sign in to Kinde and then switch to a non-production environment. This allows you to use Stripe payments in test mode.
+2. Go to **Settings > Billing** and select **Connect Stripe account** and follow the Stripe configuration steps.
+3. Scroll down the page and select **Show the pricing table when customers sign up** and select **Save.**
+4. Go to **Billing > Add a plan.**
+    1. Select **This plan is for: Users**.
+    2. Enter a **Name** (e.g, SDR Enterprise Standard), optional **Description**.
+    3. Key (e.g, `enterprise`)
+    4. Select the **Default currency**.
+    5. Select **Save**
+5. Under the **Fixed charges** section, select **Add charge**.
+    1. Enter a **Name** (Enterprise Standard), add **Line item description** (Enterprise Standard Plan).
+    2. Enter a **Price**: (e.g, 15,000)
+    3. Select **Save**. 
+6. Select **Publish**.
+
+### Part 2: Set up pricing table
+
+1. Go to **Billing >** **Pricing tables** and select **Add pricing table**.
+2. Select the **Generate** option and select **Next**.
+3. Select **User plans** and select **Save**.
+4. Select the **three dots** next to the pricing table you created and select **Edit pricing table**.
+5. Select **Make live** and select **Save**.
+6. Go to **Settings > Self-serve portal**.
+7. Enter `http://localhost:3000/dashboard` in the **Return URL** field.
+8. From **User self-management** section, switch on **Billing**, select **Save.** This will let your users change pricing plans from the self-serve portal.
+
+![self-serve portal select billing](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8d25e190-9c68-44a8-d246-eed943096500/public)
+
+## Step 2: Create the workflow code
+
+1. Fork the [workflow base template](https://github.com/kinde-starter-kits/workflow-base-template) repo into your GitHub account by selecting **Use this template > Create a new repository.**
+2. Clone the repo into your computer with the following Git command.
+    
+    ```bash
+    git clone https://github.com/your_github_username/workflow-base-template.git
+    ```
+    
+3. Change into the directory.
+    
+    ```bash
+    cd workflow-base-template
+    ```
+    
+4. Remove the sample workflow with the command.
+    
+    ```bash
+    rm -rf kindeSrc/environment/workflows/postUserAuthentication
+    ```
+    
+5. Create a new workflow with the following command. 
+    
+    You can name it anything that resonates with your project structure; we are calling it `denyPlanCancel`.
+    
+    ```bash
+    mkdir kindeSrc/environment/workflows/denyPlanCancel
+    touch kindeSrc/environment/workflows/denyPlanCancel/Workflow.ts
+    ```
+    
+6. Open the new file with your preferred code editor (e.g., VS Code) and add the following workflow code into the file and save changes.
+    
+    ```tsx
+    import {
+      onPlanCancellationRequest,
+      WorkflowSettings,
+      WorkflowTrigger,
+      denyPlanCancellation,
+      getEnvironmentVariable,
+    } from "@kinde/infrastructure"
+    
+    // The setting for this workflow
+    export const workflowSettings: WorkflowSettings = {
+      id: "onUserPlanCancellationRequest",
+      trigger: WorkflowTrigger.PlanCancellationRequest,
+      name: "Deny Plan Cancelation",
+      failurePolicy: {
+        action: "stop",
+      },
+      bindings: {
+        "kinde.plan": {},
+        "kinde.env": {},
+        url: {},
+      },
+    }
+    
+    // The workflow code to be executed when the event is triggered
+    export default async function Workflow(event: onPlanCancellationRequest) {
+      const { currentPlanCode } = event.context.billing
+      
+      // Configurable list of enterprise-like SKUs (comma-separated), default to "enterprise"
+      const ENTERPRISE_CODES = (
+        getEnvironmentVariable("ENTERPRISE_PLAN_CODES").value || "enterprise"
+      )
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+    
+      const isEnterprise =
+        !!currentPlanCode &&
+        ENTERPRISE_CODES.includes(String(currentPlanCode).toLowerCase())
+    
+      if (isEnterprise) {
+        denyPlanCancellation(
+          "Your subscription is managed by our team. To make changes, please contact support."
+        )
+      }
+    }
+    ```
+    
+    Optional: Install the Kinde infrastructure dependency with the following bash command for TypeScript intellisense.
+    
+    ```bash
+    npm install
+    ```
+    
+7. Run the following git commands in your terminal to push the changes to your GitHub repo:
+    
+    ```bash
+    git add .
+    git commit -m "add new deny plan cancelation workflow"
+    git push
+    ```
+    
+
+### Code explanation
+
+Here’s a quick breakdown of what the code does.
+
+**Imports**
+
+The top of the file brings in useful methods and types from the `@kinde/infrastructure` package:
+
+- `onPlanCancellationRequest` – the event type for plan cancellation requests.
+- `WorkflowSettings` and `WorkflowTrigger` – used to configure when the workflow runs.
+- `denyPlanCancellation` – stops a cancellation and shows a message to the user.
+- `getEnvironmentVariable` – retrieves environment variables set in the Kinde dashboard.
+
+**Workflow settings**
+
+The `workflowSettings` object defines how and when the workflow executes:
+
+- `id` is a unique identifier for the workflow.
+- `trigger` is set to `PlanCancellationRequest`, meaning the workflow runs whenever a customer tries to cancel their plan.
+- `name` is for easy reference in the dashboard.
+- `failurePolicy` with `action: "stop"` ensures the workflow halts cleanly if something goes wrong.
+- `bindings` enable access to Kinde plan info, environment variables, and URLs inside the workflow.
+
+**Main workflow logic**
+
+The `Workflow` function is executed on each cancellation attempt:
+
+1. It extracts the `currentPlanCode` from the billing context.
+2. It loads a configurable list of Enterprise-like SKUs from the `ENTERPRISE_PLAN_CODES` environment variable. If none is set, it defaults to `"enterprise"`.
+    - The list is split by commas, trimmed, and converted to lowercase for reliable matching.
+3. It checks whether the current plan matches one of the Enterprise SKUs.
+4. If the plan is Enterprise, it calls `denyPlanCancellation()` and shows a custom message to the user:
+    
+    > “Your subscription is managed by our team. To make changes, please contact support.”
+    > 
+
+**Result**
+
+Enterprise customers won’t be able to cancel through the self-serve portal. Instead, they’ll see a clear message directing them to sales or support. All other customers (Free, Pro, etc.) continue with the normal cancellation flow.
+
+## Step 3: Deploy the workflow code
+
+1. Go to **Workflows**.
+2. If you already have your workflow repo connected, go straight to step 4.
+3. Select **Connect repo > Connect GitHub** and follow the onboarding flow to authorize Kinde to access your GitHub account.
+    
+    ![connect git repo](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0f1b4c9f-64da-4885-08d0-3932939fee00/public)
+    
+4. From the dropdown, select your GitHub repository that contains the Kinde workflow code, choose the `main` branch, and click **Next**.
+    
+    If you already have a repo connected and want to change it, go to **Settings > Git repo > Change repo.**
+    
+5. Select **Sync code** to pull your latest workflow code from GitHub into your Kinde project. 
+6. Go to **Workflows** to see your workflow listed inside the dashboard. 
+    
+    ![deny plan cancellation workflows](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c96205e6-c97d-42d0-2805-16a67aeee600/public)
+    
+7. Go to **Settings > Env variables** and select **Add environment variable**.
+    1. Enter the Key: `ENTERPRISE_PLAN_CODES`
+    2. Enter all of your plan codes you don’t want the user to cancel in comma-separated values (e.g: `enterprise,enterprise_plus`)
+    3. Select **Save**.
+
+## Step 4: Test the workflow
+
+1. Setup a sample Kinde project and run it.
+2. Open your Kinde project and go through the signup process. You will see the plan selection page. 
+    
+    ![pick the pricing plan](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/280730f9-0b8c-4519-6b2a-aba081086b00/public)
+    
+3. Select the **SDR Enterprise Standard** plan. 
+Use sample credit card numbers:
+    - Card number: `4242 4242 4242 4242`
+    - Validity: `12/34`
+    - CVC: `123`
+4. Now select **My Account > Plan > Cancel plan**. 
+You will be restricted from canceling the plan with the message:
+
+> Your subscription is managed by our team. To make changes, please contact support.
+> 
+
+### Well done!
+
+By adding a workflow to handle cancelation requests, you can create clear rules for cancelling plans directly in the self-serve portal. 
+
+In our example, we blocked Enterprise customers from canceling on their own, ensuring they follow the proper sales and support channels defined in their agreements. With Kinde, you can combine these types of rules with your other billing workflows to build a billing experience that fits your business model.
