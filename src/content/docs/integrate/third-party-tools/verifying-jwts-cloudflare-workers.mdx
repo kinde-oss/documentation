@@ -172,13 +172,13 @@ With the common setup complete, you’re now ready to explore two options for co
     		}
     
     		const jwksUrl = 'https://<your_kinde_account>.kinde.com/.well-known/jwks';
-    		const publicKey = await extractPublicKey(jwksUrl);
+    		const modulus = await extractPublicKey(jwksUrl);
     
     		// Define the public key in JWK format
     		const jwk = {
     			kty: 'RSA',
     			e: 'AQAB',
-    			n: publicKey,
+    			n: modulus,
     			alg: 'RS256',
     			use: 'sig',
     		};
@@ -204,7 +204,7 @@ With the common setup complete, you’re now ready to explore two options for co
     				return new Response('Token is invalid', { status: 401 });
     			}
     		} catch (error) {
-    			return new Response(`Error verifying token: ${error.message}`, { status: 500 });
+    			return new Response(`Error verifying token: ${error.message}`, { status: 401 });
     		}
     	},
     };
@@ -233,19 +233,19 @@ With the common setup complete, you’re now ready to explore two options for co
     
     export default {
     	async fetch(request) {
-    		const token = request.headers.get('Authorization')?.split(' ')[1]; // Assuming the token is in the Authorization header
+    		const token = request.headers.get('Authorization')?.split(' ')[1];
     		if (!token) {
     			return new Response('No token provided', { status: 401 });
     		}
     
     		const jwksUrl = 'https://<your_kinde_account>.kinde.com/.well-known/jwks';
-    		const publicKey = await extractPublicKey(jwksUrl);
+    		const modulus = await extractPublicKey(jwksUrl);
     
     		// Define the public key in JWK format
     		const jwk = {
     			kty: 'RSA',
     			e: 'AQAB',
-    			n: publicKey,
+    			n: modulus,
     			alg: 'RS256',
     			use: 'sig',
     		};
