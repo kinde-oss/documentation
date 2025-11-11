@@ -23,7 +23,6 @@ audience:
 complexity: advanced
 keywords:
   - firebase
-  - postgresql
   - nextjs
   - jwt
   - authentication
@@ -141,7 +140,7 @@ In this article, we’ll walk through building a secure and scalable guestbook a
     - Imports the necessary functions to interact with the Firestore database.
     - Imports relevant functions from Kinde and NextJS.
     - Creates a server action called `addPost` to call from the form page:
-        - Gets the currently logged in user, if not redirects to the `/login` route
+        - Gets the currently logged-in user, if not redirects to the `/login` route
         - Writes a new document to Firestore with the form input
         - Redirects to the `/guestbook` route once completed
     
@@ -231,14 +230,17 @@ In this article, we’ll walk through building a secure and scalable guestbook a
     export default async function Page() {
       const postsCol = collection(db, "posts");
       const postsSnapshot = await getDocs(postsCol);
-      const posts = postsSnapshot.docs.map((doc) => doc.data());
+      const posts = postsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
     
       return (
         <div className="container">
           <h1 className="heading">Guestbook</h1>
           <div>
             {posts.map((post) => (
-              <div className="guestbook_entry" key={post.id}>
+              <div className="guestbook_entry" key={post.id || Math.random()}>
                 <h3 className="title">{post.name}</h3>
                 <p className="message">{post.message}</p>
               </div>
@@ -344,7 +346,7 @@ In this article, we’ll walk through building a secure and scalable guestbook a
 
 1. Update the `add/page.tsx` with the following code.
     
-    The code adds a check to see if the user is authenticated by Kinde using the `isAuthentication` method.
+    The code adds a check to see if the user is authenticated by Kinde using the `isAuthenticated` method.
     
     If the user is not logged in, it will not display the input form, and prompt the user to log in first.
     
