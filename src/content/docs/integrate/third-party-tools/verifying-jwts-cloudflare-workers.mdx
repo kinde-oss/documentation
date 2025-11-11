@@ -150,139 +150,125 @@ Now that Wrangler is installed and authorized, you’re ready to create your fir
 
 With the common setup complete, you’re now ready to explore two options for configuring the project. 
 
-### Option 1: Use the `cloudflare-worker-jwt` package to verify the token
+<Tabs>
+  <TabItem label="Cloudflare Worker JWT">
 
-1. Run the following command to install the **Cloudflare Worker JWT** package:
+	1. Run the following command to install the **Cloudflare Worker JWT** package:
     
-    <PackageManagers pkg='@tsndr/cloudflare-worker-jwt' />
+    	<PackageManagers pkg='@tsndr/cloudflare-worker-jwt' />
     
-2. Replace the contents of your `index.js` file with the following code:
-    
-    This code sets up your Worker to verify a JWT using the `cloudflare-worker-jwt` package.
-    
-    ```jsx
-    import { verify } from '@tsndr/cloudflare-worker-jwt';
-    import { extractPublicKey } from './helper';
-    
-    export default {
-    	async fetch(request) {
-    		const token = request.headers.get('Authorization')?.split(' ')[1];
-    		if (!token) {
-    			return new Response('No token provided', { status: 401 });
-    		}
-    
-    		const jwksUrl = 'https://<your_kinde_account>.kinde.com/.well-known/jwks';
-    		const modulus = await extractPublicKey(jwksUrl);
-    
-    		// Define the public key in JWK format
-    		const jwk = {
-    			kty: 'RSA',
-    			e: 'AQAB',
-    			n: modulus,
-    			alg: 'RS256',
-    			use: 'sig',
-    		};
-    
-    		try {
-    			// Import the public key
-    			const publicKey = await crypto.subtle.importKey(
-    				'jwk',
-    				jwk,
-    				{
-    					name: 'RSASSA-PKCS1-v1_5',
-    					hash: { name: 'SHA-256' },
-    				},
-    				false,
-    				['verify']
-    			);
-    
-    			const isValid = await verify(token, publicKey, { algorithm: 'RS256' });
-    
-    			if (isValid) {
-    				return new Response('Token is valid', { status: 200 });
-    			} else {
-    				return new Response('Token is invalid', { status: 401 });
-    			}
-    		} catch (error) {
-    			return new Response(`Error verifying token: ${error.message}`, { status: 401 });
-    		}
-    	},
-    };
-    ```
-    
-3. Replace `https://<your_kinde_account>.kinde.com/.well-known/jwks` with your Kinde account’s JWKS URL. For example:
-    
-    ```bash
-    https://tamalkinde.kinde.com/.well-known/jwks
-    ```
-    
+	2. Replace the contents of your `index.js` file with the following code:
+    			
+			```jsx
+			import { verify } from '@tsndr/cloudflare-worker-jwt';
+			import { extractPublicKey } from './helper';
+			
+			export default {
+				async fetch(request) {
+					const token = request.headers.get('Authorization')?.split(' ')[1];
+					if (!token) {
+						return new Response('No token provided', { status: 401 });
+					}
+			
+					const jwksUrl = 'https://<your_kinde_account>.kinde.com/.well-known/jwks';
+					const modulus = await extractPublicKey(jwksUrl);
+			
+					// Define the public key in JWK format
+					const jwk = {
+						kty: 'RSA',
+						e: 'AQAB',
+						n: modulus,
+						alg: 'RS256',
+						use: 'sig',
+					};
+			
+					try {
+						// Import the public key
+						const publicKey = await crypto.subtle.importKey(
+							'jwk',
+							jwk,
+							{
+								name: 'RSASSA-PKCS1-v1_5',
+								hash: { name: 'SHA-256' },
+							},
+							false,
+							['verify']
+						);
+			
+						const isValid = await verify(token, publicKey, { algorithm: 'RS256' });
+			
+						if (isValid) {
+							return new Response('Token is valid', { status: 200 });
+						} else {
+							return new Response('Token is invalid', { status: 401 });
+						}
+					} catch (error) {
+						return new Response(`Error verifying token: ${error.message}`, { status: 401 });
+					}
+				},
+			};
+			```
+	
+	</TabItem>
+  <TabItem label="Jose">
 
-### Option 2: Use the `jose` package for token verification
-
-1. Run the following command to install the **jose** package:
+		1. Run the following command to install the **jose** package:
+			
+			<PackageManagers pkg='jose' />
+			
+		2. Replace the contents of your `index.js` file with the following code:
+								
+				```jsx
+				import { jwtVerify } from 'jose';
+				import { extractPublicKey } from './helper';
+				
+				export default {
+					async fetch(request) {
+						const token = request.headers.get('Authorization')?.split(' ')[1];
+						if (!token) {
+							return new Response('No token provided', { status: 401 });
+						}
+				
+						const jwksUrl = 'https://<your_kinde_account>.kinde.com/.well-known/jwks';
+						const modulus = await extractPublicKey(jwksUrl);
+				
+						// Define the public key in JWK format
+						const jwk = {
+							kty: 'RSA',
+							e: 'AQAB',
+							n: modulus,
+							alg: 'RS256',
+							use: 'sig',
+						};
+				
+						try {
+							// Import the public key
+							const publicKey = await crypto.subtle.importKey(
+								'jwk',
+								jwk,
+								{
+									name: 'RSASSA-PKCS1-v1_5',
+									hash: { name: 'SHA-256' },
+								},
+								false,
+								['verify']
+							);
+				
+							// Verify the token
+							const { payload } = await jwtVerify(token, publicKey);
+							// Optionally, check the payload for required claims here
+				
+							return new Response('Token is valid', { status: 200 });
+						} catch (error) {
+							return new Response(`Token verification failed: ${error.message}`, { status: 401 });
+						}
+					},
+				};
+				```
+	</TabItem>
+</Tabs>
     
-    <PackageManagers pkg='jose' />
-    
-2. Replace the contents of your `index.js` file with the following code:
-    
-    This code configures your Worker to verify a JWT using the `jose` package.
-    
-    ```jsx
-    import { jwtVerify } from 'jose';
-    import { extractPublicKey } from './helper';
-    
-    export default {
-    	async fetch(request) {
-    		const token = request.headers.get('Authorization')?.split(' ')[1];
-    		if (!token) {
-    			return new Response('No token provided', { status: 401 });
-    		}
-    
-    		const jwksUrl = 'https://<your_kinde_account>.kinde.com/.well-known/jwks';
-    		const modulus = await extractPublicKey(jwksUrl);
-    
-    		// Define the public key in JWK format
-    		const jwk = {
-    			kty: 'RSA',
-    			e: 'AQAB',
-    			n: modulus,
-    			alg: 'RS256',
-    			use: 'sig',
-    		};
-    
-    		try {
-    			// Import the public key
-    			const publicKey = await crypto.subtle.importKey(
-    				'jwk',
-    				jwk,
-    				{
-    					name: 'RSASSA-PKCS1-v1_5',
-    					hash: { name: 'SHA-256' },
-    				},
-    				false,
-    				['verify']
-    			);
-    
-    			// Verify the token
-    			const { payload } = await jwtVerify(token, publicKey);
-    			// Optionally, check the payload for required claims here
-    
-    			return new Response('Token is valid', { status: 200 });
-    		} catch (error) {
-    			return new Response(`Token verification failed: ${error.message}`, { status: 401 });
-    		}
-    	},
-    };
-    ```
-    
-3. Replace `https://<your_kinde_account>.kinde.com/.well-known/jwks` with your Kinde account’s JWKS URL. For example:
-    
-    ```bash
-    https://tamalkinde.kinde.com/.well-known/jwks
-    ```
-    
-
-Let’s  now test the Worker locally to ensure everything works as expected.
+3. Replace `https://<your_kinde_account>.kinde.com/.well-known/jwks` with your Kinde account’s JWKS URL. For example: `https://tamalkinde.kinde.com/.well-known/jwks`
 
 ## Step 3: Test the Worker locally
 
