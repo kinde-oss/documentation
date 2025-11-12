@@ -58,9 +58,9 @@ If you haven’t already set up an application in Kinde with Next.js, here’s t
 
 1. Install Prisma dependencies by entering the following command in your project terminal:
     
-    <PackageManagers pkg='prisma -D' />
+    <PackageManagers pkg='-D prisma' />
 
-    <PackageManagers pkg='@prisma/client' />
+    <PackageManagers pkg='@prisma/client dotenv' />
     
     ```bash
     npx prisma init --datasource-provider sqlite
@@ -95,8 +95,18 @@ If you haven’t already set up an application in Kinde with Next.js, here’s t
       lastName  String
     }
     ```
-    
-3. Generate the Prisma Client by running the following command in your terminal.
+
+3. Open the `prisma.config.ts` file and add the following on top of the config file. This will allow Prisma to load environment variables from the `.env` file.    
+
+    ```ts
+    import "dotenv/config";
+    ```
+
+     <Aside>
+      Don't forget to add `.env` in the .gitignore file to not commit any private information.
+     </Aside>
+
+4. Generate the Prisma Client by running the following command in your terminal.
     
     This command updates the Prisma Client to reflect any changes made in the `schema.prisma` file, allowing you to interact with your database in your application.
     
@@ -104,7 +114,7 @@ If you haven’t already set up an application in Kinde with Next.js, here’s t
     npx prisma generate
     ```
     
-4. Push the schema changes to your database by running the following command.
+5. Push the schema changes to your database by running the following command.
     
     This command synchronizes the database with the updates made in the `schema.prisma` file, ensuring your database structure matches the latest schema
     
@@ -119,23 +129,22 @@ If you haven’t already set up an application in Kinde with Next.js, here’s t
     npx prisma db push
     ```
     
-5. Create a new `db.ts` file in the `/src` directory by running the following:
+6. Create a new `db.ts` file in the `/src` directory by running the following:
     
     ```bash
     touch src/db.ts
     ```
     
-6. Open the `db.ts` file and copy the following code into it. Save the file after adding the code:
+7. Open the `db.ts` file and copy the following code into it. Save the file after adding the code:
     
     ```tsx
-    import { PrismaClient } from "@prisma/client";
+    import { PrismaClient } from "@prisma/client"
 
-    const globalForPrisma = global as unknown as { prisma: PrismaClient };
+    const globalForPrisma = global as unknown as { prisma: PrismaClient }
 
-    export const prisma =
-      globalForPrisma.prisma || new PrismaClient();
+    export const prisma = globalForPrisma.prisma || new PrismaClient()
 
-    if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+    if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
     ```
     
     This code ensures that only one instance of the Prisma Client runs in your local development environment, preventing potential issues. For more details, refer to the [Comprehensive Guide to Using Prisma ORM with Next.js](https://www.prisma.io/docs/orm/more/help-and-troubleshooting/nextjs-help#avoid-multiple-prisma-client-instances).
@@ -160,21 +169,21 @@ If you haven’t already set up an application in Kinde with Next.js, here’s t
 3. Open the `route.ts` file in your code editor, add the following code, and then save the file.
     
     ```tsx
-    import prisma from "@/db";
-    import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-    import { NextResponse } from "next/server";
-    
+    import { prisma } from "@/db"
+    import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
+    import { NextResponse } from "next/server"
+
     export async function GET() {
-      const { getUser } = getKindeServerSession();
-      const user = await getUser();
-    
+      const { getUser } = getKindeServerSession()
+      const user = await getUser()
+
       if (!user || user == null || !user.id)
-        throw new Error("something went wrong with authentication" + user);
-    
+        throw new Error("something went wrong with authentication" + user)
+
       let dbUser = await prisma.user.findUnique({
         where: { kindeId: user.id },
-      });
-    
+      })
+
       if (!dbUser) {
         dbUser = await prisma.user.create({
           data: {
@@ -183,10 +192,10 @@ If you haven’t already set up an application in Kinde with Next.js, here’s t
             lastName: user.family_name ?? "",
             email: user.email ?? "", // Using nullish coalescing operator to provide a default empty string value
           },
-        });
+        })
       }
-    
-      return NextResponse.redirect("http://localhost:3000/dashboard");
+
+      return NextResponse.redirect("http://localhost:3000/dashboard")
     }
     ```
     
@@ -196,7 +205,7 @@ If you haven’t already set up an application in Kinde with Next.js, here’s t
     - Imports functions to interact with the Kinde Server Session and handle the Next.js response.
     - Defines a **GET** route to retrieve the authenticated user's information.
     - Checks if the user is already stored in the database and updates the database with user information if not.
-4. Open the `.env` file in your project and update the `KINDE_POST_LOGIN_REDIRECT_URL` field with the following value:
+4. Open the `.env` or `.env.local` file in your project and update the `KINDE_POST_LOGIN_REDIRECT_URL` field with the following value:
     
     ```tsx
     KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000/api/auth/success
