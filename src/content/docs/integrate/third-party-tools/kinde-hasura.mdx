@@ -1,0 +1,505 @@
+---
+page_id: 25dd0fcb-5881-498b-948d-f21373d52624
+title: Kinde and Hasura
+description: Build secure, scalable apps with Kinde and Hasura. Learn how to integrate Kinde Auth with Hasura GraphQL to add authentication, permissions, and real-time data access effortlessly.
+sidebar:
+  order: 9
+relatedArticles:
+  - 78f0242c-3a49-4c8d-8168-019fd69ef838
+  - 820ec3ab-2b80-4331-937c-644da9f8b339
+topics:
+  - integrate
+  - third-party-tools
+  - workflows
+sdk:
+  - react-sdk
+languages:
+  - typescript
+  - javascript
+  - graphql
+  - bash
+audience:
+  - developers
+complexity: advanced
+keywords:
+  - hasura
+  - graphql
+  - row level security
+  - rls
+  - reactjs
+  - jwt
+  - authentication
+  - database
+updated: 2025-11-12
+featured: false
+deprecated: false
+ai_summary: Build secure, scalable apps with Kinde and Hasura. Learn how to integrate Kinde Auth with Hasura GraphQL to add authentication, permissions, and real-time data access effortlessly.
+---
+
+Integrating authentication into your backend doesn’t have to be complex. By combining **Kinde** for authentication and **Hasura** for real-time GraphQL APIs, you can build secure, scalable applications with minimal setup.
+
+In this guide, you’ll learn how to connect Kinde with Hasura, allowing you to authenticate users, enforce row-level permissions, and safely expose data through Hasura’s GraphQL engine—all with clean and maintainable architecture.
+
+Whether you're building a SaaS app, a dashboard, or a data-driven product, this integration will help you focus on building features, not managing auth.
+
+### What you need
+
+- A [Kinde](https://kinde.com/) account (Sign up for free)
+- A [Hasura Cloud](https://cloud.hasura.io/) account (Sign up for free)
+- A [GitHub](https://github.com/) account to deploy Kinde workflow (Sign up for free)
+- A running Kinde front-end project, such as the [Kinde React starter kit](https://github.com/kinde-starter-kits/react-starter-kit)
+
+## Step 1: Set up your Hasura project
+
+1. Sign in to your Hasura cloud account, and select **New Project.** A side panel opens.
+2. Choose a **region** closest to your application, and select **Create Free Project**.
+3. Rename your project by selecting the pencil icon next to the project name (optional).
+4. Open the **Env vars** tab, and select **New Env Var.** A side panel opens.
+    
+    ![hasura environment variables](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9a590a19-bcaa-4621-c4e3-b115a6e95a00/public)
+    
+5. Enter `HASURA_GRAPHQL_JWT_SECRET` in the key field, and enter the following JSON value in the text box.
+    
+    ```json
+    {
+    	"jwk_url":"https://<your_kinde_subdomain>.kinde.com/.well-known/jwks.json",
+    	"audience": "hasura"
+    }
+    ```
+    
+    ![hasura jwt secret](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/244553ff-a350-43bf-8845-1ad0ceaf4f00/public)
+    
+6. Select **Add**.
+
+## Step 2: Set up your database and permissions
+
+1. Select **Launch Console** from the project dashboard. The Hasura console opens in a new tab.
+2. Select the **Data** tab. You can connect your existing database with Hasura. In this example, we will create a free database from [Neon](https://neon.com/).
+3. Select **Postgres** from the list of database providers, and select **Connect Neon Database**.
+    
+    A pop-up window will open, prompting you to sign up for a free account for Neon.
+    
+    You will be taken to your **default** database.
+    
+    ![select database](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/5c4ce740-7eb6-4ba3-d50b-6f0a74bf8b00/public)
+    
+4. Select **Create Table** to begin creating a new table.
+    
+    ![create table](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6d56f184-0d85-4c8a-4637-701f6708f900/public)
+    
+5. Enter `users` for the **Table Name**. Then add the following columns:
+    - `id` with the type of `Text`
+    - `name` with the type of `Text`
+    - `last_seen` with the type of `Timestamp` and a default value of `now()`
+        
+        ![table fields](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f24236f1-5d61-4301-0df1-877cb2cf0000/public)
+        
+6. Scroll down and select `id` from the **Primary Key** dropdown, then select **Add Table**.
+    
+    This will make the `id` column as the primary key of this table.
+    
+    ![table fields](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7612784a-f974-48db-0e4a-0e7af9171f00/public)
+    
+7. Select the **Permissions** tab, and enter `user` under the **Role** textbox. This creates a new role in your database.
+8. Select the pencil icon in the **select** cell of `user` row. A new option panel opens up.
+    
+    ![table select](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/a0f91978-ea01-47d7-1bdb-95df7cc61e00/public)
+    
+9. In the **Row select permissions**, select **With custom check** and enter the following code logic. This only allows the user to see their own data.
+    
+    ```json
+    {"id":{"_eq":"X-Hasura-User-Id"}}
+    ```
+    
+    ![row select permissions](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/26424d1a-92fe-43e2-1c56-e54ebf9d0d00/public)
+    
+10. On the same panel, under **Column select permissions**, select **Toggle All** to give the user access to all the columns. 
+    
+    ![column select permissions](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/3c001f45-89bb-4475-a374-878eb1ad9300/public)
+    
+11. Select **Save Permissions**.
+
+## Step 3: Create a Kinde workflow to add Hasura claims
+
+1. Fork the [workflow base template](https://github.com/kinde-starter-kits/workflow-base-template) repo into your GitHub account by selecting **Use this template > Create a new repository**
+2. Clone the repo into your computer with the following Git command:
+    
+    ```bash
+    git clone https://github.com/your_github_username/workflow-base-template.git
+    ```
+    
+3. Change into the directory:
+    
+    ```bash
+    cd workflow-base-template
+    ```
+    
+4. Remove the sample workflow with the command:
+    
+    ```bash
+    rm -rf kindeSrc/environment/workflows/postUserAuthentication
+    ```
+    
+5. Create a new workflow with the following command. 
+    
+    You can name it anything that resonates with your project structure. We will call it `hasuraCustomClaim`.
+    
+    ```bash
+    mkdir kindeSrc/environment/workflows/hasuraCustomClaim
+    touch kindeSrc/environment/workflows/hasuraCustomClaim/Workflow.ts
+    ```
+    
+6. Open the `Workflow.ts` file with your favorite code editor (e.g., VS Code), add the following code into the file, and save changes:
+    
+    ```tsx
+    import {
+      onUserTokenGeneratedEvent,
+      WorkflowSettings,
+      WorkflowTrigger,
+      accessTokenCustomClaims,
+    } from "@kinde/infrastructure"
+    
+    // The setting for this workflow
+    export const workflowSettings: WorkflowSettings = {
+      id: "onUserTokenGeneration",
+      name: "Hasura Custom Claim",
+      trigger: WorkflowTrigger.UserTokenGeneration,
+      failurePolicy: {
+        action: "stop",
+      },
+      bindings: {
+        "kinde.accessToken": {}, // required to modify access token claims
+        url: {}, // required for url params
+      },
+    }
+    
+    // The workflow code to be executed when the event is triggered
+    export default async function Workflow(event: onUserTokenGeneratedEvent) {
+      const userId = event.context.user.id
+    
+      // set the types for the custom claims
+      const accessToken = accessTokenCustomClaims<{
+        "https://hasura.io/jwt/claims": {
+          "x-hasura-user-id": string
+          "x-hasura-default-role": string
+          "x-hasura-allowed-roles": string[]
+        }
+      }>()
+    
+      const customClaim = {
+        "x-hasura-user-id": userId,
+        "x-hasura-default-role": "user",
+        "x-hasura-allowed-roles": ["user"],
+      }
+    
+      // Add the users company name to the access token
+      accessToken["https://hasura.io/jwt/claims"] = customClaim
+    }
+    ```
+    
+    Optional: Install the Kinde infrastructure dependency with the following bash command for TypeScript intellisense.
+    
+    ```bash
+    npm install
+    ```
+    
+7. Run the following git commands in your terminal to push the changes to your GitHub repo:
+    
+    ```bash
+    git add .
+    git commit -m "add Hasura custom claims workflow"
+    git push
+    ```
+    
+
+This workflow will add the custom Hasura claims to your Kinde-issued JWT in the following format:
+
+```json
+"https://hasura.io/jwt/claims": {
+    "x-hasura-allowed-roles": [
+      "user"
+    ],
+    "x-hasura-default-role": "user",
+    "x-hasura-user-id": "<kinde_user_id>"
+  },
+```
+
+## Step 4: Deploy the workflow code
+
+1. Sign into your [Kinde dashboard](https://kinde.com/) and select **Workflows** from the sidebar.
+2. If you already have your workflow repo connected, go straight to step 4.
+3. Select **Connect repo > Connect GitHub** and follow the onboarding flow to authorize Kinde to access your GitHub account.
+    
+    ![kinde connect repo](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ac00c3e0-5a25-4dce-e125-def55a7a9400/public)
+    
+4. From the dropdown, select your GitHub repository that contains the Kinde workflow code, choose the `main` branch, and click **Next**.
+    
+    If you already have a repo connected and want to change it, go to **Settings > Git repo > Change repo.**
+    
+5. Select **Sync code** to pull your latest workflow code from GitHub into your Kinde project. 
+You’ll now see your workflow listed inside the dashboard. 
+    
+    ![hasura custom claims workflow](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/91e86a70-8b94-4028-d928-2896ed894600/public)
+    
+
+## Step 5: Add and authorize the API connection
+
+1. From the Kinde home page, select **Settings** > **APIs** > **Add API**. 
+2. Type a name for the API (e.g., Hasura).
+3. Enter `hasura` in the **Audience** field and select **Save**. This enables your app to add a custom audience claim in your JWT for security.
+    
+    ![add api](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f598edea-280e-48bc-4fa6-7f7de23a2a00/public)
+    
+4. From the Kinde home screen, select **View details** on your application.
+    
+    ![react app](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/03e6fdd1-4d1a-4dd5-5f7d-f94f6b24f100/public)
+    
+5. Go to **APIs**, you will see the Hasura API you created earlier.
+6. Select the **three dots** next to your Hasura API and select **Authorize application**.
+    
+    This will add `hasura` into your Kinde JSON web token inside the `aud` field. It will allow Hasura to authorize a user using Kinde.
+    
+    ![authorize api](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/3a60c1f1-53ec-415c-c0c6-e0cde4cd1e00/public)
+    
+
+## Step 6: Configure Kinde React app
+
+1. Open your Kinde React app with your favorite code editor (e.g., VS Code)
+2. Open `src/main.tsx` file, replace the contents with the following code, and save changes.
+    
+    We are adding the `audience="hasura"` to check for the custom claim when authenticating.
+    
+    ```tsx
+    import { createRoot } from "react-dom/client"
+    import { KindeProvider } from "@kinde-oss/kinde-auth-react"
+    import "./index.css"
+    import App from "./App.tsx"
+    
+    createRoot(document.getElementById("root")!).render(
+      <KindeProvider
+        clientId={import.meta.env.VITE_KINDE_CLIENT_ID}
+        domain={import.meta.env.VITE_KINDE_DOMAIN}
+        logoutUri={import.meta.env.VITE_KINDE_LOGOUT_URL}
+        redirectUri={import.meta.env.VITE_KINDE_REDIRECT_URL}
+        audience="hasura"
+        // When running local against a custom domain, include the line below
+        // useInsecureForRefreshToken={true}
+      >
+        <App />
+      </KindeProvider>
+    )
+    ```
+    
+3. Open `src/components/LoggedIn.tsx` file, replace its contents with the following code, and save changes. This:
+    - Creates a custom state `token` to store the JWT token value.
+    - Creates a custom handler function to get the access token from Kinde auth.
+    - Adds a button to the UI to get and display the access token.
+    
+    ```tsx
+    import { useKindeAuth } from "@kinde-oss/kinde-auth-react"
+    import { LogoutLink, PortalLink } from "@kinde-oss/kinde-auth-react/components"
+    import { useState } from "react"
+    
+    export default function LoggedIn() {
+      const { user, getAccessToken } = useKindeAuth()
+      const [token, setToken] = useState("token-not-loaded")
+    
+      const fetchAccessToken = async () => {
+        try {
+          const accessToken = await getAccessToken()
+          setToken(accessToken ? accessToken : "no-token-found")
+        } catch (err) {
+          console.log(err)
+        }
+      }
+    
+      return (
+        <>
+          <header>
+            <nav className="nav container">
+              <h1 className="text-display-3">KindeAuth</h1>
+              <div className="profile-blob">
+                {user?.picture !== "" ? (
+                  <img
+                    className="avatar"
+                    src={user?.picture}
+                    alt="user profile avatar"
+                  />
+                ) : (
+                  <div className="avatar">
+                    {user?.givenName?.[0]}
+                    {user?.familyName?.[0]}
+                  </div>
+                )}
+                <div>
+                  <p className="text-heading-2">
+                    {user?.givenName} {user?.familyName}
+                  </p>
+                  <ul className="c-user-menu">
+                    <li>
+                      <PortalLink>Account</PortalLink>
+                    </li>
+                    <li>
+                      <LogoutLink className="text-subtle">Sign out</LogoutLink>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </nav>
+          </header>
+    
+          <main>
+            <div className="container">
+              <div className="card start-hero">
+                <p className="text-body-2 start-hero-intro">Woohoo!</p>
+                <p className="text-display-2">
+                  Your authentication is all sorted.
+                  <br />
+                  Build the important stuff.
+                </p>
+              </div>
+              <button onClick={fetchAccessToken}> Get Access Token</button>
+              <br />
+              <code>{token}</code>
+    
+              <section className="next-steps-section">
+                <h2 className="text-heading-1">Next steps for you</h2>
+              </section>
+            </div>
+          </main>
+    
+          <footer className="footer">
+            <div className="container">
+              <strong className="text-heading-2">KindeAuth</strong>
+              <p className="footer-tagline text-body-3">
+                Visit our{" "}
+                <a className="link" href="https://kinde.com/docs">
+                  help center
+                </a>
+              </p>
+    
+              <small className="text-subtle">
+                © 2025 KindeAuth, Inc. All rights reserved
+              </small>
+            </div>
+          </footer>
+        </>
+      )
+    }
+    
+    ```
+    
+4. Run the project on your local machine with the following command `npm run dev` .
+5. Go to [https://localhost:3000](https://localhost:3000) and sign in or sign up for a new account.
+6. Select **Get Access Token**, and copy the JWT for testing the Hasura implementation.
+    
+    ![get access token](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/31640ade-4ea1-48b7-6448-157c7fa9f900/public)
+    
+
+## Step 7: Test the Hasura authentication
+
+1. Sign in to your Hasura cloud account, and select **Launch Console** next to your project. Hasura Cloud Console will launch in a new tab.
+    
+    ![hasura launch console](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7c3743b9-79c5-441f-068e-eed04d13a300/public)
+    
+2. Go to the **API** tab.
+3. Test your GraphQL endpoint with the following steps:
+    1. Uncheck the `x-hasura-admin-secret`.
+    2. Add a new `KEY` called `Authorization`.
+    3. Add `Bearer <your_jwt_token>` in the `VALUE` field.
+    
+    ![hasura test api](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8a298e82-53ea-4cf2-dec7-6a15c67fdb00/public)
+    
+4. Enter the following query in the text box:
+    
+    ```graphql
+    query GetUsers {
+      users {
+        id
+        name
+        last_seen
+      }
+    }
+    ```
+    
+5. Select the **play** button.
+6. You will see an empty users array. Hasura is successfully authorizing your request.
+    
+    ```graphql
+    {
+      "data": {
+        "users": []
+      }
+    }
+    ```
+    
+
+### Test with sample user data
+
+To verify that Hasura is correctly enforcing user-level access, you can insert some test data tied to a Kinde user.
+
+1. Find a User ID in Kinde. Go to **Kinde > Users > View Profile** and copy the user ID.
+2. Add the Kinde User ID to your database. Add a record to your `users` table using the Kinde user ID you just copied.
+    
+    ![test database](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/2a160172-1822-41b8-576c-3efbef763800/public)
+    
+3. Run a query with that user's JWT. When you authenticate using that user’s JWT and run a query in Hasura, you should now see the correct user data returned:
+    
+    ```json
+    {
+      "data": {
+        "users": [
+          {
+            "id": "kp_1234",
+            "name": "Tamal Anwar Chowdhury",
+            "last_seen": "timestamp"
+          }
+        ]
+      }
+    }
+    ```
+    
+    Hasura extracts the user ID from the JWT and applies row-level permissions to return only the relevant data.
+    
+4. To try with a different user, log out and sign in (or sign up) with a different Kinde user. Use their JWT to query the same Hasura endpoint:
+    
+    ```json
+    {
+      "data": {
+        "users": []
+      }
+    }
+    ```
+    
+    You’ll notice that **no data is returned**—because the new user doesn't have a corresponding record in the database.
+    
+
+This optional test confirms that Hasura is securely limiting access to each user’s own data, based on the JWT provided during authentication.
+
+### Connect your application
+
+Now that authentication is working correctly, you can move on to connecting your frontend application:
+
+- If you're using the Kinde React SDK, retrieve the JWT using the `getAccessToken()` method.
+    
+    ```js
+    const token = await getAccessToken()
+    ```
+    
+- Use this token to make authenticated requests to your Hasura backend.
+
+This setup ensures secure and scoped access to your data, based on each authenticated user's identity.
+
+### Take a bow!
+
+You’ve set up a secure integration between Kinde and Hasura, enabling powerful authentication and authorization for your application.
+
+This approach ensures that each user only accesses their own data, helping you enforce strict access control while maintaining a smooth developer experience.
+
+As always, make sure to:
+
+- Test your configuration thoroughly using different user accounts.
+- Safely handle JWTs and other sensitive credentials.
+- Keep your dependencies up to date and stay alert for security advisories.
+
+If you need help, reach out to us at [support@kinde.com](mailto:support@kinde.com). You can also connect with the team and other developers in the [Kinde Slack community](https://join.slack.com/t/thekindecommunity/shared_invite/zt-2k5i0aeet-d6Z_2qYphcNCpj0bFa4oCg) or [Discord](https://discord.gg/wHX6j7wG5d). We're here to support you.
