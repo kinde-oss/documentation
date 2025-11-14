@@ -45,6 +45,7 @@ const sidebarData = [
         autogenerate: {directory: "build/set-up-options"},
         collapsed: false
       },
+      {label: "Self-service portal", autogenerate: {directory: "build/self-service-portal"}, collapsed: false},
       {label: "Environments", autogenerate: {directory: "build/environments"}, collapsed: false},
       {label: "Applications", autogenerate: {directory: "build/applications"}, collapsed: false},
       {label: "Organizations", autogenerate: {directory: "build/organizations"}, collapsed: false},
@@ -152,6 +153,11 @@ const sidebarData = [
         collapsed: false
       },
       {
+        label: "Self-serve SSO",
+        autogenerate: {directory: "authenticate/self-serve-sso/"},
+        collapsed: false
+      },
+      {
         label: "Multi-factor auth",
         autogenerate: {directory: "authenticate/multi-factor-auth"},
         collapsed: false
@@ -248,6 +254,11 @@ const sidebarData = [
       {
         label: "Getting started",
         autogenerate: {directory: "workflows/getting-started"},
+        collapsed: false
+      },
+      {
+        label: "Workflow tutorials",
+        autogenerate: {directory: "workflows/workflow-tutorials"},
         collapsed: false
       },
       {

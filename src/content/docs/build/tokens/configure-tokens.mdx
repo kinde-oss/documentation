@@ -61,6 +61,18 @@ Token and session expiry should be approached with priority for system and user 
 4. For each token type, set the expiry time in seconds. 3,600 seconds is one hour; 86,400 seconds is one day.
 5. Select **Save**.
 
+## Revoke a token to end a user session
+
+You can use the Kinde Account API to revoke access and refresh tokens after a user signs out of your app. This forces a new session for each login.
+
+To revoke a previously issued token, you need to make a POST request to the `/oauth2/revoke` endpoint with the operation ID `tokenRevocation`. When making the request, you should include the following parameters in the request body:
+- `token` (string): The token that you want to revoke.
+- `client_id` (string): Your client's identifier.
+- `client_secret` (string): The secret associated with your client.
+Ensure to set the Content-Type header to `application/x-www-form-urlencoded`. 
+
+Upon successful revocation, you will receive a 200 status code indicating that the token was successfully revoked. For more information and example code snippets, see [revoke tokens](https://docs.kinde.com/kinde-apis/frontend/#tag/oauth/post/oauth2/revoke).
+
 ## Token security
 
 Tokens can be vulnerable to security breaches. Access tokens in particular contain sensitive information, and these tokens can be used to access systems.
@@ -69,4 +81,5 @@ Refresh tokens can be used to reduce some of this risk as they can be used to ge
 
 To mitigate risk, we recommend using Automatic Reuse Detection and Refresh Token Rotation.
 
-You can revoke access tokens and refresh tokens via the Kinde Management API. [Search the Kinde API docs](/kinde-apis/management/).
+Setting up an automation to revoke tokens after logout can enhance security as it forces re-authentication each sign in.
+

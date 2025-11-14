@@ -1,3 +1,1 @@
-clairekinde11
-danielrivers
-DaveOrDead
+* @kinde-oss/giants-kinde
