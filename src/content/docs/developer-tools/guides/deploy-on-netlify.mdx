@@ -1,0 +1,133 @@
+---
+page_id: 5905adbb-296e-41ed-ad14-73eb986eeca7
+title: Deploy a Kinde App on Netlify
+description: Learn how to deploy your Kinde app on Netlify. This guide walks you through setup, configuration, and deployment using Netlify’s powerful hosting and continuous deployment features.
+sidebar:
+  order: 2
+relatedArticles:
+  - 3a5cbe42-d4c2-4f41-a243-a4852fdcf4a5
+topics:
+  - developer-tools
+  - guides
+  - deployment
+  - netlify
+sdk: 
+  - nextjs-sdk
+languages: 
+  - typescript
+  - javascript
+audience: developers
+complexity: beginner
+keywords:
+  - Netlify deployment
+  - environment variables
+  - callback URLs
+  - starter kits
+  - GitHub integration
+  - cloud deployment
+updated: 2025-11-14
+featured: false
+deprecated: false
+ai_summary: Learn how to deploy your Kinde app on Netlify. This guide walks you through setup, configuration, and deployment using Netlify’s powerful hosting and continuous deployment features.
+---
+
+Netlify is a platform for hosting web applications with features like continuous deployment, serverless functions, and a global content delivery network. This guide will walk you through the steps to deploy your Kinde project to Netlify, from setup to deployment.
+
+### What you need
+
+- A [Netlify](https://www.netlify.com/) account (sign up for free)
+- A [GitHub](https://github.com/) account (this guide uses GitHub for the project source)
+- A Kinde application running Next.js or a starter kit such as the [Next.js starter kit](https://github.com/kinde-starter-kits/kinde-nextjs-app-router-starter-kit).
+
+## Step 1: Set up your project in Netlify
+
+1. [Sign in to Netlify](https://app.netlify.com/) and go to the main dashboard page.
+2. If this is your first Netlify project, select **Import an existing project >** **Import from Git** option.
+    1. If you already have other Netlify projects, select **Add new project > Import an existing project**. 
+3. On the **Connect to Git provider** page, select **GitHub** from the list.
+4. Pick your project repo from the list to continue, or follow the prompts to select your repo.
+5. Enter a name for your site. This will form the site URL.
+6. Scroll down and select **Add environment variables > Import from a .env file** to configure your Kinde app.
+    
+    ![netlify add env variable](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/446d99d9-e51c-4ffb-8bec-f395df835a00/public)
+    
+7. Enter the environment variables from your project’s `.env` file
+or the `.env.local` file (if using the Kinde starter kit). You can also find the project keys in your **Kinde application > Quick start** page.
+
+  ![kinde env variables](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7a1b267a-2390-4557-6373-3edb39b40400/public)
+
+8. Select **Deploy** to deploy your site. A green **Published** label appears when the deployment is complete. It shows your site name.
+    
+    ![netlify project published](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/940791f0-9f78-4d5e-9136-04aab0b4bf00/public)
+
+    <Aside type='danger'>
+      If your deployment fails due to TypeScript type checking errors, you can adjust your TypeScript configuration. In your `tsconfig.json`, set `"strict": true` to `"strict": false` to disable strict type checking during the build.
+    </Aside>
+    
+9. If you want to change the URL of your site, select **Project configuration** in the left menu.
+    1. Select **Change project name**.
+    2. Enter a new project name (e.g, **kindenetlifydemo**) and select **Save** to update your site URL.
+
+    Once the site is deployed, take note of your Netlify project URL such as `https://<yoursitename>.netlify.app`, as you'll need it in the next section to update your Kinde configurations.
+
+## Step 2: Configure your Kinde app for deployment
+
+1. Go to your Kinde dashboard and select **View details** for the relevant application. 
+2. Scroll down to the **Callback URLs** section on the **Details** page. 
+3. Update the **Allowed callback URLs**  with your new Netlify site details. The format should be:  `https://<yoursitename>.netlify.app/api/auth/kinde_callback` 
+4. Update the **Allowed logout redirect URLs** referencing your Netlify app URL, `https://<yoursitename>.netlify.app`
+    
+    ![kinde callback urls](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/bedd6c84-2862-4db0-9562-d7722ee0b600/public)
+    
+5. Select **Save**.
+
+## Step 3: Update Netlify environment variables
+
+Currently, Netlify is configured with our local project variables. To reference our real project, we need to update the relevant `.env` variables.
+
+1. Go to your [Netlify dashboard](https://app.netlify.com/) and select your site.
+2. Select **Project configuration**, then select **Environment variables**, to view all your application environment variables.
+3. Select the `KINDE_SITE_URL` environment variable by expanding the section.
+4. Select **Options** > **Edit** to make the variable editable.
+    
+    ![edit environment variables on netlify](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/31d7b7c5-563b-47ae-349f-2c196dcd6c00/public)
+    
+5. Replace the old value of `http://localhost:3000` with your Netlify site URL (e.g., `https://<yoursitename>.netlify.app` )
+    
+    ![edit environment variables on netlify](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/59fad687-3918-48d0-4088-60864ca79b00/public)
+    
+6. Select **Save variable**. 
+7. Using your Netlify credentials, repeat from step 3 to update the following:
+    - `KINDE_POST_LOGOUT_REDIRECT_URL`
+    - `KINDE_POST_LOGIN_REDIRECT_URL`
+
+## Step 4: Redeploy your project in Netlify
+
+For the changes in the new environment variables to apply correctly, you must redeploy your Netlify project. 
+
+1. Go to **Deploys** section of your project, select **Trigger deploy** **> Deploy project without cache**.
+    
+    ![netlify trigger a new deploy](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b8d29010-5b53-4ea7-b305-15a92e9b4500/public)
+    
+    <Aside type='danger'>
+      Do not select **Deploy project** as this will preserve the old environment variables. 
+    </Aside>
+
+    Your site redeploys to Netlify.
+    
+2. Once all checks are finished, select the **Open production deploy** button to inspect your Kinde project and start authenticating.
+    
+    ![netlify published project](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/fcf9d29b-66ba-4563-2fc5-2d863ae6cd00/public)
+    
+    ![kinde live project](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/1c807051-9ee9-4750-a7a4-1e6489479600/public)
+    
+    You are now all set with a fully functional Kinde project hosted on Netlify.
+    
+
+### Congratulations!
+
+Once you’re sure everything is running smoothly you might consider how you can enhance your setup. [Netlify](https://www.netlify.com/) offers features such as custom domains, automatic deployments, and serverless functions that you can explore.
+
+If you need help, reach out to us at [support@kinde.com](mailto:support@kinde.com). You can also connect with the team and other developers in the [Kinde Slack community](https://join.slack.com/t/thekindecommunity/shared_invite/zt-2k5i0aeet-d6Z_2qYphcNCpj0bFa4oCg) or [Discord](https://discord.gg/wHX6j7wG5d). We're here to support you.
+
+Happy building!
