@@ -33,7 +33,7 @@ keywords:
   - ios setup
   - pkce flow
   - custom schemes
-updated: 2025-10-31
+updated: 2025-11-21
 featured: false
 deprecated: false
 ai_summary: Complete guide for Flutter SDK including authentication setup, Android/iOS configuration, PKCE flow, and mobile app integration for Flutter 3.10+ applications.
@@ -213,7 +213,21 @@ await sdk.register(context: context);
 ...
 ```
 
-**Note:** Kinde supports the PKCE extension, in which the `code_challenge` and  `code_challenge_method`  parameters are also required. For More information, visit [Using OAuth Scopes.](/build/tokens/oath-scopes/#authorization-code-flow-with-proof-key-for-code-exchange-pkce)
+You can pass optional parameters to sign users up for a billing plan or subscription:
+
+```dart
+await sdk.register(
+  additionalParams: AdditionalParameters(planInterest: 'pro_monthly')
+);
+```
+
+```dart
+await sdk.login(
+  additionalParams: AdditionalParameters(planInterest: 'pro_monthly')
+);
+```
+
+**Note:** Kinde supports the PKCE extension, in which the `code_challenge` and  `code_challenge_method`  parameters are also required. For More information, visit [Using OAuth Scopes.](/build/tokens/oath-scopes/#authorization-code-flow-with-proof-key-for-code-exchange-pkce)
 
 ### Signing out
 
@@ -227,7 +241,7 @@ await sdk.logout()
 
 ### Test sign up
 
-Register your first user by signing up yourself. You’ll see your newly registered user on the **Users** page in Kinde.
+Register your first user by signing up yourself. You'll see your newly registered user on the **Users** page in Kinde.
 
 ## Get user information
 
@@ -827,7 +841,7 @@ Constructs redirect url and sends user to Kinde to sign up and create a new org 
 **Arguments:**
 
 ```dart
- options?: CreateOrgURLOptions {
+ options?: CreateOrgURLOptions {
    org_name?: "string";
    org_code?: "string";
    state?: "string";
@@ -838,7 +852,9 @@ Constructs redirect url and sends user to Kinde to sign up and create a new org 
 
 ```dart
 sdk.createOrg(
-  org_name: "org_1234"
+  orgName: "org_1234",
+  planInterest: "enterprise_annual", // optional - for billing plans
+  pricingTableKey: "enterprise_2024" // optional - for billing plans
 );
 ```
 
