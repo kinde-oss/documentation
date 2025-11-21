@@ -784,7 +784,31 @@ Type: `string`
 
 Required: No
 
-Default: `openid` `profile` `email` `offline`
+Default: `openid` `profile` `email` `offline`
+
+---
+
+### `additionalParameters`
+
+Optional parameters that can be passed to authentication methods for billing and organization flows.
+
+Type: `AdditionalParameters`
+
+Required: No
+
+**Available fields:**
+
+- `planInterest` (String?) - Pre-selects a billing plan for the user
+- `pricingTableKey` (String?) - Specifies which pricing table to display
+
+**Usage:**
+
+```dart
+AdditionalParameters(
+  planInterest: 'pro_monthly',
+  pricingTableKey: 'spring_promo'
+)
+```
 
 ---
 
@@ -800,6 +824,14 @@ Constructs redirect url and sends user to Kinde to sign in.
 sdk.login();
 ```
 
+**With additional parameters:**
+
+```dart
+sdk.login(
+  additionalParams: AdditionalParameters(planInterest: 'pro_monthly')
+);
+```
+
 ### `register`
 
 Constructs redirect url and sends user to Kinde to sign up.
@@ -808,6 +840,17 @@ Constructs redirect url and sends user to Kinde to sign up.
 
 ```dart
 sdk.register();
+```
+
+**With additional parameters:**
+
+```dart
+sdk.register(
+  additionalParams: AdditionalParameters(
+    planInterest: 'pro_monthly',
+    pricingTableKey: 'spring_promo'
+  )
+);
 ```
 
 ### `logout`
@@ -840,13 +883,17 @@ true or false
 
 Constructs redirect url and sends user to Kinde to sign up and create a new org for your business.
 
+**Note:** Unlike `login()` and `register()`, this method accepts billing parameters as direct named parameters rather than through `AdditionalParameters`.
+
 **Arguments:**
 
 ```dart
- options?: CreateOrgURLOptions {
-   org_name?: "string";
-   org_code?: "string";
-   state?: "string";
+{
+  orgName?: "string";
+  orgCode?: "string";
+  planInterest?: "string";
+  pricingTableKey?: "string";
+  type?: AuthFlowType;
 }
 ```
 
