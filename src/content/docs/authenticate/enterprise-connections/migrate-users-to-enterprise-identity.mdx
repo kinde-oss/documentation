@@ -1,0 +1,276 @@
+---
+page_id: 8c71cef6-4e34-4417-afcd-cbc3fdf13ab3
+title: Moving users from email identity to Enterprise Identity
+description: Step-by-step guide to migrating existing email/password users to Enterprise SSO connections (SAML/Entra ID) using JIT provisioning, including testing, pilot rollout, and post-migration security best practices.
+sidebar:
+  order: 6
+relatedArticles:
+  - 2c58dabc-fe5c-4919-ade7-4caab8da47e8
+topics:
+  - integrate
+  - third-party-tools
+sdk: []
+languages: []
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - email
+  - enterprise
+  - user migration
+  - SSO
+  - SAML
+  - Entra ID
+  - Azure AD
+  - JIT provisioning
+  - enterprise connections
+  - identity migration
+  - trust email
+  - IdP
+updated: 2025-11-22
+featured: false
+deprecated: false
+ai_summary: Step-by-step guide to migrating existing email/password users to Enterprise SSO connections (SAML/Entra ID) using JIT provisioning, including testing, pilot rollout, and post-migration security best practices.
+---
+
+This guide walks you through migrating existing email/password users to Enterprise SSO connections (such as SAML or Entra ID). This process uses just-in-time (JIT) provisioning to map existing users to their enterprise identities based on matching email addresses.
+
+<aside>
+💡
+
+This guide is for when moving an existing user with an email identity to using an Enterprise Connection.
+
+</aside>
+
+### What you need?
+
+- An existing [Enterprise Connection](/authenticate/enterprise-connections/) configured in Kinde (e.g., SAML or Entra ID)
+- Users with email addresses that match exactly their Enterprise Identity (capitalization and structure must match)
+- Access to configure the Enterprise Connection settings in Kinde
+- A test application environment (recommended before enabling in production)
+- Access to your IdP logs (e.g., Entra ID sign-in logs) for verification
+
+## Step 1: Configure SAML application in Entra ID
+
+1. On the [Microsoft Entra admin center](https://entra.microsoft.com/#home) home screen, select **Applications > Enterprise Applications**.
+2. Select **New application** and in the next screen select **Create your own application**. A side panel opens.
+3. Enter the name for the application.
+4. Select the **Integrate any other application you don't find in the gallery (Non-gallery)** option and then select **Create**. It can take a few seconds for the application to be created.
+5. Select **Get started** on the **2. Set up single sign on** tile, then select the SAML tile.
+6. Edit the **Basic SAML Configuration**. The side panel opens.
+7. Select **Add identifier**, then enter a random string (e.g., `hEb876ZZlkg99Dwat64Mnbvyh129`). Copy this value as you'll need it for the Kinde configuration. 
+    <Aside>
+    Note that some older Entra ID tenants require the Entity ID to have a prefix of `spn:` If your connection fails, this could be why.
+    </Aside>
+
+8. Select **Add reply URL** and paste the ACS URL that you'll copy from Kinde in the next section. You can update this later if needed.
+9. Select **Save**.
+10. Select **Edit** on the **Attributes & Claims** section. Note the values of the identifiers (Principal name, Given name, Surname) - you'll need these for Kinde configuration.
+
+- Email key attribute (Email), typically `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress`
+- First name attribute (Given name), typically `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname`
+- Last name attribute (Surname), typically `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname`
+
+11. In the **SAML certificates** section, copy the **App federation metadata URL**. You'll add this as the **IdP metadata URL** in the Kinde connection.
+12. Download the Federation metadata XML file. This is the SAML signed certificate (optional, for signing SAML requests).
+
+## Step 2: Create Enterprise Connection in Kinde
+
+1. Go to **Settings > Environment > Authentication**.
+2. Scroll to the **Enterprise connection** section and select **Add connection**. The **Add connection** window opens.
+3. Select **Microsoft Entra ID (SAML)** and then select **Next**.
+4. Enter a **Connection name**. Make this something you can easily identify.
+5. For the **Entity ID**, enter the same random string you used in Entra ID (from step 7 above).
+6. Enter the **IdP metadata URL** - paste the App federation metadata URL you copied from Entra ID (step 11 above).
+7. Select a **Name ID** format. This helps identify and link user identities between your IdP and Kinde.
+8. Enter an **Email key attribute** - use the value from Entra ID (typically `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress`).
+9. (Optional) Add first name and last name attributes using the values from Entra ID.
+10. Enter **Home realm domains** if you want to speed up the sign-in process for users of those domains. Note that all home realm domains must be unique across all connections in an environment.
+11. Copy the **ACS URL**. You'll need to add this back to Entra ID as the reply URL (update step 8 above if you haven't done this yet).
+12. If you want to enable just-in-time (JIT) provisioning, select the **Create a user record in Kinde** option. For migration purposes, you should also enable **Trust email addresses provided by this connection** to allow mapping existing users.
+13. Select **Save**.
+14. Return to Entra ID and update the reply URL in the Basic SAML Configuration with the ACS URL from Kinde (if you haven't already).
+
+## Step 3: Test the integration with Kinde
+
+Before testing with real users, verify the connection works correctly with a single test user. This helps identify any configuration issues early.
+
+### Enable the connection for your test application
+
+1. In Kinde, go to **Settings > Environment > Authentication**.
+2. Find your Enterprise Connection and select **Configure**.
+3. Scroll down to the **Applications** section.
+4. Toggle the connection **ON** for your test application. Ideally, this should be an application that is not publicly available.
+5. Select **Save**.
+
+### Prepare a test user
+
+1. Identify one existing Kinde user who has an email/password identity.
+2. Verify that this user's email address in Kinde **exactly matches** their email address in Entra ID (capitalization and structure must be identical).
+3. Ensure this test user has access to your test application.
+4. Confirm you can access Entra ID sign-in logs and Kinde logs for verification purposes.
+
+### Test the SSO flow
+
+1. Open your test application in an incognito/private browser window.
+2. Initiate the SSO login flow:
+   - If you configured home realm domains, enter the test user's email address and select **Continue**. You should be redirected to Entra ID.
+   - If you didn't configure home realm domains, select the **Sign in with Enterprise** or **SSO** button.
+3. Authenticate with the test user's Entra ID credentials.
+4. After successful authentication, Entra ID should redirect back to Kinde (via the ACS URL).
+5. Kinde should process the SAML response and either:
+   - Map to the existing Kinde user (if the email matches and **Trust email addresses** is enabled), preserving the user's profile, roles, and permissions; **or**
+   - Create a new Kinde user via JIT provisioning with the SAML attributes if no match exists.
+6. You should be redirected back to your application with a valid authenticated session.
+
+### Verify the test was successful
+
+Check the following to confirm everything worked correctly:
+
+1. **In Entra ID:**
+   - Go to **Sign-in logs** and verify the authentication attempt appears.
+   - Confirm the SAML response was sent successfully to Kinde.
+
+2. **In Kinde:**
+   - Go to **Users** and find your test user.
+   - Verify the user's profile information (name, email) was preserved.
+   - Check that roles and permissions are intact (if applicable).
+   - Review the user's identity - it should now show the Enterprise Connection identity instead of email/password.
+
+3. **In your application:**
+   - Confirm the user can access protected resources.
+   - Verify the session/token is valid.
+   - Test that the user's profile data is correctly displayed.
+
+4. **Test email/password login (optional):**
+   - Attempt to sign in with the test user's email/password credentials.
+   - If home realm discovery is configured, you should be redirected to the Microsoft login page instead of the email/password form.
+
+### Troubleshooting
+
+If the test doesn't work:
+
+1. **Disable the Enterprise Connection** in Kinde to prevent further issues.
+2. **Collect debug information:**
+   - Check Entra ID sign-in logs for error messages.
+   - Review Kinde logs for SAML processing errors.
+   - Verify the ACS URL in Entra ID matches the one in Kinde.
+   - Confirm the Entity ID matches in both systems.
+   - Ensure the email addresses match exactly (case-sensitive).
+3. **Revert the test user** back to email/password identity if needed.
+4. **Fix any configuration issues** and repeat the test.
+
+For more information on troubleshooting SSO issues, see [Troubleshoot SSO issues](/authenticate/enterprise-connections/provision-users-enterprise/#troubleshoot-sso-issues).
+
+## Step 4: Pilot roll-out
+
+Once you've successfully tested with a single user, expand testing to a small group of representative users:
+
+1. Select several test users from different departments or teams.
+2. Test across different browser configurations (Chrome, Firefox, Safari, Edge).
+3. Have each test user complete the SSO login flow.
+4. Monitor both Kinde and Entra ID logs for any errors or mapping problems.
+5. Verify each user's profile, roles, and permissions are preserved correctly.
+6. Document any issues encountered and resolve them before proceeding to full migration.
+
+### Enable the connection for live applications
+
+After successful pilot testing, enable the Enterprise Connection for your production applications:
+
+1. In Kinde, go to **Settings > Environment > Authentication**.
+2. Find your Enterprise Connection and select **Configure**.
+3. Scroll down to the **Applications** section.
+4. Toggle the connection **ON** for each production application that should use this Enterprise Connection.
+5. Select **Save**.
+
+### Complete migration and disable trust email
+
+Once all existing users for that Enterprise Connection have signed in successfully at least once:
+
+1. In Kinde, go to **Settings > Environment > Authentication**.
+2. Find your Enterprise Connection and select **Configure**.
+3. Scroll down to the **Trust email addresses provided by this connection** option.
+4. Turn this setting **OFF** (improves security and prevents silent linking of emails).
+5. Select **Save**.
+
+<Aside>
+⚠️
+
+Only disable **Trust email addresses** after all users have successfully migrated. Disabling this before migration is complete may prevent users from being mapped to their existing accounts.
+
+</Aside>
+
+## Step 5: Post-migration checks and housekeeping
+
+After completing the migration:
+
+1. **Audit logs:**
+   - Review Kinde logs for any unknown or failed sign-ins.
+   - Check Entra ID sign-in logs for authentication issues.
+   - Verify all expected users have successfully migrated.
+
+2. **Security:**
+   - Revoke or rotate any signing certificates if needed per your security policy.
+   - Confirm that email/password login is disabled for migrated accounts (if desired).
+
+3. **User verification:**
+   - Spot-check user profiles to ensure data integrity.
+   - Verify roles and permissions are correctly maintained.
+
+---
+
+### Expected outcome (success criteria & what to look for)
+
+**Primary success criteria:**
+
+- User can initiate SSO login from the application and is redirected to Entra ID.
+- Entra ID accepts credentials and returns a successful SAML response to Kinde (redirect to ACS URL).
+- Kinde either:
+    - Maps the incoming SAML `emailaddress` to the **existing** Kinde user (when `Trust email` is ON), preserving profile and permissions; **or**
+    - Creates a new Kinde user via JIT provisioning with the SAML attributes if no match exists.
+- The user is redirected back to the application with a valid authenticated session and can access resources according to their preserved permissions.
+- Entra ID sign-in logs show the successful authentication; Kinde logs show either the mapped existing user sign-in or creation of the user from the Entra connection.
+- After migration completion and verification, `Trust email addresses` can be turned **OFF** and email/password login disabled for migrated accounts.
+
+---
+
+### Key items to flag
+
+<aside>
+🚨
+
+At the moment when a user has been given an Enterprise Connection identity, their existing identity is removed from their profile at the same time.
+
+</aside>
+
+<aside>
+🚨
+
+We have noticed that users (using email or an Enterprise Connection) created before March 2025 will have an issue where their email address in the Enterprise Connection are capitalized and therefore not synced with existing profiles. They will need to be recreated with the email address having the exact same capitilisation as shown in Entra. You will need to delete the user and let them log in via their enterprise SSO, which will automatically create their enterprise identity.
+
+</aside>
+
+<aside>
+⚠️
+
+Your customers’ IDP setups will be different from each other, we would recommend:
+
+1. Organising a time with them to agree to when the change will happen
+2. Flag with Kinde when this will happen, so we can be on hand to help
+3. Be on a call with them at the point of change to ensure they can authenticate in.
+
+Doing this will mean that when there are nuances between iDP setups, they can be identified and addressed swiftly. 
+
+We would recommend, starting with a customer with a smaller user base first.
+
+</aside>
+
+For more information on troubleshooting SSO issues, see [Troubleshoot SSO issues](/authenticate/enterprise-connections/provision-users-enterprise/#troubleshoot-sso-issues).
+
+### Phew!
+
+You have successfully migrated your users from email/password authentication to Enterprise Identity using SSO connections like SAML or Entra ID.
+
+By leveraging just-in-time (JIT) provisioning and email address matching, you've seamlessly transitioned your users to enterprise authentication while preserving their profiles, roles, and permissions. This migration enhances security, simplifies user management, and provides a foundation for scaling your authentication infrastructure. Your users can now enjoy a streamlined SSO experience while maintaining access to all their existing resources.
+
