@@ -1,0 +1,389 @@
+---
+page_id: 820ec3ab-2b80-4331-937c-644da9f8b339
+title: Kinde and Firebase
+description: Set up a real-time guestbook using Firebase Firestore and Kinde Auth to ensure only authenticated users can post and view messages.
+sidebar:
+  order: 7
+relatedArticles:
+  - 78f0242c-3a49-4c8d-8168-019fd69ef838
+  - a07f8f6b-5d6a-4096-be52-7b13b4a3b0a5
+  - 1023d9f8-ae2d-4167-98e0-a4aa7b31e80c
+topics:
+  - integrate
+  - third-party-tools
+sdk:
+  - nextjs-sdk
+languages:
+  - typescript
+  - javascript
+  - sql
+  - bash
+audience:
+  - developers
+complexity: advanced
+keywords:
+  - firebase
+  - nextjs
+  - jwt
+  - authentication
+  - database
+  - guestbook app
+updated: 2025-11-11
+featured: false
+deprecated: false
+ai_summary: Set up a real-time guestbook using Firebase Firestore and Kinde Auth to ensure only authenticated users can post and view messages.
+---
+
+Firebase is a comprehensive app development platform by Google, offering tools and services to streamline backend processes like real-time databases, cloud storage, and more.
+
+In this article, we’ll walk through building a secure and scalable guestbook application by integrating Firebase Firestore with Kinde Auth. By combining Firestore’s real-time database capabilities with Kinde’s seamless authentication, you’ll ensure that only authenticated users can post and view messages, creating a functional foundation you can easily expand with more advanced features.
+
+### What you need?
+
+- A [Firebase](https://firebase.google.com) account (sign up for free)
+- A running Kinde application or a starter kit such as the [Next.js starter kit](https://github.com/kinde-starter-kits/kinde-nextjs-app-router-starter-kit)
+
+## Step 1: Create a Firebase project
+
+1. Go to your [Firebase console](https://console.firebase.google.com/) and select **Create a new Firebase project**.
+2. Enter the name of your project and select **Continue**.
+3. Switch off **Enable Google Analytics for this project** and select **Create project**.
+4. Your Firebase project is created. Select **continue** to go to your project overview.
+5. Select the **web** `</>` icon to configure the project for your web application.
+    
+    ![new firebase project](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c640a73a-6a2e-4601-62d2-08a2a6dd1100/public)
+    
+6. Enter a nickname for your app and select **Register app**.
+    
+    You will be shown the configuration steps for adding Firebase to a JavaScript project.
+    
+7. Take note of your Firebase configuration object. 
+    
+    You will need this in the upcoming steps when you add Firebase to your web application.
+    
+    ```json
+    const firebaseConfig = {
+      apiKey: "YOUR_FIREBASE_API_KEY",
+      authDomain: "<DOMAIN>.firebaseapp.com",
+      projectId: "PROJECT_ID",
+      storageBucket: "<BUCKET_NAME>.firebasestorage.app",
+      messagingSenderId: "SENDER_ID",
+      appId: "YOUR_FIREBASE_APP_ID",
+    };
+    ```
+    
+8. Select **Continue to console**.
+9. Select **Cloud Firestore** > **Create database**, a pop-up appears.
+    1. Pick the closest data center for your database and select **Next**.
+    2. Select **Start in test mode** and select **Create**.
+    
+    ![firebase database](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7d488db4-1730-41fa-5d52-92dabe9df000/public)
+    
+
+## Step 2: Connect Firebase to your app
+
+1. Install the Firebase package in your project by running the following command in your terminal:
+    
+    ```bash
+    npm install firebase
+    ```
+    
+2. Create a Firebase configuration file inside the `/src` directory with the following command:
+    
+    ```bash
+    touch src/firebaseConfig.js
+    ```
+    
+3. Add the following code to the `firebaseConfig.js` file. Replace the `firebaseConfig` object with the info you obtained from the previous step. This:
+    - adds the Firestore dependency
+    - initializes a Firebase app
+    - exports a `db` function to interact with the database
+    
+    ```jsx
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "firebase/app";
+    import { getFirestore } from "firebase/firestore";
+    
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "YOUR_FIREBASE_API_KEY",
+      authDomain: "<DOMAIN>.firebaseapp.com",
+      projectId: "PROJECT_ID",
+      storageBucket: "<BUCKET_NAME>.firebasestorage.app",
+      messagingSenderId: "SENDER_ID",
+      appId: "YOUR_FIREBASE_APP_ID",
+    };
+    
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    
+    // Initialize Firestore
+    const db = getFirestore(app);
+    
+    export { db };
+    ```
+    
+4. Select **Save**. 
+
+## Step 3: Add guestbook posts to Firestore
+
+1. Create a new server action file by typing the following command:
+    
+    ```bash
+    touch src/app/actions.ts
+    ```
+    
+2. Add the following code to the newly created `actions.ts` file.
+    
+    Here’s what the code does.
+    
+    - Imports the necessary functions to interact with the Firestore database.
+    - Imports relevant functions from Kinde and NextJS.
+    - Creates a server action called `addPost` to call from the form page:
+        - Gets the currently logged-in user, if not redirects to the `/login` route
+        - Writes a new document to Firestore with the form input
+        - Redirects to the `/guestbook` route once completed
+    
+    ```tsx
+    "use server";
+    
+    import { db } from "@/firebaseConfig";
+    import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+    import { addDoc, collection } from "firebase/firestore";
+    import { redirect } from "next/navigation";
+    
+    export async function addPost(formData: FormData) {
+      const { getUser } = getKindeServerSession();
+    
+      const user = await getUser();
+      if (!user) {
+        return redirect("/login");
+      }
+    
+      const data = Object.fromEntries(formData.entries());
+      const messageObj = {
+        kindeId: user?.id,
+        message: data.message,
+        timestamp: new Date(),
+        name: user?.given_name,
+      };
+    
+      const postsCol = collection(db, "posts");
+      await addDoc(postsCol, messageObj);
+    
+      redirect("/guestbook");
+    }
+    ```
+    
+3. Create a new page route by typing the following command:
+    
+    ```bash
+    mkdir src/app/add
+    touch src/app/add/page.tsx
+    ```
+    
+4. Add the following code to the newly created `page.tsx` file and **Save**.
+    
+    This code:
+    
+    - Imports the `addPost` server action.
+    - Creates a form to grab guestbook entries.
+    
+    ```tsx
+    import { addPost } from "@/app/actions";
+    
+    export default async function Page() {
+      return (
+        <div className="container">
+          <h1 className="heading">Sign the Guestbook</h1>
+          <form className="guestbook_form" action={addPost}>
+            <label htmlFor="message">Your Message:</label>
+            <textarea name="message" id="message" cols={40} rows={5} required />
+            <br />
+            <button type="submit">Submit</button>
+          </form>
+        </div>
+      );
+    }
+    ```
+    
+5. Create the `/guestbook` route by typing the following command.
+    
+    ```bash
+    mkdir src/app/guestbook
+    touch src/app/guestbook/page.tsx
+    ```
+    
+6. Add the following code to the newly created `page.tsx` file and Save.
+    
+    This code:
+    
+    - Imports all the necessary functions to interact with Firestore.
+    - Gets all the contents from the `posts` collection in Firestore.
+    - Displays all the post contents on the page.
+    
+    ```tsx
+    import { db } from "@/firebaseConfig";
+    import { collection, getDocs } from "firebase/firestore";
+    import Link from "next/link";
+    
+    export default async function Page() {
+      const postsCol = collection(db, "posts");
+      const postsSnapshot = await getDocs(postsCol);
+      const posts = postsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+    
+      return (
+        <div className="container">
+          <h1 className="heading">Guestbook</h1>
+          <div>
+            {posts.map((post) => (
+              <div className="guestbook_entry" key={post.id || Math.random()}>
+                <h3 className="title">{post.name}</h3>
+                <p className="message">{post.message}</p>
+              </div>
+            ))}
+          </div>
+          <br />
+          <Link className="guestbook_link" href="/add">
+            Sign the guestbook
+          </Link>
+        </div>
+      );
+    }
+    ```
+    
+7. Add the following CSS styles after the existing code in `src/app/globals.css` file:
+    
+    ```css
+    .heading {
+      font-size: 1.7rem;
+      margin-bottom: 1rem;
+    }
+    
+    .guestbook_form label {
+      display: block;
+      font-weight: bold;
+      margin-block: 1rem;
+      color: gray;
+    }
+    
+    .guestbook_form textarea {
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+      font-family: inherit;
+      font-size: 1rem;
+    }
+    
+    .guestbook_form button {
+      font-size: 1rem;
+      padding: 7px 15px;
+      border-radius: 5px;
+      border: 0;
+      background-color: black;
+      color: #fff;
+      cursor: pointer;
+    }
+    
+    .guestbook_entry {
+      max-width: 500px;
+      margin-bottom: 20px;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+    
+    .guestbook_entry .title {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      color: gray;
+    }
+    
+    .guestbook_entry .message {
+      font-size: 1rem;
+      font-style: italic;
+    }
+    
+    .guestbook_link {
+      background-color: #fff6b3;
+      padding: 10px 20px;
+      border-radius: 5px;
+      border: 1px dashed #ccc;
+    }
+    
+    .guestbook_link:hover {
+      text-decoration: underline;
+    }
+    ```
+    
+
+## Step 4: Test your setup
+
+1. Run the development server by running this command:
+    
+    ```bash
+    npm run dev
+    ```
+    
+2. Visit [http://localhost:3000/](http://localhost:3000/) and sign up or sign in to your project.
+3. Go to [http://localhost:3000/add](http://localhost:3000/add) to see the guestbook form in action.
+    
+    Enter a message and select **Submit** to test it out.
+    
+    ![kinde guestbook app](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/5f0b4dc2-e686-4b1a-e9bd-0ef1b1b1ce00/public)
+    
+4. You will be redirected to the `/guestbook` route to see the entries.
+    
+    ![kinde guestbook entries](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/2e41e640-1781-4c14-24f0-a30d0b807800/public)
+    
+
+## Step 5: Secure your guestbook for logged-in users
+
+1. Update the `add/page.tsx` with the following code.
+    
+    The code adds a check to see if the user is authenticated by Kinde using the `isAuthenticated` method.
+    
+    If the user is not logged in, it will not display the input form, and prompt the user to log in first.
+    
+    ```tsx
+    import { addPost } from "@/app/actions";
+    import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+    
+    export default async function Page() {
+      const { isAuthenticated } = getKindeServerSession();
+    
+      if (!(await isAuthenticated())) {
+        return <h2>You must be logged in to sign the guestbook</h2>;
+      }
+    
+      return (
+        <div className="container">
+          <h1 className="heading">Sign the Guestbook</h1>
+          <form className="guestbook_form" action={addPost}>
+            <label htmlFor="message">Your Message:</label>
+            <textarea name="message" id="message" cols={40} rows={5} required />
+            <br />
+            <button type="submit">Submit</button>
+          </form>
+        </div>
+      );
+    }
+    ```
+    
+2. You can further protect your Firestore database by using appropriate security rules in the Rules section:
+    
+    ![firebase firestore rules](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/631e437e-06d5-4ab9-0ddd-74342beb4b00/public)
+    
+
+### Phew!
+
+You have successfully integrated Firebase Firestore with Kinde Auth to create a secure and scalable guestbook application. 
+
+By combining Firestore’s real-time database capabilities with Kinde’s authentication, you’ve ensured that your app is both functional and secure for authenticated users. This set up lays the groundwork for building more advanced features and taking your app to the next level. Keep exploring, and happy coding!
+
+If you need help, reach out to us at [support@kinde.com](mailto:support@kinde.com). You can also connect with the team and other developers in the [Kinde Slack community](https://join.slack.com/t/thekindecommunity/shared_invite/zt-2k5i0aeet-d6Z_2qYphcNCpj0bFa4oCg) or [Discord](https://discord.gg/wHX6j7wG5d). We're here to support you.

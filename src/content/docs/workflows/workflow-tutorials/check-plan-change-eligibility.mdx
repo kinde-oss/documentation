@@ -1,0 +1,1055 @@
+---
+page_id: e567c219-3c43-4a7d-ae7c-eb0b3ab2a40d
+title: Tutorial - Check plan change eligibility
+sidebar:
+  order: 60
+relatedArticles:
+  - 62fafade-5d33-4f85-9fd2-712c533db3d0
+  - f499ebb0-d7f5-4244-bf92-6bf0f6082b62
+description: Learn how to set up automatic downgrade eligibility checks using Kinde billing and workflows.
+topics:
+  - "workflows"
+  - "example-workflows"
+  - "authentication"
+  - "billing"
+sdk: "kinde infrastructure"
+languages:
+  - "TypeScript"
+  - "JavaScript"
+audience:
+  - "developers"
+complexity: "intermediate"
+keywords:
+  - "billing"
+  - "billing plan"
+  - "billing workflow"
+  - "stripe billing"
+  - "pricing table"
+updated: "2025-11-05"
+featured: false
+deprecated: false
+ai_summary: "Learn how to set up automatic downgrade eligibility checks using Kinde billing and workflows."
+---
+
+Part of most billing functions is enabling users to change plans - to upgrade or downgrade when they need to. For downgrades, you’ll need to check that a customer is not exceeding the limits of the plan they want to downgrade to, before they are eligible to downgrade. 
+
+Using Kinde billing and workflows, you can set up an automatic check for downgrade eligibility.
+
+## About this tutorial
+
+In this tutorial you’ll set up a way to check a customer’s feature usage, in order to assess if they can downgrade their plan. We’ll use a NextJS project as part of the example.
+
+## What you need
+
+- A [Kinde account](https://kinde.com/) (Sign up for free)
+- A [GitHub account](https://github.com/) (Sign up for free)
+- A [Stripe account](https://stripe.com/) (Sign up for free)
+- A running Kinde project deployed to the internet, such as the [Kinde NextJS starter kit](https://github.com/kinde-starter-kits/kinde-nextjs-app-router-starter-kit)
+
+## Step 1: Set up the Kinde project
+
+### Part 1: Prisma setup
+
+1. Go to your NextJS project in your terminal. (e.g, `cd kinde-nextjs-app-router-starter-kit`).
+2. Install the project dependencies with the following bash commands in your terminal. 
+This will install Prisma ORM, Zod validator utility, and initiate the Prisma database with SQLite database.
+
+    <PackageManagers pkg="-D prisma" />
+    <PackageManagers pkg="@prisma/client zod" />
+    
+    ```bash
+    npx prisma init --datasource-provider sqlite
+    ```
+    
+3. Open the `/prisma/schema.prisma` file with your favorite code editor and replace the contents with the following code and save changes. This will add a schema for your `Account` model with `id`, `name`, `accountNumber`, `kindeId`, and other helpful fields.
+    
+    ```graphql
+    // This is your Prisma schema file,
+    // learn more about it in the docs: https://pris.ly/d/prisma-schema
+    
+    generator client {
+      provider = "prisma-client-js"
+    }
+    
+    datasource db {
+      provider = "sqlite"
+      url      = env("DATABASE_URL")
+    }
+    
+    model Account {
+      id            String @id @default(cuid())
+      name          String
+      accountNumber String // string to preserve leading zeroes / formatting
+      kindeId       String
+    
+      // helpful timestamps (optional but nice to have)
+      createdAt DateTime @default(now())
+      updatedAt DateTime @updatedAt
+    
+      // recommend:
+      @@unique([kindeId, accountNumber]) // one user can’t reuse the same number
+      @@index([kindeId]) // faster queries by user
+    }
+    ```
+    
+4. Create a new `prisma.ts` file with the following command.
+    
+    ```bash
+    mkdir -p src/lib
+    touch src/lib/prisma.ts
+    ```
+    
+5. Add the following code to the new file and save changes. This code will create a single instance of the Prisma client when we are developing the app to avoid leaking resources.
+    
+    ```tsx
+    import { PrismaClient } from "@prisma/client"
+    
+    const prisma = new PrismaClient()
+    
+    const globalForPrisma = global as unknown as { prisma: typeof prisma }
+    
+    if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
+    
+    export default prisma
+    ```
+    
+6. Run the following bash command in your terminal to migrate the Prisma database:
+    
+    ```bash
+    npx prisma migrate dev --name init 
+    ```
+    
+
+### Part 2: Set up the user experience
+
+1. Open `src/app/dashboard/page.tsx` and replace the contents with the following code:
+This will add the account tracking UI.
+    
+    ```tsx
+    import {
+      getAccountsAction,
+      addAccountAction,
+      deleteAccountAction,
+    } from "./actions"
+    
+    import "./dashboard.css"
+    
+    export default async function Dashboard() {
+      const accounts = await getAccountsAction()
+    
+      return (
+        <div className="dash-container">
+          <h2 className="dash-title">Tracked Accounts</h2>
+    
+          {accounts.length === 0 ? (
+            <p className="empty-text">No accounts yet.</p>
+          ) : (
+            <ul className="account-list">
+              {accounts.map((a) => (
+                <li key={a.id} className="account-item">
+                  <div className="account-meta">
+                    <div className="account-name">{a.name}</div>
+                    <div className="account-number">{a.accountNumber}</div>
+                  </div>
+    
+                  <form action={deleteAccountAction} className="account-actions">
+                    <input type="hidden" name="id" value={a.id} />
+                    <button type="submit" className="btn btn-danger">
+                      Delete
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+    
+          <div className="form-card">
+            <h3 className="form-title">Add a new account to track</h3>
+    
+            <form action={addAccountAction} className="account-form">
+              <div className="form-grid">
+                <div className="form-field">
+                  <label htmlFor="name" className="label">
+                    Name
+                  </label>
+                  <input
+                    id="name"
+                    type="text"
+                    name="name"
+                    required
+                    placeholder="Personal"
+                    className="input"
+                  />
+                </div>
+    
+                <div className="form-field">
+                  <label htmlFor="accountNumber" className="label">
+                    Account Number
+                  </label>
+                  <input
+                    id="accountNumber"
+                    type="text"
+                    name="accountNumber"
+                    required
+                    placeholder="001234"
+                    className="input"
+                  />
+                </div>
+    
+                <div className="form-actions">
+                  <button type="submit" className="btn btn-primary">
+                    Add
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )
+    }
+    ```
+    
+2. Create a new `dashboard.css` file.
+    
+    ```bash
+    touch src/app/dashboard/dashboard.css
+    ```
+    
+3. Add the following styles and save changes.
+    
+    ```css
+    :root {
+      --bg: #ffffff;
+      --card-bg: #ffffff;
+      --border: #e5e7eb;
+      --border-strong: #cfd4dc;
+      --text: #111827;
+      --muted: #6b7280;
+      --primary: #000;
+      --primary-700: #333;
+      --danger: #333;
+      --danger-700: #333;
+      --ring: #93c5fd;
+    }
+    
+    * {
+      box-sizing: border-box;
+    }
+    
+    .dash-container {
+      max-width: 780px;
+      margin: 2rem auto;
+      padding: 1.25rem;
+      color: var(--text);
+      background: var(--bg);
+    }
+    
+    .dash-title {
+      margin: 0 0 0.75rem 0;
+      font-size: 1.375rem;
+      font-weight: 700;
+    }
+    
+    .empty-text {
+      margin: 0.25rem 0 1rem;
+      font-size: 0.925rem;
+      color: var(--muted);
+    }
+    
+    /* Accounts list */
+    .account-list {
+      list-style: none;
+      margin: 0 0 1.25rem 0;
+      padding: 0;
+      display: grid;
+      gap: 0.625rem;
+    }
+    
+    .account-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.75rem 0.875rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--card-bg);
+      transition: background 0.15s ease, border-color 0.15s ease,
+        box-shadow 0.15s ease;
+    }
+    
+    .account-item:hover {
+      border-color: var(--border-strong);
+      box-shadow: 0 1px 0 rgba(17, 24, 39, 0.02), 0 1px 8px rgba(17, 24, 39, 0.06);
+    }
+    
+    .account-meta {
+      min-width: 0; /* enables ellipsis */
+      flex: 1;
+    }
+    
+    .account-name {
+      font-weight: 600;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .account-number {
+      margin-top: 2px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .account-actions {
+      margin-left: auto;
+    }
+    
+    /* Buttons */
+    .btn {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.925rem;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+      background: #f3f4f6;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+        box-shadow 0.15s ease, transform 0.02s ease;
+    }
+    
+    .btn:active {
+      transform: translateY(1px);
+    }
+    
+    .btn:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--ring);
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      width: 150px;
+    }
+    
+    .btn-primary:hover {
+      background: var(--primary-700);
+      border-color: var(--primary-700);
+    }
+    
+    .btn-danger {
+      background: transparent;
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+    
+    .btn-danger:hover {
+      background: rgba(220, 38, 38, 0.06);
+      border-color: var(--danger-700);
+      color: var(--danger-700);
+    }
+    
+    /* Add form */
+    .form-card {
+      margin-top: 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      background: var(--card-bg);
+    }
+    
+    .form-title {
+      margin: 0 0 0.75rem 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    
+    .account-form {
+      width: 100%;
+    }
+    
+    .form-grid {
+      display: grid;
+      gap: 0.875rem 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      align-items: end;
+    }
+    
+    .form-field {
+      display: grid;
+      gap: 0.35rem;
+    }
+    
+    .label {
+      font-size: 0.9rem;
+      color: var(--text);
+      font-weight: 600;
+    }
+    
+    .input {
+      width: 100%;
+      height: 38px;
+      padding: 0 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      font-size: 0.95rem;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    
+    .input::placeholder {
+      color: #9ca3af;
+    }
+    
+    .input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(15, 98, 254, 0.15);
+    }
+    
+    .form-actions {
+      grid-column: 1 / -1; /* button spans full row */
+      display: flex;
+      justify-content: flex-start;
+      gap: 0.5rem;
+    }
+    
+    ```
+    
+4. Create the `actions.ts` file.
+    
+    ```bash
+    touch src/app/dashboard/actions.ts
+    ```
+    
+5. Add the following code and save changes.
+    
+    ```tsx
+    "use server"
+    
+    import prisma from "@/lib/prisma"
+    import { z } from "zod"
+    import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
+    import { revalidatePath } from "next/cache"
+    
+    const AccountInput = z.object({
+      name: z.string().min(1, "Name is required"),
+      accountNumber: z.string().min(1, "Account number is required"),
+    })
+    
+    const FEATURE_KEY = "tracked_accounts"
+    
+    // Add an account to track
+    
+    export async function addAccountAction(formData: FormData) {
+      const raw = {
+        name: String(formData.get("name") ?? "").trim(),
+        accountNumber: String(formData.get("accountNumber") ?? "").trim(),
+      }
+    
+      const parsed = AccountInput.safeParse(raw)
+      if (!parsed.success) {
+        const first = parsed.error.issues[0]
+        return { ok: false as const, error: first?.message ?? "Invalid input." }
+      }
+    
+      const { name, accountNumber } = parsed.data
+    
+      // Get current user (Kinde)
+      const { getUser } = getKindeServerSession()
+      const user = await getUser()
+      if (!user?.id) {
+        throw new Error("Not authenticated")
+      }
+    
+      // Count how many accounts the user already has
+      const used = await prisma.account.count({ where: { kindeId: user.id } })
+    
+      // Get the allowed max from Kinde entitlement
+      let limit: number | null = null
+      try {
+        limit = await getEntitlementLimit(FEATURE_KEY)
+        console.log(`The current usage for ${FEATURE_KEY} is ${used}/${limit}`)
+      } catch (e) {
+        return {
+          ok: false as const,
+          code: "ENTITLEMENT_ERROR",
+          message:
+            "We could not verify your plan entitlements right now. Please try again.",
+        }
+      }
+    
+      // Enforce limit only if we have one
+      if (limit != null && used >= limit) {
+        return {
+          ok: false as const,
+          code: "LIMIT_REACHED",
+          message: `You’ve reached your tracked accounts limit (${limit}). Remove one or upgrade your plan to add more.`,
+          usage: { used, limit },
+        }
+      }
+    
+      try {
+        const account = await prisma.account.create({
+          data: {
+            name,
+            accountNumber,
+            kindeId: user.id,
+          },
+        })
+        revalidatePath("/dashboard")
+        return {
+          ok: true as const,
+          message: "Account added.",
+          account,
+          usage: { used: used + 1, limit },
+        }
+      } catch (e: any) {
+        return { ok: false as const, error: "Failed to add account." }
+      }
+    }
+    
+    // Get all tracked accounts
+    
+    export async function getAccountsAction() {
+      const { getUser } = getKindeServerSession()
+      const user = await getUser()
+      if (!user?.id) {
+        throw new Error("Not authenticated")
+      }
+    
+      return prisma.account.findMany({
+        where: { kindeId: user.id },
+        select: { id: true, name: true, accountNumber: true },
+        orderBy: { createdAt: "asc" },
+      })
+    }
+    
+    // Delete tracked accounts
+    
+    export async function deleteAccountAction(formData: FormData) {
+      const { getUser } = getKindeServerSession()
+      const user = await getUser()
+      if (!user?.id) {
+        throw new Error("Not authenticated")
+      }
+    
+      // deleteMany ensures we only delete if it belongs to this user
+      const id = String(formData.get("id") || "")
+      const result = await prisma.account.deleteMany({
+        where: { id, kindeId: user.id },
+      })
+    
+      if (result.count === 0) {
+        return { ok: false as const, error: "Account not found or not allowed." }
+      }
+      revalidatePath("/dashboard")
+      return result
+    }
+    
+    // Helper: read the tracked_accounts limit from Kinde (Account API)
+    async function getEntitlementLimit(featureKey: string): Promise<number | null> {
+      const { getAccessTokenRaw } = getKindeServerSession()
+      const token = await getAccessTokenRaw()
+      if (!token) throw new Error("Not authenticated.")
+    
+      const base = process.env.KINDE_ISSUER_URL?.replace(/\/+$/, "")
+      if (!base) throw new Error("KINDE_ISSUER_URL is not configured.")
+    
+      const url = `${base}/account_api/v1/entitlement/${encodeURIComponent(
+        featureKey
+      )}`
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+        cache: "no-store",
+      })
+    
+      if (res.status === 404) {
+        // Feature not found for this user/plan
+        return null
+      }
+      if (!res.ok) {
+        let body = ""
+        try {
+          body = await res.text()
+        } catch {}
+        throw new Error(`Could not read entitlement (${res.status}). ${body}`)
+      }
+    
+      // Expected shape (from your spec):
+      // {
+      //   "data": { "entitlement": {
+      //     "feature_key": "tracked_accounts",
+      //     "entitlement_limit_max": 10,
+      //     ...
+      //   } }
+      // }
+      const json = await res.json()
+    
+      const ent = json?.data?.entitlement
+      if (!ent || (ent.feature_key && ent.feature_key !== featureKey)) return null
+    
+      const raw = ent.entitlement_limit_max ?? null
+    
+      const n = Number(raw)
+      return Number.isFinite(n) && n >= 0 ? n : null
+    }
+    
+    ```
+    
+6. Open `src/app/layout.tsx` file with your preferred code editor and replace the contents with the following. This will add the `PortalLink` to your user dashboard. We will need it to access the self-serve portal to change plans.
+    
+    ```tsx
+    import "./globals.css"
+    import {
+      RegisterLink,
+      LoginLink,
+      LogoutLink,
+      PortalLink,
+    } from "@kinde-oss/kinde-auth-nextjs/components"
+    import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
+    import Link from "next/link"
+    
+    export const metadata = {
+      title: "Kinde Auth",
+      description: "Kinde with NextJS App Router",
+    }
+    
+    export default async function RootLayout({
+      children,
+    }: {
+      children: React.ReactNode
+    }) {
+      const { isAuthenticated, getUser } = getKindeServerSession()
+      const user = await getUser()
+      return (
+        <html lang="en">
+          <body>
+            <header>
+              <nav className="nav container">
+                <h1 className="text-display-3">KindeAuth</h1>
+                <div>
+                  {!(await isAuthenticated()) ? (
+                    <>
+                      <LoginLink className="btn btn-ghost sign-in-btn">
+                        Sign in
+                      </LoginLink>
+                      <RegisterLink className="btn btn-dark">Sign up</RegisterLink>
+                    </>
+                  ) : (
+                    <div className="profile-blob">
+                      {user?.picture ? (
+                        <img
+                          className="avatar"
+                          src={user?.picture}
+                          alt="user profile avatar"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="avatar">
+                          {user?.given_name?.[0]}
+                          {user?.family_name?.[0]}
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-heading-2">
+                          {user?.given_name} {user?.family_name}
+                        </p>
+                        <LogoutLink className="text-subtle">Log out</LogoutLink> -{" "}
+                        <PortalLink className="text-subtle">My Account</PortalLink>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </nav>
+            </header>
+            <main>{children}</main>
+            <footer className="footer">
+              <div className="container">
+                <strong className="text-heading-2">KindeAuth</strong>
+                <p className="footer-tagline text-body-3">
+                  Visit our{" "}
+                  <Link className="link" href="https://kinde.com/docs">
+                    help center
+                  </Link>
+                </p>
+    
+                <small className="text-subtle">
+                  © 2025 KindeAuth, Inc. All rights reserved
+                </small>
+              </div>
+            </footer>
+          </body>
+        </html>
+      )
+    }
+    
+    ```
+    
+
+### Part 3: Set up the workflow endpoint
+
+We need to create an endpoint to check the current plan and usage of the customer.
+
+1. Create a new endpoint with the following bash command.
+    
+    ```bash
+    mkdir -p "src/app/api/users/accounts/count/[kindeId]"
+    touch "src/app/api/users/accounts/count/[kindeId]/route.ts"
+    ```
+    
+2. Enter the following code into the new `route.ts` file and save changes. This will create a new route in your application `/api/users/accounts/count/:kindeId` and return the count of the tracked accounts. We will use it to check the usage in our workflow code.
+    
+    ```tsx
+    import { NextResponse } from "next/server"
+    import { z } from "zod"
+    import prisma from "@/lib/prisma"
+    
+    // If you want to force fresh data (no static caching) important for this use case
+    export const dynamic = "force-dynamic"
+    
+    const ParamsSchema = z.object({
+      kindeId: z.string().min(1, "kindeId is required"),
+    })
+    
+    /**
+     * GET /api/users/accounts/count/:kindeId
+     * Response: { kindeId: string, count: number }
+     */
+    export async function GET(_req: Request, ctx: { params: { kindeId: string } }) {
+      try {
+        const { kindeId } = ParamsSchema.parse(ctx.params)
+    
+        const count = await prisma.account.count({
+          where: {
+            kindeId,
+          },
+        })
+    
+        return NextResponse.json(
+          { kindeId, count },
+          { headers: { "Cache-Control": "no-store" } }
+        )
+      } catch (err: any) {
+        const message =
+          err?.issues?.[0]?.message ??
+          err?.message ??
+          "Failed to get tracked accounts count"
+        return NextResponse.json({ error: message }, { status: 400 })
+      }
+    }
+    ```
+    
+
+## Step 2: Set up Kinde billing
+
+### Part 1: Set up plans
+
+1. Sign in to Kinde and then switch to a non-production environment. This allows you to use Stripe payments in test mode.
+2. Go to **Settings > Billing** and select **Connect Stripe account** and follow the Stripe configuration.
+3. Scroll down the page and select **Show the pricing table when customers sign up** and select **Save.**
+4. Go to **Billing > Add a plan.**
+    1. Select **This plan is for: Users**.
+    2. Enter a **Name** (e.g., Free), optional **Description**.
+    3. Key (e.g., free).
+    4. Select the **Default currency**.
+    5. Select **Save.**
+5. Under the Fixed charges section, select **Add charge**.
+    1. Enter a **Name** (Free), add **Line item description** (Free plan).
+    2. Enter a **Price**: 0.
+    3. Select **Save**. 
+6. Under the **Features and pricing >** select **Add feature**, a pop-up will open.
+7. Select **New metered**, select **Next**.
+    1. Enter a **Name** (Tracked Accounts), optional **Description**.
+    2. Enter a **Key** `tracked_accounts` .
+    3. Scroll down to set **Maximum units** to `3`, **Unit measurement** to `account`.
+    4. Select **Save**.
+    
+    ![Add feature](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6e6f9759-e859-4976-2b0a-29d1e3e89800/public)
+    
+    ![Select units](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/cab4c587-6b33-47d2-c8e8-0d5a855b9900/public)
+    
+8. Select **Publish**.
+9. Go back to **Plans** and select **Add plan**.
+10. Enter a Name (e.g. **Pro**), optional **Description**, **Key** e.g. `pro` and select **Save**.
+11. Select **Add feature > Use existing feature >** select **Tracked Accounts**, and select **Next**.
+12. Enter the **Maximum units** as `5` and select **Save**.
+13. Select **Publish**.
+
+### Part 2: Set up pricing table
+
+1. Go to **Billing > Pricing tables** and select **Add pricing table**.
+2. Select the **Generate** option and select **Next**.
+3. Select **User plans** and select **Save**.
+4. Select the three dots next to the pricing table you created and select **Edit pricing table**.
+5. Select **Make live** and select **Save**.
+6. Go to **Settings > Self-serve portal**.
+7. Enter `http://localhost:3000/dashboard` in the **Return URL** field.
+8. From **User self-management** section, select **Billing**, select **Save.** 
+    
+    This will let your users change pricing plans from the self-serve portal.
+    
+
+![self serve portal selection](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8d25e190-9c68-44a8-d246-eed943096500/public)
+
+## Step 3: Create the workflow
+
+1. Fork the [workflow base template](https://github.com/kinde-starter-kits/workflow-base-template) repo into your GitHub account by selecting **Use this template > Create a new repository.**
+2. Clone the repo into your computer with the following Git command.
+    
+    ```bash
+    git clone https://github.com/your_github_username/workflow-base-template.git
+    ```
+    
+3. Change into the directory.
+    
+    ```bash
+    cd workflow-base-template
+    ```
+    
+4. Remove the sample workflow with the command.
+    
+    ```bash
+    rm -rf kindeSrc/environment/workflows/postUserAuthentication
+    ```
+    
+5. Create a new workflow with the following command. You can name it anything that resonates with your project structure. We are calling it `denyPlanChange`.
+    
+    ```bash
+    mkdir kindeSrc/environment/workflows/denyPlanChange
+    touch kindeSrc/environment/workflows/denyPlanChange/Workflow.ts
+    ```
+    
+6. Open the new file with your preferred code editor (e.g., VS Code) and add the following workflow code into the file and save changes.
+    
+    ```tsx
+    import {
+      onPlanSelection,
+      WorkflowSettings,
+      WorkflowTrigger,
+      denyPlanSelection,
+      getEnvironmentVariable,
+      fetch,
+    } from "@kinde/infrastructure"
+    
+    // --- Settings: enable the bindings we use ---
+    export const workflowSettings: WorkflowSettings = {
+      id: "onUserPlanSelection",
+      name: "Deny Plan Change",
+      trigger: WorkflowTrigger.PlanSelection,
+      failurePolicy: { action: "stop" },
+      bindings: {
+        "kinde.plan": {},
+        "kinde.fetch": {},
+        "kinde.env": {},
+        url: {},
+      },
+    }
+    
+    // Strongly type plan codes
+    type PlanCode = "free" | "pro"
+    
+    // Feature limit of each plan
+    const limits: Record<PlanCode, number> = {
+      free: 3,
+      pro: 5,
+    }
+    
+    // Main workflow: compare current usage to requested plan limits
+    export default async function Workflow(event: onPlanSelection) {
+      const { currentPlanCode, requestedPlanCode } = event.context.billing
+      const userId = event.context.user?.id
+    
+      // Sanity checks
+      if (!userId) throw new Error("Missing user id in event context.")
+      if (!requestedPlanCode) throw new Error("Missing requested plan code.")
+    
+      // Only operate on known plan codes
+      if (!(requestedPlanCode in limits)) {
+        throw new Error(`Unknown requested plan: ${requestedPlanCode}`)
+      }
+      if (!(currentPlanCode in limits)) {
+        // If current plan is outside our table, do nothing (or throw—your call)
+        return
+      }
+    
+      const currentLimit = limits[currentPlanCode as PlanCode]
+      const requestedLimit = limits[requestedPlanCode as PlanCode]
+    
+      // If it's an upgrade or lateral move, allow it
+      const isDowngrade = requestedLimit < currentLimit
+      if (!isDowngrade) return
+    
+      // Get your backend URL from env
+      const apiVar = getEnvironmentVariable("USAGE_API_URL")?.value?.trim()
+      if (!apiVar) {
+        throw new Error(
+          "USAGE_API_URL is not set. Add a full URL in Kinde environment variables."
+        )
+      }
+    
+      // Build final URL: <USAGE_API_URL>/<userId>
+      const base = apiVar.endsWith("/") ? apiVar.slice(0, -1) : apiVar
+      const endpoint = `${base}/${encodeURIComponent(userId)}`
+    
+      let currentUsage = 0
+    
+      try {
+        const res = await fetch(endpoint, {
+          method: "GET",
+          responseFormat: "json",
+          headers: { "Content-Type": "application/json" },
+        })
+    
+        currentUsage = res.data?.count
+      } catch (error) {
+        throw new Error(
+          `Cannot check the user limits, exiting the workflow ${error}`
+        )
+      }
+    
+      if (currentUsage > requestedLimit) {
+        denyPlanSelection(
+          "You need to reduce your usage before moving to this plan:",
+          [
+            `Your current usage is ${currentUsage}, but the new plan only allows up to ${requestedLimit}.`,
+            `Please reduce your usage to ${requestedLimit} or fewer to continue.`,
+          ]
+        )
+      }
+    }
+    ```
+    
+    Optional: Install the Kinde infrastructure dependency with the following bash command for TypeScript intellisense.
+    
+    ```bash
+    npm install
+    ```
+    
+7. Run the following git commands in your terminal to push the changes to your GitHub repo:
+    
+    ```bash
+    git add .
+    git commit -m "add new deny plan change workflow"
+    git push
+    ```
+    
+
+### Code explanation
+
+Here’s a quick breakdown of what the code does.
+
+**Imports** 
+
+At the top, the workflow brings in utilities and types from `@kinde/infrastructure`:
+
+- `onPlanSelection` – event type for when a user requests a plan change.
+- `WorkflowSettings` and `WorkflowTrigger` – define how the workflow is registered and when it runs.
+- `denyPlanSelection` – stops a plan change and shows the user a helpful message.
+- `getEnvironmentVariable` – allows access to environment variables configured in Kinde.
+- `fetch` – makes API calls from inside the workflow.
+
+**Workflow settings**
+
+The `workflowSettings` object configures how the workflow is registered:
+
+- `id` and `name` identify the workflow in the Kinde dashboard.
+- `trigger: WorkflowTrigger.PlanSelection` means this workflow runs whenever a user attempts to switch plans.
+- `failurePolicy: { action: "stop" }` ensures the workflow halts if an error occurs.
+- `bindings` give the workflow access to plans, API fetching, environment variables, and external URLs.
+
+**Plan codes and feature limits**
+
+The code defines a TypeScript type `PlanCode` (either `"free"` or `"pro"`) and a simple lookup table, `limits`, that sets maximum allowed usage per plan:
+
+- Free plan: **3**
+- Pro plan: **5**
+
+This lets the workflow easily compare limits when users attempt upgrades or downgrades.
+
+**Main workflow function**
+
+The default `Workflow` function runs each time a plan change is requested. It performs the following steps:
+
+- **Pulls context from the event**
+    - Gets the user ID.
+    - Gets the current plan code and the requested new plan code.
+- **Sanity checks**
+    - Throws errors if required fields are missing.
+    - Ignores unknown plan codes.
+- **Compare plan limits**
+    - Finds the current and requested plan limits.
+    - Determines if the change is a **downgrade** (requested limit < current limit).
+    - If it’s an upgrade or same-tier move, the workflow allows it automatically.
+- **Fetches current usage from your backend**
+    - Reads an environment variable `USAGE_API_URL` to get the base API URL.
+    - Calls your backend endpoint `/<userId>` to fetch the current usage count.
+    - If the API call fails, the workflow stops with an error.
+- **Deny downgrade if usage exceeds new plan limit**
+    - If the user’s current usage is **greater than the requested plan’s limit**, the workflow blocks the downgrade.
+    - `denyPlanSelection()` shows a helpful message to the user, telling them what needs to be reduced before they can switch (e.g., “Delete tracked accounts to 3 or fewer”).
+
+**Summary**
+
+This workflow prevents users from downgrading to a plan that doesn’t support their current level of usage. It uses plan limits defined in the workflow, checks real usage from your backend, and provides clear instructions when the downgrade can’t be completed.
+
+## Step 4: Deploy the workflow
+
+1. Sign into your [Kinde dashboard](https://kinde.com/) and select **Workflows** from the sidebar.
+2. If you already have your workflow repo connected, go straight to step 4.
+3. Select **Connect repo > Connect GitHub** and follow the onboarding flow to authorize Kinde to access your GitHub account.
+    
+    ![connect repo option](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0f1b4c9f-64da-4885-08d0-3932939fee00/public)
+    
+4. From the dropdown, select your GitHub repository that contains the Kinde workflow code, choose the `main` branch, and click **Next**.
+    
+    If you already have a repo connected and want to change it, go to **Kinde > Settings > Git repo > Change repo.**
+    
+5. Select **Sync code** to pull your latest workflow code from GitHub into your Kinde project. 
+6. Go to **Workflows** to see your workflow listed inside the dashboard. 
+    
+    ![plan selection workflow](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ba33608b-b906-40c0-ff16-af27c7796900/public)
+    
+
+## Step 5: Test the workflow
+
+1. Deploy your sample NextJS project to the internet, [such as Vercel](https://www.youtube.com/watch?v=ZNuE7CkB6ck), with a live database.
+2. Go to **Settings > Env variables** and select **Add environment variable**.
+    1. Enter the Key: `USAGE_API_URL`
+    2. Enter the Value: API endpoint url for checking usage.
+    3. Select **Save**.
+3. Open your Kinde project in a browser and go through the sign up process. You will see the plan selection page. 
+    
+    ![plan selection window](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0f244f2f-104c-4e09-b32a-90b0911f7f00/public)
+    
+4. Select the Pro plan. Use sample credit card numbers:
+    - Card number: 4242 4242 4242 4242
+    - Validity: 12/34
+    - CVC: 123
+5. Add up to 5 accounts (e.g., Electricity, Gas, etc.)
+    
+    ![sample app ui](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/624566f5-520a-4e7e-cd64-aa4cfbaf9500/public)
+    
+6. Go to app home and select your account. 
+7. Select **Plan & payments > Change plan**. You will be restricted from changing the plan because your current usage exceeds the allowed limit in the free plan.
+    
+    ![plan change warning message](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/13536ad7-88b7-461f-3231-e72c50c8e700/public)
+    
+8. Now, go back to your application dashboard and delete accounts so that you have 3 or fewer tracked accounts.
+9. Go through the plan changing process again, and this time you will be able to downgrade your plan.
+
+### You did it!
+
+You’ve just wired up Kinde Billing and workflows to keep your plans honest and your users on track. Now, downgrades can’t slip through when usage is over the limit, and customers get clear guidance on how to fix it. This simple pattern sets you up to handle more features and bigger plans down the road, giving you a solid, scalable foundation for billing in your SaaS.
