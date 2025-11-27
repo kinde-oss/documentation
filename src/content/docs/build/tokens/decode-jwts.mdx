@@ -61,12 +61,12 @@ pnpm install @kinde/jwt-decoder
 ### Basic Usage
 
 ```javascript
-import { jwtDecoder } from "@kinde/jwt-decoder";
+import { jwtDecoder } from "@kinde/jwt-decoder"
 
 // Simple decode
-const decodedToken = jwtDecoder("eyJhbGc...");
+const decodedToken = jwtDecoder("eyJhbGc...")
 
-console.log(decodedToken);
+console.log(decodedToken)
 // Output: { header: {...}, payload: {...}, signature: "..." }
 ```
 
@@ -105,18 +105,18 @@ pnpm install @kinde/jwt-validator
 ### Validation and Decoding
 
 ```javascript
-import { validateToken, type jwtValidationResponse } from "@kinde/jwt-validator";
+import { validateToken, type jwtValidationResponse } from "@kinde/jwt-validator"
 
 const validationResult = await validateToken({
   token: "eyJhbGc...",
   domain: "https://your-subdomain.kinde.com"
-});
+})
 
 if (validationResult.isValid) {
-  console.log("Token is valid");
-  console.log("Decoded payload:", validationResult.payload);
+  console.log("Token is valid")
+  console.log("Decoded payload:", validationResult.payload)
 } else {
-  console.log("Token validation failed:", validationResult.error);
+  console.log("Token validation failed:", validationResult.error)
 }
 ```
 
@@ -131,43 +131,43 @@ This implementation uses `atob()`, which is available in browsers, web workers, 
 ```javascript
 function base64UrlDecode(str) {
   // Replace Base64URL characters with Base64 characters
-  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/')
   
   // Add padding if needed (Base64 strings must be multiples of 4)
   while (base64.length % 4) {
-    base64 += '=';
+    base64 += '='
   }
   
-  return atob(base64);
+  return atob(base64)
 }
 
 function decodeJWT(token) {
   try {
     // Split the token into its three parts
-    const parts = token.split('.');
+    const parts = token.split('.')
     
     if (parts.length !== 3) {
-      throw new Error('Invalid JWT format');
+      throw new Error('Invalid JWT format')
     }
     
     // Decode header and payload (base64url)
-    const header = JSON.parse(base64UrlDecode(parts[0]));
-    const payload = JSON.parse(base64UrlDecode(parts[1]));
+    const header = JSON.parse(base64UrlDecode(parts[0]))
+    const payload = JSON.parse(base64UrlDecode(parts[1]))
     
     return {
       header,
       payload,
       signature: parts[2]
-    };
+    }
   } catch (error) {
-    throw new Error('Failed to decode JWT: ' + error.message);
+    throw new Error('Failed to decode JWT: ' + error.message)
   }
 }
 
 // Usage
-const token = "eyJhbGc...";
-const decoded = decodeJWT(token);
-console.log(decoded.payload);
+const token = "eyJhbGc..."
+const decoded = decodeJWT(token)
+console.log(decoded.payload)
 ```
 
 ### Node.js Platform
@@ -177,36 +177,36 @@ For Node.js environments, use `Buffer` instead of `atob()`:
 ```javascript
 function base64UrlDecode(str) {
   // Replace Base64URL characters with Base64 characters
-  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/')
   
   // Add padding if needed (Base64 strings must be multiples of 4)
   while (base64.length % 4) {
-    base64 += '=';
+    base64 += '='
   }
   
-  return Buffer.from(base64, 'base64').toString('utf-8');
+  return Buffer.from(base64, 'base64').toString('utf-8')
 }
 
 function decodeJWT(token) {
   try {
     // Split the token into its three parts
-    const parts = token.split('.');
+    const parts = token.split('.')
     
     if (parts.length !== 3) {
-      throw new Error('Invalid JWT format');
+      throw new Error('Invalid JWT format')
     }
     
     // Decode header and payload (base64url)
-    const header = JSON.parse(base64UrlDecode(parts[0]));
-    const payload = JSON.parse(base64UrlDecode(parts[1]));
+    const header = JSON.parse(base64UrlDecode(parts[0]))
+    const payload = JSON.parse(base64UrlDecode(parts[1]))
     
     return {
       header,
       payload,
       signature: parts[2]
-    };
+    }
   } catch (error) {
-    throw new Error('Failed to decode JWT: ' + error.message);
+    throw new Error('Failed to decode JWT: ' + error.message)
   }
 }
 ```
@@ -218,18 +218,18 @@ For code that works in both browser and Node.js environments:
 ```javascript
 function base64UrlDecode(str) {
   // Replace Base64URL characters with Base64 characters
-  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/')
   
   // Add padding if needed (Base64 strings must be multiples of 4)
   while (base64.length % 4) {
-    base64 += '=';
+    base64 += '='
   }
   
   // Use Buffer in Node.js, atob in browser
   if (typeof Buffer !== 'undefined') {
-    return Buffer.from(base64, 'base64').toString('utf-8');
+    return Buffer.from(base64, 'base64').toString('utf-8')
   } else {
-    return atob(base64);
+    return atob(base64)
   }
 }
 ```
@@ -261,43 +261,43 @@ interface DecodedJWT {
 
 function base64UrlDecode(str: string): string {
   // Replace Base64URL characters with Base64 characters
-  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/')
   
   // Add padding if needed (Base64 strings must be multiples of 4)
   while (base64.length % 4) {
-    base64 += '=';
+    base64 += '='
   }
   
   // Use Buffer in Node.js, atob in browser
   if (typeof globalThis.Buffer !== 'undefined') {
-    return globalThis.Buffer.from(base64, 'base64').toString('binary');
+    return globalThis.Buffer.from(base64, 'base64').toString('binary')
   } else if (typeof globalThis.atob !== 'undefined') {
-    return globalThis.atob(base64);
+    return globalThis.atob(base64)
   } else {
-    throw new Error('Neither Buffer nor atob is available in this environment');
+    throw new Error('Neither Buffer nor atob is available in this environment')
   }
 }
 
 function decodeJWT(token: string): DecodedJWT {
   try {
     // Split the token into its three parts
-    const parts = token.split('.');
+    const parts = token.split('.')
     
     if (parts.length !== 3) {
-      throw new Error('Invalid JWT format');
+      throw new Error('Invalid JWT format')
     }
     
     // Decode header and payload (base64url)
-    const header = JSON.parse(base64UrlDecode(parts[0])) as JWTHeader;
-    const payload = JSON.parse(base64UrlDecode(parts[1])) as JWTPayload;
+    const header = JSON.parse(base64UrlDecode(parts[0])) as JWTHeader
+    const payload = JSON.parse(base64UrlDecode(parts[1])) as JWTPayload
     
     return {
       header,
       payload,
       signature: parts[2]
-    };
+    }
   } catch (error) {
-    throw new Error('Failed to decode JWT: ' + (error instanceof Error ? error.message : String(error)));
+    throw new Error('Failed to decode JWT: ' + (error instanceof Error ? error.message : String(error)))
   }
 }
 ```
@@ -327,26 +327,26 @@ When decoding JWTs, ensure you:
 ### Displaying User Information
 
 ```javascript
-import { jwtDecoder } from "@kinde/jwt-decoder";
+import { jwtDecoder } from "@kinde/jwt-decoder"
 
 function displayUserInfo(token) {
   try {
-    const decoded = jwtDecoder(token);
-    const { payload } = decoded;
+    const decoded = jwtDecoder(token)
+    const { payload } = decoded
     
-    console.log(`User: ${payload.name || payload.email}`);
-    console.log(`Organization: ${payload.org_code}`);
-    console.log(`Permissions: ${payload.permissions?.join(', ')}`);
+    console.log(`User: ${payload.name || payload.email}`)
+    console.log(`Organization: ${payload.org_code}`)
+    console.log(`Permissions: ${payload.permissions?.join(', ')}`)
     
     return {
       name: payload.name,
       email: payload.email,
       organization: payload.org_code,
       permissions: payload.permissions || []
-    };
+    }
   } catch (error) {
-    console.error('Failed to decode token:', error);
-    return null;
+    console.error('Failed to decode token:', error)
+    return null
   }
 }
 ```
@@ -356,17 +356,17 @@ function displayUserInfo(token) {
 ```javascript
 function checkFeatureFlag(token, flagName) {
   try {
-    const decoded = jwtDecoder(token);
-    const featureFlags = decoded.payload.feature_flags;
+    const decoded = jwtDecoder(token)
+    const featureFlags = decoded.payload.feature_flags
     
     if (featureFlags && featureFlags[flagName]) {
-      return featureFlags[flagName].v; // 'v' is the value
+      return featureFlags[flagName].v // 'v' is the value
     }
     
-    return false;
+    return false
   } catch (error) {
-    console.error('Failed to check feature flag:', error);
-    return false;
+    console.error('Failed to check feature flag:', error)
+    return false
   }
 }
 ```
@@ -376,11 +376,11 @@ function checkFeatureFlag(token, flagName) {
 ```javascript
 function getUserPermissions(token) {
   try {
-    const decoded = jwtDecoder(token);
-    return decoded.payload.permissions || [];
+    const decoded = jwtDecoder(token)
+    return decoded.payload.permissions || []
   } catch (error) {
-    console.error('Failed to extract permissions:', error);
-    return [];
+    console.error('Failed to extract permissions:', error)
+    return []
   }
 }
 ```
@@ -393,22 +393,22 @@ function getUserPermissions(token) {
 function safeDecodeJWT(token) {
   try {
     if (!token) {
-      throw new Error('Token is required');
+      throw new Error('Token is required')
     }
     
     if (typeof token !== 'string') {
-      throw new Error('Token must be a string');
+      throw new Error('Token must be a string')
     }
     
-    const parts = token.split('.');
+    const parts = token.split('.')
     if (parts.length !== 3) {
-      throw new Error('Invalid JWT format - must have 3 parts');
+      throw new Error('Invalid JWT format - must have 3 parts')
     }
     
-    return jwtDecoder(token);
+    return jwtDecoder(token)
   } catch (error) {
-    console.error('JWT decoding error:', error.message);
-    return null;
+    console.error('JWT decoding error:', error.message)
+    return null
   }
 }
 ```
