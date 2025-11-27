@@ -1,0 +1,482 @@
+---
+page_id: 37e847e2-b6c7-4cf1-86d3-7c607b2bffbd
+title: Manage Kinde configurations via API
+description: Learn how to manage Kinde configurations as code across environments using the Kinde Management API and a JavaScript seeding script.
+sidebar:
+  order: 20
+relatedArticles:
+  - 50284476-2442-414c-af20-01ed3ef4ca4e
+  - 51899f7f-3436-46e0-9a1b-6ecc3603a0df
+  - 6bf993fc-a195-4836-8eaf-133812be8876
+  - 601dd8c5-6ee1-474f-ad36-201e65280462
+topics:
+  - developer-tools
+  - kinde-api
+sdk:
+  - kinde-management-api
+languages:
+  - javascript
+audience:
+  - developers
+complexity: intermediate
+keywords:
+  - management api
+  - seed-script
+  - m2m application
+  - nodejs
+  - api authentication
+updated: 2025-11-11
+featured: false
+deprecated: false
+ai_summary: Learn how to manage Kinde configurations as code across environments using the Kinde Management API and a JavaScript seeding script.
+---
+
+This guide shows you how to manage your Kinde configuration as code across **dev**, **staging**, and **prod**. Because Kinde environments are isolated and changes don’t auto-promote, we’ll treat your setup like any other piece of infrastructure: versioned, repeatable, and automated through the Kinde Management API.
+
+In this guide we will use a JavaScript seeding script to create configurations using the Kinde Management API.
+
+### What you need
+
+- A [Kinde](https://kinde.com/) account (Sign up for free)
+- [Node.js](https://nodejs.org/en) version 20+
+
+## Step 1: Create Kinde environments and applications
+
+1. Select the environment drop-down in the top left of the Kinde home screen, and select **All environments**.
+    
+    ![add new environment menu in kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/dfafffb1-c119-4d9d-ad15-9147220d0300/public)
+    
+2. Select **Add environment**. A dialog opens. 
+    1. Enter a **Name** for the environment (e.g, Development)
+    2. Enter a **Code** for the environment to reference it in code `dev`.
+    3. Select **Save**.
+        
+        ![add new environment in kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/323911e2-86cd-4162-849b-be0fcd9cef00/public)
+        
+3. Create any additional environments you want to create (e.g. Staging, Testing). 
+    
+    Kinde’s Free plan allows you to create up to 2 environments. 
+    
+4. On the Kinde home screen, select **Add application**.
+5. Enter a name for the application (e.g, Kinde Seed Script) and select **Machine to machine (M2M)** as the application type.
+6. Select **Save**. The details page for the application opens.
+7. Take note of the **Domain**, **Client ID** and **Client secret.** You will need it to run your seed script in the next step.
+8. Go to **APIs** and select the **three dots** next to **Kinde Management API** and select **Authorize application**.
+    
+    ![authorize api](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/abe78007-e51d-441b-eac3-36a5e2eb5c00/public)
+    
+9. Copy the **Audience** value to configure your Kinde script in the next step.
+10. Select the **three dots** again and select **Manage scopes**.
+    
+    ![manage scopes menu](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0990ac94-5921-48e7-5557-11d1f2a44600/public)
+    
+11. Enable the following scopes and select **Save**.
+    - To create application and add auth redirect and auth logout URLS: `create:applications`, `create:application_redirect_uris`, `create:application_logout_uris`
+    - To create environment variables: `create:environment_variables`
+    - To create feature flags: `create:feature_flags`
+    - To create API and scopes: `create:apis`, `create:api_scopes`
+    - To create roles and permissions: `create:roles`, `create:permissions`, `update:role_permissions`
+
+      ![enable scopes](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4bccdc31-24fb-41fc-06ba-c892b2259800/public)
+
+Do the above for all of your environments, and you will have an environment and an M2M application credential set for `prod`, `dev`, and `staging` environments.
+
+## Step 2: Create the seeding script
+
+1. Create a new directory and switch to it using the following bash command in your terminal:
+    
+    ```bash
+    mkdir kinde-seed-script
+    cd kinde-seed-script
+    ```
+    
+2. Create the configuration files:
+    
+    ```bash
+    mkdir config
+    touch config/dev.json config/prod.json config/staging.json
+    ```
+    
+3. Enter the following seed data into your config files and save changes. Modify the sample data below, according to your needs.
+    
+    ```json
+    {
+      "application": {
+        "name": "My Kinde App, Created with Script",
+        "type": "reg",
+        "redirectUrls": ["http://localhost:3000/callback"],
+        "logoutUrls": ["http://localhost:3000/"]
+      },
+      "apis": [
+        {
+          "key": "orders-api",
+          "name": "Orders API",
+          "audience": "orders",
+          "scopes": ["orders:read", "orders:write"]
+        }
+      ],
+      "roles": [
+        {
+          "key": "admin",
+          "name": "Admin",
+          "permissions": [
+            { "key": "orders:read", "name": "Read Orders" },
+            { "key": "orders:write", "name": "Write Orders" }
+          ]
+        }
+      ],
+      "featureFlags": [
+        {
+          "name": "New Checkout",
+          "key": "new_checkout",
+          "type": "bool",
+          "allow_override_level": "env",
+          "default_value": true
+        }
+      ],
+      "envVars": [
+        { "key": "PAYMENTS_GATEWAY", "value": "sandbox", "sensitive": false },
+        { "key": "SECRET_PAYMENTS_GATEWAY", "value": "sandbox", "sensitive": true }
+      ]
+    }
+    ```
+    
+4. Create the seed script with the following command.
+    
+    ```bash
+    mkdir scripts
+    touch scripts/seed-kinde.mjs
+    ```
+    
+5. Enter the following code into the seed script and save changes. Use the function calls you need for your specific use case.
+    
+    ```jsx
+    import fs from "node:fs/promises"
+    
+    const {
+      KINDE_DOMAIN,
+      KINDE_CLIENT_ID,
+      KINDE_CLIENT_SECRET,
+      KINDE_AUDIENCE,
+      KINDE_SCOPES,
+      CONFIG_PATH,
+    } = process.env
+    
+    if (
+      !KINDE_DOMAIN ||
+      !KINDE_CLIENT_ID ||
+      !KINDE_CLIENT_SECRET ||
+      !KINDE_AUDIENCE
+    ) {
+      throw new Error("Missing Kinde env vars")
+    }
+    
+    const cfg = JSON.parse(await fs.readFile(CONFIG_PATH, "utf8"))
+    
+    async function getToken() {
+      const body = new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: KINDE_CLIENT_ID,
+        client_secret: KINDE_CLIENT_SECRET,
+        audience: KINDE_AUDIENCE,
+        scope: KINDE_SCOPES,
+      })
+    
+      const res = await fetch(`https://${KINDE_DOMAIN}/oauth2/token`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body,
+      })
+    
+      if (!res.ok) {
+        const text = await res.text() // <-- see why it failed
+        throw new Error(`Token error ${res.status}, ${text}`)
+      }
+      const json = await res.json()
+      return json.access_token
+    }
+    
+    function client(token) {
+      const base = `https://${process.env.KINDE_DOMAIN}`
+      async function call(method, path, body) {
+        const url = new URL(`/api/v1${path}`, base)
+        const res = await fetch(url, {
+          method,
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${token}`,
+          },
+          body: body ? JSON.stringify(body) : undefined,
+        })
+        if (!res.ok) {
+          throw new Error(`${method} ${base} ${path} -> ${res.status}`)
+        }
+        return res.status === 204 ? null : res.json()
+      }
+      return { call }
+    }
+    
+    // Helper functions
+    
+    async function createApplicationWithUrls(
+      api,
+      name,
+      type,
+      redirects = [],
+      logouts = []
+    ) {
+      console.log("Creating application...")
+    
+      const errors = []
+      let appObj = {}
+    
+      try {
+        appObj = await api.call("POST", "/applications", {
+          name,
+          type,
+        })
+      } catch {
+        console.log("Cannot create an application, exiting the function")
+        return
+      }
+    
+      const { id } = appObj.application
+    
+      console.log("Creating auth redirect URLs...")
+    
+      try {
+        await api.call("POST", `/applications/${id}/auth_redirect_urls`, {
+          urls: redirects,
+        })
+      } catch (error) {
+        errors.push("Cannot create redirect urls")
+      }
+    
+      console.log("Creating auth logout URLs...")
+    
+      try {
+        await api.call("POST", `/applications/${id}/auth_logout_urls`, {
+          urls: logouts,
+        })
+      } catch (error) {
+        errors.push("Cannot create logout urls")
+      }
+    
+      console.log("Created a Kinde application with id", id)
+      if (errors.length) console.log("with some errors", errors)
+    }
+    
+    async function createEnvVariable(api, item) {
+      console.log("Creating environment variable...")
+    
+      try {
+        const { key, value, sensitive = false } = item
+        await api.call("POST", `/environment_variables`, {
+          key,
+          value,
+          is_secret: sensitive,
+        })
+        console.log("Created environment variable", item.key)
+      } catch {
+        console.log("Could not create env variable", item.key)
+      }
+    }
+    
+    async function createFeatureFlag(api, flag) {
+      try {
+        await api.call("POST", `/feature_flags`, flag)
+        console.log("Created feature flag:", flag.name)
+      } catch {
+        console.log("Could not create feature flag:", flag.name)
+      }
+    }
+    
+    async function createApiAndScopes(api, { name, audience, scopes = [] }) {
+      console.log("Creating API and Scopes...")
+    
+      let apiObj = null
+    
+      try {
+        apiObj = await api.call("POST", `/apis`, { name, audience })
+        apiObj.name = name
+        console.log("Created API:", name)
+      } catch {
+        console.log("Error creating API:", name)
+        return
+      }
+    
+      // You will need a Kinde paid plan
+      // To add scope to your API
+    
+      // Un-comment this block to use it:
+      // for (const s of scopes) {
+      //   try {
+      //     await api.call("POST", `/apis/${apiObj.api.id}/scopes`, {
+      //       key: s,
+      //       description: s,
+      //     })
+      //     console.log(`Created scope "${s}" to the API ${apiObj.name}`)
+      //   } catch (error) {
+      //     console.log("Error creating scope:", s)
+      //   }
+      // }
+    }
+    
+    async function createRoleAndPermissions(api, role) {
+      console.log("Creating roles and permissions...")
+    
+      let roleObj = null
+    
+      try {
+        roleObj = await api.call("POST", `/roles`, {
+          key: role.key,
+          name: role.name,
+        })
+        roleObj.name = role.name
+        console.log("Created role:", role.name)
+      } catch {
+        console.log("Error creating role:", role.name)
+        console.log("Exiting.")
+    
+        return
+      }
+    
+      const permObjs = []
+      let permObj = null
+    
+      for (const p of role.permissions) {
+        try {
+          permObj = await api.call("POST", `/permissions`, {
+            key: p.key,
+            name: p.name,
+          })
+          permObj.name = p.name
+          console.log("Permission created:", p.name)
+          permObjs.push(permObj)
+        } catch {
+          console.log("Error creating the permission:", p.name)
+        }
+      }
+    
+      for (const perm of permObjs) {
+        const { id } = perm.permission
+        try {
+          await api.call("PATCH", `/roles/${roleObj.role.id}/permissions`, {
+            permissions: [{ id }],
+          })
+          console.log(
+            `Added the permission "${perm.name}" to the role ${roleObj.name}`
+          )
+        } catch {
+          console.log("Error creating the permission")
+        }
+      }
+    }
+    
+    // Token and create the client
+    const token = await getToken()
+    const api = client(token)
+    
+    // Destructuring the values
+    const { name, type, redirectUrls, logoutUrls } = cfg.application
+    const { envVars, apis, featureFlags, roles } = cfg
+    
+    // Execute the script
+    await Promise.all([
+      createApplicationWithUrls(api, name, type, redirectUrls, logoutUrls),
+      ...(envVars ?? []).map((v) => createEnvVariable(api, v)),
+      ...(apis ?? []).map((a) => createApiAndScopes(api, a)),
+      ...(featureFlags ?? []).map((f) => createFeatureFlag(api, f)),
+      ...(roles ?? []).map((r) => createRoleAndPermissions(api, r)),
+    ])
+    
+    console.log("Kinde Seed Complete")
+    
+    ```
+    
+
+## Step 3: Test the seeding script
+
+1. Run the following code in your terminal to set your environment variables:
+    
+    ```bash
+    export KINDE_DOMAIN=<YOUR_KINDE_DOMAIN>.kinde.com
+    export KINDE_CLIENT_ID=<KINDE_CLIENT_ID>
+    export KINDE_CLIENT_SECRET=<KINDE_CLIENT_SECRET>
+    export KINDE_AUDIENCE=https://<YOUR_KINDE_DOMAIN>.kinde.com/api
+    export KINDE_SCOPES="create:applications create:application_redirect_uris create:application_logout_uris create:environment_variables create:feature_flags create:apis create:api_scopes create:roles create:permissions update:role_permissions"
+    export CONFIG_PATH=./config/dev.json
+    ```
+    
+2. Run the script with the following terminal command. You should see a success message without any errors.
+    
+    ```bash
+    node scripts/seed-kinde.mjs
+    ```
+    
+    Output:
+    
+    ```
+    Creating application...
+    Creating environment variable...
+    Creating environment variable...
+    Creating API and Scopes...
+    Creating roles and permissions...
+    Creating auth redirect URLs...
+    Created role: Admin
+    Created API: Orders API
+    Created environment variable PAYMENTS_GATEWAY
+    Created environment variable SECRET_PAYMENTS_GATEWAY
+    Created feature flag: New Checkout
+    Creating auth logout URLs...
+    Permission created: Read Orders
+    Created a Kinde application with id <created_app_id>
+    Permission created: Write Orders
+    Added the permission "Read Orders" to the role Admin
+    Added the permission "Write Orders" to the role Admin
+    Kinde Seed complete
+    ```
+    
+3. Go to your Kinde dashboard and switch to the correct environment. 
+4. You will see the script created:
+    1. A new application in your dashboard with your designated redirect and logout URLs.
+        
+        ![kinde new application](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9cad3f46-1005-4c3c-cf42-256d4af6f800/public)
+        
+    2. Environment variables:
+        
+        ![environment variables](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/183337c0-92f9-4012-b272-f70893cd1b00/public)
+        
+    3. Feature flags:
+        
+        ![feature flags](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/e6b7212d-c84f-465c-1ccd-23d1145bd000/public)
+        
+    4. APIs and scopes (requires a paid plan):
+        
+        ![apis and scopes](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/1f925a30-e1ef-4449-7b11-6976dc0e3800/public)
+        
+    5. Admin roles, permissions, and add the permissions to the role.
+        
+        ![permissions](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4bfbe4dd-abde-432a-7037-1fe680489d00/public)
+        
+5. Run the same script for all of your environments and config presets as required.
+
+### Notes
+
+- Kinde Management API can do everything the UI can. So please [refer to the docs](https://docs.kinde.com/kinde-apis/management/) for more operations.
+- Keep your seed script scopes minimal to avoid security vulnerabilities.
+
+### What to put “under configuration as code”
+
+- **Applications** and their callbacks.
+- **APIs and scopes** that your apps use.
+- **Roles** and **permissions**, **feature flags**, and **environment variables** with safe defaults for each environment.
+
+### Guardrails and gotchas
+
+- **No cross-env copy** today. Replicate settings by seed script. Plan for drift detection by re-running your seed on each deploy.
+- **Access carefully**: Use least privilege scopes on your M2M app that runs automation.
+
+### Done!
+
+Your Kinde configuration is now managed as code across dev, staging, and prod. Choose the fit for your team and CI: least-privilege M2M per environment, review changes via PRs, and re-apply to promote config between environments. With this setup, your Kinde stack is reproducible, auditable, and easy to roll forward, no manual clicks required.
