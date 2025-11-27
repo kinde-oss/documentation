@@ -1,0 +1,356 @@
+---
+page_id: 1960e9d1-2ba6-4c33-83f7-8608a41658f1
+title: Protect FastAPI routes with Kinde
+description: "Learn how to secure your FastAPI routes with Kinde authentication."
+sidebar:
+  order: 20
+relatedArticles:
+  - 2b425ccb-d328-41ff-afb2-016019f46839
+topics:
+  - api-tools
+  - guides
+  - fastapi
+  - python
+sdk:
+  - python-sdk
+languages: []
+audience: developers
+complexity: intermediate
+keywords:
+  - fastapi
+  - python
+  - backend
+  - authenticated-routes
+updated: 2025-11-10
+featured: false
+deprecated: false
+ai_summary: Learn how to secure your FastAPI routes with Kinde authentication.
+---
+
+FastAPI is a modern Python web framework known for its speed, simplicity, and support for asynchronous programming. It’s comparable in performance to APIs built with Go or Node.js—thanks to its underlying tools like **Starlette** and **Pydantic**, and its use of **ASGI** (Asynchronous Server Gateway Interface) rather than WSGI used by frameworks like Flask and Django.
+
+In real-world benchmarks, FastAPI outperforms traditional Python frameworks in both startup time and request handling.
+
+![Why FastAPI is faster, comparison](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9d30bb20-85af-48ec-0f69-c5978cdb7100/public)
+
+*Source: [Why FastAPI?](https://medium.com/featurepreneur/why-fastapi-69fb172756b7) by A. Martin, Medium*
+
+FastAPI also makes it easy to write asynchronous endpoints, allowing for faster I/O-bound operations like fetching data from external APIs.
+
+In this guide, you’ll build a FastAPI project from scratch, run it locally, and test basic endpoints. Then, you’ll integrate Kinde Auth to securely protect your routes and manage user authentication with ease. Let’s get started!
+
+### What you need
+
+- A [Kinde](https://kinde.com) account (Sign up for free)
+- Python version 3.7 or up ([we used 3.11](https://www.python.org/downloads/release/python-3110/) for this project)
+
+## Step 1: Set up your FastAPI project
+
+1. Run the following command in your terminal window to create a project directory (e.g: `kinde-fastapi`) and go to it:
+    
+    ```bash
+    mkdir kinde-fastapi && cd kinde-fastapi
+    ```
+    
+2. Create a virtual Python environment with the following command:
+    
+    This will create a virtual environment `.venv` under your project directory. This will install all project dependencies under this folder instead of your global Python directory.
+    
+    ```bash
+    python -m venv .venv
+    ```
+    
+3. Activate the virtual environment using the following command:
+    
+    ```bash
+    source .venv/bin/activate
+    ```
+    
+4. Install the project dependencies with the following bash command:
+    
+    ```bash
+    pip install kinde_python_sdk fastapi python-dotenv starlette "uvicorn[standard]"
+    ```
+    
+5. Create the `app.py` file:
+    
+    ```bash
+    touch app.py
+    ```
+    
+6. Open the `app.py` with your favorite code editor and enter the following code:
+    
+    The code: 
+    
+    - Imports the project dependencies
+    - Creates an instance of FastAPI
+    - defines two routes `/` for the root route, and a dynamic `/items/{item_id}` route
+    
+    ```python
+    from typing import Union
+    
+    from fastapi import FastAPI
+    
+    app = FastAPI()
+    
+    @app.get("/")
+    def read_root():
+        return {"Hello": "World"}
+    
+    @app.get("/items/{item_id}")
+    def read_item(item_id: int, q: Union[str, None] = None):
+        return {"item_id": item_id, "q": q}
+    ```
+    
+7. Test the app with the following terminal command:
+    
+    This will spin up an HTTP server and run the app under [localhost](http://localhost) port 8000
+    
+    ```bash
+    uvicorn app:app --reload
+    ```
+    
+8. Go to [http://localhost:8000](http://localhost:8000) to find the root route:
+    
+    ```json
+    {
+    	"Hello": "World"
+    }
+    ```
+    
+9. Go to [http://localhost:8000/items/420](http://localhost:8000/items/420) to find the items endpoint:
+    
+    ```json
+    {
+    	"item_id": 420,
+    	"q": null
+    }
+    ```
+    
+
+Currently, you can access all the routes in your application. 
+
+In the coming steps, we will add Kinde authentication to secure the routes.
+
+## Step 2: Set up your Kinde application
+
+1. Sign in to Kinde and select **Add application**.
+2. Enter a name for your application (e.g, FastAPI).
+3. Choose **Back-end web** as the application type, and select **Save**.
+4. On the **Quick Start** page, select **Python**, and select **Save**.
+5. Go to **Details** page, and enter the following URL to the **Allowed callback URLs**: `http://localhost:8000/api/auth/kinde_callback` and **Save**.
+6. Go to **Authentication,** select your preferred social connection (e.g., Google), and select **Save**. 
+
+## Step 3: Protect FastAPI routes with Kinde auth
+
+1. Create a new configuration file `config.py`:
+    
+    ```bash
+    touch config.py
+    ```
+    
+2. Open `config.py` with your favorite code editor, enter the following code, and save:
+    
+    ```python
+    from kinde_sdk.kinde_api_client import GrantType
+    
+    SITE_HOST = "localhost"
+    SITE_PORT = "8000"
+    
+    SITE_URL = f"http://{SITE_HOST}:{SITE_PORT}"
+    LOGOUT_REDIRECT_URL = f"http://{SITE_HOST}:{SITE_PORT}/api/auth/logout"
+    KINDE_CALLBACK_URL = f"http://{SITE_HOST}:{SITE_PORT}/api/auth/kinde_callback"
+    
+    GRANT_TYPE = GrantType.AUTHORIZATION_CODE_WITH_PKCE
+    TEMPLATES_AUTO_RELOAD = True
+    SESSION_TYPE = "filesystem"
+    SESSION_PERMANENT = False
+    ```
+    
+3. Create a new `.env` file with the following command:
+    
+    ```bash
+    touch .env
+    ```
+    
+4. From your **Kinde application > Quick start** page, copy the following configuration keys and update your `.env` file with the values:
+    
+    ```
+    KINDE_ISSUER_URL = "https://your_kinde_domain.kinde.com"
+    CLIENT_ID = "your_client_id"
+    CLIENT_SECRET = "your_client_secret"
+    ```
+    
+5. Update the `app.py` file with the following code:
+    
+    ```python
+    from dotenv import load_dotenv
+    load_dotenv()
+    from typing import Union
+    from fastapi import FastAPI, Depends, HTTPException, status, Request, APIRouter
+    from fastapi.responses import RedirectResponse
+    from starlette.middleware.sessions import SessionMiddleware
+    from kinde_sdk.configuration import Configuration
+    from kinde_sdk.kinde_api_client import KindeApiClient, GrantType
+    import os
+    import secrets
+    
+    import config  # Your configuration file with necessary settings
+    
+    KINDE_ISSUER_URL = os.getenv("KINDE_ISSUER_URL")
+    CLIENT_ID = os.getenv("CLIENT_ID")
+    CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+    # Secret used for session management
+    SECRET_KEY = secrets.token_hex(32)
+    
+    app = FastAPI()
+    app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
+    
+    # Callback endpoint
+    router = APIRouter()
+    
+    # Initialize Kinde client with configuration
+    configuration = Configuration(host=KINDE_ISSUER_URL)
+    kinde_api_client_params = {
+        "configuration": configuration,
+        "domain": KINDE_ISSUER_URL,
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "grant_type": config.GRANT_TYPE,
+        "callback_url": config.KINDE_CALLBACK_URL,
+    }
+    if config.GRANT_TYPE == GrantType.AUTHORIZATION_CODE_WITH_PKCE:
+        kinde_api_client_params["code_verifier"] = ""
+    
+    # User clients dictionary to store Kinde clients for each user
+    user_clients = {}
+    
+    # Dependency to get the current user's KindeApiClient instance
+    
+    def get_kinde_client(request: Request) -> KindeApiClient:
+        user_id = request.session.get("user_id")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    
+        if user_id not in user_clients:
+            # If the client does not exist, create a new instance with parameters
+            user_clients[user_id] = KindeApiClient(**kinde_api_client_params)
+    
+        kinde_client = user_clients[user_id]
+        # Ensure the client is authenticated
+        if not kinde_client.is_authenticated():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    
+        return kinde_client
+    
+    # Login endpoint
+    
+    @app.get("/api/auth/login")
+    def login(request: Request):
+        kinde_client = KindeApiClient(**kinde_api_client_params)
+        login_url = kinde_client.get_login_url()
+        return RedirectResponse(login_url)
+    
+    # Register endpoint
+    
+    @app.get("/api/auth/register")
+    def register(request: Request):
+        kinde_client = KindeApiClient(**kinde_api_client_params)
+        register_url = kinde_client.get_register_url()
+        return RedirectResponse(register_url)
+    
+    @app.get("/api/auth/kinde_callback")
+    def callback(request: Request):
+        kinde_client = KindeApiClient(**kinde_api_client_params)
+        kinde_client.fetch_token(authorization_response=str(request.url))
+        user = kinde_client.get_user_details()
+        request.session["user_id"] = user.get("id")
+        user_clients[user.get("id")] = kinde_client
+        return RedirectResponse(app.url_path_for("read_root"))
+    
+    # Logout endpoint
+    
+    @app.get("/api/auth/logout")
+    def logout(request: Request):
+        user_id = request.session.get("user_id")
+        if user_id in user_clients:
+            kinde_client = user_clients[user_id]
+            logout_url = kinde_client.logout(
+                redirect_to=config.LOGOUT_REDIRECT_URL)
+            del user_clients[user_id]
+            request.session.pop("user_id", None)
+            return RedirectResponse(logout_url)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    
+    @app.get("/")
+    def read_root(kinde_client: KindeApiClient = Depends(get_kinde_client)):
+        # Now this route requires authentication
+        user = kinde_client.get_user_details()
+        return {
+            "info": "Route protected with Kinde",
+            "user_info": user.get("given_name") + " " + user.get("family_name")
+        }
+    
+    @app.get("/items/{item_id}")
+    def read_item(item_id: int, q: Union[str, None] = None, kinde_client: KindeApiClient = Depends(get_kinde_client)):
+        # This route also requires authentication
+        return {"item_id": item_id, "q": q}
+    
+    ```
+    
+
+Let’s walk through what’s happening in the code now that Kinde authentication has been added.
+
+We start by importing the necessary libraries, including those from the Kinde SDK and `starlette` for session management. Since Kinde doesn’t handle sessions directly, we use Starlette’s session middleware to manage state on the server side.
+
+Each user’s `KindeApiClient` instance is stored in a dictionary to keep track of their session state. If a client instance doesn’t already exist, we create a new one and use helper functions—like `is_authenticated`—to access user details and manage protected routes.
+
+If you're planning to use this setup in production, we recommend storing session data in a shared store such as Redis, Memcached, or a database. This ensures session persistence across multiple app instances. FastAPI doesn’t include built-in support for server-side session storage, so you’ll need to integrate your own solution for distributed environments.
+
+Once your session management is in place, protecting routes is simple. Just add `kinde_client: KindeApiClient = Depends(get_kinde_client)` as a parameter to any route function that requires authentication. From there, the route is secured without additional configuration.
+
+## Step 4: Test your application endpoints
+
+1. Run the development server (if not running already) by using the following bash command:
+    
+    ```bash
+    uvicorn app:app --reload
+    ```
+    
+2. Go to [http://localhost:8000](http://localhost:8000), you will see this API response:
+    
+    ```json
+    {
+    	"detail": "Not authenticated"
+    }
+    ```
+    
+3. Go to [http://localhost:8000/docs](http://localhost:8000/docs) to see all your application's API endpoints.
+    
+    ![API docs page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/04e9960b-8080-462d-e819-389a3118cc00/public)
+    
+4. Sign in or register a new user via either of the endpoints:
+    - [http://localhost:8000/api/auth/login](http://localhost:8000/api/auth/login)
+    - [http://localhost:8000/api/auth/register](http://localhost:8000/api/auth/register)
+5. After a successful authentication, you will be redirected to the root page with your user info.
+    
+    You have now projected your FastAPI endpoint with Kinde auth.
+    
+    ```json
+    {
+    	"info": "Route protected with Kinde",
+    	"user_info": "{the logged in user's name}"
+    }
+    ```
+    
+
+### You’re done!
+
+You’ve now secured your FastAPI routes using Kinde Auth, combining the performance and flexibility of FastAPI with Kinde’s streamlined approach to authentication.
+
+Remember to follow best practices when handling user data, keep your dependencies up to date, and test your integration thoroughly to ensure secure and reliable flows.
+
+If you need help, reach out to us at [support@kinde.com](mailto:support@kinde.com). You can also connect with the team and other developers in the [Kinde Slack community](https://join.slack.com/t/thekindecommunity/shared_invite/zt-2k5i0aeet-d6Z_2qYphcNCpj0bFa4oCg) or [Discord](https://discord.gg/wHX6j7wG5d). We're here to support you.
