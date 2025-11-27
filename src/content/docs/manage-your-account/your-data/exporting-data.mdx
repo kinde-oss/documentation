@@ -7,6 +7,7 @@ relatedArticles:
   - d82207a5-c72b-48d7-b02d-b3d1d77b88a2
   - 692187c5-1b82-467a-b86f-85b9098ecaab
   - 2169707b-af80-435d-883e-feb46de390f9
+  - aa132a66-b7eb-4d81-a039-dd1c3027f93e
 app_context:
   - m: settings
     s: environment_details
@@ -37,7 +38,9 @@ keywords:
   - security process
   - data protection
   - export approval
-updated: 2024-01-15
+  - access requests
+  - waitlist export
+updated: 2025-11-27
 featured: false
 deprecated: false
 ai_summary: Comprehensive guide to exporting Kinde data including secure password export processes, encryption/decryption, and data format specifications.
@@ -122,9 +125,21 @@ At any time, the person who made the export request can cancel it by going to th
 
 ## What the exported data looks like
 
-Data is exported in NDJSON format, with separate data files for users and organizations.
+Data is exported in NDJSON format. Your export includes three data files:
 
-Here’s an example of `users.ndjson`.
+| File | Contents |
+|------|----------|
+| `organizations.ndjson` | All your organizations |
+| `users.ndjson` | All registered users (with optional password hashes) |
+| `access_requests.ndjson` | People who've requested access but aren't users yet |
+
+<Aside>
+
+Access requests are people who have submitted a request through your [Request Access page](/design/pages/set-up-the-request-access-page/), such as early adopters on a waitlist or people requesting access to a beta or invite-only product. They're included automatically—no additional setup required. Note that access requests who have been converted to full users will appear in both the `users.ndjson` and `access_requests.ndjson` files.
+
+</Aside>
+
+Here's an example of `users.ndjson`.
 
 ```json
 {
@@ -243,6 +258,52 @@ Here's an example of `organizations.ndjson`.
     }
   },
   "required": ["name", "created_on", "business_code", "organization_code"],
+  "additionalProperties": false
+}
+```
+
+Here's an example of `access_requests.ndjson`.
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the access request"
+    },
+    "first_name": {
+      "type": ["string", "null"],
+      "description": "First name provided by the requester"
+    },
+    "last_name": {
+      "type": ["string", "null"],
+      "description": "Last name provided by the requester"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Email address of the requester"
+    },
+    "business_code": {
+      "type": "string",
+      "description": "Your Kinde business identifier"
+    },
+    "organizations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Organizations the requester is associated with, if any"
+    },
+    "created_on": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the access request was submitted"
+    }
+  },
+  "required": ["id", "email", "business_code", "created_on"],
   "additionalProperties": false
 }
 ```
