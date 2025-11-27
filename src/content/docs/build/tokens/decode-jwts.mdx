@@ -35,8 +35,6 @@ ai_summary: Comprehensive guide to decoding JSON Web Tokens using Kinde's JWT li
 
 JWT decoding involves parsing and validating JSON Web Tokens to extract their payload information securely. While JWTs are typically signed (not encrypted), decoding refers to the process of parsing the token structure and validating its claims.
 
-## Understanding JWT Structure
-
 Before decoding a JWT, it's important to understand its structure. A JWT consists of three parts separated by dots (`.`):
 
 1. **Header** - Contains metadata about the token (algorithm, type)
@@ -128,7 +126,23 @@ If you need to decode JWTs without using Kinde's libraries, you can implement ma
 
 ### Base64 URL Decoding
 
+#### Browser/Web Platform
+
+This implementation uses `atob()`, which is available in browsers, web workers, and service workers:
+
 ```javascript
+function base64UrlDecode(str) {
+  // Replace Base64URL characters with Base64 characters
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  
+  // Add padding if needed (Base64 strings must be multiples of 4)
+  while (base64.length % 4) {
+    base64 += '=';
+  }
+  
+  return atob(base64);
+}
+
 function decodeJWT(token) {
   try {
     // Split the token into its three parts
@@ -139,8 +153,8 @@ function decodeJWT(token) {
     }
     
     // Decode header and payload (base64url)
-    const header = JSON.parse(atob(parts[0].replace(/-/g, '+').replace(/_/g, '/')));
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const header = JSON.parse(base64UrlDecode(parts[0]));
+    const payload = JSON.parse(base64UrlDecode(parts[1]));
     
     return {
       header,
@@ -156,6 +170,70 @@ function decodeJWT(token) {
 const token = "eyJhbGc...";
 const decoded = decodeJWT(token);
 console.log(decoded.payload);
+```
+
+#### Node.js Platform
+
+For Node.js environments, use `Buffer` instead of `atob()`:
+
+```javascript
+function base64UrlDecode(str) {
+  // Replace Base64URL characters with Base64 characters
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  
+  // Add padding if needed (Base64 strings must be multiples of 4)
+  while (base64.length % 4) {
+    base64 += '=';
+  }
+  
+  return Buffer.from(base64, 'base64').toString('utf-8');
+}
+
+function decodeJWT(token) {
+  try {
+    // Split the token into its three parts
+    const parts = token.split('.');
+    
+    if (parts.length !== 3) {
+      throw new Error('Invalid JWT format');
+    }
+    
+    // Decode header and payload (base64url)
+    const header = JSON.parse(base64UrlDecode(parts[0]));
+    const payload = JSON.parse(base64UrlDecode(parts[1]));
+    
+    return {
+      header,
+      payload,
+      signature: parts[2]
+    };
+  } catch (error) {
+    throw new Error('Failed to decode JWT: ' + error.message);
+  }
+}
+```
+
+#### Universal/Cross-Platform
+
+For code that works in both browser and Node.js environments:
+
+```javascript
+function base64UrlDecode(str) {
+  // Replace Base64URL characters with Base64 characters
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  
+  // Add padding if needed (Base64 strings must be multiples of 4)
+  while (base64.length % 4) {
+    base64 += '=';
+  }
+  
+  // Use Buffer in Node.js, atob in browser
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(base64, 'base64').toString('utf-8');
+  } else {
+    return atob(base64);
+  }
+}
 ```
 
 ### TypeScript Implementation
@@ -183,8 +261,39 @@ interface DecodedJWT {
   signature: string;
 }
 
+function base64UrlDecode(str: string): string {
+  // Replace Base64URL characters with Base64 characters
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  
+  // Add padding if needed (Base64 strings must be multiples of 4)
+  while (base64.length % 4) {
+    base64 += '=';
+  }
+  
+  return atob(base64);
+}
+
 function decodeJWT(token: string): DecodedJWT {
-  // Implementation same as above
+  try {
+    // Split the token into its three parts
+    const parts = token.split('.');
+    
+    if (parts.length !== 3) {
+      throw new Error('Invalid JWT format');
+    }
+    
+    // Decode header and payload (base64url)
+    const header = JSON.parse(base64UrlDecode(parts[0])) as JWTHeader;
+    const payload = JSON.parse(base64UrlDecode(parts[1])) as JWTPayload;
+    
+    return {
+      header,
+      payload,
+      signature: parts[2]
+    };
+  } catch (error) {
+    throw new Error('Failed to decode JWT: ' + (error instanceof Error ? error.message : String(error)));
+  }
 }
 ```
 
