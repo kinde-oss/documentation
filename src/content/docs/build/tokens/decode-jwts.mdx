@@ -268,7 +268,14 @@ function base64UrlDecode(str: string): string {
     base64 += '=';
   }
   
-  return atob(base64);
+  // Use Buffer in Node.js, atob in browser
+  if (typeof globalThis.Buffer !== 'undefined') {
+    return globalThis.Buffer.from(base64, 'base64').toString('binary');
+  } else if (typeof globalThis.atob !== 'undefined') {
+    return globalThis.atob(base64);
+  } else {
+    throw new Error('Neither Buffer nor atob is available in this environment');
+  }
 }
 
 function decodeJWT(token: string): DecodedJWT {
