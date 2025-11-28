@@ -63,11 +63,14 @@ pnpm install @kinde/jwt-decoder
 ```javascript
 import { jwtDecoder } from "@kinde/jwt-decoder"
 
+const token =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30"
+
 // Simple decode
-const decodedToken = jwtDecoder("eyJhbGc...")
+const decodedToken = jwtDecoder(token)
 
 console.log(decodedToken)
-// Output: { header: {...}, payload: {...}, signature: "..." }
+// Output: { sub: '1234567890', name: 'John Doe', admin: true, iat: 1516239022 }
 ```
 
 ### Type-Safe Decoding
@@ -105,19 +108,35 @@ pnpm install @kinde/jwt-validator
 ### Validation and Decoding
 
 ```javascript
-import { validateToken, type jwtValidationResponse } from "@kinde/jwt-validator"
+import { validateToken } from "@kinde/jwt-validator"
+import { jwtDecoder } from "@kinde/jwt-decoder"
 
-const validationResult = await validateToken({
-  token: "eyJhbGc...",
-  domain: "https://your-subdomain.kinde.com"
-})
+const token = "ey..." // your JWT here
 
-if (validationResult.isValid) {
-  console.log("Token is valid")
-  console.log("Decoded payload:", validationResult.payload)
-} else {
-  console.log("Token validation failed:", validationResult.error)
+const validateAndDecode = async () => {
+  try {
+    // Validate the token
+    const result = await validateToken({
+      token,
+      domain: "https://your-subdomain.kinde.com",
+    })
+
+    if (result.valid) {
+      console.log("Token is valid")
+
+      // Decode after validation
+      const decoded = jwtDecoder(token)
+      console.log("Decoded payload:", decoded)
+    } else {
+      console.log("Token validation failed:", result.message)
+    }
+  } catch (error) {
+    // The validator throws for JWKS or validation errors
+    console.error("Token is invalid:", error)
+  }
 }
+
+validateAndDecode()
 ```
 
 ## Manual JWT Decoding
@@ -331,13 +350,12 @@ import { jwtDecoder } from "@kinde/jwt-decoder"
 
 function displayUserInfo(token) {
   try {
-    const decoded = jwtDecoder(token)
-    const { payload } = decoded
-    
-    console.log(`User: ${payload.name || payload.email}`)
-    console.log(`Organization: ${payload.org_code}`)
-    console.log(`Permissions: ${payload.permissions?.join(', ')}`)
-    
+    const payload = jwtDecoder(token);
+
+    console.log(`User: ${payload.name || payload.email}`);
+    console.log(`Organization: ${payload.org_code}`);
+    console.log(`Permissions: ${payload.permissions?.join(', ')}`);
+
     return {
       name: payload.name,
       email: payload.email,
@@ -345,8 +363,8 @@ function displayUserInfo(token) {
       permissions: payload.permissions || []
     }
   } catch (error) {
-    console.error('Failed to decode token:', error)
-    return null
+    console.error('Failed to decode token:', error);
+    return null;
   }
 }
 ```
@@ -354,19 +372,22 @@ function displayUserInfo(token) {
 ### Checking Feature Flags
 
 ```javascript
+import { jwtDecoder } from "@kinde/jwt-decoder"
+
 function checkFeatureFlag(token, flagName) {
   try {
-    const decoded = jwtDecoder(token)
-    const featureFlags = decoded.payload.feature_flags
-    
+    const payload = jwtDecoder(token);
+
+    const featureFlags = payload.feature_flags;
+
     if (featureFlags && featureFlags[flagName]) {
-      return featureFlags[flagName].v // 'v' is the value
+      return featureFlags[flagName].v;
     }
-    
-    return false
+
+    return false;
   } catch (error) {
-    console.error('Failed to check feature flag:', error)
-    return false
+    console.error('Failed to check feature flag:', error);
+    return false;
   }
 }
 ```
@@ -374,10 +395,12 @@ function checkFeatureFlag(token, flagName) {
 ### Extracting Permissions
 
 ```javascript
-function getUserPermissions(token) {
+import { jwtDecoder } from "@kinde/jwt-decoder"
+
+export function getUserPermissions(token) {
   try {
-    const decoded = jwtDecoder(token)
-    return decoded.payload.permissions || []
+    const payload = jwtDecoder(token)
+    return payload.permissions || []
   } catch (error) {
     console.error('Failed to extract permissions:', error)
     return []
