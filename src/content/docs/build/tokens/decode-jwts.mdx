@@ -76,16 +76,15 @@ console.log(decodedToken)
 ### Type-Safe Decoding
 
 ```typescript
-import { jwtDecoder } from "@kinde/jwt-decoder";
+import { jwtDecoder, type JWTDecoded } from "@kinde/jwt-decoder"
 
 // Decode with extended type
-const decodedToken = jwtDecoder<
-  JWTDecoded & {
-    // Extra attributes here
-    custom_claim?: string;
-    feature_flags?: Record<string, any>;
-  }
->("eyJhbGc...");
+type CustomJWT = JWTDecoded & {
+  custom_claim?: string
+  feature_flags?: Record<string, any>
+}
+
+const decodedToken = jwtDecoder<CustomJWT>("ey...")
 ```
 
 ## Using Kinde JWT Validator
@@ -345,26 +344,36 @@ When decoding JWTs, ensure you:
 
 ### Displaying User Information
 
+You can extract user information from decoded tokens, including email, organization code, feature flags, and permissions.
+
+By default, the email claim is not included in the `access_token`. To enable it:
+
+1. Go to **Application** > **View Details** > **Tokens** > **Access Token** and select **Customize**.
+2. Enable the **Email (string)** claim.
+3. Select **Save**.
+
+If you need to access the user's full name and profile picture, use the `id_token` instead of the access token. The `id_token` includes these claims by default. You can decode the `id_token` using the same method as the access token. Learn more about [ID tokens](/build/tokens/about-id-tokens/).
+
 ```javascript
 import { jwtDecoder } from "@kinde/jwt-decoder"
 
 function displayUserInfo(token) {
   try {
-    const payload = jwtDecoder(token);
+    const payload = jwtDecoder(token)
 
-    console.log(`User: ${payload.name || payload.email}`);
-    console.log(`Organization: ${payload.org_code}`);
-    console.log(`Permissions: ${payload.permissions?.join(', ')}`);
+    // Note: Email must be enabled in token customization for access tokens
+    console.log(`User: ${payload.email}`)
+    console.log(`Organization code: ${payload.org_code}`)
+    console.log(`Permissions: ${payload.permissions?.join(", ")}`)
 
     return {
-      name: payload.name,
-      email: payload.email,
-      organization: payload.org_code,
-      permissions: payload.permissions || []
+      email: payload?.email || "",
+      org_code: payload.org_code,
+      permissions: payload.permissions || [],
     }
   } catch (error) {
-    console.error('Failed to decode token:', error);
-    return null;
+    console.error("Failed to decode token:", error)
+    return null
   }
 }
 ```
