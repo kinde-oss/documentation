@@ -38,6 +38,8 @@ The **Model Context Protocol (MCP)** is an open standard that allows AI assistan
 
 ## Step 1: Create an Environment API Key
 
+An **Environment API Key** is a global authentication key in Kinde that enables you to access your Kinde Users, Organizations, Roles, Permissions, and more programmatically, such as the Kinde Management API, or the Kinde MCP Server.
+
 1. Sign in to your **Kinde dashboard**
 2. Navigate to **Settings** > **APIs** > **Kinde Management API** > select **View details**
 3. Go to the **API Keys** tab
@@ -64,6 +66,24 @@ The **Model Context Protocol (MCP)** is an open standard that allows AI assistan
     ![copy api key](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7f061eba-a7fa-4460-f959-9a5b56886d00/public)
 
 
+## Step 2: Configure the AI Assistant
+
+Now that you have your API key, configure your AI assistant to connect to the Kinde MCP Server using your API key and Kinde subdomain:
+
+    ```json
+        "kinde": {
+          "url": "https://YOUR_BUSINESS.kinde.com/mcp",
+          "headers": {
+            "Authorization": "Bearer YOUR_API_KEY"
+          }
+        }
+    ```
+
+    - **Replace**: `YOUR_BUSINESS` with your Kinde subdomain (e.g., `acme` for `acme.kinde.com`)
+    - **Replace**: `YOUR_API_KEY` with the Environment API Key from Step 1
+
+Select your AI assistant below to configure the MCP server:
+
 ## Cursor
 
 1. Open **Cursor**
@@ -88,9 +108,6 @@ The **Model Context Protocol (MCP)** is an open standard that allows AI assistan
     }
 
     ```
-    
-    - **Replace**: `YOUR_BUSINESS` with your Kinde subdomain (e.g., `acme` for `acme.kinde.com`)
-    - **Replace**: `YOUR_API_KEY` with the Environment API Key from Step 1
 
 6. Save and restart Cursor.
 7. Once enabled, you should now see the Kinde MCP server in the list of available tools.
@@ -157,7 +174,7 @@ The **Model Context Protocol (MCP)** is an open standard that allows AI assistan
 
     ![vs code MCP server enabled](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/aefee25c-d8c3-45b3-2fa6-0407338c8400/public)
 
-## Testing the MCP Server
+## Step 3: Testing the MCP Server
 
 Once you have setup the MCP server, you can ask your AI assistant "What tools do you have available from Kinde?" to see the available operations.
 
@@ -226,31 +243,51 @@ Check out the [About the Kinde MCP Server](/mcp-server/about-mcp-server/about-mc
 
 ---
 
-## Troubleshooting
+## Troubleshooting Kinde MCP Server
 
-### "No tools available" or empty tool list
+<details>
+<summary>Why am I seeing "No tools available" or an empty tool list?</summary>
 
-- ✓ Verify your API key has the correct scopes
-- ✓ Ensure **Enable for MCP Server** is checked
-- ✓ Check that your API key is active
+If you're not seeing any tools available from the Kinde MCP server, try the following:
 
-### "Authentication required" or "Invalid token"
+- Verify your API key has the correct scopes
+- Ensure **Enable for MCP Server** is checked
+- Check that your API key is active
 
-- ✓ Check your API key is copied correctly (no extra spaces)
-- ✓ Verify the format: `Bearer YOUR_API_KEY`
-- ✓ Confirm your Kinde subdomain is correct
+</details>
 
-### Connection timeout
+<details>
+<summary>Why am I getting "Authentication required" or "Invalid token" errors?</summary>
 
-- ✓ Check your internet connection
-- ✓ Verify URL: `https://YOUR_BUSINESS.kinde.com/mcp`
-- ✓ Restart your AI assistant
+If you're encountering authentication errors, check the following:
 
-### Missing expected operations
+- Check your API key is copied correctly (no extra spaces)
+- Verify the format: `Bearer YOUR_API_KEY`
+- Confirm your Kinde subdomain is correct
 
-- ✓ Tools depend on your API key's scopes
-- ✓ Check scopes in the Kinde dashboard
-- ✓ Create a new key with additional scopes if needed
+</details>
+
+<details>
+<summary>Why am I experiencing connection timeouts?</summary>
+
+If you're experiencing connection timeouts, try these solutions:
+
+- Check your internet connection
+- Verify URL: `https://YOUR_BUSINESS.kinde.com/mcp`
+- Restart your AI assistant
+
+</details>
+
+<details>
+<summary>Why are some expected operations missing?</summary>
+
+If you're not seeing all the operations you expect, remember that:
+
+- Tools depend on your API key's scopes
+- Check scopes in the Kinde dashboard
+- Create a new key with additional scopes if needed
+
+</details>
 
 ---
 
@@ -273,8 +310,3 @@ The Kinde MCP Server transforms how developers interact with authentication and 
 - [API Scopes and Permissions](https://docs.kinde.com/kinde-apis/management/#scopes)
 - [Managing Roles and Permissions](https://docs.kinde.com/manage-users/roles-and-permissions/)
 - [About Organizations](https://docs.kinde.com/build/organizations/multi-tenancy-using-organizations/)
-
-
-What is an Environment API Key?
-
-Environment API Keys are special API keys designed for machine-to-machine communication, including the MCP Server.
