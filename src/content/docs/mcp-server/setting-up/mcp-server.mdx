@@ -1,6 +1,6 @@
 ---
 page_id: 1119f226-3b22-4131-b2a6-a568b1dfb011
-title: Set up the Kinde MCP server
+title: Set up the Kinde MCP server with AI assistants
 description: "Step-by-step guide to setting up the Kinde MCP server"
 sidebar:
   order: 1
@@ -30,24 +30,6 @@ ai_summary: Step-by-step guide to setting up the Kinde MCP server
 ---
 
 The **Model Context Protocol (MCP)** is an open standard that allows AI assistants to interact with external tools and services. Kinde's MCP Server enables AI assistants like **Cursor**, **Claude Desktop**, and **VS Code** to directly interact with your Kinde environment—letting you manage users, roles, permissions, and more using natural language. So instead of switching between your IDE and the Kinde dashboard, ask your AI assistant to perform Kinde operations for you.
-
----
-
-## What can you do with the Kinde MCP Server?
-
-With the MCP Server connected, you can ask your AI assistant to:
-
-| Use Case | Example Prompt |
-| --- | --- |
-| 👥 Query users | "Show me all users in my Kinde environment" |
-| 🎭 Manage roles | "Create a new role called 'editor' with read and write permissions" |
-| 🏢 View organizations | "List all organizations and their user counts" |
-| 🔐 Create permissions | "Add a new permission called 'delete:posts'" |
-| 🚩 Manage feature flags | "What feature flags are enabled for this organization?" |
-| 📋 Handle subscribers | "Get the subscriber list for my application" |
-| 🏷️ Create properties | "Create a custom user property for department" |
-
----
 
 ### What you need
 
@@ -81,9 +63,8 @@ With the MCP Server connected, you can ask your AI assistant to:
 
     ![copy api key](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7f061eba-a7fa-4460-f959-9a5b56886d00/public)
 
-## Step 2: Configure Your AI Assistant
 
-### Cursor
+## Cursor
 
 1. Open **Cursor**
 2. Go to **Cursor** > **Settings** > **Cursor Settings**
@@ -112,11 +93,11 @@ With the MCP Server connected, you can ask your AI assistant to:
     - **Replace**: `YOUR_API_KEY` with the Environment API Key from Step 1
 
 6. Save and restart Cursor.
-7. You should now see the Kinde MCP server in the list of available tools.
+7. Once enabled, you should now see the Kinde MCP server in the list of available tools.
 
     ![cursor MCP server enabled](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/40ea4f02-1f23-4fb0-8ef3-a4440a146900/public)  
 
-### Claude Desktop
+## Claude Desktop
 
 1. Open **Claude Desktop**
 2. Go to **Settings** > **Developer** > select **Edit Config**, the `claude_desktop_config.json` file opens in your file browser.
@@ -151,24 +132,85 @@ With the MCP Server connected, you can ask your AI assistant to:
 
     ![claude local MCP servers](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/690147de-ffae-4fe0-124b-610cf0f0e700/public)
 
-### VS Code (with MCP extension)
+## VS Code
 
-1. Open your **VS Code settings**
-2. Find the MCP server configuration section
-3. Add the Kinde server with the same URL and authorization header format as above
+1. Open the Command Palette by pressing `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS)
+2. Type `MCP: Open User Configuration` and select it
+3. Add the following configuration and save the file:
 
----
+    ```json
+    {
+      "servers": {
+        "kinde": {
+          "type": "http",
+          "url": "https://YOUR_BUSINESS.kinde.com/mcp",
+          "headers": {
+            "Authorization": "Bearer YOUR_API_KEY"
+          }
+        }
+      }
+    }
+    ```
 
-## Step 3: Verify the Connection
+3. Restart VS Code
+4. Go to the **Extensions** section and open the MCP panel. You should see the Kinde MCP server listed there.
 
-Once configured, verify the connection by asking your AI assistant:
+    ![vs code MCP server enabled](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/aefee25c-d8c3-45b3-2fa6-0407338c8400/public)
 
-> "What tools do you have available from Kinde?"
-> 
+## Testing the MCP Server
 
-Your assistant should list the available Kinde operations based on the scopes you granted.
+Once you have setup the MCP server, you can ask your AI assistant "What tools do you have available from Kinde?" to see the available operations.
 
----
+Output from Claude Desktop:
+
+```text
+I have access to these Kinde API tools:
+
+Users:
+
+GetUsers - List/filter users by email, phone, username, user_id, or organization status
+GetUserData - Get specific user details by ID
+
+Organizations:
+
+GetOrganizations - List organizations with sorting options
+GetOrganization - Get specific organization details by code
+
+Roles & Permissions:
+
+CreateRole - Create new roles with keys, names, descriptions, and default settings
+CreatePermission - Create new permissions with keys, names, and descriptions
+
+All tools support expanding related data (organizations, identities, billing) where applicable.
+
+What would you like to do with Kinde?
+```
+
+
+Below are some more example prompts you can try out with the MCP Server.
+
+### User Management
+
+- "List all users who signed up in the last 7 days"
+- "Find the user with email [john@example.com](mailto:john@example.com) and show me their profile"
+- "How many users do I have in total?"
+
+### Role & Permission Management
+
+- "Create a new role called 'content-moderator' that can read and update posts"
+- "Show me all the permissions assigned to the 'admin' role"
+- "What roles does the user with ID usr_abc123 have?"
+
+### Organization Management
+
+- "List all organizations and how many users each has"
+- "Show me the feature flags enabled for the 'enterprise' organization"
+- "What permissions does [john@example.com](mailto:john@example.com) have in 'acme-corp'?"
+
+### Properties & Configuration
+
+- "Create a custom user property called 'department' that accepts text values"
+- "Show me all the environment variables configured"
 
 ## Available Operations
 
@@ -218,30 +260,7 @@ The MCP Server exposes the following operations (depending on your API key scope
 
 ---
 
-## Example Prompts
 
-### User Management
-
-- "List all users who signed up in the last 7 days"
-- "Find the user with email [john@example.com](mailto:john@example.com) and show me their profile"
-- "How many users do I have in total?"
-
-### Role & Permission Management
-
-- "Create a new role called 'content-moderator' that can read and update posts"
-- "Show me all the permissions assigned to the 'admin' role"
-- "What roles does the user with ID usr_abc123 have?"
-
-### Organization Management
-
-- "List all organizations and how many users each has"
-- "Show me the feature flags enabled for the 'enterprise' organization"
-- "What permissions does [john@example.com](mailto:john@example.com) have in 'acme-corp'?"
-
-### Properties & Configuration
-
-- "Create a custom user property called 'department' that accepts text values"
-- "Show me all the environment variables configured"
 
 ---
 
