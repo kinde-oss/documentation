@@ -45,7 +45,11 @@ const sidebarData = [
         autogenerate: {directory: "build/set-up-options"},
         collapsed: false
       },
-      {label: "Self-service portal", autogenerate: {directory: "build/self-service-portal"}, collapsed: false},
+      {
+        label: "Self-service portal",
+        autogenerate: {directory: "build/self-service-portal"},
+        collapsed: false
+      },
       {label: "Environments", autogenerate: {directory: "build/environments"}, collapsed: false},
       {label: "Applications", autogenerate: {directory: "build/applications"}, collapsed: false},
       {label: "Organizations", autogenerate: {directory: "build/organizations"}, collapsed: false},
@@ -91,7 +95,7 @@ const sidebarData = [
         label: "Account API",
         autogenerate: {directory: "developer-tools/account-api"},
         collapsed: false
-      },
+      }
     ]
   },
   {
@@ -101,7 +105,11 @@ const sidebarData = [
     collapsed: true,
     cardLink: "/manage-your-apis/about-api-keys/",
     items: [
-      {label: "Register and manage your APIs", autogenerate: {directory: "developer-tools/your-apis"}, collapsed: false},
+      {
+        label: "Register and manage your APIs",
+        autogenerate: {directory: "developer-tools/your-apis"},
+        collapsed: false
+      },
       {
         label: "About API keys",
         autogenerate: {directory: "manage-your-apis/about-api-keys/"},
@@ -112,7 +120,30 @@ const sidebarData = [
         autogenerate: {directory: "manage-your-apis/add-manage-api-keys/"},
         collapsed: false
       },
-      {label: "Test and troubleshoot", autogenerate: {directory: "manage-your-apis/troubleshoot-api-keys/"}, collapsed: false}
+      {
+        label: "Test and troubleshoot",
+        autogenerate: {directory: "manage-your-apis/troubleshoot-api-keys/"},
+        collapsed: false
+      }
+    ]
+  },
+  {
+    label: "MCP Server",
+    description: "Integrate Kinde with AI assistants using the Model Context Protocol",
+    icon: "dev-tools",
+    collapsed: true,
+    cardLink: "/mcp-server/about-mcp-server",
+    items: [
+      {
+        label: "About MCP Server",
+        autogenerate: {directory: "mcp-server/about-mcp-server"},
+        collapsed: false
+      },
+      {
+        label: "Get started",
+        autogenerate: {directory: "mcp-server/get-started"},
+        collapsed: false
+      }
     ]
   },
   {
@@ -401,25 +432,6 @@ const sidebarData = [
       //   autogenerate: {directory: "releases/plan-and-release"},
       //   collapsed: false
       // }
-    ]
-  },
-  {
-    label: "MCP Server",
-    description: "Integrate Kinde with AI assistants using the Model Context Protocol",
-    icon: "dev-tools",
-    collapsed: true,
-    cardLink: "/mcp-server/about-mcp-server/about-mcp-server/",
-    items: [
-      {
-        label: "About MCP Server",
-        autogenerate: {directory: "mcp-server/about-mcp-server"},
-        collapsed: false
-      },
-      {
-        label: "Setting up",
-        autogenerate: {directory: "mcp-server/setting-up"},
-        collapsed: false
-      }
     ]
   },
   {
