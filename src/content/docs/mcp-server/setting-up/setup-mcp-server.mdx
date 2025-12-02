@@ -29,21 +29,21 @@ deprecated: false
 ai_summary: Step-by-step guide to setting up the Kinde MCP server
 ---
 
-The **Model Context Protocol (MCP)** is an open standard that allows AI assistants to interact with external tools and services. Kinde's MCP Server enables AI assistants like **Cursor**, **Claude Desktop**, and **VS Code** to directly interact with your Kinde environment—letting you manage users, roles, permissions, and more using natural language. So instead of switching between your IDE and the Kinde dashboard, ask your AI assistant to perform Kinde operations for you.
+Learn how to set up the Kinde MCP Server with popular AI assistants like **Cursor**, **Claude Desktop**, and **VS Code**. The Kinde MCP Server enables you to manage users, organizations, roles, permissions, and more directly from your IDE using natural language, eliminating the need to switch between your code editor and the Kinde dashboard.
 
 ### What you need
 
 - A [Kinde](https://kinde.com) account with admin access to your business (Sign up for free)
-- An AI assistant that supports MCP protocol (e.g., Cursor)
+- An AI assistant that supports MCP protocol (e.g., [Claude Desktop](https://www.claude.com/download))
 
 ## Step 1: Create an Environment API Key
 
-An **Environment API Key** is a global authentication key in Kinde that enables you to access your Kinde Users, Organizations, Roles, Permissions, and more programmatically, such as the Kinde Management API, or the Kinde MCP Server.
+An **Environment API Key** is a global authentication key in Kinde that enables you to access your Kinde Users, Organizations, Roles, Permissions, and more programmatically, using the Kinde Management API, or the Kinde MCP Server. To get one, follow the steps below:
 
 1. Sign in to your **Kinde dashboard**
 2. Navigate to **Settings** > **APIs** > **Kinde Management API** > select **View details**
 3. Go to the **API Keys** tab
-4. Select **Add API Key**, a pop up appears
+4. Select **Add API Key**, a pop-up appears
 5. Give your key a name (e.g., "Cursor MCP Access")
 6. Check the option to **Can be used by the Kinde MCP server**
 
@@ -54,7 +54,8 @@ An **Environment API Key** is a global authentication key in Kinde that enables 
     - `read:organizations` — View organizations
     - `create:roles` — Create new roles
     - `create:permissions` — Create permissions
-    - See all the available [scopes you can use in the Kinde MCP Server](/mcp-server/about-mcp-server/about-mcp-server/)
+  
+    See all the available [scopes you can use in the Kinde MCP Server](/mcp-server/about-mcp-server/about-mcp-server/)
 
     <Aside type="warning" title="Security note">
       Only grant the minimum scopes necessary for your use case. You can always create additional API keys with different scope configurations.
@@ -68,7 +69,7 @@ An **Environment API Key** is a global authentication key in Kinde that enables 
 
 ## Step 2: Configure the AI Assistant
 
-Now that you have your API key, configure your AI assistant to connect to the Kinde MCP Server using your API key and Kinde subdomain:
+Now that you have your API key, configure your AI assistant to connect to the Kinde MCP Server using the following json configuration:
 
     ```json
         "kinde": {
@@ -110,7 +111,7 @@ Select your AI assistant below to configure the MCP server:
     ```
 
 6. Save and restart Cursor.
-7. Once enabled, you should now see the Kinde MCP server in the list of available tools.
+7. Once enabled, you should now see the Kinde MCP server in the list of **Installed MCP Servers**:
 
     ![cursor MCP server enabled](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/40ea4f02-1f23-4fb0-8ef3-a4440a146900/public)  
 
@@ -145,14 +146,14 @@ Select your AI assistant below to configure the MCP server:
 ```
 
 5. Restart **Claude Desktop**.
-6. You should now see the Kinde MCP server in the list of available tools.
+6. You should now see the Kinde MCP server on the page:
 
     ![claude local MCP servers](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/690147de-ffae-4fe0-124b-610cf0f0e700/public)
 
 ## VS Code
 
 1. Open the Command Palette by pressing `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS)
-2. Type `MCP: Open User Configuration` and select it
+2. Type `MCP: Open User Configuration` and select it; the `mcp.json` file opens.
 3. Add the following configuration and save the file:
 
     ```json
@@ -178,7 +179,7 @@ Select your AI assistant below to configure the MCP server:
 
 Once you have setup the MCP server, you can ask your AI assistant "What tools do you have available from Kinde?" to see the available operations.
 
-Output from Claude Desktop:
+Sample  output from Claude Desktop:
 
 ```text
 I have access to these Kinde API tools:
@@ -231,18 +232,6 @@ Below are some more example prompts you can try out with the MCP Server.
 
 Check out the [About the Kinde MCP Server](/mcp-server/about-mcp-server/about-mcp-server/) for more information on the available operations.
 
-## Security Best Practices
-
-| Practice | Description |
-| --- | --- |
-| 🎯 Least privilege | Only grant the scopes your AI assistant actually needs |
-| 🔐 Separate keys | Create different API keys for different use cases |
-| 🔄 Rotate regularly | Periodically rotate your Environment API Keys |
-| 👁️ Monitor usage | Check Kinde audit logs for MCP Server operations |
-| 🚫 Never share | Don't commit API keys to version control |
-
----
-
 ## Troubleshooting Kinde MCP Server
 
 <details>
@@ -252,7 +241,7 @@ If you're not seeing any tools available from the Kinde MCP server, try the foll
 
 - Verify your API key has the correct scopes
 - Ensure **Enable for MCP Server** is checked
-- Check that your API key is active
+- Check that your API key is `active` and not `revoked`
 
 </details>
 
@@ -261,8 +250,8 @@ If you're not seeing any tools available from the Kinde MCP server, try the foll
 
 If you're encountering authentication errors, check the following:
 
-- Check your API key is copied correctly (no extra spaces)
-- Verify the format: `Bearer YOUR_API_KEY`
+- Check your API key is copied correctly (no missing characters or extra spaces)
+- Verify the format: `Bearer YOUR_API_KEY` (The word "Bearer" is required)
 - Confirm your Kinde subdomain is correct
 
 </details>
@@ -270,26 +259,26 @@ If you're encountering authentication errors, check the following:
 <details>
 <summary>Why am I experiencing connection timeouts?</summary>
 
-If you're experiencing connection timeouts, try these solutions:
-
-- Check your internet connection
-- Verify URL: `https://YOUR_BUSINESS.kinde.com/mcp`
-- Restart your AI assistant
+In case of connection issues, make sure the URL: `https://YOUR_BUSINESS.kinde.com/mcp` and your API key are correct. Restart your AI assistant if needed. And finally check your internet connection.
 
 </details>
 
 <details>
-<summary>Why are some expected operations missing?</summary>
+<summary>Why can't I create or update users, and organization using the MCP server?</summary>
 
-If you're not seeing all the operations you expect, remember that:
-
-- Tools depend on your API key's scopes
-- Check scopes in the Kinde dashboard
-- Create a new key with additional scopes if needed
+As AI can misinterpret requests or hallucinate, the scopes that the Kinde MCP server can be assigned are currently limited to **gets and creates** only. This ensures that AI clients can query information and create new resources, but cannot modify or delete existing data, providing an additional layer of safety when using AI to interact with your Kinde account.
 
 </details>
 
----
+## Security Best Practices
+
+| Practice | Description |
+| --- | --- |
+| 🎯 Least privilege | Only grant the scopes your AI assistant actually needs |
+| 🔐 Separate keys | Create different API keys for different use cases |
+| 🔄 Rotate regularly | Periodically rotate your Environment API Keys |
+| 👁️ Monitor usage | Check Kinde audit logs for MCP Server operations |
+| 🚫 Never share | Don't commit API keys to version control |ß
 
 ## How Kinde Helps
 
