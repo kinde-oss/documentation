@@ -29,16 +29,276 @@ deprecated: false
 ai_summary: Step-by-step guide to setting up the Kinde MCP server
 ---
 
-Follow the steps below to connect your Kinde account to your preferred AI client and begin interacting with natural language.
+The **Model Context Protocol (MCP)** is an open standard that allows AI assistants to interact with external tools and services. Kinde's MCP Server enables AI assistants like **Cursor**, **Claude Desktop**, and **VS Code** to directly interact with your Kinde environment—letting you manage users, roles, permissions, and more using natural language. So instead of switching between your IDE and the Kinde dashboard, ask your AI assistant to perform Kinde operations for you.
 
-## Setup
+---
 
-1. **Set up an environment-level API key** - Create an API key in your Kinde environment that defines the scope of access the AI client will have. This allows you to control exactly what the AI can do in your Kinde account.
+## What can you do with the Kinde MCP Server?
 
-   To do this, go to **Settings** > **APIs** > **Kinde Management API** > **API keys** and click **Add API key**.
-   Ensure to toggle on the option ***Can be used by the Kinde MCP server*** and select the scopes you wish the AI client to have access to.
+With the MCP Server connected, you can ask your AI assistant to:
 
-2. **Add the configuration to your AI client** - Configure your AI client (such as Claude or Cursor) with the API key and connection details provided to begin interacting with Kinde.
-If you are using Cursor there is a quick-link that will do this for you.
+| Use Case | Example Prompt |
+| --- | --- |
+| 👥 Query users | "Show me all users in my Kinde environment" |
+| 🎭 Manage roles | "Create a new role called 'editor' with read and write permissions" |
+| 🏢 View organizations | "List all organizations and their user counts" |
+| 🔐 Create permissions | "Add a new permission called 'delete:posts'" |
+| 🚩 Manage feature flags | "What feature flags are enabled for this organization?" |
+| 📋 Handle subscribers | "Get the subscriber list for my application" |
+| 🏷️ Create properties | "Create a custom user property for department" |
 
-3. **Start asking questions** - Once configured, you can use natural language to query and manage your Kinde resources through your AI client.
+---
+
+### What you need
+
+- A [Kinde](https://kinde.com) account with admin access to your business (Sign up for free)
+- An AI assistant that supports MCP protocol (e.g., Cursor)
+
+## Step 1: Create an Environment API Key
+
+1. Sign in to your **Kinde dashboard**
+2. Navigate to **Settings** > **APIs** > **Kinde Management API** > select **View details**
+3. Go to the **API Keys** tab
+4. Select **Add API Key**, a pop up appears
+5. Give your key a name (e.g., "Cursor MCP Access")
+6. Check the option to **Can be used by the Kinde MCP server**
+
+    ![add api key](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/14258cdf-eaa0-4297-f5cb-daf98039ab00/public)
+
+7. Select the scopes you want to grant:
+    - `read:users` — View user information
+    - `read:organizations` — View organizations
+    - `create:roles` — Create new roles
+    - `create:permissions` — Create permissions
+    - Add other scopes based on your needs
+
+    <Aside type="warning" title="Security note">
+      Only grant the minimum scopes necessary for your use case. You can always create additional API keys with different scope configurations.
+    </Aside>
+
+8. Select **Create**
+9. Copy and save the generated API key, you will need it for the next step.
+
+    ![copy api key](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7f061eba-a7fa-4460-f959-9a5b56886d00/public)
+
+## Step 2: Configure Your AI Assistant
+
+### Cursor
+
+1. Open **Cursor**
+2. Go to **Cursor** > **Settings** > **Cursor Settings**
+3. Navigate to **Tools & MCP**
+4. Select **Add custom MCP** or if you already have other MCP servers, select **New MCP server**, the `mcp.json` file opens.
+  
+    ![add MCP server in cursor](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/06bb2677-6d5a-4f44-989b-5e2e81e87800/public)
+
+5. Add the following configuration, and save the file.
+
+    ```json
+    {
+      "mcpServers": {
+        "kinde": {
+          "url": "https://YOUR_BUSINESS.kinde.com/mcp",
+          "headers": {
+            "Authorization": "Bearer YOUR_API_KEY"
+          }
+        }
+      }
+    }
+
+    ```
+    
+    - **Replace**: `YOUR_BUSINESS` with your Kinde subdomain (e.g., `acme` for `acme.kinde.com`)
+    - **Replace**: `YOUR_API_KEY` with the Environment API Key from Step 1
+
+6. Save and restart Cursor.
+7. You should now see the Kinde MCP server in the list of available tools.
+
+    ![cursor MCP server enabled](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/40ea4f02-1f23-4fb0-8ef3-a4440a146900/public)  
+
+### Claude Desktop
+
+1. Open your Claude Desktop configuration file:
+
+| Platform | Path |
+| --- | --- |
+| macOS | ~/Library/Application Support/Claude/claude_desktop_config.json |
+| Windows | %APPDATA%\Claude\claude_desktop_config.json |
+1. Add the Kinde MCP server configuration:
+
+```json
+{
+  "mcpServers": {
+    "kinde": {
+      "url": "https://YOUR_BUSINESS.kinde.com/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}
+
+```
+
+1. Save the file and restart Claude Desktop
+
+---
+
+### VS Code (with MCP extension)
+
+1. Open your **VS Code settings**
+2. Find the MCP server configuration section
+3. Add the Kinde server with the same URL and authorization header format as above
+
+---
+
+## Step 3: Verify the Connection
+
+Once configured, verify the connection by asking your AI assistant:
+
+> "What tools do you have available from Kinde?"
+> 
+
+Your assistant should list the available Kinde operations based on the scopes you granted.
+
+---
+
+## Available Operations
+
+The MCP Server exposes the following operations (depending on your API key scopes):
+
+### Users
+
+| Operation | Description | Scope |
+| --- | --- | --- |
+| GetUsers | List all users | read:users |
+| GetUserData | Get user details | read:users |
+| GetUserIdentities | Get linked identity providers | read:user_identities |
+
+### Roles & Permissions
+
+| Operation | Description | Scope |
+| --- | --- | --- |
+| GetRoles | List all roles | read:roles |
+| GetRole | Get role details | read:roles |
+| CreateRole | Create a new role | create:roles |
+| GetPermissions | List all permissions | read:permissions |
+| CreatePermission | Create a permission | create:permissions |
+| GetRolePermissions | Get role's permissions | read:role_permissions |
+
+### Organizations
+
+| Operation | Description | Scope |
+| --- | --- | --- |
+| GetOrganizations | List all organizations | read:organizations |
+| GetOrganization | Get organization details | read:organizations |
+| GetOrganizationUsers | List users in org | read:organization_users |
+| GetOrganizationUserRoles | Get user's roles in org | read:organization_users |
+| GetOrganizationUserPermissions | Get user's permissions in org | read:organization_users |
+| GetOrganizationFeatureFlags | Get org's feature flags | read:feature_flags |
+
+### Configuration
+
+| Operation | Description | Scope |
+| --- | --- | --- |
+| GetEnvironment | Get environment details | read:environments |
+| GetProperties | List custom properties | read:properties |
+| CreateProperty | Create a custom property | create:properties |
+| CreateFeatureFlag | Create a feature flag | create:feature_flags |
+| CreateEnvironmentVariable | Create env variable | create:environment_variables |
+| GetSubscribers | List subscribers | read:subscribers |
+| CreateSubscriber | Create a subscriber | create:subscribers |
+
+---
+
+## Example Prompts
+
+### User Management
+
+- "List all users who signed up in the last 7 days"
+- "Find the user with email [john@example.com](mailto:john@example.com) and show me their profile"
+- "How many users do I have in total?"
+
+### Role & Permission Management
+
+- "Create a new role called 'content-moderator' that can read and update posts"
+- "Show me all the permissions assigned to the 'admin' role"
+- "What roles does the user with ID usr_abc123 have?"
+
+### Organization Management
+
+- "List all organizations and how many users each has"
+- "Show me the feature flags enabled for the 'enterprise' organization"
+- "What permissions does [john@example.com](mailto:john@example.com) have in 'acme-corp'?"
+
+### Properties & Configuration
+
+- "Create a custom user property called 'department' that accepts text values"
+- "Show me all the environment variables configured"
+
+---
+
+## Security Best Practices
+
+| Practice | Description |
+| --- | --- |
+| 🎯 Least privilege | Only grant the scopes your AI assistant actually needs |
+| 🔐 Separate keys | Create different API keys for different use cases |
+| 🔄 Rotate regularly | Periodically rotate your Environment API Keys |
+| 👁️ Monitor usage | Check Kinde audit logs for MCP Server operations |
+| 🚫 Never share | Don't commit API keys to version control |
+
+---
+
+## Troubleshooting
+
+### "No tools available" or empty tool list
+
+- ✓ Verify your API key has the correct scopes
+- ✓ Ensure **Enable for MCP Server** is checked
+- ✓ Check that your API key is active
+
+### "Authentication required" or "Invalid token"
+
+- ✓ Check your API key is copied correctly (no extra spaces)
+- ✓ Verify the format: `Bearer YOUR_API_KEY`
+- ✓ Confirm your Kinde subdomain is correct
+
+### Connection timeout
+
+- ✓ Check your internet connection
+- ✓ Verify URL: `https://YOUR_BUSINESS.kinde.com/mcp`
+- ✓ Restart your AI assistant
+
+### Missing expected operations
+
+- ✓ Tools depend on your API key's scopes
+- ✓ Check scopes in the Kinde dashboard
+- ✓ Create a new key with additional scopes if needed
+
+---
+
+## How Kinde Helps
+
+The Kinde MCP Server transforms how developers interact with authentication and user management:
+
+| Benefit | Description |
+| --- | --- |
+| ⚡ Move faster | Execute Kinde operations without leaving your IDE |
+| 🔄 Less context switching | Manage users and permissions with natural language |
+| 🤖 Automate tasks | Let your AI handle routine user management |
+| 📖 Learn naturally | Explore Kinde's API by asking what's possible |
+
+---
+
+## Related Documentation
+
+- [Kinde Management API](https://docs.kinde.com/kinde-apis/management/)
+- [API Scopes and Permissions](https://docs.kinde.com/kinde-apis/management/#scopes)
+- [Managing Roles and Permissions](https://docs.kinde.com/manage-users/roles-and-permissions/)
+- [About Organizations](https://docs.kinde.com/build/organizations/multi-tenancy-using-organizations/)
+
+
+What is an Environment API Key?
+
+Environment API Keys are special API keys designed for machine-to-machine communication, including the MCP Server.
