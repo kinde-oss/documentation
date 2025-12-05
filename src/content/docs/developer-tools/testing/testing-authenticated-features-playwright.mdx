@@ -1,0 +1,518 @@
+---
+page_id: f38ed786-7234-44d1-a564-f7269ce536c5
+title: Testing authenticated features with Playwright
+description: "Comprehensive guide to testing authenticated features using Playwright, including reusing authentication state, CI/CD integration, and handling passwordless flows."
+sidebar:
+  order: 4
+relatedArticles:
+  - cc2bd7c3-b365-417f-a6d0-a2685acd6a7e
+  - c1b1ea81-35f9-467e-8079-042d6a786e55
+topics:
+  - developer-tools
+  - testing
+  - playwright
+  - e2e-testing
+  - authenticated-testing
+sdk: []
+languages:
+  - JavaScript
+  - TypeScript
+audience: developers
+complexity: intermediate
+keywords:
+  - Playwright
+  - authenticated testing
+  - e2e testing
+  - test automation
+  - CI/CD
+  - authentication state
+  - Mailosaur
+updated: 2025-01-27
+featured: false
+deprecated: false
+ai_summary: Comprehensive guide to testing authenticated features using Playwright, including reusing authentication state, CI/CD integration, and handling passwordless flows.
+---
+
+<Aside type="info">
+
+**Last updated: January 27, 2025**
+
+We're continuously improving Kinde and expanding testing capabilities. This documentation is regularly updated to reflect the latest supported use cases and best practices.
+
+</Aside>
+
+This guide covers how to implement automated end-to-end testing for applications that use Kinde authentication, using Playwright as your testing framework.
+
+## Overview
+
+There are two main approaches to E2E testing with Kinde:
+
+1. **API Testing with Refresh Tokens** – Bypass the UI login flow and use pre-authenticated tokens
+2. **Full UI Testing** – Automate the complete sign-in flow through the browser
+
+We recommend combining both approaches: use stored authentication state for most tests, and validate the actual login flow in dedicated auth tests.
+
+## Approach 1: Reusing Authentication State (Recommended)
+
+Playwright supports saving and reusing browser authentication state. This is the most efficient approach for most test suites.
+
+### Step 1: Create a test user in Kinde
+
+1. Go to your Kinde dashboard → **Users**
+2. Create a dedicated test user (e.g., `e2e-test@yourcompany.com`)
+3. Use **email + password** authentication for simplicity
+4. Ensure the email is verified
+
+### Step 2: Configure your Playwright project
+
+```tsx
+// playwright.config.ts
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './tests',
+
+  // Global setup runs once before all tests
+  globalSetup: require.resolve('./tests/global-setup'),
+
+  projects: [
+    // Setup project - authenticates and saves state
+    {
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+    },
+
+    // Main tests - use saved auth state
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // Use saved authentication state
+        storageState: 'playwright/.auth/user.json',
+      },
+      dependencies: ['setup'],
+    },
+  ],
+});
+```
+
+### Step 3: Create the authentication setup
+
+```tsx
+// tests/auth.setup.ts
+import { test as setup, expect } from '@playwright/test';
+
+const authFile = 'playwright/.auth/user.json';
+
+setup('authenticate', async ({ page }) => {
+  // Navigate to your app's login page
+  await page.goto('https://your-app.com');
+
+  // Click sign in (this redirects to Kinde)
+  await page.click('[data-testid="sign-in-button"]');
+
+  // Wait for Kinde login page
+  await page.waitForURL(/.*kinde\.com.*/);
+
+  // Enter email
+  await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
+  await page.click('button[type="submit"]');
+
+  // Enter password
+  await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
+  await page.click('button[type="submit"]');
+
+  // Wait for redirect back to your app
+  await page.waitForURL('https://your-app.com/**');
+
+  // Verify authentication succeeded
+  await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
+
+  // Save authentication state
+  await page.context().storageState({ path: authFile });
+});
+```
+
+### Step 4: Write tests using saved auth state
+
+```tsx
+// tests/dashboard.spec.ts
+import { test, expect } from '@playwright/test';
+
+// This test runs with pre-authenticated state
+test('user can view dashboard', async ({ page }) => {
+  await page.goto('https://your-app.com/dashboard');
+
+  // No login required - already authenticated
+  await expect(page.locator('h1')).toContainText('Dashboard');
+});
+
+test('user can update profile', async ({ page }) => {
+  await page.goto('https://your-app.com/profile');
+
+  await page.fill('input[name="displayName"]', 'Test User');
+  await page.click('button[type="submit"]');
+
+  await expect(page.locator('.toast-success')).toBeVisible();
+});
+```
+
+### Step 5: Add environment variables
+
+```bash
+# .env.test (add to .gitignore!)
+TEST_USER_EMAIL=e2e-test@yourcompany.com
+TEST_USER_PASSWORD=your-secure-test-password
+```
+
+```tsx
+// playwright.config.ts - load env vars
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.test' });
+```
+
+## Approach 2: Testing the Full Login Flow
+
+For tests that specifically validate authentication flows:
+
+```tsx
+// tests/auth-flow.spec.ts
+import { test, expect } from '@playwright/test';
+
+// Don't use saved auth state for these tests
+test.use({ storageState: { cookies: [], origins: [] } });
+
+test.describe('Authentication Flow', () => {
+  test('user can sign in with email and password', async ({ page }) => {
+    await page.goto('https://your-app.com');
+
+    // Should show sign-in button when not authenticated
+    await expect(page.locator('[data-testid="sign-in-button"]')).toBeVisible();
+
+    // Click sign in
+    await page.click('[data-testid="sign-in-button"]');
+
+    // Should redirect to Kinde
+    await expect(page).toHaveURL(/.*kinde\.com.*/);
+
+    // Complete login flow
+    await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
+    await page.click('button[type="submit"]');
+
+    await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
+    await page.click('button[type="submit"]');
+
+    // Should redirect back and show authenticated state
+    await page.waitForURL('https://your-app.com/**');
+    await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
+  });
+
+  test('user can sign out', async ({ page }) => {
+    // First authenticate
+    await page.goto('https://your-app.com');
+    await page.click('[data-testid="sign-in-button"]');
+    await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
+    await page.click('button[type="submit"]');
+    await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
+    await page.click('button[type="submit"]');
+    await page.waitForURL('https://your-app.com/**');
+
+    // Now sign out
+    await page.click('[data-testid="sign-out-button"]');
+
+    // Should show signed-out state
+    await expect(page.locator('[data-testid="sign-in-button"]')).toBeVisible();
+  });
+
+  test('invalid credentials show error message', async ({ page }) => {
+    await page.goto('https://your-app.com');
+    await page.click('[data-testid="sign-in-button"]');
+
+    await page.fill('input[name="p_email"]', 'invalid@example.com');
+    await page.click('button[type="submit"]');
+
+    await page.fill('input[name="p_password"]', 'wrong-password');
+    await page.click('button[type="submit"]');
+
+    // Should show error
+    await expect(page.locator('[data-testid="error-message"]')).toBeVisible();
+  });
+});
+```
+
+## Approach 3: API Testing with Token Refresh
+
+For backend/API testing, use refresh tokens to maintain authentication without browser automation:
+
+```tsx
+// tests/api/api.setup.ts
+import { test as setup } from '@playwright/test';
+
+setup('refresh API tokens', async ({ request }) => {
+  const response = await request.post(
+    'https://your-subdomain.kinde.com/oauth2/token',
+    {
+      form: {
+        client_id: process.env.KINDE_CLIENT_ID!,
+        grant_type: 'refresh_token',
+        refresh_token: process.env.KINDE_REFRESH_TOKEN!,
+      },
+    }
+  );
+
+  const tokens = await response.json();
+
+  // Store access token for API tests
+  process.env.KINDE_ACCESS_TOKEN = tokens.access_token;
+
+  // Important: Update your secrets manager with the new refresh token
+  // for subsequent test runs
+  console.log('New refresh token (update in secrets):', tokens.refresh_token);
+});
+```
+
+```tsx
+// tests/api/users.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('API Tests', () => {
+  test('can fetch user profile', async ({ request }) => {
+    const response = await request.get('https://your-app.com/api/profile', {
+      headers: {
+        Authorization: `Bearer ${process.env.KINDE_ACCESS_TOKEN}`,
+      },
+    });
+
+    expect(response.ok()).toBeTruthy();
+
+    const data = await response.json();
+    expect(data.email).toBe(process.env.TEST_USER_EMAIL);
+  });
+
+  test('can update user settings', async ({ request }) => {
+    const response = await request.patch(
+      'https://your-app.com/api/settings',
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.KINDE_ACCESS_TOKEN}`,
+        },
+        data: {
+          theme: 'dark',
+        },
+      }
+    );
+
+    expect(response.ok()).toBeTruthy();
+  });
+});
+```
+
+## Handling Email OTP (Passwordless) Flows
+
+If your app uses passwordless authentication with email OTP, you'll need to capture the verification code. Here's an approach using Mailosaur:
+
+```tsx
+// tests/auth-otp.setup.ts
+import { test as setup, expect } from '@playwright/test';
+import MailosaurClient from 'mailosaur';
+
+const mailosaur = new MailosaurClient(process.env.MAILOSAUR_API_KEY!);
+const serverId = process.env.MAILOSAUR_SERVER_ID!;
+const testEmail = `test.${serverId}@mailosaur.net`;
+
+setup('authenticate with OTP', async ({ page }) => {
+  await page.goto('https://your-app.com');
+  await page.click('[data-testid="sign-in-button"]');
+
+  // Enter email for OTP
+  await page.fill('input[name="p_email"]', testEmail);
+  await page.click('button[type="submit"]');
+
+  // Wait for OTP email
+  const email = await mailosaur.messages.get(serverId, {
+    sentTo: testEmail,
+  });
+
+  // Extract 6-digit OTP code from email
+  const otpMatch = email.text?.body?.match(/\b(\d{6})\b/);
+  const otpCode = otpMatch?.[1];
+
+  if (!otpCode) {
+    throw new Error('Could not extract OTP code from email');
+  }
+
+  // Enter OTP
+  await page.fill('input[name="p_otp"]', otpCode);
+  await page.click('button[type="submit"]');
+
+  // Wait for successful auth
+  await page.waitForURL('https://your-app.com/**');
+  await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
+
+  // Save state
+  await page.context().storageState({ path: 'playwright/.auth/user.json' });
+
+  // Clean up - delete the email
+  await mailosaur.messages.del(email.id!);
+});
+```
+
+### Alternative: Email-to-S3 Pipeline
+
+If you have your own email infrastructure:
+
+```tsx
+// utils/email-otp.ts
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+
+const s3 = new S3Client({ region: 'us-east-1' });
+
+export async function waitForOTPEmail(
+  email: string,
+  timeoutMs = 30000
+): Promise<string> {
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < timeoutMs) {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: 'your-test-emails-bucket',
+        Key: `${email}/latest.txt`,
+      });
+
+      const response = await s3.send(command);
+      const body = await response.Body?.transformToString();
+
+      const otpMatch = body?.match(/\b(\d{6})\b/);
+      if (otpMatch) {
+        return otpMatch[1];
+      }
+    } catch (e) {
+      // Email not arrived yet
+    }
+
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+
+  throw new Error('Timeout waiting for OTP email');
+}
+```
+
+## Complete project structure
+
+```
+your-project/
+├── playwright.config.ts
+├── .env.test                    # Local env vars (gitignored)
+├── playwright/
+│   └── .auth/
+│       └── user.json            # Saved auth state (gitignored)
+├── tests/
+│   ├── auth.setup.ts            # Authentication setup
+│   ├── auth-flow.spec.ts         # Login/logout UI tests
+│   ├── dashboard.spec.ts         # Tests using saved auth
+│   ├── profile.spec.ts
+│   └── api/
+│       ├── api.setup.ts          # Token refresh setup
+│       └── users.spec.ts         # API tests
+└── package.json
+```
+
+## CI/CD integration (GitHub Actions)
+
+```yaml
+# .github/workflows/e2e-tests.yml
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        run: npx playwright test
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          KINDE_CLIENT_ID: ${{ secrets.KINDE_CLIENT_ID }}
+          KINDE_REFRESH_TOKEN: ${{ secrets.KINDE_REFRESH_TOKEN }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+```
+
+## Best practices
+
+| Practice | Description |
+| --- | --- |
+| **Use storage state** | Save auth state once, reuse across tests for speed |
+| **Isolate auth tests** | Test login flows separately with fresh browser context |
+| **Use test-specific users** | Never use real user accounts |
+| **Secure credentials** | Use GitHub Secrets or similar; never commit passwords |
+| **Handle flakiness** | Add appropriate waits for Kinde redirects |
+| **Use data-testid** | Add test IDs to your UI elements for reliable selectors |
+| **Clean up** | Delete test data after test runs when possible |
+
+## Troubleshooting
+
+### Tests fail with "Navigation timeout"
+
+Kinde redirects can take time. Increase timeout:
+
+```tsx
+await page.waitForURL('https://your-app.com/**', { timeout: 30000 });
+```
+
+### Auth state not persisting
+
+Ensure `playwright/.auth/` directory exists and is writable. Add to `.gitignore`.
+
+### Token refresh fails in CI
+
+The refresh token may have expired. Re-authenticate manually and update your CI secrets with the new refresh token.
+
+### Kinde form selectors changed
+
+Kinde may update their UI. Use more resilient selectors:
+
+```tsx
+// Instead of specific class names
+await page.locator('input[type="email"]').fill(email);
+await page.locator('input[type="password"]').fill(password);
+```
+
+## What's not supported
+
+The following limitations apply to Playwright testing with Kinde:
+
+- **Social provider flows**: Automated testing of Google, GitHub, or other social sign-in flows is not directly supported
+- **Enterprise SSO flows**: Testing SAML/SSO enterprise connections requires coordination with identity providers
+- **MFA flows**: Testing multi-factor authentication may require manual intervention
+
+## Related guides
+
+- [Testing Authentication Flows](/developer-tools/testing/testing-authentication-flows/) - Learn how to test sign-up and sign-in flows
+- [Backend API Testing with Refresh Tokens](/developer-tools/testing/backend-api-testing/) - Learn how to test APIs without browser automation
+

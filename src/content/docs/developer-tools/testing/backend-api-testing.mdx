@@ -1,0 +1,164 @@
+---
+page_id: 4882de7b-07f3-4cc8-ac01-b096e17dcc35
+title: Backend API testing with refresh tokens
+description: "Guide to testing backend APIs and services using Kinde refresh tokens for maintaining long-running authenticated sessions in automated tests."
+sidebar:
+  order: 2
+relatedArticles:
+  - cc2bd7c3-b365-417f-a6d0-a2685acd6a7e
+  - 5a248c6f-c1ae-480a-95c3-d3c69c81598d
+topics:
+  - developer-tools
+  - testing
+  - api-testing
+  - refresh-tokens
+sdk: []
+languages:
+  - JavaScript
+  - TypeScript
+  - Python
+  - curl
+audience: developers
+complexity: intermediate
+keywords:
+  - backend testing
+  - API testing
+  - refresh tokens
+  - token rotation
+  - automated testing
+  - CI/CD
+  - test automation
+updated: 2025-01-27
+featured: false
+deprecated: false
+ai_summary: Guide to testing backend APIs using Kinde refresh tokens for maintaining authenticated sessions in automated tests, including token rotation and CI/CD integration.
+---
+
+<Aside type="info">
+
+**Last updated: January 27, 2025**
+
+We're continuously improving Kinde and expanding testing capabilities. This documentation is regularly updated to reflect the latest supported use cases and best practices.
+
+</Aside>
+
+For automated backend tests, you can establish a long-running auth session using refresh tokens. This allows your test infrastructure to maintain authentication without manual sign-ins.
+
+## How it works
+
+1. Perform a one-time browser-based sign-in with a test user
+2. Extract the refresh token from that session
+3. Store the refresh token securely (e.g., GitHub Secrets, AWS Secrets Manager)
+4. Rotate tokens programmatically at the start of each test run
+
+The access token obtained this way is identical to what your production users receive.
+
+## Setup steps
+
+### Step 1: Create a test user
+
+Create a dedicated test user in your Kinde dashboard. This keeps test data separate from real user data.
+
+1. Go to your Kinde dashboard → **Users**
+2. Create a new user (e.g., `e2e-test@yourcompany.com`)
+3. Use **email + password** authentication for simplicity
+4. Ensure the email is verified
+
+### Step 2: Obtain initial tokens
+
+1. Sign in with your test user in a browser
+2. Inspect your browser's cookies or application storage to locate the refresh token and access token
+3. Store these tokens securely
+
+<Aside type="warning">
+
+**Important**: When obtaining your initial tokens, ensure your application requests the `offline_access` scope to receive a refresh token.
+
+</Aside>
+
+### Step 3: Configure token rotation in tests
+
+At the start of your test suite (e.g., in `jest.setup.js` or equivalent), exchange your stored refresh token for fresh tokens:
+
+```bash
+curl --location 'https://<your_subdomain>.kinde.com/oauth2/token' \
+  --header 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'client_id=<your_client_id>' \
+  --data-urlencode 'grant_type=refresh_token' \
+  --data-urlencode 'refresh_token=<stored_refresh_token>'
+```
+
+The response includes both a new `access_token` and a new `refresh_token`:
+
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "refresh_token": "v1.MjEyNjM1OTU5...",
+  "token_type": "bearer",
+  "expires_in": 86400
+}
+```
+
+### Step 4: Update your stored token
+
+After each token exchange:
+
+1. Update your secret manager with the new `refresh_token`
+2. Set the `access_token` as an environment variable for use in tests
+
+**Example: jest.setup.js**
+
+```jsx
+// Example: jest.setup.js
+const response = await fetch('https://your-subdomain.kinde.com/oauth2/token', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: new URLSearchParams({
+    client_id: process.env.KINDE_CLIENT_ID,
+    grant_type: 'refresh_token',
+    refresh_token: process.env.KINDE_REFRESH_TOKEN,
+  }),
+});
+
+const tokens = await response.json();
+process.env.KINDE_ACCESS_TOKEN = tokens.access_token;
+
+// Update your secret manager with tokens.refresh_token for the next run
+```
+
+## Important considerations
+
+### Token rotation
+
+After exchange, the previous refresh token remains valid for approximately 30 seconds (grace period), then becomes invalid. Always use the most recently issued refresh token.
+
+### Secure storage
+
+Never commit tokens to source control. Use secret managers like GitHub Secrets, AWS Secrets Manager, or similar.
+
+### Token refresh frequency
+
+Refresh tokens at the start of each test run to ensure fresh access tokens.
+
+## What's not supported
+
+The following limitations apply to backend API testing with refresh tokens:
+
+- **Social provider tokens**: Refresh tokens obtained through social sign-in may have different expiration behaviors
+- **Organization-scoped tokens**: If testing organization-specific APIs, ensure your test user belongs to the correct organization
+- **M2M tokens**: Machine-to-machine applications use different token mechanisms (see [M2M documentation](/machine-to-machine-applications/about-m2m/))
+
+## Reference documentation
+
+- [Refresh Tokens Guide](/build/tokens/refresh-tokens/)
+- [Configure Tokens](/build/tokens/configure-tokens/)
+- [Token Customization](/build/tokens/token-customization/)
+
+## Best practices
+
+1. **Isolate test environments**: Use separate Kinde environments or organizations for testing
+2. **Use dedicated test users**: Don't use real user accounts for automated testing
+3. **Rotate credentials regularly**: Even test credentials should follow security best practices
+4. **Handle token expiry gracefully**: Build retry logic into your tests for token refresh failures
+5. **Monitor test reliability**: Track flaky tests related to authentication timing issues
+

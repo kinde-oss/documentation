@@ -68,6 +68,11 @@ const sidebarData = [
         collapsed: false
       },
       {
+        label: "Testing",
+        autogenerate: {directory: "developer-tools/testing"},
+        collapsed: false
+      },
+      {
         label: "Front end SDKs",
         autogenerate: {directory: "developer-tools/sdks/frontend"},
         collapsed: false
