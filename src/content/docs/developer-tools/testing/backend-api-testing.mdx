@@ -1,12 +1,13 @@
 ---
 page_id: 4882de7b-07f3-4cc8-ac01-b096e17dcc35
-title: Backend API testing with refresh tokens
+title: WIP Backend API testing with refresh tokens
 description: "Guide to testing backend APIs and services using Kinde refresh tokens for maintaining long-running authenticated sessions in automated tests."
 sidebar:
-  order: 2
+  order: 3
 relatedArticles:
   - cc2bd7c3-b365-417f-a6d0-a2685acd6a7e
-  - 5a248c6f-c1ae-480a-95c3-d3c69c81598d
+  - 5a67a5c0-3211-4d66-a090-4df8fde1cdad
+  - c1b1ea81-35f9-467e-8079-042d6a786e55
 topics:
   - developer-tools
   - testing
@@ -34,14 +35,6 @@ deprecated: false
 ai_summary: Guide to testing backend APIs using Kinde refresh tokens for maintaining authenticated sessions in automated tests, including token rotation and CI/CD integration.
 ---
 
-<Aside type="info">
-
-**Last updated: January 27, 2025**
-
-We're continuously improving Kinde and expanding testing capabilities. This documentation is regularly updated to reflect the latest supported use cases and best practices.
-
-</Aside>
-
 For automated backend tests, you can establish a long-running auth session using refresh tokens. This allows your test infrastructure to maintain authentication without manual sign-ins.
 
 ## How it works
@@ -53,18 +46,15 @@ For automated backend tests, you can establish a long-running auth session using
 
 The access token obtained this way is identical to what your production users receive.
 
+<Aside type="info">
+
+**Before you begin**: Make sure you've completed the [test user and environment setup](/developer-tools/testing/setup-test-user-environment/). You'll need a test user and configured test application to proceed.
+
+</Aside>
+
 ## Setup steps
 
-### Step 1: Create a test user
-
-Create a dedicated test user in your Kinde dashboard. This keeps test data separate from real user data.
-
-1. Go to your Kinde dashboard → **Users**
-2. Create a new user (e.g., `e2e-test@yourcompany.com`)
-3. Use **email + password** authentication for simplicity
-4. Ensure the email is verified
-
-### Step 2: Obtain initial tokens
+### Step 1: Obtain initial tokens
 
 1. Sign in with your test user in a browser
 2. Inspect your browser's cookies or application storage to locate the refresh token and access token
@@ -76,7 +66,7 @@ Create a dedicated test user in your Kinde dashboard. This keeps test data separ
 
 </Aside>
 
-### Step 3: Configure token rotation in tests
+### Step 2: Configure token rotation in tests
 
 At the start of your test suite (e.g., in `jest.setup.js` or equivalent), exchange your stored refresh token for fresh tokens:
 
@@ -99,7 +89,7 @@ The response includes both a new `access_token` and a new `refresh_token`:
 }
 ```
 
-### Step 4: Update your stored token
+### Step 3: Update your stored token
 
 After each token exchange:
 
