@@ -1,0 +1,322 @@
+---
+page_id: 96f72b3a-a9e8-4a9a-8ff9-407404f9511d
+title: Verifying JWTs in Cloudflare Workers
+description: Learn how to securely verify JSON Web Tokens (JWTs) in Cloudflare Workers using the cloudflare-worker-jwt and jose libraries for fast, edge-based authentication.
+sidebar:
+  order: 2
+relatedArticles:
+  - 855e5ca8-f2fb-4162-a594-10cee8a2ff8b
+  - a07f8f6b-5d6a-4096-be52-7b13b4a3b0a5
+topics:
+  - integrate
+  - third-party-tools
+  - json-web-token
+  - cloudflare
+sdk: []
+languages: []
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - cloudflare
+  - json-web-token
+  - jwt
+  - jwks
+  - jose
+updated: 2025-11-10
+featured: false
+deprecated: false
+ai_summary: Learn how to securely verify JSON Web Tokens (JWTs) in Cloudflare Workers using the cloudflare-worker-jwt and jose libraries for fast, edge-based authentication.
+---
+
+Cloudflare Workers enable serverless application deployment at the edge, offering improved performance, lower latency, and simplified server management. 
+
+You might want to set these up to improve user authentication and security across your applications. For example, by deploying JWT verification at the edge, you can validate tokens closer to your users while maintaining robust security standards.
+
+Cloudflare Workers do have limitations. They do not support most server-side libraries, or Node.js-specific dependencies like `fs` and `net/http`.
+
+Instead, use one of these two libraries to handle JWT verification:
+
+- **`cloudflare-worker-jwt`**: Lightweight and optimized for Cloudflare Workers.
+- **`jose`**: More versatile, supporting a wide range of cryptographic tasks across environments.
+
+This article demonstrates how to verify JWTs using both libraries.
+
+## What you need
+
+- A [Cloudflare](https://www.cloudflare.com/) account (sign up for free)
+- [Node.js](https://nodejs.org/en) version 20+
+
+## Step 1: Install Wrangler and connect it to Cloudflare
+
+Wrangler is the Cloudflare Developer Platform command-line interface (CLI) that allows you to manage Worker projects. 
+
+1. Install Wrangler globally by running the following command in your terminal:
+    
+    This will add Wrangler to your system as a global dependency.
+    
+    <PackageManagers pkg='-g wrangler'/>
+    
+2. Confirm Wrangler is installed by checking the version. Use this command. 
+    
+    ```bash
+    wrangler --version
+    ```
+    
+    Output:
+    
+    ```bash
+    ⛅️ wrangler 4.46.0
+    ```
+    
+    If the Wrangler version number is returned, the installation was successful.
+    
+3. Authenticate Wrangler with your Cloudflare account by running:
+    
+    ```bash
+    wrangler login
+    ```
+    
+    This will open your default web browser, prompting you to log in to your Cloudflare account and authorize Wrangler. Once logged in, you’ll see a confirmation page.
+    
+    ![cloudflare now connected](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/13aec8e9-9f60-4c52-3b89-82e514d21e00/public)
+    
+
+Now that Wrangler is installed and authorized, you’re ready to create your first Worker project.
+
+## Step 2: Create a new Worker project using Wrangler
+
+1. Run the following command in your terminal to create a new Worker project:
+    
+    ```bash
+    wrangler init my-kinde-worker
+    ```
+    
+2. From the menu, choose **Hello World example**.
+3. Select **Worker Only** as your template.
+4. Select **JavaScript** from the language menu.
+5. For the following prompts, select **No**:
+    1. Do you want to use git for version control? **No**
+    2. Do you want to deploy your application? **No**
+    
+    This scaffolds a sample Worker project with the selected template.
+    
+6. Open the newly created project folder:
+    
+    ```bash
+    cd my-kinde-worker
+    ```
+    
+7. Create a new file in the `src` directory to store your helper function:
+    
+    ```bash
+    touch src/helper.js
+    ```
+    
+8. Open `src/helper.js` with your favorite code editor, add the following code and save changes:
+    
+    This function extracts the public key from your JWKS URL.
+    
+    ```jsx
+    export async function extractPublicKey(jwksUrl) {
+    	try {
+    		// Fetch the JWKS JSON from the URL
+    		const response = await fetch(jwksUrl);
+    		if (!response.ok) {
+    			throw new Error(`Failed to fetch JWKS: ${response.statusText}`);
+    		}
+    
+    		const jwks = await response.json();
+    		if (!jwks.keys || jwks.keys.length === 0) {
+    			throw new Error('No keys found in JWKS');
+    		}
+    
+    		// Extract the 'n' (modulus) from the first key
+    		const { n } = jwks.keys[0];
+    		if (!n) {
+    			throw new Error("'n' key not found in the JWKS");
+    		}
+    
+    		return n;
+    	} catch (error) {
+    		console.error(`Error extracting modulus: ${error.message}`);
+    		throw error;
+    	}
+    }
+    
+    ```
+    
+
+With the common setup complete, you’re now ready to explore two options for configuring the project. 
+
+<Tabs>
+  <TabItem label="Cloudflare Worker JWT">
+
+	1. Run the following command to install the **Cloudflare Worker JWT** package:
+    
+    	<PackageManagers pkg='@tsndr/cloudflare-worker-jwt' />
+    
+	2. Replace the contents of your `index.js` file with the following code:
+    			
+			```jsx
+			import { verify } from '@tsndr/cloudflare-worker-jwt';
+			import { extractPublicKey } from './helper';
+			
+			export default {
+				async fetch(request) {
+					const token = request.headers.get('Authorization')?.split(' ')[1];
+					if (!token) {
+						return new Response('No token provided', { status: 401 });
+					}
+			
+					const jwksUrl = 'https://<your_kinde_account>.kinde.com/.well-known/jwks';
+					const modulus = await extractPublicKey(jwksUrl);
+			
+					// Define the public key in JWK format
+					const jwk = {
+						kty: 'RSA',
+						e: 'AQAB',
+						n: modulus,
+						alg: 'RS256',
+						use: 'sig',
+					};
+			
+					try {
+						// Import the public key
+						const publicKey = await crypto.subtle.importKey(
+							'jwk',
+							jwk,
+							{
+								name: 'RSASSA-PKCS1-v1_5',
+								hash: { name: 'SHA-256' },
+							},
+							false,
+							['verify']
+						);
+			
+						const isValid = await verify(token, publicKey, { algorithm: 'RS256' });
+			
+						if (isValid) {
+							return new Response('Token is valid', { status: 200 });
+						} else {
+							return new Response('Token is invalid', { status: 401 });
+						}
+					} catch (error) {
+						return new Response(`Error verifying token: ${error.message}`, { status: 401 });
+					}
+				},
+			};
+			```
+	
+	</TabItem>
+  <TabItem label="Jose">
+
+		1. Run the following command to install the **jose** package:
+			
+			<PackageManagers pkg='jose' />
+			
+		2. Replace the contents of your `index.js` file with the following code:
+								
+				```jsx
+				import { jwtVerify } from 'jose';
+				import { extractPublicKey } from './helper';
+				
+				export default {
+					async fetch(request) {
+						const token = request.headers.get('Authorization')?.split(' ')[1];
+						if (!token) {
+							return new Response('No token provided', { status: 401 });
+						}
+				
+						const jwksUrl = 'https://<your_kinde_account>.kinde.com/.well-known/jwks';
+						const modulus = await extractPublicKey(jwksUrl);
+				
+						// Define the public key in JWK format
+						const jwk = {
+							kty: 'RSA',
+							e: 'AQAB',
+							n: modulus,
+							alg: 'RS256',
+							use: 'sig',
+						};
+				
+						try {
+							// Import the public key
+							const publicKey = await crypto.subtle.importKey(
+								'jwk',
+								jwk,
+								{
+									name: 'RSASSA-PKCS1-v1_5',
+									hash: { name: 'SHA-256' },
+								},
+								false,
+								['verify']
+							);
+				
+							// Verify the token
+							const { payload } = await jwtVerify(token, publicKey);
+							// Optionally, check the payload for required claims here
+				
+							return new Response('Token is valid', { status: 200 });
+						} catch (error) {
+							return new Response(`Token verification failed: ${error.message}`, { status: 401 });
+						}
+					},
+				};
+				```
+	</TabItem>
+</Tabs>
+    
+3. Replace `https://<your_kinde_account>.kinde.com/.well-known/jwks` with your Kinde account’s JWKS URL. For example: `https://tamalkinde.kinde.com/.well-known/jwks`
+
+## Step 3: Test the Worker locally
+
+1. Start your Worker locally by running the following command in your terminal:
+    
+    ```jsx
+    wrangler dev
+    ```
+    
+    This will launch your Worker at [`http://127.0.0.1:8787`](http://127.0.0.1:8787/)
+    
+    You will need a JSON web token to test against this Worker.
+    
+2. Sign in to your Kinde project. If you don’t have one, you can set up a sample project using the [Kinde Next.js starter kit](https://github.com/kinde-starter-kits/kinde-nextjs-app-router-starter-kit).
+    
+    ![kinde nextjs app](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f9434392-8c30-4c57-f354-075a6826fb00/public)
+    
+3. Open your browser console (`ctrl+shift+j` on Windows, `cmd+opt+i` on Mac for most browsers), the browser console opens.
+4. Navigate to the **Application** tab > Cookies > Select `access_token`, and copy its JWT value from the cookies.
+    
+    ![kinde access token](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f4806f58-45d6-46e2-4e20-8f738112c800/public)
+    
+5. Run the following in another terminal, replacing `YOUR_JWT` with the JWT token you copied.
+    
+    ```bash
+    curl -X GET "http://127.0.0.1:8787" -H "Authorization: Bearer YOUR_JWT"
+    ```
+    
+    If everything is configured correctly, the response should display `Token is valid`, confirming your Worker is functioning as expected.
+    
+
+## Step 4: Deploy the Worker to Cloudflare
+
+1. Start the deployment process by running the following command:
+    
+    ```bash
+    wrangler deploy
+    ```
+    
+    This command will deploy your Worker to Cloudflare.
+    
+2. Once the deployment is complete, go to your Cloudflare Worker page to see your Worker running live.
+    
+    ![cloudflare worker deployed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/07591fa3-4e8a-4d5f-cd57-47c38b22e200/public)
+    
+
+You’re now ready to integrate the Cloudflare Worker into your application and start handling secure requests efficiently.
+
+### Finished!
+
+With your Cloudflare Worker deployed and JWT verification fully configured, you now have a scalable, secure solution for handling authentication at the edge. This setup will enhance your application's performance while simplifying token verification.
