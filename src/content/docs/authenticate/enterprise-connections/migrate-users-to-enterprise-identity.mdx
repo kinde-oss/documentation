@@ -40,52 +40,11 @@ This guide walks you through migrating existing email/password users to Enterpri
 ### What you need
 
 - A [Kinde](https://kinde.com) account with existing users.
-- A [Microsoft Entra ID](https://entra.microsoft.com/#home) account.
+- An enterprise app.
 - Users with email addresses that match exactly their Enterprise Identity (capitalization and structure must match)
 - A test application in Kinde.
 
-## Step 1: Configure SAML application in Entra ID
-
-1. Go to the [Microsoft Entra](https://entra.microsoft.com/#home) dashboard, and select **Enterprise Apps** in the left menu.
-2. Select **New application** and in the next screen select **Create your own application**. A side panel opens.
-3. Enter the name for the application.
-4. Select the **Integrate any other application you don't find in the gallery (Non-gallery)** option and then select **Create**. It can take a few seconds for the application to be created.
-5. Select **Get started** on the **2. Set up single sign on** tile, then select the SAML tile.
-6. Edit the **Basic SAML Configuration**. The side panel opens.
-7. Select **Add identifier**, then enter a random string (e.g., `hEb876ZZlkg99Dwat64Mnbvyh129`). Copy this value as you'll need it for the Kinde configuration. 
-    <Aside>
-    Note that some older Entra ID tenants require the Entity ID to have a prefix of `spn:` If your connection fails, this could be why.
-    </Aside>
-
-8. Select **Add reply URL** and paste the ACS URL that you'll copy from Kinde in the next section. You can update this later if needed.
-9. Select **Save**.
-10. Select **Edit** on the **Attributes & Claims** section. Note the values of the identifiers (Principal name, Given name, Surname) - you'll need these for Kinde configuration.
-
-   - Email key attribute (Email), typically `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress`
-   - First name attribute (Given name), typically `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname`
-   - Last name attribute (Surname), typically `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname`
-
-11. In the **SAML certificates** section, copy the **App federation metadata URL**. You'll add this as the **IdP metadata URL** in the Kinde connection.
-12. Download the Federation metadata XML file. This is the SAML signed certificate (optional, for signing SAML requests).
-
-## Step 2: Create Enterprise Connection in Kinde
-
-1. Select your appropriate Kinde environment, then select **Settings > Authentication**.
-2. Scroll to the **Enterprise connection** section and select **Add connection**. The **Add connection** window opens.
-3. Select **Microsoft Entra ID (SAML)** and then select **Next**.
-4. Enter a **Connection name**. Make this something you can easily identify.
-5. For the **Entity ID**, enter the same random string you used in Entra ID (from step 7 above).
-6. Enter the **IdP metadata URL** - paste the App federation metadata URL you copied from Entra ID (step 11 above).
-7. Select a **Name ID** format to `Email address`. This helps identify and link user identities between your IdP and Kinde.
-8. Enter an **Email key attribute** - use the value from Entra ID (typically `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress`).
-9. (Optional) Add first name and last name attributes using the values from Entra ID.
-10. Enter **Home realm domains** if you want to speed up the sign-in process for users of those domains. Note that all home realm domains must be unique across all connections in an environment.
-11. Copy the **Assertion Consumer Service (ACS) URL**. You'll need to add this back to Entra ID as the reply URL (update step 8 above if you haven't done this yet).
-12. If you want to enable just-in-time (JIT) provisioning, select the **Create a user record in Kinde** option. For migration purposes, you should also enable **Trust email addresses provided by this connection** to allow mapping existing users.
-13. Select **Save**.
-14. Return to Entra ID and update the reply URL in the Basic SAML Configuration with the ACS URL from Kinde (if you haven't already).
-
-## Step 3: Test the integration with Kinde
+## Test the integration with Kinde
 
 Before testing with real users, verify the connection works correctly with a single test user. This helps identify any configuration issues early.
 
@@ -121,7 +80,7 @@ Before testing with real users, verify the connection works correctly with a sin
 
 Check the following to confirm everything worked correctly:
 
-**In Entra ID:**
+**In your enterprise app:**
    - Go to **Sign-in logs** and verify the authentication attempt appears.
    - Confirm the SAML response was sent successfully to Kinde.
 
@@ -227,7 +186,7 @@ Only disable **Trust email addresses** after all users have successfully migrate
 
 ---
 
-### Key items to flag
+### Items to be aware of
 
 #### Identity removal
 
