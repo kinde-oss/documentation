@@ -182,6 +182,27 @@ import { Link } from "@remix-run/react";
 </Link>
 ```
 
+### Redirecting after authentication
+
+**Static redirect**
+
+Set `KINDE_POST_LOGIN_REDIRECT_URL` in `.env` to send users to a fixed page after login.
+
+**Dynamic redirect**
+
+Append `post_login_redirect_url` or `returnTo` to the login/register URL for per-request redirects.
+
+```jsx
+<Link
+  to={{
+    pathname: "/kinde-auth/login",
+    search: "?post_login_redirect_url=/dashboard"
+  }}
+>
+  Login
+</Link>
+```
+
 **Sign into organizations**
 
 To log into specific organizations you can specify the `org_code` in the search params.
@@ -340,6 +361,35 @@ export default function Dashboard() {
 
 Use the loader example above to block unauthenticated users. To automatically redirect back to the requested route after login, include `returnTo` in the login/register link.
 
+```tsx
+// app/routes/protected.tsx
+import { json, LoaderFunctionArgs, redirect } from "@remix-run/node";
+import { useLoaderData, Link } from "@remix-run/react";
+import { getKindeSession } from "@kinde-oss/kinde-remix-sdk";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { getUser, headers, isAuthenticated } = await getKindeSession(request);
+
+  if (!(await isAuthenticated())) {
+    throw redirect("/kinde-auth/login?returnTo=/protected");
+  }
+
+  const user = await getUser();
+  return json({ user }, { headers });
+};
+
+export default function Protected() {
+  const { user } = useLoaderData<typeof loader>();
+  return (
+    <div>
+      <p>This page is protected.</p>
+      <p>Welcome {user?.given_name}</p>
+      <Link to="/kinde-auth/logout">Logout</Link>
+    </div>
+  );
+}
+```
+
 ## Refreshing Kinde data
 
 Pass the `headers` returned from `getKindeSession` in your loader/action responses so refresh tokens rotate automatically. You can also call `refreshTokens()` manually when you need the latest data (for example after a mutation).
@@ -356,6 +406,15 @@ export const action = async ({request}: ActionFunctionArgs) => {
   const {refreshTokens} = await getKindeSession(request);
   const headers = await refreshTokens();
   return redirect("/profile", {headers});
+};
+
+// Refresh after an update
+export const updateProfile = async ({request}: ActionFunctionArgs) => {
+  const { refreshTokens, getUser } = await getKindeSession(request);
+  // ...perform your mutation here...
+  const headers = await refreshTokens();
+  const user = await getUser();
+  return json({ user }, { headers });
 };
 ```
 
@@ -385,12 +444,49 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 - To log users into a specific organization, set `org_code` on your login/register links (as shown above).
 - To create an organization from your app, link to `/kinde-auth/create_org` or use the Management API.
 
+```tsx
+// Create org via Kinde Auth route
+<Link
+  to={{
+    pathname: "/kinde-auth/create_org",
+    search: "?org_name=Hurlstone"
+  }}
+>
+  Create org
+</Link>
+```
+
+If `org_code` is not specified and the user belongs to multiple organizations, they’ll be prompted to choose during login/registration.
+
 ## Self Serve Portal
 
 Send users to the self-serve portal by linking to the portal URL returned from the [Self-serve portal API](/build/self-service-portal/self-serve-portal-for-orgs/) or by using a stored URL in your app.
 
 ```tsx
 <Link to="https://<your-kinde-subdomain>.kinde.com/portal">Open portal</Link>
+```
+
+### subNav
+
+Use `subNav` to land users on a specific portal area.
+
+```tsx
+import { Link } from "@remix-run/react";
+import { PortalPage } from "@kinde/js-utils";
+
+<Link to={`https://<your-kinde-subdomain>.kinde.com/portal?subNav=${PortalPage.organizationPaymentDetails}`}>
+  Manage billing
+</Link>;
+```
+
+### returnUrl
+
+Send users back to your app after portal actions with an absolute `returnUrl`.
+
+```tsx
+<Link to="https://<your-kinde-subdomain>.kinde.com/portal?returnUrl=https://app.example.com/settings">
+  Open portal
+</Link>
 ```
 
 ## Analytics
@@ -427,6 +523,11 @@ Include `lang` in the search params when sending users to login or register.
 
 An `audience` is the intended recipient of an access token. Set `KINDE_AUDIENCE` in `.env` to populate the `aud` claim.
 
+```shell
+KINDE_AUDIENCE=<your-api>
+KINDE_AUDIENCE=<api-one> <api-two>  # multiple audiences (space separated)
+```
+
 ## Working with subdomains
 
 If you use a custom domain and start auth on `auth.mysite.com` but redirect back to `app.mysite.com`, set `KINDE_COOKIE_DOMAIN=.mysite.com` so cookies are available across subdomains.
@@ -438,6 +539,15 @@ KINDE_COOKIE_DOMAIN=.mysite.com
 ## Working with preview URLs
 
 When deploying to environments with dynamic URLs (for example Vercel previews), set `KINDE_SITE_URL`, `KINDE_POST_LOGOUT_REDIRECT_URL`, and `KINDE_POST_LOGIN_REDIRECT_URL` at build time to the preview URL. Wildcards are supported in Kinde callback/logout URLs if you prefer a simpler setup.
+
+```bash
+# example in a Remix deploy script
+export KINDE_SITE_URL="https://${VERCEL_URL}"
+export KINDE_POST_LOGOUT_REDIRECT_URL="https://${VERCEL_URL}"
+export KINDE_POST_LOGIN_REDIRECT_URL="https://${VERCEL_URL}/dashboard"
+```
+
+To keep Kinde allowlists up to date, you can use an M2M token with the Kinde Management API to add the preview callback/logout URLs during your deploy step (similar to the Next.js example).
 
 ## Health check
 
