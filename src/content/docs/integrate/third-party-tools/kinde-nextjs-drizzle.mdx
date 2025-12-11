@@ -1,0 +1,235 @@
+---
+page_id: 9e1dc88a-6010-44a6-9d56-03cf7ac94377
+title: Set up a Next.js app with Drizzle ORM and Kinde
+description: "Discover how to integrate Kinde authentication seamlessly into a Next.js application while managing user data with a Drizzle-powered SQLite database."
+sidebar:
+  order: 11
+relatedArticles:
+  - 78f0242c-3a49-4c8d-8168-019fd69ef838
+  - a07f8f6b-5d6a-4096-be52-7b13b4a3b0a5
+  - 1023d9f8-ae2d-4167-98e0-a4aa7b31e80c
+topics:
+  - integrate
+  - third-party-tools
+sdk:
+  - nextjs-sdk
+languages:
+  - typescript
+  - javascript
+  - sqlite
+  - bash
+audience:
+  - developers
+complexity: advanced
+keywords:
+  - drizzle
+  - nextjs
+  - jwt
+  - authentication
+  - database
+updated: 2025-11-12
+featured: false
+deprecated: false
+ai_summary: "Discover how to integrate Kinde authentication seamlessly into a Next.js application while managing user data with a Drizzle-powered SQLite database."
+---
+
+Discover how to integrate Kinde authentication seamlessly into a Next.js application while managing user data with a Drizzle-powered SQLite database.
+
+This tutorial will guide you step-by-step through setting up your environment, installing the necessary dependencies, creating authentication routes, and using Drizzle Studio to inspect your database.
+
+By the end of this guide, you’ll have a robust authentication flow complete with user management, fully prepared to support your application’s future development. Let’s go!
+
+### What you need
+
+- A [Kinde](https://kinde.com/) account (sign up for free)
+- A running Next.js application configured with Kinde or use the [Next.js starter kit](https://github.com/kinde-starter-kits/kinde-nextjs-app-router-starter-kit)
+
+## Step 1: Integrate Drizzle ORM with your Next.js project
+
+1. Change in to your Next.js project directory by entering the following command in your project terminal:
+    
+    ```jsx
+    cd my-nextjs-project
+    ```
+    
+2. Install Drizzle dependencies by entering the following command:
+    
+    <PackageManagers pkg='drizzle-orm better-sqlite3' />
+
+    <PackageManagers pkg='-D drizzle-kit @types/better-sqlite3' />
+    
+3. Create a configuration file for Drizzle in the root directory:
+    
+    ```bash
+    touch drizzle.config.ts
+    ```
+    
+4. Open the file with your preferred code editor, enter the following configuration options in the file and save:
+    
+    ```tsx
+    import { defineConfig } from "drizzle-kit"
+    
+    export default defineConfig({
+      out: "./drizzle",
+      schema: "./src/db/schema.ts",
+      dialect: "sqlite",
+      dbCredentials: {
+        url: "./sqlite.db",
+      },
+    })
+    ```
+    
+5. Create a database schema file:
+    
+    ```bash
+    mkdir src/db
+    touch src/db/schema.ts
+    ```
+    
+6. Enter the following code in `schema.ts` to construct your **userTable** schema and save the file.
+    
+    The code imports sqlite dependencies and creates a table called `users_table` in Drizzle with the following columns, `id`, `kinde_id`, `first_name`, `last_name`, and `email`.
+    
+    ```tsx
+    import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core"
+    
+    export const usersTable = sqliteTable("users_table", {
+      id: integer().primaryKey({ autoIncrement: true }),
+      kindeId: text("kinde_id").notNull().unique(),
+      firstName: text("first_name"),
+      lastName: text("last_name"),
+      email: text("email"),
+    })
+    ```
+    
+7. Create an `index.ts` file in the db directory:
+    
+    ```bash
+    touch src/db/index.ts
+    ```
+    
+8. Enter the following code into the newly created `index.ts` file and save the changes.
+    
+    This creates a SQLite database instance and connects to Drizzle.
+    
+    ```tsx
+    import { drizzle } from "drizzle-orm/better-sqlite3"
+    import Database from "better-sqlite3"
+    const sqlite = new Database("sqlite.db")
+    
+    export const db = drizzle({ client: sqlite })
+    ```
+    
+9. Open the `tsconfig.json` file. Change the “target” from `es5` to `es6`. Save the file. 
+    
+    This is because Drizzle does not yet support es5.
+    
+    ```json
+    {
+      "compilerOptions": {
+        "target": "es6",
+        ...
+    
+    ```
+    
+10. Push the database changes by entering the following in your terminal:
+    
+    ```bash
+    npx drizzle-kit push
+    ```
+    
+
+## Step 2: Save user data to the database after authentication
+
+1. Create a new directory `success` and a `route.ts` file inside it with the following commands:
+    
+    This file will act as a GET route to interface with the database and handle user authentication data.
+    
+    ```bash
+    mkdir src/app/api/auth/success
+    touch src/app/api/auth/success/route.ts
+    ```
+    
+2. Open the `route.ts` file in your code editor, add the following code, and then save the file.
+    
+    ```tsx
+    import { db } from "@/db"
+    import { usersTable } from "@/db/schema"
+    import { eq } from "drizzle-orm"
+    import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
+    import { NextResponse } from "next/server"
+    
+    export async function GET() {
+      const { getUser } = getKindeServerSession()
+      const user = await getUser()
+    
+      if (!user || user == null || !user.id)
+        throw new Error("something went wrong with authentication" + user)
+    
+      const dbUser = await db
+        .selectDistinct()
+        .from(usersTable)
+        .where(eq(usersTable.kindeId, user.id))
+    
+      if (!dbUser.length) {
+        await db.insert(usersTable).values({
+          kindeId: user.id,
+          firstName: user.given_name ?? "",
+          lastName: user.family_name ?? "",
+          email: user.email ?? "", // Using nullish coalescing operator to provide a default empty string value
+        })
+      }
+    
+      return NextResponse.redirect("/")
+    }
+    ```
+    
+    Here’s what the code does:
+    
+    - Imports the Drizzle database instance, and the user table function.
+    - Imports functions to interact with the Kinde Server Session and handle the Next.js response.
+    - Defines a **GET** route to retrieve the authenticated user's information.
+    - Checks if the user is already stored in the database and inserts user information if not.
+
+3. Open the `.env` or `.env.local` file in your project and update the `KINDE_POST_LOGIN_REDIRECT_URL` field with the following value:
+    
+    ```tsx
+    KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000/api/auth/success
+    ```
+    
+    This ensures that after a successful login, the user is redirected to this route, which updates the database and then redirects the user.
+    
+
+## Step 3: Test the Drizzle integration
+
+1. Start your development server by running the following command in your terminal:
+    
+    ```bash
+    npm run dev
+    ```
+    
+2. Open your web browser and navigate to [`http://localhost:3000`](http://localhost:3000/) to view your Kinde application locally. 
+3. Select **Sign Up** to create a new user account. Enter the required details and complete the sign-up process.
+4. Open a new terminal window and start the Drizzle Studio with the following command:
+    
+    ```bash
+    npx drizzle-kit studio
+    ```
+    
+    <Aside> 
+      Drizzle Studio is a visual tool for managing your database. It provides an intuitive interface to view, edit, and manage data in your database, making it easier to inspect records and make updates without writing SQL queries. It integrates directly with your Drizzle schema, streamlining database interactions during development.
+    </Aside>
+    
+5. Go to [https://local.drizzle.studio](https://local.drizzle.studio/) in your web browser to access Drizzle Studio and view your database.
+6. Select the **users_table** model to see the newly registered user details.
+    
+    ![drizzle studio](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d1b1db36-f1cd-4d51-df26-61b72eb11800/public)
+    
+
+    You have now stored the user details in your local database using Drizzle.
+
+### Finito!
+
+You've successfully integrated Kinde authentication with your Next.js application and managed user data using a Drizzle-powered SQLite database. Your app now has a secure and scalable foundation.
+
+Build on this by adding features like role-based access, custom user profiles, or API integrations. By leveraging Kinde and Drizzle, you've set the stage for a reliable and efficient authentication system. Keep innovating and enhancing!
