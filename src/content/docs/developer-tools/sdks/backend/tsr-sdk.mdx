@@ -1,0 +1,323 @@
+---
+page_id: 7eb15b27-864c-49fd-a12e-3f4d415f47fa
+title: TanStack React Start SDK
+sidebar:
+  order: 10
+head:
+  - tag: meta
+    attrs:
+      property: "og:image"
+      content: "https://kinde.com/assets/images/open-graph/DOCS-SSI-SDK_NEXT.png"
+---
+
+<Aside title="Disclaimer">
+The Kinde TanStack React Start SDK is currently in beta.
+</Aside>
+
+This SDK is for TanStack React Start version `v1.132.25` or higher.
+
+New to Kinde? [Get started here](/get-started/guides/first-things-first/)
+
+## Install for a new project
+
+The easiest way to get started is to use the [TanStack React Start starter kit](TODO)
+
+## **Install for an existing project**
+
+<PackageManagers pkg="@kinde-oss/kinde-tsr" />
+
+## **Set callback URLs**
+
+1. In Kinde, go to **Settings > Applications > [Your app] > View details**.
+2. Add your callback URLs in the relevant fields. For example:
+   - Allowed callback URLs (also known as redirect URIs) - for example `http://localhost:3000/api/auth/callback`
+   - Allowed logout redirect URLs - for example `http://localhost:3000`
+3. Select **Save**.
+
+## **Configure environment variables**
+
+Put these variables in a `.env.local` file in the root of your app. You can find these variables on your Kinde **Settings > Applications > [Your app] > View details** page.
+- `VITE_KINDE_CLIENT_ID` - Your business’s unique ID on Kinde
+- `KINDE_CLIENT_SECRET` - Your business’s secret key (do not share)
+- `VITE_KINDE_ISSUER_URL` - your kinde domain
+- `VITE_KINDE_SITE_URL` - where your app is running
+- `KINDE_POST_LOGOUT_REDIRECT_URL` - where you want users to be redirected to after logging out. Make sure this URL is under your allowed logout redirect URLs.
+- `KINDE_POST_LOGIN_REDIRECT_URL` - where you want users to be redirected to after authenticating.
+
+<Aside>
+Variables prefixed with `VITE_` are exposed to the client. The `KINDE_CLIENT_SECRET` should only be used on the server-side.
+</Aside>
+
+Replace the information in the example with your own information. You might also set different URLs depending where your project is running. They need to match the callback URLs you entered in Kinde, above.
+
+```shell
+VITE_KINDE_CLIENT_ID=<your_kinde_client_id>
+KINDE_CLIENT_SECRET=<your_kinde_client_secret>
+VITE_KINDE_ISSUER_URL=https://<your_kinde_subdomain>.kinde.com
+VITE_KINDE_SITE_URL=http://localhost:3000
+KINDE_POST_LOGOUT_REDIRECT_URL=http://localhost:3000
+KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000/dashboard
+```
+
+## **Set up Kinde Auth Route Handlers**
+
+Create the following file `src/routes/api.auth.$.ts` inside your project. Inside the file, insert the following code:
+
+```tsx
+import { kindeAuthHandler } from "@kinde/kinde-auth-tanstack-start/server";
+import { createFileRoute } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/api/auth/$")({
+  server: {
+    handlers: {
+      GET: async ({ request }) => kindeAuthHandler(request),
+      POST: async ({ request }) => kindeAuthHandler(request),
+    },
+  },
+});
+```
+
+This will handle Kinde Auth endpoints in your app.
+
+## **Customising Kinde Auth API paths**
+
+The default path for the Kinde Auth API is `/api/auth`. If your application uses a custom base path for your API, you can override this setting by setting the following variable in your `.env` file:
+
+```bash
+KINDE_AUTH_API_PATH="/my/custom/path"
+```
+
+You can also customise the Kinde Auth API sub-paths by setting the following variables in your `.env` file:
+
+- `KINDE_AUTH_LOGIN_ROUTE` - defaults to `login`
+- `KINDE_AUTH_LOGOUT_ROUTE` - defaults to `logout`
+- `KINDE_AUTH_REGISTER_ROUTE` - defaults to `register`
+- `KINDE_AUTH_CREATE_ORG_ROUTE` - defaults to `create-org`
+- `KINDE_AUTH_HEALTH_ROUTE` - defaults to `health`
+- `KINDE_AUTH_SETUP_ROUTE` - defaults to `setup`
+
+#### **Example**
+
+Given the following `.env` file:
+
+```bash
+KINDE_AUTH_API_PATH="/my/custom/path"
+KINDE_AUTH_LOGIN_ROUTE="app_login"
+```
+
+The Kinde login route for your application will be `/my/custom/path/app_login`.
+
+<Aside type='warning'>
+Ensure you update the filename of your API route to match.
+</Aside>
+
+## **Set up middleware**
+
+Middleware is used to protect the server-side of your application, keep tokens refreshed, and define route rules for protecting your application on both client and server.
+
+All paths are public by default, and must be explicitly opted-in for protection using route rules.
+
+<Aside type='warning'>
+Middleware in TanStack Start does not run on the client, meaning subsequent client-side navigations to pages will not be protected with middleware alone.
+
+Ensure you also read the [Protecting routes on the client](#protecting-routes-on-the-client) section to protect routes on the client.
+</Aside>
+
+#### **Middleware configuration**
+
+Create a `start.ts` file in your project's root directory and add the following code:
+```ts
+import { createStart } from '@tanstack/react-start';
+import { createKindeGlobalMiddleware } from '@kinde/kinde-auth-tanstack-start/server';
+
+export const startInstance = createStart(() => {
+    return {
+        requestMiddleware: [createKindeGlobalMiddleware({
+            routeRules: [
+            ]
+        })]
+    }
+});
+```
+
+#### **Defining route rules**
+
+The route rules array on `createKindeGlobalMiddleware` is used to define the rules for protecting your application on both client and server.
+
+It defines which pages should be protected, how redirection should be handled, and whether to narrow protection checks down to specific permissions, roles or entitlements.
+
+Route rule paths support a glob pattern syntax for matching routes.
+
+**Examples**
+- `/admin/*` - matches `/admin` and anything after, e.g., `/admin/users`, `/admin/settings`
+- `*/faq` - matches any route that ends with `/faq`, e.g., `/some-route/faq`, `/another-route/faq`
+- `/admin/*/settings` - matches `/admin/users/settings`, `/admin/org/settings`, etc.
+
+An example of route rules:
+```ts
+import { createStart } from '@tanstack/react-start';
+import { createKindeGlobalMiddleware } from '@kinde/kinde-auth-tanstack-start/server';
+
+export const startInstance = createStart(() => {
+    return {
+        requestMiddleware: [createKindeGlobalMiddleware({
+            routeRules: [
+                {
+                    // Protect the dashboard route and all its children
+                    path: '/dashboard/*',
+                    // Redirect to this page if the authentication check fails.
+                    redirectTo: '/'
+                },
+                {
+                    // Protect the admin route and all its children, also ensuring the user has the 'read:admin' permission or the 'admin' role
+                    path: '/admin/*',
+                    redirectTo: '/',
+                    has: {
+                        permissions: ['read:admin'],
+                        roles: ['admin'],
+                    }
+                },
+                {
+                    // Protect the pro route and all its children, also ensuring the user has the 'pro' billing entitlement
+                    path: '/pro/*',
+                    redirectTo: '/',
+                    has: {
+                        billingEntitlements: ['pro'],
+                    }
+                },
+                {
+                    // Protect the new wip page route, also ensuring the user has the 'new-wip-page-access' feature flag
+                    path: '*/new-wip-page',
+                    redirectTo: '/current-page',
+                    has: {
+                        featureFlags: ['new-wip-page-access'],
+                    }
+                }
+            ]
+        })]
+    }
+});
+```
+
+## **Set up the Kinde Auth Provider**
+
+In your applications `__root.tsx` file, wrap your app in the Kinde Auth Provider. This will give you access to the Kinde Auth data in your app and will ensure that the tokens are refreshed when needed.
+
+```tsx
+import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
+import { KindeTanstackProvider } from '@kinde/kinde-auth-tanstack-start';
+
+export const Route = createRootRouteWithContext<MyRouterContext>()({
+  component: RootComponent,
+});
+
+function RootComponent() {
+  return (
+    <RootDocument>
+      <Outlet />
+    </RootDocument>
+  )
+}
+
+
+function RootDocument({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        <KindeTanstackProvider>
+          {children}
+        </KindeTanstackProvider>
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+```
+
+## Protecting routes on the client
+
+In order to protect routes on the client, you need to use the `protect` utility in a routes `beforeLoad` function. It will use the route rules you've defined in your middleware.
+
+```tsx
+export const Route = createFileRoute('/protected/')({
+  beforeLoad: async (ctx) => {
+    // You must pass the path of the route in order for your route rules to be applied.
+    await protect(ctx.location.pathname);
+
+    // Note that any code you supply after protect will not be executed if the route is protected as the user is redirected.
+  },
+});
+```
+
+## Authentication
+
+### Sign up and sign in
+
+The SDK ships with `<LoginLink>` and `<RegisterLink>` components which can be used to start the auth flow.
+
+```jsx
+import {RegisterLink, LoginLink} from "@kinde-oss/kinde-auth-nextjs/components";
+
+...
+
+<LoginLink>Sign in</LoginLink>
+<RegisterLink>Sign up</RegisterLink>
+```
+
+### Redirecting after authentication
+
+**Static redirect**
+
+If you want to redirect users to a certain page after logging in, you can set the `KINDE_POST_LOGIN_REDIRECT_URL` environment variable in your `.env.local` file.
+
+**Dynamic redirect**
+
+You can also set a `postLoginRedirectURL` parameter to tell us where to redirect after authenticating.
+
+```jsx
+import {RegisterLink, LoginLink} from "@kinde-oss/kinde-auth-nextjs/components";
+
+...
+
+<LoginLink postLoginRedirectURL="/dashboard">Sign in</LoginLink>
+<RegisterLink postLoginRedirectURL="/welcome">Sign up</RegisterLink>
+```
+
+This appends `post_login_redirect_url` to the search params when redirecting to Kinde Auth. You can achieve the same result as above, like this:
+
+```jsx
+import { redirect } from "next/navigation";
+...
+
+redirect('/api/auth/login?post_login_redirect_url=/dashboard')
+
+...
+```
+
+### Logout
+
+This is implemented in much the same way as signing up or signing in. A component is provided for you.
+
+```jsx
+import {LogoutLink} from "@kinde-oss/kinde-auth-nextjs/components";
+
+...
+
+<LogoutLink>Log out</LogoutLink>
+```
+
+## Kinde Auth data - Server
+
+## Debug mode
+
+In debug mode you will see more logs in your console that may help with debugging and assist with support.
+
+```tsx
+// .env
+
+KINDE_DEBUG_MODE = true;
+```
+
