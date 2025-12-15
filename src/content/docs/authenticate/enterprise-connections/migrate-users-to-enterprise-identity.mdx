@@ -34,7 +34,7 @@ deprecated: false
 ai_summary: Step-by-step guide to migrating existing email/password users to Enterprise SSO connections (SAML/Entra ID) using JIT provisioning, including testing, pilot rollout, and post-migration security best practices.
 ---
 
-This guide walks you through migrating existing email/password users to Enterprise SSO connections (such as SAML or Entra ID). This process uses just-in-time (JIT) provisioning to map existing users to their enterprise identities based on matching email addresses.
+This guide walks you through migrating existing email/password users to Enterprise SSO connections (such as SAML, Entra ID, or other enterprise connections). This process uses just-in-time (JIT) provisioning to map existing users to their enterprise identities based on matching email addresses.
 
 
 ### What you need
@@ -50,7 +50,7 @@ Before testing with real users, verify the connection works correctly with a sin
 
 ### Enable the connection for your test application
 
-1. In Kinde, go to **Settings > Authentication**.
+1. In Kinde, go to **Environment > Settings > Authentication**.
 2. Find your Enterprise Connection and select **Configure**.
 3. Scroll down to the **Applications** section.
 4. Toggle the connection **ON** for your test application. Ideally, this should be an application that is not publicly available.
@@ -59,18 +59,18 @@ Before testing with real users, verify the connection works correctly with a sin
 ### Prepare a test user
 
 1. Identify one existing Kinde user who has an email/password identity.
-2. Verify that this user's email address in Kinde **exactly matches** their email address in Entra ID (capitalization and structure must be identical).
+2. Verify that this user's email address in Kinde **exactly matches** their email address in your identity provider (capitalization and structure must be identical).
 3. Ensure this test user has access to your test application.
-4. Confirm you can access Entra ID sign-in logs and Kinde logs for verification purposes.
+4. Confirm you can access your identity provider's sign-in logs and Kinde logs for verification purposes.
 
 ### Test the SSO flow
 
 1. Open your test application in an incognito/private browser window.
 2. Initiate the SSO login flow:
-   - If you configured home realm domains, enter the test user's email address and select **Continue**. You should be redirected to Entra ID.
+   - If you configured home realm domains, enter the test user's email address and select **Continue**. You should be redirected to your identity provider.
    - If you didn't configure home realm domains, select the **Sign in with Enterprise** or **SSO** button.
-3. Authenticate with the test user's Entra ID credentials.
-4. After successful authentication, Entra ID should redirect back to Kinde (via the ACS URL).
+3. Authenticate with the test user's identity provider credentials.
+4. After successful authentication, your identity provider should redirect back to Kinde (via the ACS URL).
 5. Kinde should process the SAML response and either:
    - Map to the existing Kinde user (if the email matches and **Trust email addresses** is enabled), preserving the user's profile, roles, and permissions; **or**
    - Create a new Kinde user via JIT provisioning with the SAML attributes if no match exists.
@@ -80,7 +80,7 @@ Before testing with real users, verify the connection works correctly with a sin
 
 Check the following to confirm everything worked correctly:
 
-**In your enterprise app:**
+**In your identity provider:**
    - Go to **Sign-in logs** and verify the authentication attempt appears.
    - Confirm the SAML response was sent successfully to Kinde.
 
@@ -97,7 +97,7 @@ Check the following to confirm everything worked correctly:
 
 **Test email/password login (optional):**
    - Attempt to sign in with the test user's email/password credentials.
-   - If home realm discovery is configured, you should be redirected to the Microsoft login page instead of the email/password form.
+   - If home realm discovery is configured, you should be redirected to your identity provider's login page instead of the email/password form.
 
 ### Troubleshooting
 
@@ -105,9 +105,9 @@ If the test doesn't work:
 
 - **Disable the Enterprise Connection** in Kinde to prevent further issues.
 - **Collect debug information:**
-   - Check Entra ID sign-in logs for error messages.
+   - Check your identity provider's sign-in logs for error messages.
    - Review Kinde logs for SAML processing errors.
-   - Verify the ACS URL in Entra ID matches the one in Kinde.
+   - Verify the ACS URL in your identity provider matches the one in Kinde.
    - Confirm the Entity ID matches in both systems.
 - **Email address format mismatches:** Different identity providers may return email addresses in different formats, which can prevent successful user mapping:
    - Ensure email addresses match exactly (case-sensitive) between Kinde and your IdP.
@@ -125,7 +125,7 @@ Once you've successfully tested with a single user, expand testing to a small gr
 - Select several test users from different departments or teams.
 - Test across different browser configurations (Chrome, Firefox, Safari, Edge).
 - Have each test user complete the SSO login flow.
-- Monitor both Kinde and Entra ID logs for any errors or mapping problems.
+- Monitor both Kinde and your identity provider's logs for any errors or mapping problems.
 - Verify each user's profile, roles, and permissions are preserved correctly.
 - Document any issues encountered and resolve them before proceeding to full migration.
 
@@ -133,7 +133,7 @@ Once you've successfully tested with a single user, expand testing to a small gr
 
 After successful pilot testing, enable the Enterprise Connection for your production applications:
 
-1. In Kinde, go to **Settings > Environment > Authentication**.
+1. In Kinde, go to **Environment > Settings > Authentication**.
 2. Find your Enterprise Connection and select **Configure**.
 3. Scroll down to the **Applications** section.
 4. Toggle the connection **ON** for each production application that should use this Enterprise Connection.
@@ -143,7 +143,7 @@ After successful pilot testing, enable the Enterprise Connection for your produc
 
 Once all existing users for that Enterprise Connection have signed in successfully at least once:
 
-1. In Kinde, go to **Settings > Environment > Authentication**.
+1. In Kinde, go to **Environment > Settings > Authentication**.
 2. Find your Enterprise Connection and select **Configure**.
 3. Scroll down to the **Trust email addresses provided by this connection** option.
 4. Turn this setting **OFF** (improves security and prevents silent linking of emails).
@@ -161,7 +161,7 @@ Only disable **Trust email addresses** after all users have successfully migrate
 
 **Audit logs:**
    - Review Kinde logs for any unknown or failed sign-ins.
-   - Check Entra ID sign-in logs for authentication issues.
+   - Check your identity provider's sign-in logs for authentication issues.
    - Verify all expected users have successfully migrated.
 
 **Security:**
@@ -178,28 +178,41 @@ Only disable **Trust email addresses** after all users have successfully migrate
 
 **Primary success criteria:**
 
-- User can initiate SSO login from the application and is redirected to Entra ID.
-- Entra ID accepts credentials and returns a successful SAML response to Kinde (redirect to ACS URL).
+- User can initiate SSO login from the application and is redirected to your identity provider.
+- Your identity provider accepts credentials and returns a successful SAML response to Kinde (redirect to ACS URL).
 - Kinde either:
-    - Maps the incoming SAML `emailaddress` to the **existing** Kinde user (when `Trust email` is ON), preserving profile and permissions; **or**
+    - Maps the incoming SAML `emailaddress` to the **existing** Kinde user (when `Trust email addresses` is ON), preserving profile and permissions; **or**
     - Creates a new Kinde user via JIT provisioning with the SAML attributes if no match exists.
 - The user is redirected back to the application with a valid authenticated session and can access resources according to their preserved permissions.
-- Entra ID sign-in logs show the successful authentication; Kinde logs show either the mapped existing user sign-in or creation of the user from the Entra connection.
+- Your identity provider's sign-in logs show the successful authentication; Kinde logs show either the mapped existing user sign-in or creation of the user from the enterprise connection.
 - After migration completion and verification, `Trust email addresses` can be turned **OFF** and email/password login disabled for migrated accounts.
 
 ---
 
-### Items to be aware of
+## Items to be aware of
 
-#### Identity removal
+### Identity removal
 
 At the moment when a user has been given an Enterprise Connection identity, their existing identity is removed from their profile at the same time.
 
-#### Email capitalization issue
+### Email capitalization issue
 
-We have noticed that users (using email or an Enterprise Connection) created before March 2025 will have an issue where their email address in the Enterprise Connection are capitalized and therefore not synced with existing profiles. They will need to be recreated with the email address having the exact same capitilisation as shown in Entra. You will need to delete the user and let them log in via their enterprise SSO, which will automatically create their enterprise identity.
+Users created in Kinde before March 2025 may experience an email capitalization mismatch that prevents proper syncing between their Kinde profile and Enterprise Connection identity.
 
-#### Customer IdP setup
+This affects users created in Kinde before March 2025, regardless of whether they were originally created with email authentication or an Enterprise Connection. The email address stored in the Enterprise Connection may have incorrect capitalization that doesn't match their existing Kinde profile, preventing automatic syncing during migration.
+
+<Aside type="warning" title="Important">
+
+This issue only affects users created in Kinde before March 2025. Users created after this date do not experience this capitalization issue. If you're migrating users created before March 2025, check their email capitalization before proceeding with the migration.
+
+</Aside>
+
+**To resolve:**
+1. Delete the affected user in Kinde.
+2. Have the user log in via their enterprise SSO.
+3. Kinde will automatically create their enterprise identity with the correct email capitalization matching your identity provider.
+
+### Customer IdP setup
 
 Your customers' IdP setups will be different from each other, we would recommend:
 
@@ -213,9 +226,17 @@ We would recommend, starting with a customer with a smaller user base first.
 
 For more information on troubleshooting SSO issues, see [Troubleshoot SSO issues](/authenticate/enterprise-connections/provision-users-enterprise/#troubleshoot-sso-issues).
 
-### Congratulations!
+### Summary
 
-You have successfully migrated your users from email/password authentication to Enterprise Identity using SSO connections like SAML or Entra ID.
+This guide covered migrating existing email/password users to Enterprise Identity connections using just-in-time (JIT) provisioning. The migration process relies on email address matching between Kinde and your identity provider to map existing users to their enterprise identities.
 
-By leveraging just-in-time (JIT) provisioning and email address matching, you've seamlessly transitioned your users to enterprise authentication while preserving their profiles, roles, and permissions. This migration enhances security, simplifies user management, and provides a foundation for scaling your authentication infrastructure. Your users can now enjoy a streamlined SSO experience while maintaining access to all their existing resources.
+**Key takeaways:**
+
+1. Email addresses must match exactly (case-sensitive) between Kinde and your identity provider—verify your Email key attribute configuration matches your IdP's SAML response format
+2. Enable **Trust email addresses** during migration to enable automatic mapping, then disable it after all users have migrated for improved security
+3. Test with a single user first, then expand to a pilot group before full rollout
+4. Users created in Kinde before March 2025 may require manual resolution due to email capitalization issues
+5. Monitor authentication logs during and after migration to ensure successful user mapping
+
+
 
