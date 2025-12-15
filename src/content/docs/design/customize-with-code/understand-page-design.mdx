@@ -323,20 +323,82 @@ The top level `context` key object contains information about the page itself, l
 
 ## Page settings
 
-Sometimes additional information needs to be passed to Kinde from your page. You can use the page settings object for this.
+Use the `pageSettings` object to configure what capabilities your custom UI page can access by enabling bindings.
 
 ```js
-export const pageSettings = {};
+export const pageSettings = {}
 ```
 
-The main use case for this is when you want to make bindings available to your page, for example access to your Kinde environment variables.
+The main use case for this is when you want to make bindings available to your page. For example, the `kinde.env` binding is required when calling the Kinde Management API via `createKindeAPI` (it's used internally for M2M authentication). However, this binding does not give you direct access to call `getEnvironmentVariable` in your page code.
 
 ```js
 export const pageSettings = {
   bindings: {
-    "kinde.env": {}
+    "kinde.env": {},
+    "kinde.fetch": {},
+    url: {}
   }
-};
+}
 ```
 
-This allows you to have fine grained control over what your pages can access.
+This allows you to have fine grained control over what your pages can access. See [Pages and the Kinde Management API](/design/customize-with-code/pages-and-kinde-api/) for more information about using bindings to make API calls.
+
+Note: If you don't need to call the Kinde Management API, you can leave pageSettings as an empty object {} or omit it entirely.
+
+## Environment Variables
+
+The `@kinde/infrastructure` package exports a `getEnvironmentVariable` method, but this method is not available in Custom UI pages, even if you import it.
+
+If you need to access environment variables in your Custom UI page, you have a few options:
+
+### Option 1: Pass data from the workflow handler to the page
+
+In your workflow handler, fetch the env var and return it in the `data` object:
+
+  ```js
+  // In your workflow handler
+  import { getEnvironmentVariable } from "@kinde/infrastructure"
+
+  export default async function handler(event) {
+    const publicUrl = getEnvironmentVariable("APP_PUBLIC_URL")?.value
+      return {
+        data: {
+          publicUrl,
+        },
+      }
+  }
+  ```
+
+Then access it in your Custom UI page via the `context` object. You can access the workflow data through `context.data`:
+
+  ```js
+  // In your Custom UI page - Page function
+  export default async function Page(event) {
+    const { publicUrl } = event.context.data
+    // ... rest of your code
+  }
+
+  // Or in your Layout component
+  const Layout = async ({request, context}) => {
+    const { publicUrl } = context.data
+    // ... rest of your code
+  }
+  ```
+
+### Option 2: Hardcode or use a relative URL
+
+If `APP_PUBLIC_URL` is just for building URLs in the UI, consider using relative paths instead. 
+
+  ```js
+  // In your Custom UI page
+  const publicUrl = "/api/public-url"
+  ```
+
+### Option 3: Fetch from an API
+
+Make an API call from your Custom UI page to retrieve the necessary configuration. This requires the `kinde.fetch` binding in your `pageSettings`.
+
+  ```js
+  // In your Custom UI page
+  const publicUrl = await fetch("/api/public-url").then(res => res.json()).then(data => data.publicUrl);
+  ```
