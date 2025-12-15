@@ -27,7 +27,7 @@ keywords:
   - token security
   - JWT libraries
   - token parsing
-updated: 2024-01-15
+updated: 2025-12-15
 featured: false
 deprecated: false
 ai_summary: Comprehensive guide to decoding JSON Web Tokens using Kinde's JWT libraries, including validation methods, security considerations, and practical implementation examples.
@@ -290,7 +290,7 @@ function base64UrlDecode(str: string): string {
   
   // Use Buffer in Node.js, atob in browser
   if (typeof globalThis.Buffer !== 'undefined') {
-    return globalThis.Buffer.from(base64, 'base64').toString('binary')
+    return globalThis.Buffer.from(base64, 'base64').toString('utf-8')
   } else if (typeof globalThis.atob !== 'undefined') {
     return globalThis.atob(base64)
   } else {
@@ -360,6 +360,15 @@ function displayUserInfo(token) {
 }
 ```
 
+**About `org_code` and `permissions` claims**
+
+The `org_code` and `permissions` claims are **not included by default** in access tokens:
+
+- **`org_code`**: Only included when the user belongs to and signs in to an organization. If a user belongs to no organizations, this claim will be omitted.
+- **`permissions`**: Only included when the user signs in to an organization AND has permissions assigned to them or their role. If no permissions are configured or assigned, this claim will be omitted.
+
+Always check if these claims exist before accessing them (as shown in the example above using optional chaining or default values).
+
 ### Checking Feature Flags
 
 ```javascript
@@ -383,6 +392,17 @@ function checkFeatureFlag(token, flagName) {
 }
 ```
 
+**About `feature_flags` claim**
+
+The `feature_flags` claim is **not included by default** in access tokens. It's only included when:
+
+- Feature flags are configured in your Kinde environment and assigned to the user or organization
+- For Machine-to-Machine (M2M) applications, only flags explicitly enabled in the app's token configuration are included
+
+If no feature flags are configured or assigned, this claim will be omitted. Always check if the claim exists before accessing it (as shown in the example above).
+
+Feature flags use a compact format with short keys: `t` for type and `v` for value.
+
 ### Extracting Permissions
 
 ```javascript
@@ -398,6 +418,14 @@ export function getUserPermissions(token) {
   }
 }
 ```
+
+**About `permissions` claim**
+
+The `permissions` claim is **not included by default** in access tokens. It's only included when:
+
+- The user signs in to an organization AND has permissions assigned to them or their role
+
+If no permissions are configured or assigned, this claim will be omitted. Always check if the claim exists before accessing it (as shown in the example above using `|| []` as a fallback).
 
 ## Security Considerations
 
