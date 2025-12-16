@@ -1,6 +1,6 @@
 ---
 page_id: 4882de7b-07f3-4cc8-ac01-b096e17dcc35
-title: Backend API testing with refresh tokens
+title: Backend API testing with Jest
 description: "Guide to testing backend APIs and services using Kinde refresh tokens for maintaining long-running authenticated sessions in automated tests."
 sidebar:
   order: 3
@@ -62,28 +62,174 @@ The access token obtained this way is identical to what your production users re
 
     ![Screenshot of browser developer tools showing the refresh_token and access_token cookies](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8f5e05a6-2671-4688-06de-bbc328b4d700/public)
 
-## Step 2: Configure token rotation in tests
+## Step 2: Set up Jest testing suite
 
-At the start of your test suite (e.g., in `jest.setup.js` or equivalent), exchange your stored refresh token for fresh tokens:
+1. Install the required dependencies:
 
-```bash
-curl --location 'https://<your_subdomain>.kinde.com/oauth2/token' \
-  --header 'Content-Type: application/x-www-form-urlencoded' \
-  --data-urlencode 'client_id=<your_client_id>' \
-  --data-urlencode 'grant_type=refresh_token' \
-  --data-urlencode 'refresh_token=<stored_refresh_token>'
-```
+    ```bash
+    npm install --save-dev jest dotenv
+    ```
 
-The response includes both a new `access_token` and a new `refresh_token`:
+2. Create a new `.env` file in your project root:
 
-```json
-{
-  "access_token": "eyJhbGciOiJSUzI1NiIs...",
-  "refresh_token": "v1.MjEyNjM1OTU5...",
-  "token_type": "bearer",
-  "expires_in": 86400
-}
-```
+    ```bash
+    touch .env
+    ```
+
+3. Open the `.env` file and add your Kinde configuration:
+
+    ```env
+    KINDE_ISSUER_URL=https://your-subdomain.kinde.com
+    KINDE_CLIENT_ID=your_client_id
+    KINDE_REFRESH_TOKEN=your_refresh_token_from_step_1
+    KINDE_ACCESS_TOKEN=your_access_token_from_step_1
+    ```
+
+    Replace the placeholder values with your actual Kinde credentials from Step 1.
+
+4. Create a `jest.setup.js` file:
+
+    ```bash
+    touch jest.setup.js
+    ```
+
+5. Open `jest.setup.js` and add the following code that refreshes tokens before tests run and updates the `.env` file:
+
+    ```javascript
+    // jest.setup.js
+    require('dotenv').config()
+    const fs = require('fs')
+    const path = require('path')
+
+    async function refreshTokens() {
+      const tokenUrl = `${process.env.KINDE_ISSUER_URL}/oauth2/token`
+      
+      try {
+        const response = await fetch(tokenUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: process.env.KINDE_CLIENT_ID,
+            grant_type: 'refresh_token',
+            refresh_token: process.env.KINDE_REFRESH_TOKEN,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error(`Token refresh failed: ${response.status} ${response.statusText}`)
+        }
+
+        const tokens = await response.json()
+        
+        // Update environment variables for current test run
+        process.env.KINDE_ACCESS_TOKEN = tokens.access_token
+        process.env.KINDE_REFRESH_TOKEN = tokens.refresh_token
+
+        // Update .env file for future runs
+        const envPath = path.join(process.cwd(), '.env')
+        let envContent = fs.readFileSync(envPath, 'utf8')
+        
+        // Replace existing tokens or add new ones
+        envContent = envContent.replace(
+          /KINDE_ACCESS_TOKEN=.*/,
+          `KINDE_ACCESS_TOKEN=${tokens.access_token}`
+        )
+        envContent = envContent.replace(
+          /KINDE_REFRESH_TOKEN=.*/,
+          `KINDE_REFRESH_TOKEN=${tokens.refresh_token}`
+        )
+        
+        fs.writeFileSync(envPath, envContent)
+        
+        console.log('✓ Tokens refreshed successfully')
+      } catch (error) {
+        console.error('✗ Failed to refresh tokens:', error.message)
+        throw error
+      }
+    }
+
+    // Refresh tokens before all tests
+    // Export the promise so Jest waits for it to complete
+    module.exports = refreshTokens()
+    ```
+
+6. Create or update your `package.json` file to configure Jest. Add the following to your `package.json`:
+
+    ```json
+    {
+      "scripts": {
+        "test": "jest"
+      },
+      "jest": {
+        "setupFilesAfterEnv": ["<rootDir>/jest.setup.js"],
+        "testEnvironment": "node"
+      }
+    }
+    ```
+
+7. Create a test file:
+
+    ```bash
+    touch kinde-api.test.js
+    ```
+
+8. Open `kinde-api.test.js` and add the following example tests:
+
+    ```javascript
+    // kinde-api.test.js
+    require('dotenv').config()
+
+    const KINDE_ISSUER_URL = process.env.KINDE_ISSUER_URL
+    const ACCESS_TOKEN = process.env.KINDE_ACCESS_TOKEN
+
+    describe('Kinde API Tests', () => {
+      test('should get user profile', async () => {
+        const response = await fetch(
+          `${KINDE_ISSUER_URL}/oauth2/user_profile`,
+          {
+            headers: {
+              Authorization: `Bearer ${ACCESS_TOKEN}`,
+            },
+          }
+        )
+
+        expect(response.ok).toBe(true)
+        const data = await response.json()
+        expect(data).toHaveProperty('id')
+        expect(data).toHaveProperty('email')
+      })
+
+      test('should get user roles', async () => {
+        const response = await fetch(
+          `${KINDE_ISSUER_URL}/oauth2/user_roles`,
+          {
+            headers: {
+              Authorization: `Bearer ${ACCESS_TOKEN}`,
+            },
+          }
+        )
+
+        expect(response.ok).toBe(true)
+        const data = await response.json()
+        expect(Array.isArray(data.roles)).toBe(true)
+      })
+
+      test('should get user permissions', async () => {
+        const response = await fetch(
+          `${KINDE_ISSUER_URL}/oauth2/user_permissions`,
+          {
+            headers: {
+              Authorization: `Bearer ${ACCESS_TOKEN}`,
+            },
+          }
+        )
+
+        expect(response.ok).toBe(true)
+        const data = await response.json()
+        expect(Array.isArray(data.permissions)).toBe(true)
+      })
+    })
+    ```
 
 ## Step 3: Update your stored token
 
