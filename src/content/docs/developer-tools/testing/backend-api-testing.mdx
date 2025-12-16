@@ -1,6 +1,6 @@
 ---
 page_id: 4882de7b-07f3-4cc8-ac01-b096e17dcc35
-title: WIP Backend API testing with refresh tokens
+title: Backend API testing with refresh tokens
 description: "Guide to testing backend APIs and services using Kinde refresh tokens for maintaining long-running authenticated sessions in automated tests."
 sidebar:
   order: 3
@@ -29,15 +29,21 @@ keywords:
   - automated testing
   - CI/CD
   - test automation
-updated: 2025-01-27
+updated: 2025-12-16
 featured: false
 deprecated: false
 ai_summary: Guide to testing backend APIs using Kinde refresh tokens for maintaining authenticated sessions in automated tests, including token rotation and CI/CD integration.
 ---
 
-For automated backend tests, you can establish a long-running auth session using refresh tokens. This allows your test infrastructure to maintain authentication without manual sign-ins.
+In this guide, we'll show you how to test backend APIs using Kinde refresh tokens for maintaining authenticated sessions in automated tests, including token rotation and CI/CD integration.
+
+### What you need
+
+- A test user with email and password created in the [test user and environment setup](/developer-tools/testing/setup-test-user-environment/) guide.
 
 ## How it works
+
+For automated backend tests, you can establish a long-running auth session using refresh tokens. This allows your test infrastructure to maintain authentication without manual sign-ins.
 
 1. Perform a one-time browser-based sign-in with a test user
 2. Extract the refresh token from that session
@@ -46,27 +52,17 @@ For automated backend tests, you can establish a long-running auth session using
 
 The access token obtained this way is identical to what your production users receive.
 
-<Aside type="info">
+## Step 1: Obtain initial tokens
 
-**Before you begin**: Make sure you've completed the [test user and environment setup](/developer-tools/testing/setup-test-user-environment/). You'll need a test user and configured test application to proceed.
+1. Run your test application locally
+2. Sign in with your test user in a browser
+3. Right click on the page and select **Inspect** to open the browser developer tools
+4. Navigate to the **Application** tab and select **Cookies** > `http://localhost:3000`
+5. Select the `refresh_token` and `access_token` cookies and copy their values, you will need these in the next step
 
-</Aside>
+    ![Screenshot of browser developer tools showing the refresh_token and access_token cookies](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8f5e05a6-2671-4688-06de-bbc328b4d700/public)
 
-## Setup steps
-
-### Step 1: Obtain initial tokens
-
-1. Sign in with your test user in a browser
-2. Inspect your browser's cookies or application storage to locate the refresh token and access token
-3. Store these tokens securely
-
-<Aside type="warning">
-
-**Important**: When obtaining your initial tokens, ensure your application requests the `offline_access` scope to receive a refresh token.
-
-</Aside>
-
-### Step 2: Configure token rotation in tests
+## Step 2: Configure token rotation in tests
 
 At the start of your test suite (e.g., in `jest.setup.js` or equivalent), exchange your stored refresh token for fresh tokens:
 
@@ -89,7 +85,7 @@ The response includes both a new `access_token` and a new `refresh_token`:
 }
 ```
 
-### Step 3: Update your stored token
+## Step 3: Update your stored token
 
 After each token exchange:
 
@@ -115,6 +111,10 @@ process.env.KINDE_ACCESS_TOKEN = tokens.access_token;
 
 // Update your secret manager with tokens.refresh_token for the next run
 ```
+
+## Step 4: Run the tests
+
+to be added...
 
 ## Important considerations
 
