@@ -79,6 +79,7 @@ The access token obtained this way is identical to what your production users re
 3. Open the `.env` file and add your Kinde configuration:
 
     ```env
+    # .env
     KINDE_ISSUER_URL=https://your-subdomain.kinde.com
     KINDE_CLIENT_ID=your_client_id
     KINDE_REFRESH_TOKEN=your_refresh_token_from_step_1
@@ -103,7 +104,7 @@ The access token obtained this way is identical to what your production users re
 
     async function refreshTokens() {
       const tokenUrl = `${process.env.KINDE_ISSUER_URL}/oauth2/token`
-      
+
       try {
         const response = await fetch(tokenUrl, {
           method: 'POST',
@@ -120,7 +121,7 @@ The access token obtained this way is identical to what your production users re
         }
 
         const tokens = await response.json()
-        
+
         // Update environment variables for current test run
         process.env.KINDE_ACCESS_TOKEN = tokens.access_token
         process.env.KINDE_REFRESH_TOKEN = tokens.refresh_token
@@ -128,7 +129,7 @@ The access token obtained this way is identical to what your production users re
         // Update .env file for future runs
         const envPath = path.join(process.cwd(), '.env')
         let envContent = fs.readFileSync(envPath, 'utf8')
-        
+
         // Replace existing tokens or add new ones
         envContent = envContent.replace(
           /KINDE_ACCESS_TOKEN=.*/,
@@ -138,13 +139,14 @@ The access token obtained this way is identical to what your production users re
           /KINDE_REFRESH_TOKEN=.*/,
           `KINDE_REFRESH_TOKEN=${tokens.refresh_token}`
         )
-        
+
         fs.writeFileSync(envPath, envContent)
-        
+
         console.log('✓ Tokens refreshed successfully')
       } catch (error) {
-        console.error('✗ Failed to refresh tokens:', error.message)
-        throw error
+        console.warn('⚠ Failed to refresh tokens:', error.message)
+        console.warn('⚠ Continuing with existing tokens from .env file')
+        // Don't throw - allow tests to run with existing tokens
       }
     }
 
@@ -185,7 +187,7 @@ The access token obtained this way is identical to what your production users re
     describe('Kinde API Tests', () => {
       test('should get user profile', async () => {
         const response = await fetch(
-          `${KINDE_ISSUER_URL}/oauth2/user_profile`,
+          `${KINDE_ISSUER_URL}/oauth2/v2/user_profile`,
           {
             headers: {
               Authorization: `Bearer ${ACCESS_TOKEN}`,
@@ -197,36 +199,6 @@ The access token obtained this way is identical to what your production users re
         const data = await response.json()
         expect(data).toHaveProperty('id')
         expect(data).toHaveProperty('email')
-      })
-
-      test('should get user roles', async () => {
-        const response = await fetch(
-          `${KINDE_ISSUER_URL}/oauth2/user_roles`,
-          {
-            headers: {
-              Authorization: `Bearer ${ACCESS_TOKEN}`,
-            },
-          }
-        )
-
-        expect(response.ok).toBe(true)
-        const data = await response.json()
-        expect(Array.isArray(data.roles)).toBe(true)
-      })
-
-      test('should get user permissions', async () => {
-        const response = await fetch(
-          `${KINDE_ISSUER_URL}/oauth2/user_permissions`,
-          {
-            headers: {
-              Authorization: `Bearer ${ACCESS_TOKEN}`,
-            },
-          }
-        )
-
-        expect(response.ok).toBe(true)
-        const data = await response.json()
-        expect(Array.isArray(data.permissions)).toBe(true)
       })
     })
     ```
