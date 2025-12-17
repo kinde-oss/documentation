@@ -1,7 +1,7 @@
 ---
 page_id: 4882de7b-07f3-4cc8-ac01-b096e17dcc35
 title: Backend API testing with Jest
-description: "Guide to testing backend APIs and services using Kinde refresh tokens for maintaining long-running authenticated sessions in automated tests."
+description: "Guide to testing backend APIs with Jest using Kinde refresh tokens for maintaining long-running authenticated sessions in automated tests."
 sidebar:
   order: 3
 relatedArticles:
@@ -16,8 +16,6 @@ topics:
 sdk: []
 languages:
   - JavaScript
-  - TypeScript
-  - Python
   - curl
 audience: developers
 complexity: intermediate
@@ -27,19 +25,19 @@ keywords:
   - refresh tokens
   - token rotation
   - automated testing
-  - CI/CD
   - test automation
 updated: 2025-12-16
 featured: false
 deprecated: false
-ai_summary: Guide to testing backend APIs using Kinde refresh tokens for maintaining authenticated sessions in automated tests, including token rotation and CI/CD integration.
+ai_summary: Guide to testing backend APIs with Jest using Kinde refresh tokens for maintaining authenticated sessions in automated tests, including token rotation.
 ---
 
-In this guide, we'll show you how to test backend APIs using Kinde refresh tokens for maintaining authenticated sessions in automated tests, including token rotation and CI/CD integration.
+In this guide, we'll show you how to test backend APIs with Jest using Kinde refresh tokens for maintaining authenticated sessions in automated tests, including token rotation.
 
 ### What you need
 
 - A test user with email and password created in the [test user and environment setup](/developer-tools/testing/setup-test-user-environment/) guide.
+- [Node.js](https://nodejs.org/en/download/) version 20 or higher.
 
 ## How it works
 
@@ -88,19 +86,23 @@ The access token obtained this way is identical to what your production users re
 
     Replace the placeholder values with your actual Kinde credentials from Step 1.
 
-4. Create a `jest.setup.js` file:
+    <Aside type="warning">
+    
+    **Important**: Make sure to add `.env` to your `.gitignore` file to prevent committing tokens to source control.
+    
+    </Aside>
+
+4. Create a `jest.global-setup.js` file:
 
     ```bash
-    touch jest.setup.js
+    touch jest.global-setup.js
     ```
 
-5. Open `jest.setup.js` and add the following code that refreshes tokens before tests run and updates the `.env` file:
+5. Open `jest.global-setup.js` and add the following code that refreshes tokens before tests run:
 
     ```javascript
-    // jest.setup.js
+    // jest.global-setup.js
     require('dotenv').config()
-    const fs = require('fs')
-    const path = require('path')
 
     async function refreshTokens() {
       const tokenUrl = `${process.env.KINDE_ISSUER_URL}/oauth2/token`
@@ -117,7 +119,8 @@ The access token obtained this way is identical to what your production users re
         })
 
         if (!response.ok) {
-          throw new Error(`Token refresh failed: ${response.status} ${response.statusText}`)
+          const errorText = await response.text()
+          throw new Error(`Token refresh failed: ${response.status} ${response.statusText} - ${errorText}`)
         }
 
         const tokens = await response.json()
@@ -125,22 +128,6 @@ The access token obtained this way is identical to what your production users re
         // Update environment variables for current test run
         process.env.KINDE_ACCESS_TOKEN = tokens.access_token
         process.env.KINDE_REFRESH_TOKEN = tokens.refresh_token
-
-        // Update .env file for future runs
-        const envPath = path.join(process.cwd(), '.env')
-        let envContent = fs.readFileSync(envPath, 'utf8')
-
-        // Replace existing tokens or add new ones
-        envContent = envContent.replace(
-          /KINDE_ACCESS_TOKEN=.*/,
-          `KINDE_ACCESS_TOKEN=${tokens.access_token}`
-        )
-        envContent = envContent.replace(
-          /KINDE_REFRESH_TOKEN=.*/,
-          `KINDE_REFRESH_TOKEN=${tokens.refresh_token}`
-        )
-
-        fs.writeFileSync(envPath, envContent)
 
         console.log('✓ Tokens refreshed successfully')
       } catch (error) {
@@ -150,9 +137,7 @@ The access token obtained this way is identical to what your production users re
       }
     }
 
-    // Refresh tokens before all tests
-    // Export the promise so Jest waits for it to complete
-    module.exports = refreshTokens()
+    module.exports = refreshTokens
     ```
 
 6. Create or update your `package.json` file to configure Jest. Add the following to your `package.json`:
@@ -163,7 +148,7 @@ The access token obtained this way is identical to what your production users re
         "test": "jest"
       },
       "jest": {
-        "setupFilesAfterEnv": ["<rootDir>/jest.setup.js"],
+        "globalSetup": "<rootDir>/jest.global-setup.js",
         "testEnvironment": "node"
       }
     }
@@ -195,7 +180,11 @@ The access token obtained this way is identical to what your production users re
           }
         )
 
-        expect(response.ok).toBe(true)
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`)
+        }
+
         const data = await response.json()
         expect(data).toHaveProperty('id')
         expect(data).toHaveProperty('email')
@@ -203,36 +192,27 @@ The access token obtained this way is identical to what your production users re
     })
     ```
 
-## Step 3: Update your stored token
+    You can use the same access token to test other Account API endpoints such as roles, permissions, properties, billing entitlements, and more. See the [Account API Reference](https://docs.kinde.com/kinde-apis/frontend/) for more information.
 
-After each token exchange:
+## Step 3: Run the tests
 
-1. Update your secret manager with the new `refresh_token`
-2. Set the `access_token` as an environment variable for use in tests
+1. Run the tests using the following command:
 
-**Example: jest.setup.js**
+    ```bash
+    npm test
+    ```
 
-```jsx
-// Example: jest.setup.js
-const response = await fetch('https://your-subdomain.kinde.com/oauth2/token', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  body: new URLSearchParams({
-    client_id: process.env.KINDE_CLIENT_ID,
-    grant_type: 'refresh_token',
-    refresh_token: process.env.KINDE_REFRESH_TOKEN,
-  }),
-});
+2. You should see the following output:
 
-const tokens = await response.json();
-process.env.KINDE_ACCESS_TOKEN = tokens.access_token;
+    ```bash
+    PASS ./kinde-api.test.js
+      Kinde API Tests
+        ✓ should get user profile (36ms)
 
-// Update your secret manager with tokens.refresh_token for the next run
-```
-
-## Step 4: Run the tests
-
-to be added...
+    Test Suites: 1 passed, 1 total
+    Tests:       1 passed, 1 total
+    ```
+You have successfully run the tests and validated that the API is working as expected. Use this approach to test your API endpoints and ensure they are working as expected.
 
 ## Important considerations
 
@@ -242,7 +222,7 @@ After exchange, the previous refresh token remains valid for approximately 30 se
 
 ### Secure storage
 
-Never commit tokens to source control. Use secret managers like GitHub Secrets, AWS Secrets Manager, or similar.
+Never commit tokens to source control. Make sure to add `.env` to your `.gitignore` file. For CI/CD environments, use secret managers like GitHub Secrets, AWS Secrets Manager, or similar to inject environment variables securely.
 
 ### Token refresh frequency
 
@@ -255,12 +235,6 @@ The following limitations apply to backend API testing with refresh tokens:
 - **Social provider tokens**: Refresh tokens obtained through social sign-in may have different expiration behaviors
 - **Organization-scoped tokens**: If testing organization-specific APIs, ensure your test user belongs to the correct organization
 - **M2M tokens**: Machine-to-machine applications use different token mechanisms (see [M2M documentation](/machine-to-machine-applications/about-m2m/))
-
-## Reference documentation
-
-- [Refresh Tokens Guide](/build/tokens/refresh-tokens/)
-- [Configure Tokens](/build/tokens/configure-tokens/)
-- [Token Customization](/build/tokens/token-customization/)
 
 ## Best practices
 
