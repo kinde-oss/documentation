@@ -33,7 +33,7 @@ keywords:
   - ios setup
   - pkce flow
   - custom schemes
-updated: 2025-10-31
+updated: 2025-11-21
 featured: false
 deprecated: false
 ai_summary: Complete guide for Flutter SDK including authentication setup, Android/iOS configuration, PKCE flow, and mobile app integration for Flutter 3.10+ applications.
@@ -704,6 +704,36 @@ int getTeamCount() {
 }
 ```
 
+## Self-serve portal
+
+The Flutter SDK provides the `generatePortalUrl` method to generate a one-time link to the Kinde self-serve portal. This allows users to manage their profile, billing, and organization settings.
+
+### Generate a portal URL
+
+```dart
+final portalUrl = await sdk.generatePortalUrl();
+```
+
+### With subnav parameter
+
+Direct users to a specific portal section using the `subnav` parameter:
+
+```dart
+final portalUrl = await sdk.generatePortalUrl(
+  subnav: PortalUrlSubnav.organizationDetails,
+);
+```
+
+### With return URL
+
+Specify where users should return after exiting the portal:
+
+```dart
+final portalUrl = await sdk.generatePortalUrl(
+  returnUrl: 'https://yourapp.com/dashboard',
+);
+```
+
 ## Limitations
 
 - **WebView authentication on mobile:** When using the Flutter SDK on mobile platforms (iOS/Android), users will need to authenticate separately when accessing content in in-app WebViews. This occurs because the SDK uses ephemeral web authentication sessions for security, which do not share authentication state with WebViews. Authentication tokens are stored in native secure storage (Keychain/KeyStore) and are not accessible to WebView contexts, which maintain separate cookie storage. For applications requiring seamless authentication between native and web contexts, contact [support@kinde.com](mailto:support@kinde.com) for guidance.
@@ -1091,4 +1121,29 @@ sdk.getIntegerFlag(code:"team_count");
 2
 ```
 
-If you need help connecting to Kinde, contact us at [support@kinde.com](mailto:support@kinde.com).
+### `generatePortalUrl`
+
+Generate a one-time link to the self-serve portal.
+
+**Arguments:**
+
+```dart
+subnav?: PortalUrlSubnav
+returnUrl?: "string"
+```
+
+**Usage:**
+
+```dart
+sdk.generatePortalUrl();
+sdk.generatePortalUrl(subnav: PortalUrlSubnav.organizationDetails);
+sdk.generatePortalUrl(returnUrl: "https://yourapp.com/dashboard");
+```
+
+**Sample output:**
+
+```dart
+"https://yourapp.kinde.com/portal/..."
+```
+
+If you need help connecting to Kinde, contact us at [support@kinde.com](mailto:support@kinde.com).

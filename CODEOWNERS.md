@@ -1,1 +1,0 @@
-* @kinde-oss/giants-kinde
