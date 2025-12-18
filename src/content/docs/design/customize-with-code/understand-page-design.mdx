@@ -333,62 +333,55 @@ The `pageSettings` object is required when you need to enable bindings that give
     }
     ```
 
-Bindings are explicitly opted-in for performance reasons. By declaring only the bindings you need, you tell Kinde's runtime which internal features to initialize, avoiding unnecessary computation and keeping your page render as fast as possible.
+    <Aside>
+    Bindings are explicitly opted-in for performance reasons. By declaring only the bindings you need, you tell Kinde's runtime which internal features to initialize, avoiding unnecessary computation and keeping your page render as fast as possible.
+    </Aside>
 
-## Environment Variables
+## How to access environment variables in your page
 
-The `@kinde/infrastructure` package exports a `getEnvironmentVariable` method, but this method is not available in Custom UI pages, even if you import it.
+You can access environment variables within your custom UI pages using the `getEnvironmentVariable` method. To enable this functionality, you must add the `pageSettings` object with the environment binding in all of your custom pages.
 
-If you need to access environment variables in your Custom UI page, you have a few options:
+Follow these steps:
 
-### Option 1: Pass data from the workflow handler to the page
+1. Set up your environment variables in Kinde > **Environment** > **Settings** > **Env variables**
+2. Add the `pageSettings` object with the `kinde.env` binding to your page file
+3. Import the `getEnvironmentVariable` method from `@kinde/infrastructure`
+4. Access the environment variable within your Page component
 
-In your workflow handler, fetch the env var and return it in the `data` object:
+Example:
 
-  ```js
-  // In your workflow handler
-  import { getEnvironmentVariable } from "@kinde/infrastructure"
+    ```tsx
+    "use server";
+    import { type KindePageEvent, getEnvironmentVariable } from "@kinde/infrastructure";
+    import React from "react";
+    import { renderToString } from "react-dom/server.browser";
 
-  export default async function handler(event) {
-    const publicUrl = getEnvironmentVariable("APP_PUBLIC_URL")?.value
-      return {
-        data: {
-          publicUrl,
-        },
+    const DefaultPage: React.FC<KindePageEvent> = ({ context, request }) => {
+      // Access environment variables inside your component
+      const publicUrl = getEnvironmentVariable("APP_PUBLIC_URL")?.value;
+
+      return (
+        <div>
+          <p>Public URL: {publicUrl}</p>
+        </div>
+      );
+    }
+
+    export default async function Page(event: KindePageEvent): Promise<string> {
+      const page = await DefaultPage(event);
+      return renderToString(page);
+    }
+
+    // Required: Add pageSettings with kinde.env binding to enable environment variable access
+    export const pageSettings = {
+      bindings: {
+        "kinde.env": {}
       }
-  }
-  ```
+    }
+    ```
 
-Then access it in your Custom UI page via the `context` object. You can access the workflow data through `context.data`:
+    <Aside type="warning">
 
-  ```js
-  // In your Custom UI page - Page function
-  export default async function Page(event) {
-    const { publicUrl } = event.context.data
-    // ... rest of your code
-  }
+    You cannot access environment variables at the module level (outside of your component functions). The `getEnvironmentVariable` method must be called inside your Page component or Layout component.
 
-  // Or in your Layout component
-  const Layout = async ({request, context}) => {
-    const { publicUrl } = context.data
-    // ... rest of your code
-  }
-  ```
-
-### Option 2: Hardcode or use a relative URL
-
-If `APP_PUBLIC_URL` is just for building URLs in the UI, consider using relative paths instead. 
-
-  ```js
-  // In your Custom UI page
-  const publicUrl = "/api/public-url"
-  ```
-
-### Option 3: Fetch from an API
-
-Make an API call from your Custom UI page to retrieve the necessary configuration. This requires the `kinde.fetch` binding in your `pageSettings`.
-
-  ```js
-  // In your Custom UI page
-  const publicUrl = await fetch("/api/public-url").then(res => res.json()).then(data => data.publicUrl);
-  ```
+    </Aside>
