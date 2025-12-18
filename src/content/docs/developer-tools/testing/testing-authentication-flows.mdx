@@ -1,6 +1,6 @@
 ---
 page_id: c1b1ea81-35f9-467e-8079-042d6a786e55
-title: WIP Testing authentication flows
+title: Testing authentication flows
 description: "Guide to testing sign-up, sign-in, and sign-out flows using browser automation tools like Playwright, Cypress, and AWS CloudWatch Synthetic Canaries."
 sidebar:
   order: 4
@@ -8,6 +8,7 @@ relatedArticles:
   - cc2bd7c3-b365-417f-a6d0-a2685acd6a7e
   - 5a67a5c0-3211-4d66-a090-4df8fde1cdad
   - f38ed786-7234-44d1-a564-f7269ce536c5
+  - a1b2c3d4-e5f6-7890-abcd-ef1234567890
 topics:
   - developer-tools
   - testing
@@ -30,35 +31,19 @@ keywords:
   - Cypress
   - AWS CloudWatch
   - browser automation
-updated: 2025-01-27
+updated: 2025-12-18
 featured: false
 deprecated: false
 ai_summary: Guide to testing authentication flows (sign-up, sign-in, sign-out) using browser automation tools including Playwright, Cypress, and AWS CloudWatch Synthetic Canaries.
 ---
 
-<Aside type="info">
-
-**Last updated: January 27, 2025**
-
-We're continuously improving Kinde and expanding testing capabilities. This documentation is regularly updated to reflect the latest supported use cases and best practices.
-
-</Aside>
-
 For full UI testing including the authentication flow, you can use browser automation tools like Puppeteer, Playwright, or Cypress. This guide covers how to test sign-up, sign-in, and sign-out flows with Kinde authentication.
 
-<Aside type="info">
-
-**Before you begin**: Make sure you've completed the [test user and environment setup](/developer-tools/testing/setup-test-user-environment/). You'll need a test user and configured test application to proceed.
-
-</Aside>
-
-## Recommended setup
+### Recommended setup
 
 1. **Use username/password authentication**: Configure your test environment with email + password as the sign-in method. This avoids dependencies on external services (social providers, email verification).
 
-2. **Use a verified test user**: Use a test user with a verified email address to skip verification flows (created during setup).
-
-3. **Use a test application**: Use the dedicated test application configured during setup.
+2. Use a test user and application configured during [setup](/developer-tools/testing/setup-test-user-environment/).
 
 ## Tool comparison
 
@@ -120,33 +105,25 @@ exports.handler = async () => {
 When testing sign-up flows, ensure:
 
 1. **Test user doesn't exist**: Use unique email addresses for each test run (e.g., `test-${timestamp}@example.com`)
-2. **Handle email verification**: If email verification is required, use an email testing service (see Passwordless flows below)
+2. **Handle email verification**: If email verification is required, use an email testing service (see [Testing Passwordless Flows](/developer-tools/testing/testing-passwordless-flows/))
 3. **Verify redirect**: Check that users are redirected to the correct page after sign-up
 4. **Test error cases**: Test with invalid emails, weak passwords, etc.
 
-**Example with Playwright:**
+### General pattern
 
-```tsx
-test('user can sign up', async ({ page }) => {
-  const timestamp = Date.now();
-  const testEmail = `test-${timestamp}@example.com`;
+The typical sign-up flow involves:
 
-  await page.goto('https://your-app.com');
-  await page.click('[data-testid="sign-up-button"]');
+1. Navigate to your application
+2. Click the sign-up button (redirects to Kinde)
+3. Fill in email and password on the Kinde sign-up page
+4. Submit the form
+5. Wait for redirect back to your application
+6. Verify the user is authenticated
 
-  // Wait for Kinde sign-up page
-  await page.waitForURL(/.*kinde\.com.*/);
-
-  // Fill sign-up form
-  await page.fill('input[name="p_email"]', testEmail);
-  await page.fill('input[name="p_password"]', 'SecurePassword123!');
-  await page.click('button[type="submit"]');
-
-  // Wait for redirect back to app
-  await page.waitForURL('https://your-app.com/**');
-  await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
-});
-```
+**Key selectors to use:**
+- Email input: `input[name="p_email"]`
+- Password input: `input[name="p_password"]`
+- Submit button: `button[type="submit"]`
 
 ## Testing sign-in flows
 
@@ -157,42 +134,21 @@ For sign-in flows:
 3. **Verify session**: Ensure the user is properly authenticated after sign-in
 4. **Test redirects**: Verify redirects to intended pages
 
-**Example with Playwright:**
+### General pattern
 
-```tsx
-test('user can sign in with email and password', async ({ page }) => {
-  await page.goto('https://your-app.com');
-  await page.click('[data-testid="sign-in-button"]');
+The typical sign-in flow involves:
 
-  // Wait for Kinde login page
-  await page.waitForURL(/.*kinde\.com.*/);
+1. Navigate to your application
+2. Click the sign-in button (redirects to Kinde)
+3. Enter email and submit
+4. Enter password and submit
+5. Wait for redirect back to your application
+6. Verify the user is authenticated
 
-  // Enter credentials
-  await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
-  await page.click('button[type="submit"]');
-
-  await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
-  await page.click('button[type="submit"]');
-
-  // Wait for redirect back to app
-  await page.waitForURL('https://your-app.com/**');
-  await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
-});
-
-test('invalid credentials show error message', async ({ page }) => {
-  await page.goto('https://your-app.com');
-  await page.click('[data-testid="sign-in-button"]');
-
-  await page.fill('input[name="p_email"]', 'invalid@example.com');
-  await page.click('button[type="submit"]');
-
-  await page.fill('input[name="p_password"]', 'wrong-password');
-  await page.click('button[type="submit"]');
-
-  // Should show error
-  await expect(page.locator('[data-testid="error-message"]')).toBeVisible();
-});
-```
+**Error handling:**
+- Test with invalid credentials
+- Verify error messages are displayed
+- Ensure users remain on the login page after errors
 
 ## Testing sign-out flows
 
@@ -202,108 +158,59 @@ Test that sign-out:
 2. **Redirects correctly**: User is redirected to the intended page
 3. **Protects routes**: Protected routes are no longer accessible
 
-**Example with Playwright:**
+### General pattern
+
+The typical sign-out flow involves:
+
+1. Authenticate the user first
+2. Click the sign-out button
+3. Verify the user is signed out (sign-in button visible)
+4. Attempt to access protected routes
+5. Verify redirect to sign-in page
+
+## Example: Cypress
+
+Here's a pattern using Cypress for testing authentication flows:
 
 ```tsx
-test('user can sign out', async ({ page }) => {
-  // First authenticate
-  await page.goto('https://your-app.com');
-  await page.click('[data-testid="sign-in-button"]');
-  await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
-  await page.click('button[type="submit"]');
-  await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
-  await page.click('button[type="submit"]');
-  await page.waitForURL('https://your-app.com/**');
+describe('Authentication Flows', () => {
+  it('user can sign in with email and password', () => {
+    cy.visit('https://your-app.com');
+    cy.get('[data-testid="sign-in-button"]').click();
 
-  // Now sign out
-  await page.click('[data-testid="sign-out-button"]');
+    // Wait for Kinde login page
+    cy.url().should('include', 'kinde.com');
 
-  // Should show signed-out state
-  await expect(page.locator('[data-testid="sign-in-button"]')).toBeVisible();
-  
-  // Protected route should redirect
-  await page.goto('https://your-app.com/dashboard');
-  await expect(page).toHaveURL(/.*sign-in.*/);
+    // Enter credentials
+    cy.get('input[name="p_email"]').type(Cypress.env('TEST_USER_EMAIL'));
+    cy.get('button[type="submit"]').click();
+
+    cy.get('input[name="p_password"]').type(Cypress.env('TEST_USER_PASSWORD'));
+    cy.get('button[type="submit"]').click();
+
+    // Wait for redirect back to app
+    cy.url().should('include', 'your-app.com');
+    cy.get('[data-testid="user-profile"]').should('be.visible');
+  });
+
+  it('user can sign out', () => {
+    // First authenticate (or use cy.session for state reuse)
+    cy.visit('https://your-app.com');
+    cy.get('[data-testid="sign-in-button"]').click();
+    cy.get('input[name="p_email"]').type(Cypress.env('TEST_USER_EMAIL'));
+    cy.get('button[type="submit"]').click();
+    cy.get('input[name="p_password"]').type(Cypress.env('TEST_USER_PASSWORD'));
+    cy.get('button[type="submit"]').click();
+    cy.url().should('include', 'your-app.com');
+
+    // Now sign out
+    cy.get('[data-testid="sign-out-button"]').click();
+
+    // Should show signed-out state
+    cy.get('[data-testid="sign-in-button"]').should('be.visible');
+  });
 });
 ```
-
-## Handling passwordless flows (Email OTP)
-
-Testing passwordless authentication with email OTP requires capturing the verification code. Some approaches:
-
-### Using a test email service
-
-**Mailosaur** or **Mailtrap** provide API access to test inboxes:
-
-```tsx
-import MailosaurClient from 'mailosaur';
-
-const mailosaur = new MailosaurClient(process.env.MAILOSAUR_API_KEY!);
-const serverId = process.env.MAILOSAUR_SERVER_ID!;
-const testEmail = `test.${serverId}@mailosaur.net`;
-
-// Request OTP
-await page.fill('input[name="p_email"]', testEmail);
-await page.click('button[type="submit"]');
-
-// Wait for OTP email
-const email = await mailosaur.messages.get(serverId, {
-  sentTo: testEmail,
-});
-
-// Extract 6-digit OTP code from email
-const otpMatch = email.text?.body?.match(/\b(\d{6})\b/);
-const otpCode = otpMatch?.[1];
-
-// Enter OTP
-await page.fill('input[name="p_otp"]', otpCode);
-await page.click('button[type="submit"]');
-```
-
-### Email-to-storage pipeline
-
-Route test emails to S3 or a database, then query from your tests:
-
-```tsx
-// utils/email-otp.ts
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
-
-const s3 = new S3Client({ region: 'us-east-1' });
-
-export async function waitForOTPEmail(
-  email: string,
-  timeoutMs = 30000
-): Promise<string> {
-  const startTime = Date.now();
-
-  while (Date.now() - startTime < timeoutMs) {
-    try {
-      const command = new GetObjectCommand({
-        Bucket: 'your-test-emails-bucket',
-        Key: `${email}/latest.txt`,
-      });
-
-      const response = await s3.send(command);
-      const body = await response.Body?.transformToString();
-
-      const otpMatch = body?.match(/\b(\d{6})\b/);
-      if (otpMatch) {
-        return otpMatch[1];
-      }
-    } catch (e) {
-      // Email not arrived yet
-    }
-
-    await new Promise((r) => setTimeout(r, 1000));
-  }
-
-  throw new Error('Timeout waiting for OTP email');
-}
-```
-
-### Dedicated test domain
-
-Configure a subdomain's email to be programmatically accessible.
 
 ## What's not supported
 
@@ -323,8 +230,6 @@ The following limitations apply to UI authentication flow testing:
 5. **Handle flakiness**: Add retry logic for network-related failures
 6. **Use environment variables**: Store test credentials securely, never commit to source control
 
-## Related guides
+## Passwordless authentication flows
 
-- [Testing Authenticated Features with Playwright](/developer-tools/testing/testing-authenticated-features-playwright/) - Learn how to test features after authentication
-- [Backend API Testing with Refresh Tokens](/developer-tools/testing/backend-api-testing/) - Learn how to test APIs without browser automation
-
+If your application uses passwordless authentication with email OTP, see the dedicated guide on **[Testing Passwordless Flows](/developer-tools/testing/testing-passwordless-flows/)**.

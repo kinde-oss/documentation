@@ -8,6 +8,7 @@ relatedArticles:
   - cc2bd7c3-b365-417f-a6d0-a2685acd6a7e
   - 5a67a5c0-3211-4d66-a090-4df8fde1cdad
   - c1b1ea81-35f9-467e-8079-042d6a786e55
+  - a1b2c3d4-e5f6-7890-abcd-ef1234567890
 topics:
   - developer-tools
   - testing
@@ -52,12 +53,14 @@ This guide covers how to implement automated end-to-end testing for applications
 
 ## Overview
 
-There are two main approaches to E2E testing with Kinde:
+This guide focuses on efficiently testing authenticated features using Playwright. For testing the authentication flows themselves (sign-up, sign-in, sign-out), see [Testing Authentication Flows](/developer-tools/testing/testing-authentication-flows/).
 
-1. **API Testing with Refresh Tokens** – Bypass the UI login flow and use pre-authenticated tokens
-2. **Full UI Testing** – Automate the complete sign-in flow through the browser
+There are two main approaches covered here:
 
-We recommend combining both approaches: use stored authentication state for most tests, and validate the actual login flow in dedicated auth tests.
+1. **Reusing Authentication State** – Save auth state once and reuse across tests (recommended for most cases)
+2. **API Testing with Token Refresh** – Test backend APIs without browser automation
+
+We recommend using stored authentication state for most tests, and validating the actual login flow in dedicated auth tests (see [Testing Authentication Flows](/developer-tools/testing/testing-authentication-flows/)).
 
 ## Approach 1: Reusing Authentication State (Recommended)
 
@@ -175,76 +178,7 @@ import dotenv from 'dotenv';
 dotenv.config({ path: '.env.test' });
 ```
 
-## Approach 2: Testing the Full Login Flow
-
-For tests that specifically validate authentication flows:
-
-```tsx
-// tests/auth-flow.spec.ts
-import { test, expect } from '@playwright/test';
-
-// Don't use saved auth state for these tests
-test.use({ storageState: { cookies: [], origins: [] } });
-
-test.describe('Authentication Flow', () => {
-  test('user can sign in with email and password', async ({ page }) => {
-    await page.goto('https://your-app.com');
-
-    // Should show sign-in button when not authenticated
-    await expect(page.locator('[data-testid="sign-in-button"]')).toBeVisible();
-
-    // Click sign in
-    await page.click('[data-testid="sign-in-button"]');
-
-    // Should redirect to Kinde
-    await expect(page).toHaveURL(/.*kinde\.com.*/);
-
-    // Complete login flow
-    await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
-    await page.click('button[type="submit"]');
-
-    await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
-    await page.click('button[type="submit"]');
-
-    // Should redirect back and show authenticated state
-    await page.waitForURL('https://your-app.com/**');
-    await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
-  });
-
-  test('user can sign out', async ({ page }) => {
-    // First authenticate
-    await page.goto('https://your-app.com');
-    await page.click('[data-testid="sign-in-button"]');
-    await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
-    await page.click('button[type="submit"]');
-    await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
-    await page.click('button[type="submit"]');
-    await page.waitForURL('https://your-app.com/**');
-
-    // Now sign out
-    await page.click('[data-testid="sign-out-button"]');
-
-    // Should show signed-out state
-    await expect(page.locator('[data-testid="sign-in-button"]')).toBeVisible();
-  });
-
-  test('invalid credentials show error message', async ({ page }) => {
-    await page.goto('https://your-app.com');
-    await page.click('[data-testid="sign-in-button"]');
-
-    await page.fill('input[name="p_email"]', 'invalid@example.com');
-    await page.click('button[type="submit"]');
-
-    await page.fill('input[name="p_password"]', 'wrong-password');
-    await page.click('button[type="submit"]');
-
-    // Should show error
-    await expect(page.locator('[data-testid="error-message"]')).toBeVisible();
-  });
-});
-```
-
-## Approach 3: API Testing with Token Refresh
+## Approach 2: API Testing with Token Refresh
 
 For backend/API testing, use refresh tokens to maintain authentication without browser automation:
 
@@ -311,96 +245,11 @@ test.describe('API Tests', () => {
 });
 ```
 
-## Handling Email OTP (Passwordless) Flows
+## Passwordless authentication flows
 
-If your app uses passwordless authentication with email OTP, you'll need to capture the verification code. Here's an approach using Mailosaur:
+If your app uses passwordless authentication with email OTP, you'll need to capture the verification code. See the dedicated guide:
 
-```tsx
-// tests/auth-otp.setup.ts
-import { test as setup, expect } from '@playwright/test';
-import MailosaurClient from 'mailosaur';
-
-const mailosaur = new MailosaurClient(process.env.MAILOSAUR_API_KEY!);
-const serverId = process.env.MAILOSAUR_SERVER_ID!;
-const testEmail = `test.${serverId}@mailosaur.net`;
-
-setup('authenticate with OTP', async ({ page }) => {
-  await page.goto('https://your-app.com');
-  await page.click('[data-testid="sign-in-button"]');
-
-  // Enter email for OTP
-  await page.fill('input[name="p_email"]', testEmail);
-  await page.click('button[type="submit"]');
-
-  // Wait for OTP email
-  const email = await mailosaur.messages.get(serverId, {
-    sentTo: testEmail,
-  });
-
-  // Extract 6-digit OTP code from email
-  const otpMatch = email.text?.body?.match(/\b(\d{6})\b/);
-  const otpCode = otpMatch?.[1];
-
-  if (!otpCode) {
-    throw new Error('Could not extract OTP code from email');
-  }
-
-  // Enter OTP
-  await page.fill('input[name="p_otp"]', otpCode);
-  await page.click('button[type="submit"]');
-
-  // Wait for successful auth
-  await page.waitForURL('https://your-app.com/**');
-  await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
-
-  // Save state
-  await page.context().storageState({ path: 'playwright/.auth/user.json' });
-
-  // Clean up - delete the email
-  await mailosaur.messages.del(email.id!);
-});
-```
-
-### Alternative: Email-to-S3 Pipeline
-
-If you have your own email infrastructure:
-
-```tsx
-// utils/email-otp.ts
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
-
-const s3 = new S3Client({ region: 'us-east-1' });
-
-export async function waitForOTPEmail(
-  email: string,
-  timeoutMs = 30000
-): Promise<string> {
-  const startTime = Date.now();
-
-  while (Date.now() - startTime < timeoutMs) {
-    try {
-      const command = new GetObjectCommand({
-        Bucket: 'your-test-emails-bucket',
-        Key: `${email}/latest.txt`,
-      });
-
-      const response = await s3.send(command);
-      const body = await response.Body?.transformToString();
-
-      const otpMatch = body?.match(/\b(\d{6})\b/);
-      if (otpMatch) {
-        return otpMatch[1];
-      }
-    } catch (e) {
-      // Email not arrived yet
-    }
-
-    await new Promise((r) => setTimeout(r, 1000));
-  }
-
-  throw new Error('Timeout waiting for OTP email');
-}
-```
+**[Testing Passwordless Flows](/developer-tools/testing/testing-passwordless-flows/)** - Learn how to test email OTP authentication using Mailosaur, Mailtrap, or custom email infrastructure.
 
 ## Complete project structure
 
@@ -413,7 +262,6 @@ your-project/
 │       └── user.json            # Saved auth state (gitignored)
 ├── tests/
 │   ├── auth.setup.ts            # Authentication setup
-│   ├── auth-flow.spec.ts         # Login/logout UI tests
 │   ├── dashboard.spec.ts         # Tests using saved auth
 │   ├── profile.spec.ts
 │   └── api/
@@ -517,6 +365,7 @@ The following limitations apply to Playwright testing with Kinde:
 
 ## Related guides
 
-- [Testing Authentication Flows](/developer-tools/testing/testing-authentication-flows/) - Learn how to test sign-up and sign-in flows
+- [Testing Authentication Flows](/developer-tools/testing/testing-authentication-flows/) - Learn how to test sign-up and sign-in flows with various tools
+- [Testing Passwordless Flows](/developer-tools/testing/testing-passwordless-flows/) - Learn how to test email OTP authentication
 - [Backend API Testing with Refresh Tokens](/developer-tools/testing/backend-api-testing/) - Learn how to test APIs without browser automation
 
