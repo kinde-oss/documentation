@@ -189,7 +189,7 @@ myApp/
   └── kinde.json
 ```
 
-## Kinde.json
+## `kinde.json` file
 
 The `kinde.json` file defines the config for all custom code in Kinde, including workflows and custom pages. A typical config file will look as follows:
 
@@ -321,29 +321,19 @@ The top level `context` key object contains information about the page itself, l
     - `description` the page description
     - `logoAlt` the alt text for your company logo
 
-## Page settings
+## `pageSettings` object
 
-Use the `pageSettings` object to configure what capabilities your custom UI page can access by enabling bindings.
+The `pageSettings` object is required when you need to enable bindings that give your page access to additional Kinde features, such as environment variables or the fetch API. Without declaring these bindings in `pageSettings`, these features won't be available in your page code.
 
-```js
-export const pageSettings = {}
-```
+    ```js
+    export const pageSettings = {
+      bindings: {
+        "kinde.env": {}
+      }
+    }
+    ```
 
-The main use case for this is when you want to make bindings available to your page. For example, the `kinde.env` binding is required when calling the Kinde Management API via `createKindeAPI` (it's used internally for M2M authentication). However, this binding does not give you direct access to call `getEnvironmentVariable` in your page code.
-
-```js
-export const pageSettings = {
-  bindings: {
-    "kinde.env": {},
-    "kinde.fetch": {},
-    url: {}
-  }
-}
-```
-
-This allows you to have fine-grained control over what your pages can access. See [Pages and the Kinde Management API](/design/customize-with-code/pages-and-kinde-api/) for more information about using bindings to make API calls.
-
-Note: If you don't need to call the Kinde Management API, you can leave pageSettings as an empty object {} or omit it entirely.
+Bindings are explicitly opted-in for performance reasons. By declaring only the bindings you need, you tell Kinde's runtime which internal features to initialize, avoiding unnecessary computation and keeping your page render as fast as possible.
 
 ## Environment Variables
 
