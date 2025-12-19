@@ -90,7 +90,7 @@ After creating the connection, configure these settings:
 4. **Sign in URL** (optional): Override the default SSO endpoint with a URL your IdP recognizes
 5. **Sign request algorithm**: Choose the algorithm used to sign SAML requests (RSA-SHA1 or RSA-SHA256)
 6. **Protocol binding**: Choose the protocol binding used to send SAML requests
-7. **Name ID format**: Select the format for the Name ID used to identify users in SAML responses (persistent)
+7. **Name ID format**: Select the format for the Name ID used to identify users in SAML responses (*persistent* recommended)
 8. Setup the attribute mapping for user:
 
     - **Email key attribute**: The attribute in the SAML token that contains the user's email. Defaults to `email` if not provided.
@@ -130,36 +130,15 @@ After creating the connection, configure these settings:
 
 In your IdP admin console, create a new SAML application with these settings:
 
-### Required IdP configuration
+1. **ACS URL / Reply URL**: `https://yourdomain.kinde.com/login/saml/callback`
+2. **Entity ID / Audience**: Use the Entity ID you configured in Kinde
+3. **Name ID format**: Select the format for the Name ID used to identify users in SAML responses (*Persistent* recommended)
+4. **RelayState** (optional): Configure a default RelayState URL if your IdP supports it. This is where users are redirected after authentication.
+5. **Enable IdP-initiated SSO**: In your IdP's application settings, enable the option to allow IdP-initiated sign-on (the exact setting name varies by provider)
 
-1. **ACS URL / Reply URL**
-
-   ```
-   https://yourdomain.kinde.com/login/saml/callback
-   ```
-
-2. **Entity ID / Audience**
-
-   Use the Entity ID you configured in Kinde
-
-3. **Name ID format**
-
-   Choose one of:
-
-   - `Persistent` (recommended)
-   - `Email address`
-   - `Transient`
-   - `Unspecified`
-
-### For IdP-initiated SSO specifically
-
-1. **RelayState** (optional)
-
-   Configure a default RelayState URL if your IdP supports it. This is where users are redirected after authentication.
-
-2. **Enable IdP-initiated SSO**
-
-   In your IdP's application settings, enable the option to allow IdP-initiated sign-on (the exact setting name varies by provider)
+    <Aside>
+    IdP-initiated SAML SSO support may vary by Identity Provider. Contact Kinde support if you encounter issues with specific IdP configurations.
+    </Aside>
 
 ## Step 4: Enable the connection in Kinde
 
@@ -202,33 +181,15 @@ In your IdP admin console, create a new SAML application with these settings:
 
 ### Error codes
 
-to be added...
+For a comprehensive list of error codes, see [Common errors and codes](/get-started/guides/error-codes/).
 
 ## Security best practices
 
-1. **Prefer SP-initiated when possible**
+- **Prefer SP-initiated when possible**: SP-initiated SSO includes additional security validations (InResponseTo, state/nonce)
+- **Enable IdP-initiated only when required**: Only enable for enterprise customers who specifically require portal-based access
+- **Use signed requests**: Configure SAML request signing for enhanced security
+- **Enforce MFA at the IdP**: Since authentication happens at the IdP, ensure MFA is required there
+- **Keep certificates current**: Monitor certificate expiration and rotate before they expire
 
-   SP-initiated SSO includes additional security validations (InResponseTo, state/nonce)
 
-2. **Enable IdP-initiated only when required**
-
-   Only enable for enterprise customers who specifically require portal-based access
-
-3. **Use signed requests**
-
-   Configure SAML request signing for enhanced security
-
-4. **Enforce MFA at the IdP**
-
-   Since authentication happens at the IdP, ensure MFA is required there
-
-5. **Keep certificates current**
-
-   Monitor certificate expiration and rotate before they expire
-
-<Aside>
-
-Note: IdP-initiated SAML SSO support may vary by Identity Provider. Contact Kinde support if you encounter issues with specific IdP configurations.
-
-</Aside>
 
