@@ -30,7 +30,7 @@ In this guide, you'll learn how to configure IdP-initiated SSO in Kinde, includi
 
 IdP-initiated SSO is an authentication flow where the login process **starts at the Identity Provider** rather than at your application (the Service Provider).
 
-When setting up enterprise authentication, you'll encounter two main ways to start a SAML single sign-on flow: Service Provider (SP) initiated and Identity Provider (IdP) initiated. This differs from SP-initiated SSO, where the user first visits your application and is then redirected to the IdP to authenticate.
+When setting up enterprise authentication, you'll encounter two main ways to start a SAML single sign-on flow: Service Provider (SP) initiated and Identity Provider (IdP) initiated. IdP-initiated SSO differs from SP-initiated SSO, where the user first visits your application and is then redirected to the IdP to authenticate.
 
 ### How it works
 
@@ -43,10 +43,9 @@ When setting up enterprise authentication, you'll encounter two main ways to sta
 
 ### What you need 
 
-
 - A [Kinde](https://kinde.com) account with an **enterprise connections** entitlement
-- Admin access to your [enterprise identity Provider](/authenticate/enterprise-connections/about-enterprise-connections) (Okta, Azure AD, Google Workspace, etc.)
-- A [verified domain](/authenticate/enterprise-connections/about-enterprise-connections#domain-based-access-control) configured in Kinde (for organization-level connections)
+- Admin access to your [enterprise identity provider](/authenticate/enterprise-connections/about-enterprise-connections) (Okta, Azure AD, Google Workspace, etc.)
+- A [verified domain configured in Kinde](/build/domains/organization-custom-domain/) (for organization-level connections)
 
 ## Step 1: Add a SAML enterprise connection in Kinde
 
@@ -67,10 +66,10 @@ When setting up enterprise authentication, you'll encounter two main ways to sta
 1. Sign in to your Kinde admin portal
 2. Navigate to **Organizations** > select your organization
 3. Go to the **Authentication** tab
-4. Select **Add connection** a pop-up appears
-5. Select **Organization SSO connection**, select **Next**
-5. Choose your connection type (Custom SAML, Cloudflare, Okta, etc.)
-6. Select **Next**
+4. Select **Add connection**. A pop-up appears
+5. Select **Organization SSO connection**, then select **Next**
+6. Choose your connection type (Custom SAML, Cloudflare, Okta, etc.)
+7. Select **Next**
 
 <Aside type="warning">
 
@@ -87,12 +86,12 @@ After creating the connection, configure these settings:
 
 1. **Connection name**: A name to identify this connection (e.g., "Acme Corp SSO")
 2. **Entity ID**: The unique identifier configured in your IdP (e.g., `https://yourapp.kinde.com`)
-3. **IdP metadata URL**: You will add it after finish setting up your Identity Provider
+3. **IdP metadata URL**: You will add this after finishing setup in your Identity Provider (see Step 3)
 4. **Sign in URL** (optional): Override the default SSO endpoint with a URL your IdP recognizes
 5. **Sign request algorithm**: Choose the algorithm used to sign SAML requests (RSA-SHA1 or RSA-SHA256)
 6. **Protocol binding**: Choose the protocol binding used to send SAML requests
 7. **Name ID format**: Select the format for the Name ID used to identify users in SAML responses (*persistent* recommended)
-8. Setup the attribute mapping for user:
+8. Set up the attribute mapping for user:
 
     - **Email key attribute**: The attribute in the SAML token that contains the user's email. Defaults to `email` if not provided.
     - **User ID key attribute**: The attribute in the SAML token that contains the user ID. Defaults to `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier` if not provided.
@@ -116,7 +115,7 @@ After creating the connection, configure these settings:
 10. **Always show sign-in button**: 
     - **Off (default):** If home realm domains are set, the SSO button only shows after email domain detection
     - **On:** The SSO button is always visible on the login screen
-11. Copy the **Assertion Consumer Service (ACS) URL** you will need to add this to your IdP configuration.
+11. Copy the **Assertion Consumer Service (ACS) URL**. You will need to add this to your IdP configuration.
 12. **Provisioning**: Control how users are created when authenticating via SAML:
     - **Create a user record in Kinde**: When enabled, users who don't exist in Kinde are automatically created on first sign-in
     - **Trust email addresses provided by this connection**: Merge accounts when email matches an existing Kinde user
@@ -133,7 +132,7 @@ After creating the connection, configure these settings:
 
 In your IdP admin console, create a new SAML application with these settings:
 
-1. **ACS URL / Reply URL**: `https://yourdomain.kinde.com/login/saml/callback`
+1. **ACS URL / Reply URL**: Use the ACS URL you copied from Kinde in Step 2 (e.g., `https://yourdomain.kinde.com/login/saml/callback`)
 2. **Entity ID / Audience**: Use the Entity ID you configured in Kinde
 3. **Name ID format**: Select the format for the Name ID used to identify users in SAML responses (*Persistent* recommended)
 4. **RelayState** (optional): Configure a default RelayState URL if your IdP supports it. This is where users are redirected after authentication.
@@ -143,17 +142,17 @@ In your IdP admin console, create a new SAML application with these settings:
     IdP-initiated SAML SSO support may vary by Identity Provider. Contact Kinde support if you encounter issues with specific IdP configurations.
     </Aside>
 
-    Once finished, you will receive the metadate URL and certificate information to add to your Kinde connection.  
+6. Copy the **Metadata URL** from your IdP. This is typically found in the SAML application settings or can be downloaded as an XML file. You'll need this URL in the next step.
   
 ## Step 4: Finish setting up your IdP connection
 
-1. Open the connection in Kinde. Via **Organization** > **Authentication** or via **Settings** > **Authentication**.
-2. Scroll to the IdP metadata URL field and paste the Metadata URL you copied from the last step.
-3. Enter the signed certificate and key information if you have it. You can do this later as well.
+1. Open the connection in Kinde. Go to **Organizations** > **Authentication** or **Settings** > **Authentication**.
+2. Scroll to the **IdP metadata URL** field and paste the Metadata URL you copied from Step 3.
+3. (Optional) Enter the signed certificate and key information if you have it. You can do this later as well. See [Advanced SAML configurations](/authenticate/enterprise-connections/advanced-saml-configurations/) for more details.
 4. Switch on the connection. This will make it instantly available to users if this is your production environment.
     - For environment-level connections, scroll down and select the apps that will use the auth method.
     - For organization-level connections, scroll down and select if you want to switch this on for the org.
-7. Select Save. You can now use the IdP for the selected applications.
+5. Select **Save**. You can now use the IdP for the selected applications.
 
 ## Step 5: Test the configuration
 
