@@ -1,6 +1,6 @@
 ---
 page_id: cc2bd7c3-b365-417f-a6d0-a2685acd6a7e
-title: WIP End-to-end testing with Kinde
+title: End-to-end testing with Kinde
 description: "Overview of end-to-end testing approaches for applications using Kinde authentication, including what's possible, unsupported use cases, and guidance for choosing the right testing strategy."
 sidebar:
   order: 1
@@ -32,79 +32,36 @@ keywords:
   - refresh tokens
   - API testing
   - UI testing
-updated: 2025-01-27
+updated: 2025-12-20
 featured: false
 deprecated: false
 ai_summary: Overview of end-to-end testing approaches for applications using Kinde authentication, including backend API testing with refresh tokens and UI testing with browser automation tools.
 ---
 
-Intro section, to be updated.
+Automated testing with Kinde authentication helps ensure your application's authentication flows work reliably. You can test backend APIs, UI authentication flows, and authenticated features using different approaches depending on what you need to validate.
 
-You can test applications that use Kinde authentication in the following ways:
+## Testing approaches
 
-### Backend API Testing
+Kinde supports three main testing approaches:
 
-- **Refresh token-based testing**: Use refresh tokens to maintain long-running authenticated sessions for API tests
-- **Token rotation**: Programmatically rotate tokens at the start of each test run
-- **CI/CD integration**: Store tokens securely in secret managers (GitHub Secrets, AWS Secrets Manager, etc.)
-- **Backend API validation**: Test your protected API endpoints without browser automation
+- **Backend API testing**: Test protected API endpoints using refresh tokens for long-running authenticated sessions
+- **Authentication flow testing**: Test sign-up, sign-in, and sign-out flows using browser automation tools
+- **Authenticated feature testing**: Test protected routes and features after authentication using saved session state
 
-### UI End-to-End Testing
+Each approach has its own guide with detailed implementation steps and examples.
 
-- **Full authentication flows**: Test complete sign-up and sign-in flows using browser automation tools
-- **Multiple tool support**: Use Playwright, Cypress, AWS CloudWatch Synthetic Canaries, or other browser automation tools
-- **Passwordless flows**: Test email OTP authentication flows using email testing services
-- **Authenticated feature testing**: Test protected routes and features after authentication
-- **State reuse**: Save and reuse authentication state across multiple tests for efficiency
+## Limitations
 
-## What's not supported
+Some authentication flows have testing limitations:
 
-The following use cases are currently **not supported** or have limitations:
+- **Social provider flows**: Automated testing of Google, GitHub, or other social sign-in flows is not directly supported due to third-party provider restrictions
+- **MFA flows**: Testing multi-factor authentication may require manual intervention
+- **Enterprise SSO flows**: Testing SAML/SSO enterprise connections requires coordination with identity providers
 
-- **Social provider testing**: Automated testing of social sign-in flows (Google, GitHub, etc.) is not directly supported due to third-party provider restrictions
-- **MFA testing**: Testing multi-factor authentication flows may require manual intervention or specialized test infrastructure
-- **Enterprise SSO testing**: Testing SAML/SSO enterprise connections requires coordination with identity providers and may not be fully automatable
-- **Real-time email verification**: Testing email verification flows requires access to test email inboxes (use services like Mailosaur or Mailtrap)
+For these use cases, consider manual testing or staging environments with test identity providers.
 
-<Aside type="warning">
+## Next steps
 
-If you need to test unsupported use cases, consider using manual testing or staging environments with test identity providers.
+Before you start testing, you need to set up your test infrastructure:
 
-</Aside>
-
-## Before you begin
-
-Before starting with any testing approach, you need to set up your test infrastructure:
-
-**[Setup the Test user and environment](/developer-tools/testing/setup-test-user-environment/)** - Complete guide to creating test users, configuring test applications, and setting up isolated test environments. This setup is common across all testing methods.
-
-## Choose your testing approach
-
-### Testing APIs or Backend Services?
-
-If you're testing backend APIs or services that require authentication, use the refresh token approach:
-
-**[Backend API Testing with Refresh Tokens](/developer-tools/testing/backend-api-testing/)** - Learn how to set up long-running authenticated sessions using refresh tokens for API testing.
-
-### Testing Sign-Up or Sign-In Flows?
-
-If you need to test the complete authentication user experience (sign-up, sign-in, sign-out), use browser automation:
-
-**[Testing Authentication Flows](/developer-tools/testing/testing-authentication-flows/)** - Learn how to test sign-up and sign-in flows using browser automation tools like Playwright, Cypress, and AWS CloudWatch Synthetic Canaries.
-
-### Testing Authenticated Features?
-
-If you want to test features that require authentication (dashboard, profile pages, etc.), use Playwright with saved authentication state:
-
-**[Testing Authenticated Features with Playwright](/developer-tools/testing/testing-authenticated-features-playwright/)** - Comprehensive guide to testing authenticated features efficiently using Playwright, including reusing authentication state and CI/CD integration.
-
-## Best practices
-
-Regardless of which approach you choose, follow these best practices:
-
-1. **Set up test infrastructure first**: Complete the [test user and environment setup](/developer-tools/testing/setup-test-user-environment/) before starting tests
-2. **Use dedicated test users**: Create separate test users in Kinde for automated testing
-3. **Isolate test environments**: Use separate Kinde environments or organizations for testing
-4. **Secure credential storage**: Never commit tokens or passwords to source control; use secret managers
-5. **Handle token expiry gracefully**: Build retry logic for token refresh failures
-6. **Monitor test reliability**: Track flaky tests related to authentication timing issues
+**[Setup test user and environment](/developer-tools/testing/setup-test-user-environment/)** - Create test users, configure test applications, and set up isolated test environments. This setup is required for all testing methods.
