@@ -209,77 +209,117 @@ exports.handler = async () => {
 
 ## Example: Cypress
 
-Here's a pattern using Cypress for testing authentication flows:
+1. Install Cypress with the following command:
+    ```bash
+    npm install cypress --save-dev
+    ```
+2. Run Cypress configuration wizard and follow the setup:
+    ```bash
+    npx cypress open
+    ```
+3. Create the Cypress env file:
+    ```bash
+    touch cypress.env.json
+    ```
+4. Add the following to the `cypress.env.json` file:
+    ```json
+    {
+      "TEST_APP_URL": "https://your-app-url.com",
+      "TEST_USER_EMAIL": "test@example.com",
+      "TEST_USER_PASSWORD": "your-test-password",
+      "KINDE_ISSUER_URL": "https://YOUR_KINDE_DOMAIN.kinde.com"
+    }
+    ```
+    <Aside type="warning" title="Important">
+      Make sure to add the `cypress.env.json` file to your `.gitignore` file to prevent committing sensitive information to source control.
+    </Aside>
+5. Add the following to the `spec.cy.js` file:
+    ```js
+    // spec.cy.js
+    describe('Authentication Flows', () => {
+      it('user can sign in with email and password', () => {
+        cy.visit(Cypress.env('TEST_APP_URL'))
+        cy.get('[data-testid="sign-in-button"]').click()
+
+        // Wait for Kinde login page
+        cy.url().should('include', 'kinde.com')
+
+        cy.origin(Cypress.env('KINDE_ISSUER_URL'), () => {
+          // Enter credentials
+          cy.get('input[name="p_email"]').type(Cypress.env('TEST_USER_EMAIL'))
+          cy.get('button[type="submit"]').click()
+
+          cy.get('input[name="p_password"]').type(Cypress.env('TEST_USER_PASSWORD'))
+          cy.get('button[type="submit"]').click({ multiple: true })
+        })
+        // Wait for redirect back to app
+        cy.url().should('include', new URL(Cypress.env('TEST_APP_URL')).hostname)
+        cy.get('[data-testid="user-profile"]').should('be.visible')
+      })
+
+      it('user can sign out', () => {
+        // First authenticate (or use cy.session for state reuse)
+        cy.visit(Cypress.env('TEST_APP_URL'))
+        cy.get('[data-testid="sign-in-button"]').click()
+        cy.origin(Cypress.env('KINDE_ISSUER_URL'), () => {
+          // Enter credentials
+          cy.get('input[name="p_email"]').type(Cypress.env('TEST_USER_EMAIL'))
+          cy.get('button[type="submit"]').click()
+
+          cy.get('input[name="p_password"]').type(Cypress.env('TEST_USER_PASSWORD'))
+          cy.get('button[type="submit"]').click({ multiple: true })
+        })
+        cy.url().should('include', new URL(Cypress.env('TEST_APP_URL')).hostname)
+
+        // Now sign out
+        cy.get('[data-testid="sign-out-button"]').click()
+
+        // Should show signed-out state
+        cy.get('[data-testid="sign-in-button"]').should('be.visible')
+      })
+    })
+    ```
+6. Run the Cypress tests:
+    ```bash
+    npx cypress open
+    ```
+
+    You should now see the Cypress tests in the browser.
+
+    ![Cypress tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f652e891-5863-402d-ec3d-16576792a600/public)
+
+### Example: Sign up flow with Cypress
 
 ```js
-describe('Authentication Flows', () => {
   it('user can sign up with email and password', () => {
-    // Generate unique email for this test run
-    const timestamp = Date.now();
-    const testEmail = `test-${timestamp}@mailosaur.net`;
-    
-    cy.visit(Cypress.env('TEST_APP_URL'));
-    cy.get('[data-testid="sign-up-button"]').click();
-    
-    // Wait for Kinde sign-up page
-    cy.url().should('include', 'kinde.com');
-    
-    // Fill sign-up form
-    cy.get('input[name="p_email"]').type(testEmail);
-    cy.get('input[name="p_password"]').type(Cypress.env('TEST_USER_PASSWORD'));
-    cy.get('button[type="submit"]').click();
-    
-    // Wait for OTP email and extract code
-    // Note: Integrate with Mailosaur or email service to retrieve OTP
-    // See Testing Passwordless Flows guide for email service integration
-    // cy.task('getOTPFromEmail', testEmail).then((otpCode) => {
-    //   cy.get('input[name="p_otp"]').type(otpCode);
-    //   cy.get('button[type="submit"]').click();
-    // });
-    
-    // Wait for redirect back to app
-    cy.url().should('include', new URL(Cypress.env('TEST_APP_URL')).hostname);
-    cy.get('[data-testid="user-profile"]').should('be.visible');
-  });
-
-  it('user can sign in with email and password', () => {
-    cy.visit(Cypress.env('TEST_APP_URL'));
-    cy.get('[data-testid="sign-in-button"]').click();
-
-    // Wait for Kinde login page
-    cy.url().should('include', 'kinde.com');
-
-    // Enter credentials
-    cy.get('input[name="p_email"]').type(Cypress.env('TEST_USER_EMAIL'));
-    cy.get('button[type="submit"]').click();
-
-    cy.get('input[name="p_password"]').type(Cypress.env('TEST_USER_PASSWORD'));
-    cy.get('button[type="submit"]').click();
-
-    // Wait for redirect back to app
-    cy.url().should('include', new URL(Cypress.env('TEST_APP_URL')).hostname);
-    cy.get('[data-testid="user-profile"]').should('be.visible');
-  });
-
-  it('user can sign out', () => {
-    // First authenticate (or use cy.session for state reuse)
-    cy.visit(Cypress.env('TEST_APP_URL'));
-    cy.get('[data-testid="sign-in-button"]').click();
-    cy.get('input[name="p_email"]').type(Cypress.env('TEST_USER_EMAIL'));
-    cy.get('button[type="submit"]').click();
-    cy.get('input[name="p_password"]').type(Cypress.env('TEST_USER_PASSWORD'));
-    cy.get('button[type="submit"]').click();
-    cy.url().should('include', new URL(Cypress.env('TEST_APP_URL')).hostname);
-
-    // Now sign out
-    cy.get('[data-testid="sign-out-button"]').click();
-
-    // Should show signed-out state
-    cy.get('[data-testid="sign-in-button"]').should('be.visible');
-  });
-});
+      // Generate unique email for this test run
+      const timestamp = Date.now();
+      const testEmail = `test-${timestamp}@mailosaur.net`;
+      
+      cy.visit(Cypress.env('TEST_APP_URL'));
+      cy.get('[data-testid="sign-up-button"]').click();
+      
+      // Wait for Kinde sign-up page
+      cy.url().should('include', 'kinde.com');
+      
+      // Fill sign-up form
+      cy.get('input[name="p_email"]').type(testEmail);
+      cy.get('input[name="p_password"]').type(Cypress.env('TEST_USER_PASSWORD'));
+      cy.get('button[type="submit"]').click();
+      
+      // Wait for OTP email and extract code
+      // Note: Integrate with Mailosaur or email service to retrieve OTP
+      // See Testing Passwordless Flows guide for email service integration
+      // cy.task('getOTPFromEmail', testEmail).then((otpCode) => {
+      //   cy.get('input[name="p_otp"]').type(otpCode);
+      //   cy.get('button[type="submit"]').click();
+      // });
+      
+      // Wait for redirect back to app
+      cy.url().should('include', new URL(Cypress.env('TEST_APP_URL')).hostname);
+      cy.get('[data-testid="user-profile"]').should('be.visible');
+    });`
 ```
-
 ## Example: Playwright
 
 Here's a pattern using Playwright for testing authentication flows:
