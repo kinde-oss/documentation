@@ -5,8 +5,7 @@ description: "Guide to testing sign-up, sign-in, and sign-out flows using browse
 sidebar:
   order: 4
 relatedArticles:
-  - cc2bd7c3-b365-417f-a6d0-a2685acd6a7e
-  - 5a67a5c0-3211-4d66-a090-4df8fde1cdad
+  - 4882de7b-07f3-4cc8-ac01-b096e17dcc35
   - f38ed786-7234-44d1-a564-f7269ce536c5
   - a1b2c3d4-e5f6-7890-abcd-ef1234567890
 topics:
@@ -19,7 +18,6 @@ sdk: []
 languages:
   - JavaScript
   - TypeScript
-  - Python
 audience: developers
 complexity: intermediate
 keywords:
@@ -27,11 +25,13 @@ keywords:
   - authentication flows
   - sign-up testing
   - sign-in testing
+  - sign-out testing
   - Playwright
   - Cypress
   - AWS CloudWatch
+  - puppeteer
   - browser automation
-updated: 2025-12-18
+updated: 2025-12-30
 featured: false
 deprecated: false
 ai_summary: Guide to testing authentication flows (sign-up, sign-in, sign-out) using browser automation tools including Playwright, Cypress, and AWS CloudWatch Synthetic Canaries.
@@ -130,7 +130,7 @@ The typical sign-out flow involves:
 
 Here's a pattern using AWS CloudWatch Synthetic Canaries with Puppeteer:
 
-```jsx
+```js
 // Synthetic canary script
 const synthetics = require('Synthetics');
 const { launch } = require('puppeteer-core');
@@ -144,7 +144,7 @@ exports.handler = async () => {
 
   // Sign-up flow
   await flowStep('Open app for sign-up', async () => {
-    await page.goto('https://your-app.com');
+    await page.goto(process.env.TEST_APP_URL);
   });
 
   await flowStep('Click sign up', async () => {
@@ -156,7 +156,7 @@ exports.handler = async () => {
     const testEmail = `test-${timestamp}@mailosaur.net`;
     
     await page.type('input[name="p_email"]', testEmail);
-    await page.type('input[name="p_password"]', process.env.TEST_PASSWORD);
+    await page.type('input[name="p_password"]', process.env.TEST_USER_PASSWORD);
     await page.click('button[type="submit"]');
   });
 
@@ -188,7 +188,7 @@ exports.handler = async () => {
   });
 
   await flowStep('Enter password', async () => {
-    await page.type('input[name="p_password"]', process.env.TEST_PASSWORD);
+    await page.type('input[name="p_password"]', process.env.TEST_USER_PASSWORD);
     await page.click('button[type="submit"]');
   });
 
@@ -211,14 +211,14 @@ exports.handler = async () => {
 
 Here's a pattern using Cypress for testing authentication flows:
 
-```tsx
+```js
 describe('Authentication Flows', () => {
   it('user can sign up with email and password', () => {
     // Generate unique email for this test run
     const timestamp = Date.now();
     const testEmail = `test-${timestamp}@mailosaur.net`;
     
-    cy.visit('https://your-app.com');
+    cy.visit(Cypress.env('TEST_APP_URL'));
     cy.get('[data-testid="sign-up-button"]').click();
     
     // Wait for Kinde sign-up page
@@ -226,7 +226,7 @@ describe('Authentication Flows', () => {
     
     // Fill sign-up form
     cy.get('input[name="p_email"]').type(testEmail);
-    cy.get('input[name="p_password"]').type(Cypress.env('TEST_PASSWORD'));
+    cy.get('input[name="p_password"]').type(Cypress.env('TEST_USER_PASSWORD'));
     cy.get('button[type="submit"]').click();
     
     // Wait for OTP email and extract code
@@ -238,12 +238,12 @@ describe('Authentication Flows', () => {
     // });
     
     // Wait for redirect back to app
-    cy.url().should('include', 'your-app.com');
+    cy.url().should('include', new URL(Cypress.env('TEST_APP_URL')).hostname);
     cy.get('[data-testid="user-profile"]').should('be.visible');
   });
 
   it('user can sign in with email and password', () => {
-    cy.visit('https://your-app.com');
+    cy.visit(Cypress.env('TEST_APP_URL'));
     cy.get('[data-testid="sign-in-button"]').click();
 
     // Wait for Kinde login page
@@ -257,19 +257,19 @@ describe('Authentication Flows', () => {
     cy.get('button[type="submit"]').click();
 
     // Wait for redirect back to app
-    cy.url().should('include', 'your-app.com');
+    cy.url().should('include', new URL(Cypress.env('TEST_APP_URL')).hostname);
     cy.get('[data-testid="user-profile"]').should('be.visible');
   });
 
   it('user can sign out', () => {
     // First authenticate (or use cy.session for state reuse)
-    cy.visit('https://your-app.com');
+    cy.visit(Cypress.env('TEST_APP_URL'));
     cy.get('[data-testid="sign-in-button"]').click();
     cy.get('input[name="p_email"]').type(Cypress.env('TEST_USER_EMAIL'));
     cy.get('button[type="submit"]').click();
     cy.get('input[name="p_password"]').type(Cypress.env('TEST_USER_PASSWORD'));
     cy.get('button[type="submit"]').click();
-    cy.url().should('include', 'your-app.com');
+    cy.url().should('include', new URL(Cypress.env('TEST_APP_URL')).hostname);
 
     // Now sign out
     cy.get('[data-testid="sign-out-button"]').click();
@@ -284,7 +284,7 @@ describe('Authentication Flows', () => {
 
 Here's a pattern using Playwright for testing authentication flows:
 
-```tsx
+```js
 import { test, expect } from '@playwright/test';
 
 test.describe('Authentication Flows', () => {
@@ -293,7 +293,7 @@ test.describe('Authentication Flows', () => {
     const timestamp = Date.now();
     const testEmail = `test-${timestamp}@mailosaur.net`;
     
-    await page.goto('https://your-app.com');
+    await page.goto(process.env.TEST_APP_URL!);
     await page.click('[data-testid="sign-up-button"]');
     
     // Wait for Kinde sign-up page
@@ -301,7 +301,7 @@ test.describe('Authentication Flows', () => {
     
     // Fill sign-up form
     await page.fill('input[name="p_email"]', testEmail);
-    await page.fill('input[name="p_password"]', process.env.TEST_PASSWORD!);
+    await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
     await page.click('button[type="submit"]');
     
     // Wait for OTP email and extract code
@@ -312,12 +312,13 @@ test.describe('Authentication Flows', () => {
     // await page.click('button[type="submit"]');
     
     // Wait for redirect back to app
-    await expect(page).toHaveURL(/your-app\.com/);
+    const appUrl = new URL(process.env.TEST_APP_URL!);
+    await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
     await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
   });
 
   test('user can sign in with email and password', async ({ page }) => {
-    await page.goto('https://your-app.com');
+    await page.goto(process.env.TEST_APP_URL!);
     await page.click('[data-testid="sign-in-button"]');
     
     // Wait for Kinde login page
@@ -331,19 +332,21 @@ test.describe('Authentication Flows', () => {
     await page.click('button[type="submit"]');
     
     // Wait for redirect back to app
-    await expect(page).toHaveURL(/your-app\.com/);
+    const appUrl = new URL(process.env.TEST_APP_URL!);
+    await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
     await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
   });
 
   test('user can sign out', async ({ page }) => {
     // First authenticate
-    await page.goto('https://your-app.com');
+    await page.goto(process.env.TEST_APP_URL!);
     await page.click('[data-testid="sign-in-button"]');
     await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
     await page.click('button[type="submit"]');
     await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
     await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/your-app\.com/);
+    const appUrl = new URL(process.env.TEST_APP_URL!);
+    await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
     
     // Now sign out
     await page.click('[data-testid="sign-out-button"]');
