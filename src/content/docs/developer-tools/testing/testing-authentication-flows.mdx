@@ -42,6 +42,7 @@ Authentication is critical, and when it breaks, users can't access your product.
 ### What you need
 
 - A test user with email and password created in the [test user and environment setup](/developer-tools/testing/setup-test-user-environment/) guide.
+- A running test application with `testid` attributes such as the [Kinde Next.js test application](https://github.com/tamalchowdhury/kinde-test-application).
 
 ## Tool comparison
 
@@ -125,87 +126,6 @@ The typical sign-out flow involves:
 3. Verify the user is signed out (sign-in button visible)
 4. Attempt to access protected routes
 5. Verify redirect to sign-in page
-
-## Example: AWS CloudWatch Synthetic Canaries
-
-Here's a pattern using AWS CloudWatch Synthetic Canaries with Puppeteer:
-
-```js
-// Synthetic canary script
-const synthetics = require('Synthetics');
-const { launch } = require('puppeteer-core');
-
-const flowStep = async (stepName, action) => {
-  await synthetics.executeStep(stepName, action);
-};
-
-exports.handler = async () => {
-  const page = await synthetics.getPage();
-
-  // Sign-up flow
-  await flowStep('Open app for sign-up', async () => {
-    await page.goto(process.env.TEST_APP_URL);
-  });
-
-  await flowStep('Click sign up', async () => {
-    await page.click('[data-testid="sign-up-button"]');
-  });
-
-  await flowStep('Fill sign-up form', async () => {
-    const timestamp = Date.now();
-    const testEmail = `test-${timestamp}@mailosaur.net`;
-    
-    await page.type('input[name="p_email"]', testEmail);
-    await page.type('input[name="p_password"]', process.env.TEST_USER_PASSWORD);
-    await page.click('button[type="submit"]');
-  });
-
-  await flowStep('Handle OTP verification', async () => {
-    // Wait for OTP email and extract code
-    // Note: Integrate with Mailosaur or email service to retrieve OTP
-    // See Testing Passwordless Flows guide for email service integration
-    // const otpCode = await getOTPFromEmail(testEmail);
-    // await page.type('input[name="p_otp"]', otpCode);
-    // await page.click('button[type="submit"]');
-  });
-
-  await flowStep('Verify signed up', async () => {
-    await page.waitForSelector('[data-testid="user-profile"]');
-  });
-
-  // Sign-in flow (sign out first to reset state)
-  await flowStep('Sign out before sign-in test', async () => {
-    await page.click('[data-testid="sign-out-button"]');
-  });
-
-  await flowStep('Click sign in', async () => {
-    await page.click('[data-testid="sign-in-button"]');
-  });
-
-  await flowStep('Enter email', async () => {
-    await page.type('input[name="p_email"]', process.env.TEST_USER_EMAIL);
-    await page.click('button[type="submit"]');
-  });
-
-  await flowStep('Enter password', async () => {
-    await page.type('input[name="p_password"]', process.env.TEST_USER_PASSWORD);
-    await page.click('button[type="submit"]');
-  });
-
-  await flowStep('Verify signed in', async () => {
-    await page.waitForSelector('[data-testid="user-profile"]');
-  });
-
-  // Sign-out flow
-  await flowStep('Sign out', async () => {
-    await page.click('[data-testid="sign-out-button"]');
-  });
-
-  await flowStep('Verify signed out', async () => {
-    await page.waitForSelector('[data-testid="sign-in-button"]');
-  });
-};
-```
 
 ## Example: Cypress
 
@@ -445,6 +365,87 @@ exports.handler = async () => {
     await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
     await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
   });
+```
+
+## Example: AWS CloudWatch Synthetic Canaries
+
+Here's a pattern using AWS CloudWatch Synthetic Canaries with Puppeteer:
+
+```js
+// Synthetic canary script
+const synthetics = require('Synthetics');
+const { launch } = require('puppeteer-core');
+
+const flowStep = async (stepName, action) => {
+  await synthetics.executeStep(stepName, action);
+};
+
+exports.handler = async () => {
+  const page = await synthetics.getPage();
+
+  // Sign-up flow
+  await flowStep('Open app for sign-up', async () => {
+    await page.goto(process.env.TEST_APP_URL);
+  });
+
+  await flowStep('Click sign up', async () => {
+    await page.click('[data-testid="sign-up-button"]');
+  });
+
+  await flowStep('Fill sign-up form', async () => {
+    const timestamp = Date.now();
+    const testEmail = `test-${timestamp}@mailosaur.net`;
+    
+    await page.type('input[name="p_email"]', testEmail);
+    await page.type('input[name="p_password"]', process.env.TEST_USER_PASSWORD);
+    await page.click('button[type="submit"]');
+  });
+
+  await flowStep('Handle OTP verification', async () => {
+    // Wait for OTP email and extract code
+    // Note: Integrate with Mailosaur or email service to retrieve OTP
+    // See Testing Passwordless Flows guide for email service integration
+    // const otpCode = await getOTPFromEmail(testEmail);
+    // await page.type('input[name="p_otp"]', otpCode);
+    // await page.click('button[type="submit"]');
+  });
+
+  await flowStep('Verify signed up', async () => {
+    await page.waitForSelector('[data-testid="user-profile"]');
+  });
+
+  // Sign-in flow (sign out first to reset state)
+  await flowStep('Sign out before sign-in test', async () => {
+    await page.click('[data-testid="sign-out-button"]');
+  });
+
+  await flowStep('Click sign in', async () => {
+    await page.click('[data-testid="sign-in-button"]');
+  });
+
+  await flowStep('Enter email', async () => {
+    await page.type('input[name="p_email"]', process.env.TEST_USER_EMAIL);
+    await page.click('button[type="submit"]');
+  });
+
+  await flowStep('Enter password', async () => {
+    await page.type('input[name="p_password"]', process.env.TEST_USER_PASSWORD);
+    await page.click('button[type="submit"]');
+  });
+
+  await flowStep('Verify signed in', async () => {
+    await page.waitForSelector('[data-testid="user-profile"]');
+  });
+
+  // Sign-out flow
+  await flowStep('Sign out', async () => {
+    await page.click('[data-testid="sign-out-button"]');
+  });
+
+  await flowStep('Verify signed out', async () => {
+    await page.waitForSelector('[data-testid="sign-in-button"]');
+  });
+};
 ```
 
 ## What's not supported
