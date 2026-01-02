@@ -322,13 +322,102 @@ exports.handler = async () => {
 ```
 ## Example: Playwright
 
-Here's a pattern using Playwright for testing authentication flows:
+1. Install Playwright with the following command:
+    ```bash
+    npm init playwright@latest
+    ```
+2. Install dotenv with the following command:
+    ```bash
+    npm install dotenv --save-dev
+    ```
+3. Edit the `playwright.config.ts` file to add the following:
+    ```ts
+    // playwright.config.ts
+    import dotenv from 'dotenv';
+    import path from 'path';
+    dotenv.config({ path: path.resolve(__dirname, '.env') });
+    ... other config file content ...
+    ```
+4. Create a new `.env` file:
+    ```bash
+    touch .env
+    ```
+5. Add the following to the `.env` file:
+    ```env
+    TEST_APP_URL=https://your-app-url.com
+    TEST_USER_EMAIL=test@example.com
+    TEST_USER_PASSWORD=your-test-password
+    ```
 
-```js
-import { test, expect } from '@playwright/test';
+    <Aside type="warning" title="Important">
+      Make sure to add the `.env` file to your `.gitignore` file to prevent committing sensitive information to source control.
+    </Aside>
 
-test.describe('Authentication Flows', () => {
-  test('user can sign up with email and password', async ({ page }) => {
+6. Create a new test file:
+    ```bash
+    touch tests/auth.spec.ts
+    ```
+7. Add the following to the `auth.spec.ts` file:
+
+    ```ts
+    // tests/auth.spec.ts
+    import { test, expect } from '@playwright/test';
+
+    test.describe('Authentication Flows', () => {
+
+      test('user can sign in with email and password', async ({ page }) => {
+        await page.goto(process.env.TEST_APP_URL!);
+        await page.click('[data-testid="sign-in-button"]');
+
+        // Wait for Kinde login page
+        await expect(page).toHaveURL(/kinde\.com/);
+
+        // Enter credentials
+        await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
+        await page.click('button[type="submit"]');
+
+        await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
+        await page.click('button[type="submit"]');
+
+        // Wait for redirect back to app
+        const appUrl = new URL(process.env.TEST_APP_URL!);
+        await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
+        await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
+      });
+
+      test('user can sign out', async ({ page }) => {
+        // First authenticate
+        await page.goto(process.env.TEST_APP_URL!);
+        await page.click('[data-testid="sign-in-button"]');
+        await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
+        await page.click('button[type="submit"]');
+        await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
+        await page.click('button[type="submit"]');
+        const appUrl = new URL(process.env.TEST_APP_URL!);
+        await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
+
+        // Now sign out
+        await page.click('[data-testid="sign-out-button"]');
+
+        // Should show signed-out state
+        await expect(page.locator('[data-testid="sign-in-button"]')).toBeVisible();
+      });
+    });
+    ```
+8. Run the Playwright tests in ui mode:
+    ```bash
+    npx playwright test --ui
+    ```
+
+    You should now see the Playwright tests in the browser.
+
+    ![Playwright tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/49ecd595-d9ef-409c-63bd-a8b7236e3300/public)
+
+### Example: Sign up flow with Playwright
+
+```ts
+// tests/auth.spec.ts
+    test('user can sign up with email and password', async ({ page }) => {
     // Generate unique email for this test run
     const timestamp = Date.now();
     const testEmail = `test-${timestamp}@mailosaur.net`;
@@ -356,45 +445,6 @@ test.describe('Authentication Flows', () => {
     await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
     await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
   });
-
-  test('user can sign in with email and password', async ({ page }) => {
-    await page.goto(process.env.TEST_APP_URL!);
-    await page.click('[data-testid="sign-in-button"]');
-    
-    // Wait for Kinde login page
-    await expect(page).toHaveURL(/kinde\.com/);
-    
-    // Enter credentials
-    await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
-    await page.click('button[type="submit"]');
-    
-    await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
-    await page.click('button[type="submit"]');
-    
-    // Wait for redirect back to app
-    const appUrl = new URL(process.env.TEST_APP_URL!);
-    await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
-    await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
-  });
-
-  test('user can sign out', async ({ page }) => {
-    // First authenticate
-    await page.goto(process.env.TEST_APP_URL!);
-    await page.click('[data-testid="sign-in-button"]');
-    await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
-    await page.click('button[type="submit"]');
-    await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
-    await page.click('button[type="submit"]');
-    const appUrl = new URL(process.env.TEST_APP_URL!);
-    await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
-    
-    // Now sign out
-    await page.click('[data-testid="sign-out-button"]');
-    
-    // Should show signed-out state
-    await expect(page.locator('[data-testid="sign-in-button"]')).toBeVisible();
-  });
-});
 ```
 
 ## What's not supported
