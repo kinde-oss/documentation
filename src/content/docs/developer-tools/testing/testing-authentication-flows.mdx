@@ -80,9 +80,13 @@ The typical sign-up flow involves:
 7. Verify the user is authenticated
 
 **Key selectors to use:**
+- First name input: `input[name="p_first_name"]`
+- Last name input: `input[name="p_last_name"]`
 - Email input: `input[name="p_email"]`
-- Password input: `input[name="p_password"]`
-- OTP input: `input[name="p_otp"]`
+- Password input: `input[name="p_first_password"]` 
+- Password confirmation: `input[name="p_second_password"]`
+- Terms and conditions checkbox: `input[name="p_has_clickwrap_accepted"]`
+- OTP input: `input[name="p_confirmation_code"]`
 - Submit button: `button[type="submit"]`
 
 ## Testing sign-in flows
@@ -223,36 +227,78 @@ The typical sign-out flow involves:
 
 ### Example: Sign up flow with Playwright
 
+Check out the full working example in the [Testing Passwordless Flows](/developer-tools/testing/testing-passwordless-flows/) guide.
+
 ```ts
-// tests/auth.spec.ts
-    test('user can sign up with email and password', async ({ page }) => {
+// tests/email-password-signup.spec.ts
+import { test, expect } from '@playwright/test'
+import MailosaurClient from 'mailosaur'
+require('dotenv').config()
+
+const mailosaur = new MailosaurClient(process.env.MAILOSAUR_API_KEY!)
+const serverId = process.env.MAILOSAUR_SERVER_ID!
+
+test.describe('Authentication Flows', () => {
+  test('user can sign up with email and password', async ({ page }) => {
     // Generate unique email for this test run
-    const timestamp = Date.now();
-    const testEmail = `test-${timestamp}@mailosaur.net`;
-    
-    await page.goto(process.env.TEST_APP_URL!);
-    await page.click('[data-testid="sign-up-button"]');
-    
+    const timestamp = Date.now()
+    const testEmail = `test-${timestamp}@${serverId}.mailosaur.net`
+
+    await page.goto(process.env.TEST_APP_URL!)
+    await page.click('[data-testid="sign-up-button"]')
+
     // Wait for Kinde sign-up page
-    await expect(page).toHaveURL(/kinde\.com/);
-    
+    await expect(page).toHaveURL(/kinde\.com/)
+
     // Fill sign-up form
-    await page.fill('input[name="p_email"]', testEmail);
-    await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
-    await page.click('button[type="submit"]');
-    
-    // Wait for OTP email and extract code
-    // Note: Integrate with Mailosaur or email service to retrieve OTP
-    // See Testing Passwordless Flows guide for email service integration
-    // const otpCode = await getOTPFromEmail(testEmail);
-    // await page.fill('input[name="p_otp"]', otpCode);
-    // await page.click('button[type="submit"]');
-    
-    // Wait for redirect back to app
-    const appUrl = new URL(process.env.TEST_APP_URL!);
-    await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
-    await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
-  });
+    await page.fill('input[name="p_first_name"]', 'John')
+    await page.fill('input[name="p_last_name"]', 'Doe')
+    await page.fill('input[name="p_email"]', testEmail)
+    await page.check('input[name="p_has_clickwrap_accepted"]') // Accept terms and conditions
+    await page.click('button[type="submit"]')
+
+    // Wait for OTP email
+    const email = await mailosaur.messages.get(serverId, {
+      sentTo: testEmail,
+    })
+
+    // Extract 6-digit OTP code from email
+    const otpMatch = email.text?.body?.match(/\b(\d{6})\b/)
+    const otpCode = otpMatch?.[1]
+
+    if (!otpCode) {
+      throw new Error('Could not extract OTP code from email')
+    }
+
+    // Enter OTP
+    await page.fill('input[name="p_confirmation_code"]', otpCode)
+    await page.click('button[type="submit"]')
+
+    // Enter password
+    await page.fill(
+      'input[name="p_first_password"]',
+      process.env.TEST_USER_PASSWORD!
+    )
+    await page.fill(
+      'input[name="p_second_password"]',
+      process.env.TEST_USER_PASSWORD!
+    )
+    await page.click('button[type="submit"]')
+
+    // Wait for successful auth
+    const appUrl = new URL(process.env.TEST_APP_URL!)
+    await expect(page).toHaveURL(
+      new RegExp(appUrl.hostname.replace('.', '\\.'))
+    )
+    await expect(page.locator('[data-testid="user-profile"]')).toBeVisible()
+
+    // Save state
+    await page.context().storageState({ path: 'playwright/.auth/user.json' })
+
+    // Clean up - delete the email
+    await mailosaur.messages.del(email.id!)
+  })
+})
 ```
 
 ## Example: Cypress
@@ -338,11 +384,13 @@ The typical sign-out flow involves:
 
 ### Example: Sign up flow with Cypress
 
-```js
+```ts
+// spec.cy.ts
+describe('Authentication Flows', () => {
   it('user can sign up with email and password', () => {
       // Generate unique email for this test run
       const timestamp = Date.now();
-      const testEmail = `test-${timestamp}@mailosaur.net`;
+      const testEmail = `test-${timestamp}@testemail.com`;
       
       cy.visit(Cypress.env('TEST_APP_URL'));
       cy.get('[data-testid="sign-up-button"]').click();
@@ -351,22 +399,28 @@ The typical sign-out flow involves:
       cy.url().should('include', 'kinde.com');
       
       // Fill sign-up form
-      cy.get('input[name="p_email"]').type(testEmail);
-      cy.get('input[name="p_password"]').type(Cypress.env('TEST_USER_PASSWORD'));
-      cy.get('button[type="submit"]').click();
-      
-      // Wait for OTP email and extract code
-      // Note: Integrate with Mailosaur or email service to retrieve OTP
+      cy.origin(Cypress.env('KINDE_ISSUER_URL'), { args: { testEmail } }, ({ testEmail }) => {
+          cy.get('input[name="p_first_name"]').type('John');
+          cy.get('input[name="p_last_name"]').type('Doe');
+          cy.get('input[name="p_email"]').type(testEmail);
+          cy.get('input[name="p_has_clickwrap_accepted"]').check(); // Accept terms and conditions
+          cy.get('button[type="submit"]').click();
+      });
+
+      // Handle OTP email verification in this step
       // See Testing Passwordless Flows guide for email service integration
-      // cy.task('getOTPFromEmail', testEmail).then((otpCode) => {
-      //   cy.get('input[name="p_otp"]').type(otpCode);
-      //   cy.get('button[type="submit"]').click();
-      // });
+      
+      cy.origin(Cypress.env('KINDE_ISSUER_URL'), () => {
+        cy.get('input[name="p_first_password"]').type(Cypress.env('TEST_USER_PASSWORD')!)
+        cy.get('input[name="p_second_password"]').type(Cypress.env('TEST_USER_PASSWORD')!)
+        cy.get('button[type="submit"]').click();
+      });
       
       // Wait for redirect back to app
       cy.url().should('include', new URL(Cypress.env('TEST_APP_URL')).hostname);
       cy.get('[data-testid="user-profile"]').should('be.visible');
-    });`
+    });
+});
 ```
 
 ## Example: AWS CloudWatch Synthetic Canaries
@@ -376,7 +430,6 @@ Here's a pattern using AWS CloudWatch Synthetic Canaries with Puppeteer:
 ```js
 // Synthetic canary script
 const synthetics = require('Synthetics');
-const { launch } = require('puppeteer-core');
 
 const flowStep = async (stepName, action) => {
   await synthetics.executeStep(stepName, action);
@@ -384,68 +437,101 @@ const flowStep = async (stepName, action) => {
 
 exports.handler = async () => {
   const page = await synthetics.getPage();
+  
+  // Store testEmail outside flowStep for OTP handling
+  let testEmail;
 
   // Sign-up flow
   await flowStep('Open app for sign-up', async () => {
-    await page.goto(process.env.TEST_APP_URL);
+    await page.goto(process.env.TEST_APP_URL, { 
+      waitUntil: 'networkidle0', 
+      timeout: 30000 
+    });
   });
 
   await flowStep('Click sign up', async () => {
+    await page.waitForSelector('[data-testid="sign-up-button"]', { timeout: 10000 });
     await page.click('[data-testid="sign-up-button"]');
+    // Wait for navigation to Kinde
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
   });
 
   await flowStep('Fill sign-up form', async () => {
     const timestamp = Date.now();
-    const testEmail = `test-${timestamp}@mailosaur.net`;
+    testEmail = `test-${timestamp}@testemail.com`;
     
-    await page.type('input[name="p_email"]', testEmail);
-    await page.type('input[name="p_password"]', process.env.TEST_USER_PASSWORD);
+    await page.waitForSelector('input[name="p_first_name"]', { timeout: 10000 });
+    await page.fill('input[name="p_first_name"]', 'John');
+    await page.fill('input[name="p_last_name"]', 'Doe');
+    await page.fill('input[name="p_email"]', testEmail);
+    await page.click('input[name="p_has_clickwrap_accepted"]'); // Use click() instead of check()
     await page.click('button[type="submit"]');
+    // Wait for OTP page
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
   });
 
   await flowStep('Handle OTP verification', async () => {
-    // Wait for OTP email and extract code
-    // Note: Integrate with Mailosaur or email service to retrieve OTP
+    // Handle OTP email verification in this step
     // See Testing Passwordless Flows guide for email service integration
-    // const otpCode = await getOTPFromEmail(testEmail);
-    // await page.type('input[name="p_otp"]', otpCode);
+    // Example: const otpCode = await getOTPFromEmail(testEmail);
+    // await page.fill('input[name="p_confirmation_code"]', otpCode);
     // await page.click('button[type="submit"]');
+    // await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
+  });
+
+  await flowStep('Create password', async () => {
+    await page.waitForSelector('input[name="p_first_password"]', { timeout: 10000 });
+    await page.fill('input[name="p_first_password"]', process.env.TEST_USER_PASSWORD);
+    await page.fill('input[name="p_second_password"]', process.env.TEST_USER_PASSWORD);
+    await page.click('button[type="submit"]');
+    // Wait for redirect back to app
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
   });
 
   await flowStep('Verify signed up', async () => {
-    await page.waitForSelector('[data-testid="user-profile"]');
+    await page.waitForSelector('[data-testid="user-profile"]', { timeout: 10000 });
   });
 
   // Sign-in flow (sign out first to reset state)
   await flowStep('Sign out before sign-in test', async () => {
+    await page.waitForSelector('[data-testid="sign-out-button"]', { timeout: 10000 });
     await page.click('[data-testid="sign-out-button"]');
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
   });
 
   await flowStep('Click sign in', async () => {
+    await page.waitForSelector('[data-testid="sign-in-button"]', { timeout: 10000 });
     await page.click('[data-testid="sign-in-button"]');
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
   });
 
   await flowStep('Enter email', async () => {
-    await page.type('input[name="p_email"]', process.env.TEST_USER_EMAIL);
+    await page.waitForSelector('input[name="p_email"]', { timeout: 10000 });
+    await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL);
     await page.click('button[type="submit"]');
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
   });
 
   await flowStep('Enter password', async () => {
-    await page.type('input[name="p_password"]', process.env.TEST_USER_PASSWORD);
+    await page.waitForSelector('input[name="p_password"]', { timeout: 10000 });
+    await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD);
     await page.click('button[type="submit"]');
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
   });
 
   await flowStep('Verify signed in', async () => {
-    await page.waitForSelector('[data-testid="user-profile"]');
+    await page.waitForSelector('[data-testid="user-profile"]', { timeout: 10000 });
   });
 
   // Sign-out flow
   await flowStep('Sign out', async () => {
+    await page.waitForSelector('[data-testid="sign-out-button"]', { timeout: 10000 });
     await page.click('[data-testid="sign-out-button"]');
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
   });
 
   await flowStep('Verify signed out', async () => {
-    await page.waitForSelector('[data-testid="sign-in-button"]');
+    await page.waitForSelector('[data-testid="sign-in-button"]', { timeout: 10000 });
   });
 };
 ```
