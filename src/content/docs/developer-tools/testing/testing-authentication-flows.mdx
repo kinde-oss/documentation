@@ -43,6 +43,7 @@ Authentication is critical, and when it breaks, users can't access your product.
 
 - A test user with email and password created in the [test user and environment setup](/developer-tools/testing/setup-test-user-environment/) guide.
 - A running test application with `testid` attributes such as the [Kinde Next.js test application](https://github.com/tamalchowdhury/kinde-test-application).
+- [Node.js](https://nodejs.org/en/download/) version 20 or higher.
 
 ## Tool comparison
 
@@ -126,6 +127,133 @@ The typical sign-out flow involves:
 3. Verify the user is signed out (sign-in button visible)
 4. Attempt to access protected routes
 5. Verify redirect to sign-in page
+
+## Example: Playwright
+
+1. Install Playwright with the following command:
+    ```bash
+    npm init playwright@latest
+    ```
+2. Install dotenv with the following command:
+    ```bash
+    npm install dotenv --save-dev
+    ```
+3. Edit the `playwright.config.ts` file to add the following:
+    ```ts
+    // playwright.config.ts
+    import dotenv from 'dotenv';
+    import path from 'path';
+    dotenv.config({ path: path.resolve(__dirname, '.env') });
+    // ... other config file content ...
+    ```
+4. Create a new `.env` file:
+    ```bash
+    touch .env
+    ```
+5. Add the following to the `.env` file:
+    ```env
+    TEST_APP_URL=https://your-app-url.com
+    TEST_USER_EMAIL=test@example.com
+    TEST_USER_PASSWORD=your-test-password
+    ```
+
+    <Aside type="warning" title="Important">
+      Make sure to add the `.env` file to your `.gitignore` file to prevent committing sensitive information to source control.
+    </Aside>
+
+6. Create a new test file:
+    ```bash
+    touch tests/auth.spec.ts
+    ```
+7. Add the following to the `auth.spec.ts` file:
+
+    ```ts
+    // tests/auth.spec.ts
+    import { test, expect } from '@playwright/test';
+
+    test.describe('Authentication Flows', () => {
+
+      test('user can sign in with email and password', async ({ page }) => {
+        await page.goto(process.env.TEST_APP_URL!);
+        await page.click('[data-testid="sign-in-button"]');
+
+        // Wait for Kinde login page
+        await expect(page).toHaveURL(/kinde\.com/);
+
+        // Enter credentials
+        await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
+        await page.click('button[type="submit"]');
+
+        await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
+        await page.click('button[type="submit"]');
+
+        // Wait for redirect back to app
+        const appUrl = new URL(process.env.TEST_APP_URL!);
+        await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
+        await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
+      });
+
+      test('user can sign out', async ({ page }) => {
+        // First authenticate
+        await page.goto(process.env.TEST_APP_URL!);
+        await page.click('[data-testid="sign-in-button"]');
+        await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
+        await page.click('button[type="submit"]');
+        await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
+        await page.click('button[type="submit"]');
+        const appUrl = new URL(process.env.TEST_APP_URL!);
+        await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
+
+        // Now sign out
+        await page.click('[data-testid="sign-out-button"]');
+
+        // Should show signed-out state
+        await expect(page.locator('[data-testid="sign-in-button"]')).toBeVisible();
+      });
+    });
+    ```
+8. Run the Playwright tests in ui mode:
+    ```bash
+    npx playwright test --ui
+    ```
+
+    You should now see the Playwright tests in the browser.
+
+    ![Playwright tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/49ecd595-d9ef-409c-63bd-a8b7236e3300/public)
+
+### Example: Sign up flow with Playwright
+
+```ts
+// tests/auth.spec.ts
+    test('user can sign up with email and password', async ({ page }) => {
+    // Generate unique email for this test run
+    const timestamp = Date.now();
+    const testEmail = `test-${timestamp}@mailosaur.net`;
+    
+    await page.goto(process.env.TEST_APP_URL!);
+    await page.click('[data-testid="sign-up-button"]');
+    
+    // Wait for Kinde sign-up page
+    await expect(page).toHaveURL(/kinde\.com/);
+    
+    // Fill sign-up form
+    await page.fill('input[name="p_email"]', testEmail);
+    await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
+    await page.click('button[type="submit"]');
+    
+    // Wait for OTP email and extract code
+    // Note: Integrate with Mailosaur or email service to retrieve OTP
+    // See Testing Passwordless Flows guide for email service integration
+    // const otpCode = await getOTPFromEmail(testEmail);
+    // await page.fill('input[name="p_otp"]', otpCode);
+    // await page.click('button[type="submit"]');
+    
+    // Wait for redirect back to app
+    const appUrl = new URL(process.env.TEST_APP_URL!);
+    await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
+    await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
+  });
+```
 
 ## Example: Cypress
 
@@ -239,132 +367,6 @@ The typical sign-out flow involves:
       cy.url().should('include', new URL(Cypress.env('TEST_APP_URL')).hostname);
       cy.get('[data-testid="user-profile"]').should('be.visible');
     });`
-```
-## Example: Playwright
-
-1. Install Playwright with the following command:
-    ```bash
-    npm init playwright@latest
-    ```
-2. Install dotenv with the following command:
-    ```bash
-    npm install dotenv --save-dev
-    ```
-3. Edit the `playwright.config.ts` file to add the following:
-    ```ts
-    // playwright.config.ts
-    import dotenv from 'dotenv';
-    import path from 'path';
-    dotenv.config({ path: path.resolve(__dirname, '.env') });
-    ... other config file content ...
-    ```
-4. Create a new `.env` file:
-    ```bash
-    touch .env
-    ```
-5. Add the following to the `.env` file:
-    ```env
-    TEST_APP_URL=https://your-app-url.com
-    TEST_USER_EMAIL=test@example.com
-    TEST_USER_PASSWORD=your-test-password
-    ```
-
-    <Aside type="warning" title="Important">
-      Make sure to add the `.env` file to your `.gitignore` file to prevent committing sensitive information to source control.
-    </Aside>
-
-6. Create a new test file:
-    ```bash
-    touch tests/auth.spec.ts
-    ```
-7. Add the following to the `auth.spec.ts` file:
-
-    ```ts
-    // tests/auth.spec.ts
-    import { test, expect } from '@playwright/test';
-
-    test.describe('Authentication Flows', () => {
-
-      test('user can sign in with email and password', async ({ page }) => {
-        await page.goto(process.env.TEST_APP_URL!);
-        await page.click('[data-testid="sign-in-button"]');
-
-        // Wait for Kinde login page
-        await expect(page).toHaveURL(/kinde\.com/);
-
-        // Enter credentials
-        await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
-        await page.click('button[type="submit"]');
-
-        await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
-        await page.click('button[type="submit"]');
-
-        // Wait for redirect back to app
-        const appUrl = new URL(process.env.TEST_APP_URL!);
-        await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
-        await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
-      });
-
-      test('user can sign out', async ({ page }) => {
-        // First authenticate
-        await page.goto(process.env.TEST_APP_URL!);
-        await page.click('[data-testid="sign-in-button"]');
-        await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
-        await page.click('button[type="submit"]');
-        await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
-        await page.click('button[type="submit"]');
-        const appUrl = new URL(process.env.TEST_APP_URL!);
-        await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
-
-        // Now sign out
-        await page.click('[data-testid="sign-out-button"]');
-
-        // Should show signed-out state
-        await expect(page.locator('[data-testid="sign-in-button"]')).toBeVisible();
-      });
-    });
-    ```
-8. Run the Playwright tests in ui mode:
-    ```bash
-    npx playwright test --ui
-    ```
-
-    You should now see the Playwright tests in the browser.
-
-    ![Playwright tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/49ecd595-d9ef-409c-63bd-a8b7236e3300/public)
-
-### Example: Sign up flow with Playwright
-
-```ts
-// tests/auth.spec.ts
-    test('user can sign up with email and password', async ({ page }) => {
-    // Generate unique email for this test run
-    const timestamp = Date.now();
-    const testEmail = `test-${timestamp}@mailosaur.net`;
-    
-    await page.goto(process.env.TEST_APP_URL!);
-    await page.click('[data-testid="sign-up-button"]');
-    
-    // Wait for Kinde sign-up page
-    await expect(page).toHaveURL(/kinde\.com/);
-    
-    // Fill sign-up form
-    await page.fill('input[name="p_email"]', testEmail);
-    await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
-    await page.click('button[type="submit"]');
-    
-    // Wait for OTP email and extract code
-    // Note: Integrate with Mailosaur or email service to retrieve OTP
-    // See Testing Passwordless Flows guide for email service integration
-    // const otpCode = await getOTPFromEmail(testEmail);
-    // await page.fill('input[name="p_otp"]', otpCode);
-    // await page.click('button[type="submit"]');
-    
-    // Wait for redirect back to app
-    const appUrl = new URL(process.env.TEST_APP_URL!);
-    await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
-    await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
-  });
 ```
 
 ## Example: AWS CloudWatch Synthetic Canaries
