@@ -45,9 +45,9 @@ We recommend using stored authentication state for most tests, and validating th
 
 ### What you need
 
-- A test user with email and password created in the [test user and environment setup](/developer-tools/testing/setup-test-user-environment/) guide.
+- A [test user with email and password](/developer-tools/testing/setup-test-user-environment/).
+- A [running test application](/developer-tools/testing/setup-test-user-environment/#step-3-create-a-test-application) for testing locally.
 - [Node.js](https://nodejs.org/en/download/) version 20 or higher.
-- A [running test application](https://github.com/tamalchowdhury/kinde-test-application) for testing locally.
 
 ## Setup a Playwright project
 
@@ -189,70 +189,160 @@ Playwright supports saving and reusing browser authentication state. This is the
 
 ## Approach 2: API Testing with Token Refresh
 
-For backend/API testing, use refresh tokens to maintain authentication without browser automation:
+1. Login to your test application and get the `refresh_token` cookie value. 
+    
+    Learn how to [obtain the refresh token](/developer-tools/testing/backend-api-testing/#step-1-obtain-initial-tokens) here.
 
-```tsx
-// tests/api/api.setup.ts
-import { test as setup } from '@playwright/test';
+2. Update the `.env` file with the following values:
 
-setup('refresh API tokens', async ({ request }) => {
-  const response = await request.post(
-    'https://your-subdomain.kinde.com/oauth2/token',
-    {
-      form: {
-        client_id: process.env.KINDE_CLIENT_ID!,
-        grant_type: 'refresh_token',
-        refresh_token: process.env.KINDE_REFRESH_TOKEN!,
+    ```env
+    # .env
+    TEST_APP_URL=http://your-app-url.com
+    TEST_USER_EMAIL=test@example.com
+    KINDE_CLIENT_ID=your-kinde-client-id
+    KINDE_ISSUER_URL=https://your-subdomain.kinde.com
+    KINDE_REFRESH_TOKEN=your-refresh-token
+    ```
+3. Create and update a new `api.setup.ts` file with the following content:
+
+    ```tsx
+    // tests/api/api.setup.ts
+    import { test as setup, expect } from '@playwright/test'
+    import { writeFileSync, mkdirSync } from 'fs'
+    import { join, dirname } from 'path'
+
+    setup('refresh API tokens', async ({ request }) => {
+      const response = await request.post(
+        `${process.env.KINDE_ISSUER_URL}/oauth2/token`,
+        {
+          form: {
+            client_id: process.env.KINDE_CLIENT_ID!,
+            grant_type: 'refresh_token',
+            refresh_token: process.env.KINDE_REFRESH_TOKEN!,
+          },
+        }
+      )
+
+      expect(response.ok()).toBeTruthy()
+      const tokens = await response.json()
+
+      // Store access token in a file
+      const tokenPath = join(__dirname, '../../playwright/.auth/api-token.json')
+      const tokenDir = dirname(tokenPath)
+
+      // Ensure directory exists
+      mkdirSync(tokenDir, { recursive: true })
+
+      writeFileSync(
+        tokenPath,
+        JSON.stringify(
+          {
+            access_token: tokens.access_token,
+            expires_at: Date.now() + tokens.expires_in * 1000,
+          },
+          null,
+          2
+        )
+      )
+
+      // Important: Update your secrets manager with the new refresh token
+      // for subsequent test runs
+      console.log('New refresh token (update in secrets):', tokens.refresh_token)
+    })
+    ```
+
+4. Create and update a new `users.spec.ts` file with the following content:
+
+    ```tsx
+    // tests/api/users.spec.ts
+    import { test, expect } from '@playwright/test'
+    import { readFileSync } from 'fs'
+    import { join } from 'path'
+
+    test.describe('API Tests', () => {
+      let accessToken: string
+
+      test.beforeAll(() => {
+        // Load access token from file created by api.setup.ts
+        const tokenPath = join(__dirname, '../../playwright/.auth/api-token.json')
+        const tokenData = JSON.parse(readFileSync(tokenPath, 'utf-8'))
+        accessToken = tokenData.access_token
+      })
+
+      test('can fetch user profile', async ({ request }) => {
+        const response = await request.get('/api/profile', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        })
+
+        expect(response.ok()).toBeTruthy()
+
+        const data = await response.json()
+        expect(data.email).toBe(process.env.TEST_USER_EMAIL)
+      })
+
+      test('can update user settings', async ({ request }) => {
+        const response = await request.patch('/api/settings', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          data: {
+            theme: 'dark',
+          },
+        })
+
+        expect(response.ok()).toBeTruthy()
+      })
+    })
+    ```
+5. Update the `playwright.config.ts` file to add the following:
+
+    ```tsx
+    // playwright.config.ts
+    import { defineConfig, devices } from '@playwright/test'
+    import * as dotenv from 'dotenv'
+
+    dotenv.config()
+
+    export default defineConfig({
+      testDir: './tests',
+      fullyParallel: true,
+      forbidOnly: !!process.env.CI,
+      retries: process.env.CI ? 2 : 0,
+      workers: process.env.CI ? 1 : undefined,
+      reporter: 'html',
+
+      use: {
+        baseURL: process.env.TEST_APP_URL,
+        trace: 'on-first-retry',
       },
-    }
-  );
 
-  const tokens = await response.json();
-
-  // Store access token for API tests
-  process.env.KINDE_ACCESS_TOKEN = tokens.access_token;
-
-  // Important: Update your secrets manager with the new refresh token
-  // for subsequent test runs
-  console.log('New refresh token (update in secrets):', tokens.refresh_token);
-});
-```
-
-```tsx
-// tests/api/users.spec.ts
-import { test, expect } from '@playwright/test';
-
-test.describe('API Tests', () => {
-  test('can fetch user profile', async ({ request }) => {
-    const response = await request.get('https://your-app.com/api/profile', {
-      headers: {
-        Authorization: `Bearer ${process.env.KINDE_ACCESS_TOKEN}`,
-      },
-    });
-
-    expect(response.ok()).toBeTruthy();
-
-    const data = await response.json();
-    expect(data.email).toBe(process.env.TEST_USER_EMAIL);
-  });
-
-  test('can update user settings', async ({ request }) => {
-    const response = await request.patch(
-      'https://your-app.com/api/settings',
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.KINDE_ACCESS_TOKEN}`,
+      projects: [
+        // Setup project - authenticates and saves state
+        {
+          name: 'setup',
+          testMatch: /api\/.*\.setup\.ts/,
         },
-        data: {
-          theme: 'dark',
-        },
-      }
-    );
 
-    expect(response.ok()).toBeTruthy();
-  });
-});
-```
+        // Main tests - use saved auth state
+        {
+          name: 'api-tests',
+          testMatch: /api\/.*\.spec\.ts/,
+          dependencies: ['setup'],
+        },
+      ],
+    })
+    ```
+
+6. Run the tests using the following command:
+    ```bash
+    npx playwright test --ui
+    ```
+
+    You should see the tests pass.
+
+    ![Playwright API tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/76c4ced9-2be0-4220-b9e7-f7e5c362da00/public)
 
 ## Complete project structure
 
