@@ -5,8 +5,7 @@ description: "Comprehensive guide to testing authenticated features using Playwr
 sidebar:
   order: 6
 relatedArticles:
-  - cc2bd7c3-b365-417f-a6d0-a2685acd6a7e
-  - 5a67a5c0-3211-4d66-a090-4df8fde1cdad
+  - 4882de7b-07f3-4cc8-ac01-b096e17dcc35
   - c1b1ea81-35f9-467e-8079-042d6a786e55
   - a1b2c3d4-e5f6-7890-abcd-ef1234567890
 topics:
@@ -29,22 +28,13 @@ keywords:
   - CI/CD
   - authentication state
   - Mailosaur
-updated: 2025-12-20
+updated: 2026-01-04
 featured: false
 deprecated: false
 ai_summary: Comprehensive guide to testing authenticated features using Playwright, including reusing authentication state, CI/CD integration, and handling passwordless flows.
 ---
 
-Intro section.
-
-### What you need
-
-- A test user with email and password created in the [test user and environment setup](/developer-tools/testing/setup-test-user-environment/) guide.
-- [Node.js](https://nodejs.org/en/download/) version 20 or higher.
-
-## Overview
-
-This guide covers how to implement automated end-to-end testing for applications that use Kinde authentication, using Playwright as your testing framework.
+Learn how to efficiently test authenticated features in applications using Kinde authentication with Playwright.
 
 There are two main approaches covered here:
 
@@ -53,121 +43,149 @@ There are two main approaches covered here:
 
 We recommend using stored authentication state for most tests, and validating the actual login flow in dedicated auth tests.
 
+### What you need
+
+- A test user with email and password created in the [test user and environment setup](/developer-tools/testing/setup-test-user-environment/) guide.
+- [Node.js](https://nodejs.org/en/download/) version 20 or higher.
+- A [running test application](https://github.com/tamalchowdhury/kinde-test-application) for testing locally.
+
+## Setup a Playwright project
+
+1. Install Playwright with the following command:
+    ```bash
+    npm init playwright@latest
+    ```
+2. Install dotenv with the following command:
+    ```bash
+    npm install dotenv --save-dev
+    ```
+3. Create a new `.env` file:
+    ```bash
+    touch .env
+    ```
+4. Add the following to the `.env` file:
+    ```env
+    TEST_APP_URL=https://your-app-url.com
+    TEST_USER_EMAIL=test@example.com
+    TEST_USER_PASSWORD=your-test-password
+    ```
+
+    <Aside type="warning" title="Important">
+      Make sure to add the `.env` file to your `.gitignore` file to prevent committing sensitive information to source control.
+    </Aside>
+
 ## Approach 1: Reusing Authentication State (Recommended)
 
-Playwright supports saving and reusing browser authentication state. This is the most efficient approach for most test suites.
+Playwright supports saving and reusing browser authentication state. This is the most efficient approach for most test suites. Follow the steps below:
 
-### Step 1: Use your test user
+1. Edit the `playwright.config.ts` file to add the following:
 
-Use the test user you created during setup. Ensure you have the test user's email and password available as environment variables.
+    ```tsx
+    // playwright.config.ts
+    import { defineConfig, devices } from '@playwright/test';
+    import * as dotenv from 'dotenv';
 
-### Step 2: Configure your Playwright project
+    dotenv.config();
 
-```tsx
-// playwright.config.ts
-import { defineConfig, devices } from '@playwright/test';
+    export default defineConfig({
+      testDir: './tests',
+      fullyParallel: true,
+      forbidOnly: !!process.env.CI,
+      retries: process.env.CI ? 2 : 0,
+      workers: process.env.CI ? 1 : undefined,
+      reporter: 'html',
 
-export default defineConfig({
-  testDir: './tests',
-
-  // Global setup runs once before all tests
-  globalSetup: require.resolve('./tests/global-setup'),
-
-  projects: [
-    // Setup project - authenticates and saves state
-    {
-      name: 'setup',
-      testMatch: /.*\.setup\.ts/,
-    },
-
-    // Main tests - use saved auth state
-    {
-      name: 'chromium',
       use: {
-        ...devices['Desktop Chrome'],
-        // Use saved authentication state
-        storageState: 'playwright/.auth/user.json',
+        baseURL: process.env.TEST_APP_URL,
+        trace: 'on-first-retry',
       },
-      dependencies: ['setup'],
-    },
-  ],
-});
-```
 
-### Step 3: Create the authentication setup
+      projects: [
+        // Setup project - authenticates and saves state
+        {
+          name: 'setup',
+          testMatch: /.*\.setup\.ts/,
+        },
 
-```tsx
-// tests/auth.setup.ts
-import { test as setup, expect } from '@playwright/test';
+        // Main tests - use saved auth state
+        {
+          name: 'chromium',
+          use: {
+            ...devices['Desktop Chrome'],
+            storageState: 'playwright/.auth/user.json',
+          },
+          dependencies: ['setup'],
+        },
+      ],
+    });
+    ```
 
-const authFile = 'playwright/.auth/user.json';
+2. Create an `auth.setup.ts` file and add the following:
+    ```tsx
+    // tests/auth.setup.ts
+    import { test as setup, expect } from '@playwright/test';
 
-setup('authenticate', async ({ page }) => {
-  // Navigate to your app's login page
-  await page.goto('https://your-app.com');
+    const authFile = 'playwright/.auth/user.json';
 
-  // Click sign in (this redirects to Kinde)
-  await page.click('[data-testid="sign-in-button"]');
+    setup('authenticate', async ({ page, baseURL }) => {
+      // Navigate to your app's login page
+      await page.goto(baseURL!);
 
-  // Wait for Kinde login page
-  await page.waitForURL(/.*kinde\.com.*/);
+      // Click sign in (this redirects to Kinde)
+      await page.click('[data-testid="sign-in-button"]');
 
-  // Enter email
-  await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
-  await page.click('button[type="submit"]');
+      // Wait for Kinde login page
+      await page.waitForURL(/.*kinde\.com.*/);
 
-  // Enter password
-  await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
-  await page.click('button[type="submit"]');
+      // Enter email
+      await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
+      await page.click('button[type="submit"]');
 
-  // Wait for redirect back to your app
-  await page.waitForURL('https://your-app.com/**');
+      // Enter password
+      await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
+      await page.click('button[type="submit"]');
 
-  // Verify authentication succeeded
-  await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
+      // Wait for redirect back to your app
+      await page.waitForURL(new RegExp(`^${baseURL}/.*`));
 
-  // Save authentication state
-  await page.context().storageState({ path: authFile });
-});
-```
+      // Verify authentication succeeded
+      await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
 
-### Step 4: Write tests using saved auth state
+      // Save authentication state
+      await page.context().storageState({ path: authFile });
+    });
+    ```
 
-```tsx
-// tests/dashboard.spec.ts
-import { test, expect } from '@playwright/test';
+3. Create a new `dashboard.spec.ts` file and add the following:
 
-// This test runs with pre-authenticated state
-test('user can view dashboard', async ({ page }) => {
-  await page.goto('https://your-app.com/dashboard');
+    ```tsx
+    // tests/dashboard.spec.ts
+    import { test, expect } from '@playwright/test';
 
-  // No login required - already authenticated
-  await expect(page.locator('h1')).toContainText('Dashboard');
-});
+    // This test runs with pre-authenticated state
+    test('user can view dashboard', async ({ page }) => {
+      await page.goto('/dashboard');
+      // No login required - already authenticated
+      await expect(page.locator('[data-testid="start-hero-intro"]')).toContainText('Woohoo!');
+    });
 
-test('user can update profile', async ({ page }) => {
-  await page.goto('https://your-app.com/profile');
+    test('user can update profile', async ({ page }) => {
+      await page.goto('/profile');
 
-  await page.fill('input[name="displayName"]', 'Test User');
-  await page.click('button[type="submit"]');
+      await page.fill('[data-testid="display-name-input"]', 'Test User');
+      await page.click('[data-testid="display-name-submit"]');  
 
-  await expect(page.locator('.toast-success')).toBeVisible();
-});
-```
+      await expect(page.locator('.toast-success')).toBeVisible();
+    });
+    ```
+4. Run the tests using the following command:
+    ```bash
+    npx playwright test --ui
+    ```
 
-### Step 5: Add environment variables
+    You should see the tests pass.
 
-```bash
-# .env.test (add to .gitignore!)
-TEST_USER_EMAIL=e2e-test@yourcompany.com
-TEST_USER_PASSWORD=your-secure-test-password
-```
-
-```tsx
-// playwright.config.ts - load env vars
-import dotenv from 'dotenv';
-dotenv.config({ path: '.env.test' });
-```
+    ![Playwright saved user tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/67f6fda3-5f9e-4826-59f5-d8cf13d37200/public)
 
 ## Approach 2: API Testing with Token Refresh
 
@@ -241,14 +259,13 @@ test.describe('API Tests', () => {
 ```
 your-project/
 ├── playwright.config.ts
-├── .env.test                    # Local env vars (gitignored)
+├── .env                         # Environment variables (gitignored)
 ├── playwright/
 │   └── .auth/
 │       └── user.json            # Saved auth state (gitignored)
 ├── tests/
 │   ├── auth.setup.ts            # Authentication setup
 │   ├── dashboard.spec.ts         # Tests using saved auth
-│   ├── profile.spec.ts
 │   └── api/
 │       ├── api.setup.ts          # Token refresh setup
 │       └── users.spec.ts         # API tests
@@ -302,15 +319,13 @@ jobs:
 
 ## Best practices
 
-| Practice | Description |
-| --- | --- |
-| **Use storage state** | Save auth state once, reuse across tests for speed |
-| **Isolate auth tests** | Test login flows separately with fresh browser context |
-| **Use test-specific users** | Never use real user accounts |
-| **Secure credentials** | Use GitHub Secrets or similar; never commit passwords |
-| **Handle flakiness** | Add appropriate waits for Kinde redirects |
-| **Use data-testid** | Add test IDs to your UI elements for reliable selectors |
-| **Clean up** | Delete test data after test runs when possible |
+1. **Use storage state**: Save auth state once, reuse across tests for speed
+2. **Isolate auth tests**: Test login flows separately with fresh browser context
+3. **Use test-specific users**: Never use real user accounts
+4. **Secure credentials**: Use GitHub Secrets or similar; never commit passwords
+5. **Handle flakiness**: Add appropriate waits for Kinde redirects
+6. **Use data-testid**: Add test IDs to your UI elements for reliable selectors
+7. **Clean up**: Delete test data after test runs when possible
 
 ## Troubleshooting
 
@@ -332,7 +347,7 @@ The refresh token may have expired. Re-authenticate manually and update your CI 
 
 ### Kinde form selectors changed
 
-Kinde may update their UI. Use more resilient selectors:
+Kinde may update the UI. Use more resilient selectors:
 
 ```tsx
 // Instead of specific class names
@@ -347,4 +362,3 @@ The following limitations apply to Playwright testing with Kinde:
 - **Social provider flows**: Automated testing of Google, GitHub, or other social sign-in flows is not directly supported
 - **Enterprise SSO flows**: Testing SAML/SSO enterprise connections requires coordination with identity providers
 - **MFA flows**: Testing multi-factor authentication may require manual intervention
-
