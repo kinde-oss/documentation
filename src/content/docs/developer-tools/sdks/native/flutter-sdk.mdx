@@ -213,7 +213,23 @@ await sdk.register(context: context);
 ...
 ```
 
-**Note:** Kinde supports the PKCE extension, in which the `code_challenge` and  `code_challenge_method`  parameters are also required. For More information, visit [Using OAuth Scopes.](/build/tokens/oath-scopes/#authorization-code-flow-with-proof-key-for-code-exchange-pkce)
+You can pass optional parameters to sign users up for a billing plan or subscription through the login() or register() functions:
+
+```dart
+await sdk.login(
+  type: AuthFlowType.pkce,
+  additionalParameters: AdditionalParameters(planInterest: 'pro_monthly')
+);
+
+await sdk.register(
+  additionalParameters: AdditionalParameters(
+    planInterest: 'pro_monthly',
+    pricingTableKey: 'spring_promo'
+  )
+);
+```
+
+**Note:** Kinde supports the PKCE extension, in which the `code_challenge` and  `code_challenge_method`  parameters are also required. For More information, visit [Using OAuth Scopes.](/build/tokens/oath-scopes/#authorization-code-flow-with-proof-key-for-code-exchange-pkce)
 
 ### Signing out
 
@@ -227,7 +243,7 @@ await sdk.logout()
 
 ### Test sign up
 
-Register your first user by signing up yourself. You’ll see your newly registered user on the **Users** page in Kinde.
+Register your first user by signing up yourself. You'll see your newly registered user on the **Users** page in Kinde.
 
 ## Get user information
 
@@ -798,7 +814,31 @@ Type: `string`
 
 Required: No
 
-Default: `openid` `profile` `email` `offline`
+Default: `openid` `profile` `email` `offline`
+
+---
+
+### `additionalParameters`
+
+Optional parameters that can be passed to authentication methods for billing and organization flows.
+
+Type: `AdditionalParameters`
+
+Required: No
+
+**Available fields:**
+
+- `planInterest` (String?) - Pre-selects a billing plan for the user
+- `pricingTableKey` (String?) - Specifies which pricing table to display
+
+**Usage:**
+
+```dart
+AdditionalParameters(
+  planInterest: 'pro_monthly',
+  pricingTableKey: 'spring_promo'
+)
+```
 
 ---
 
@@ -814,6 +854,14 @@ Constructs redirect url and sends user to Kinde to sign in.
 sdk.login();
 ```
 
+**With additional parameters:**
+
+```dart
+sdk.login(
+  additionalParameters: AdditionalParameters(planInterest: 'pro_monthly')
+);
+```
+
 ### `register`
 
 Constructs redirect url and sends user to Kinde to sign up.
@@ -822,6 +870,17 @@ Constructs redirect url and sends user to Kinde to sign up.
 
 ```dart
 sdk.register();
+```
+
+**With additional parameters:**
+
+```dart
+sdk.register(
+  additionalParameters: AdditionalParameters(
+    planInterest: 'pro_monthly',
+    pricingTableKey: 'spring_promo'
+  )
+);
 ```
 
 ### `logout`
@@ -857,10 +916,12 @@ Constructs redirect url and sends user to Kinde to sign up and create a new org 
 **Arguments:**
 
 ```dart
- options?: CreateOrgURLOptions {
-   org_name?: "string";
-   org_code?: "string";
-   state?: "string";
+{
+  orgName?: "string";
+  orgCode?: "string";
+  planInterest?: "string";
+  pricingTableKey?: "string";
+  type?: AuthFlowType;
 }
 ```
 
@@ -868,9 +929,13 @@ Constructs redirect url and sends user to Kinde to sign up and create a new org 
 
 ```dart
 sdk.createOrg(
-  org_name: "org_1234"
+  orgName: "org_1234",
+  planInterest: "enterprise_annual", // optional
+  pricingTableKey: "enterprise_2024" // optional
 );
 ```
+
+**Note:** This method accepts `planInterest` and `pricingTableKey` as direct named parameters, unlike `login()` and `register()` which use the `additionalParameters` wrapper.
 
 ### `getClaim`
 
