@@ -31,7 +31,7 @@ keywords:
   - kinde.json
   - route mapping
   - server rendering
-updated: 2024-01-15
+updated: 2025-12-15
 featured: false
 deprecated: false
 ai_summary: Comprehensive guide for understanding Kinde page customization including React templating, directory structure, route mapping, and server-rendered JavaScript implementation.
@@ -189,7 +189,7 @@ myApp/
   └── kinde.json
 ```
 
-## Kinde.json
+## `kinde.json` file
 
 The `kinde.json` file defines the config for all custom code in Kinde, including workflows and custom pages. A typical config file will look as follows:
 
@@ -321,22 +321,67 @@ The top level `context` key object contains information about the page itself, l
     - `description` the page description
     - `logoAlt` the alt text for your company logo
 
-## Page settings
+## `pageSettings` object
 
-Sometimes additional information needs to be passed to Kinde from your page. You can use the page settings object for this.
+The `pageSettings` object is required when you need to enable bindings that give your page access to additional Kinde features, such as environment variables or the fetch API. Without declaring these bindings in `pageSettings`, these features won't be available in your page code.
 
-```js
-export const pageSettings = {};
-```
+    ```js
+    export const pageSettings = {
+      bindings: {
+        "kinde.env": {}
+      }
+    }
+    ```
 
-The main use case for this is when you want to make bindings available to your page, for example access to your Kinde environment variables.
+    <Aside>
+    Bindings are explicitly opted-in for performance reasons. By declaring only the bindings you need, you tell Kinde's runtime which internal features to initialize, avoiding unnecessary computation and keeping your page render as fast as possible.
+    </Aside>
 
-```js
-export const pageSettings = {
-  bindings: {
-    "kinde.env": {}
-  }
-};
-```
+## How to access environment variables in your page
 
-This allows you to have fine grained control over what your pages can access.
+You can access environment variables within your custom UI pages using the `getEnvironmentVariable` method. To enable this functionality, you must add the `pageSettings` object with the environment binding in all of your custom pages.
+
+Follow these steps:
+
+1. Set up your environment variables in Kinde > **Environment** > **Settings** > **Env variables**
+2. Add the `pageSettings` object with the `kinde.env` binding to your page file
+3. Import the `getEnvironmentVariable` method from `@kinde/infrastructure`
+4. Access the environment variable within your Page component
+
+Example:
+
+    ```tsx
+    "use server";
+    import { type KindePageEvent, getEnvironmentVariable } from "@kinde/infrastructure";
+    import React from "react";
+    import { renderToString } from "react-dom/server.browser";
+
+    const DefaultPage: React.FC<KindePageEvent> = ({ context, request }) => {
+      // Access environment variables inside your component
+      const publicUrl = getEnvironmentVariable("APP_PUBLIC_URL")?.value;
+
+      return (
+        <div>
+          <p>Public URL: {publicUrl}</p>
+        </div>
+      );
+    }
+
+    export default async function Page(event: KindePageEvent): Promise<string> {
+      const page = await DefaultPage(event);
+      return renderToString(page);
+    }
+
+    // Required: Add pageSettings with kinde.env binding to enable environment variable access
+    export const pageSettings = {
+      bindings: {
+        "kinde.env": {}
+      }
+    }
+    ```
+
+    <Aside type="warning">
+
+    You cannot access environment variables at the module level (outside of your component functions). The `getEnvironmentVariable` method must be called inside your Page component or Layout component.
+
+    </Aside>
