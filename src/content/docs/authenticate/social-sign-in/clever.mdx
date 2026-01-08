@@ -1,0 +1,91 @@
+---
+page_id: c4449422-d296-447e-8595-6485d3d963e4
+title: Clever social sign in
+sidebar:
+  order: 5
+description: Step-by-step guide to setting up Clever social sign-in including Clever app creation, OAuth configuration, and Kinde integration.
+metadata:
+  topics: [authenticate]
+  sdk: []
+  languages: []
+  audience: [developer, integration-engineer]
+  complexity: intermediate
+  keywords: [Clever sign-in, Clever app, OAuth, client ID, client secret, callback URL]
+  updated: 2026-01-08
+ai_summary: Step-by-step guide to setting up Clever social sign-in including Clever app creation, OAuth configuration, callback URL setup, and Kinde integration.
+featured: false
+deprecated: false
+---
+
+You can enable users to sign up and sign in using their Clever credentials. To enable this, follow all the steps below to create a Clever app and configure credentials in Kinde.
+
+### What you need
+- A [Kinde](https://kinde.com) account (Sign up for free)
+- A [Clever development application](https://apps.clever.com/signup) (Sign up for free)
+
+## Step 1: Get your Kinde callback URL
+
+1. In Kinde, go to **Settings** > **Authentication**.
+2. In the **Social connections** section, select **Add connection.**
+3. In the window that appears, select **Clever,** then select **Next**. 
+4. In the **Callback URL** section:
+   1. If you use Kinde's domain as your default, copy the **Kinde domain** URL.
+   2. If you use custom domains, select the **Use custom domain instead** switch.
+   3. If you have only one custom domain, copy the Custom domain URL. If you have custom domains for multiple organizations, select each one from the list and copy the callbacks for each. You need to enter all custom domain callbacks in the Clever app.
+5. Select **Save**.
+
+    Use the copied Callback URL to set up the app (see below).
+
+## Step 2: Get Clever app credentials
+
+1. Sign in to the [Clever developer](https://apps.clever.com) dashboard.
+2. Go to **Settings** > **Integration** > **OAuth Settings**, select **Edit**. A popup appears.
+    - In the **REDIRECT URIS** field, enter your Kinde Callback URL from Step 1 and select **Save**.
+3. On the same page, select **Edit** on **Additional Settings**. A popup appears.
+    - Select **Teachers** and **Students** from the dropdown menu, and select **Save**
+4. Go to **Library** > **Integration Guide** > scroll down to **Configure your app** section
+5. Select **View Client ID and Secret**. A popup appears with the credentials you need to add to Kinde.
+    - Copy the **CLIENT ID** and **CLIENT SECRET**. You will need these in the next step.
+
+## Step 3: Add Clever app credentials to Kinde
+
+1. In Kinde, go to **Settings** > **Authentication**.
+2. On the **Clever** tile, select **Configure**.
+3. Paste the **Client ID** and **Client secret** into the relevant fields.
+
+    <Aside type="warning" title="Social sign in for production environments">
+
+    Do not use Kinde's app credentials by leaving the fields blank, as this poses a security and performance risk, and makes it difficult to change auth providers without service disruptions for your users.
+
+    </Aside>
+
+4. Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified. We recommend leaving this off for maximum security.
+5. Add any [upstream params](/authenticate/auth-guides/pass-params-idp/) that you want to pass to the IdP.
+6. Select which applications will allow Clever social sign in.
+7. Select **Save**.
+
+    Users will now see Clever as an option to sign up and sign in to the selected applications.
+
+## Step 4: Test the connection
+
+You can test your development Clever Library application by signing in with a Clever test user. Find the [test credentials here](https://docs.google.com/spreadsheets/d/1VTFeG9J9zvYNgyukEEW7iuNC_sv65pLoyxHa34DQgks/edit?gid=167761082#gid=167761082).
+
+1. Go to the test URL provided by Clever: 
+    ```text
+    https://clever.com/oauth/authorize?response_type=code&redirect_uri={kinde_callback_url}&client_id={clever_client_id}&district_id=5b2ad81a709e300001e2cd7a
+    ```
+    Replace `{kinde_callback_url}` with your Kinde callback URL and `{clever_client_id}` with your Clever client ID.
+
+2. Sign in with a test Teacher credential (username: `teacher1` password: `clever`)
+3. Set up a test application in Kinde such as the [Next.js starter kit](https://github.com/kinde-starter-kits/kinde-nextjs-app-router-starter-kit)
+4. Run the application and select **Sign in** or **Sign up**
+5. Select **Continue with Clever** and sign in with the test Teacher credential
+6. Accept the permissions and you will be logged in to your test application
+7. Go to your **Kinde dashboard** > **Users** to see the user's information
+
+    ![Clever test user](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/00e5e6e9-7cf5-4aa2-d8de-84b8da130a00/public)
+
+
+## Next steps 
+
+You have successfully set up Clever social sign-in. Submit your development application to Clever to use this login in your production environment.
