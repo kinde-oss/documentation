@@ -18,16 +18,17 @@ languages:
   - javascript
   - sqlite
   - bash
+  - prisma
 audience:
   - developers
 complexity: advanced
 keywords:
-  - prisma
+  - prisma 7
   - nextjs
   - jwt
   - authentication
   - database
-updated: 2025-11-12
+updated: 2025-01-08
 featured: false
 deprecated: false
 ai_summary: Learn how to integrate Kinde authentication with a Next.js application and store user data in a Prisma-managed SQLite database.
@@ -42,147 +43,160 @@ By the end, you will have a fully functional authentication flow with user manag
 ### What you need
 
 - A [Kinde](https://kinde.com/) account (sign up for free)
+- A running Next.js application configured with Kinde ([use the starter kit](https://github.com/kinde-starter-kits/kinde-nextjs-app-router-starter-kit))
 
-## Step 1: Set up an application in Kinde
+## Step 1: Install Prisma in your Next.js project
 
-If you haven’t already set up an application in Kinde with Next.js, here’s the fastest way.
-
-1. In Kinde, go to **Settings >** **Applications** and select **Add application**. 
-2. Give the application a name and select **Back-end web**, then select **Save**. The **Quickstart** page opens.
-3. Select **Next.js** as the framework and select **Save**.
-4. Follow the relevant prompts for using a starter kit or connecting an existing codebase. When you’ve finished, proceed with Step 2 below.
-
-![nextjs quick start](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f8062c0b-eb6e-4b9c-f4f9-3383bafdb200/public)
-
-## Step 2: Integrate Prisma ORM with your Next.js project
-
-1. Install Prisma dependencies by entering the following commands in your project terminal:
+1. Install Prisma client and adapter dependencies with the following bash command:
     
-    <PackageManagers pkg='-D prisma' />
-
-    <PackageManagers pkg='@prisma/client' />
+    ```bash
+    npm install @prisma/client @prisma/adapter-better-sqlite3 typescript@5.9.3
+    ```
+    <Aside>
+      Prisma 7 requires TypeScript version 5.4.0 or higher. Make sure your `typescript` version in `package.json` is `^5.4.0` or higher. We are using version 5.9.3 for this guide.
+    </Aside>
+2. Install Prisma as a dev dependency:
     
-    These commands install:
+    ```bash
+    npm install prisma --save-dev
+    ```
     
-    - `prisma` as a development dependency (includes the Prisma CLI)
-    - `@prisma/client` as a runtime dependency (the Prisma Client for querying your database)
-    
-2. Initialize Prisma with SQLite as the database provider:
+3. Initialize your Prisma project with SQLite as the database provider:
     
     ```bash
     npx prisma init --datasource-provider sqlite
     ```
     
-    This command performs the following tasks:
+4. Create a `prisma.config.ts` file in your project root. This file is required for Prisma 7 to manage database connections:
     
-    - Creates a `/prisma` directory with a `schema.prisma` file
-    - Configures Prisma to use a SQLite database
-    - Updates the `.env` file with a `DATABASE_URL` field set to `"file:./dev.db"`
+    ```bash
+    touch prisma.config.ts
+    ```
     
-3. Open the `/prisma/schema.prisma` file in your code editor. Replace its contents with the following code:
+    Open `prisma.config.ts` and add the following configuration:
     
-    In this project, you use SQLite, a simple file-based database stored on your computer. The schema defines a `User` model with fields for `id`, `kindeId`, `email`, `firstName`, and `lastName`, allowing your app to store user data locally.
+    ```typescript
+    import "dotenv/config"
+    import { defineConfig, env } from "prisma/config"
+    
+    export default defineConfig({
+      schema: "prisma/schema.prisma",
+      migrations: {
+        path: "prisma/migrations",
+      },
+      datasource: {
+        url: env("DATABASE_URL"),
+      },
+    })
+    ```
+    
+    This configuration file tells Prisma 7 where to find your schema, migrations, and database connection URL.
+    
+5. Open the `/prisma/schema.prisma` file in your code editor. Replace its contents with the following code:
+    
+    In this project, you use SQLite, a simple file-based database stored on your computer. The schema defines a `User` model with fields for `id`, `kindeId`, `email`, `firstName`, `lastName`, `createdAt`, and `updatedAt`, allowing your app to store user data locally.
     
     ```prisma
     generator client {
-      provider = "prisma-client-js"
+    provider = "prisma-client"
+    output   = "../src/generated/prisma"
     }
-    
+
     datasource db {
       provider = "sqlite"
-      url      = env("DATABASE_URL")
     }
-    
+
     model User {
-      id        Int    @id @default(autoincrement())
-      kindeId   String @unique
-      email     String @unique
+      id        Int      @id @default(autoincrement())
+      kindeId   String   @unique
       firstName String
       lastName  String
+      email     String
+      createdAt DateTime @default(now())
+      updatedAt DateTime @updatedAt
     }
     ```
-
-     <Aside>
-      Don't forget to add `.env` and `.env.local` in the .gitignore file to not commit any private information.
-     </Aside>
-
-4. Run migrations and generate Prisma Client by running the following command:
     
-    This command creates the database tables and generates the Prisma Client based on your schema.
-    
+6. Run migrations and generate Prisma Client with the following command:
+        
     ```bash
     npx prisma migrate dev --name init
     ```
+  
+7. Generate the Prisma client with the following command:
+
+    ```bash
+    npx prisma generate
+    ```
     
-    This will:
-    
-    - Create a `prisma/migrations` directory with your initial migration
-    - Apply the migration to create the database tables
-    - Generate the Prisma Client automatically
-    
-    <Aside>
-      For quick prototyping with SQLite, you can also use `npx prisma db push` instead of migrations. However, `prisma migrate dev` is recommended as it creates versioned migrations that can be tracked and applied consistently across environments. For more information, see the [Prisma migration guide](https://www.prisma.io/docs/guides/nextjs#24-run-migrations-and-generate-prisma-client).
-    </Aside>
-    
-5. Set up Prisma Client by creating a new `lib` directory at the root of your project and adding a `prisma.ts` file:
+8. Set up Prisma Client by creating a new `lib` directory at the root of your project and adding a `prisma.ts` file:
     
     ```bash
-    mkdir -p lib && touch lib/prisma.ts
+    mkdir -p src/lib && touch src/lib/prisma.ts
     ```
     
-    <Aside>
-      If your Next.js project uses a `src` directory, create the `lib` directory inside `src` instead: `mkdir -p src/lib && touch src/lib/prisma.ts`. Adjust the import path accordingly.
-    </Aside>
+9. Open the `src/lib/prisma.ts` file and copy the following code into it. Save the file after adding the code:
     
-6. Open the `lib/prisma.ts` file and copy the following code into it. Save the file after adding the code:
-    
-    ```tsx
-    import { PrismaClient } from "@prisma/client"
+    ```typescript
+    import { PrismaClient } from "../generated/prisma/client";
+    import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
-    const globalForPrisma = globalThis as unknown as {
-      prisma: PrismaClient | undefined
-    }
+    const globalForPrisma = global as unknown as {
+      prisma: PrismaClient;
+    };
 
-    export const prisma =
-      globalForPrisma.prisma ??
-      new PrismaClient({
-        log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-      })
+    const adapter = new PrismaBetterSqlite3({
+      url: process.env.DATABASE_URL,
+    });
 
-    if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
+    const prisma: PrismaClient =
+      globalForPrisma.prisma || new PrismaClient({ adapter });
 
-    export default prisma
+    if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+    export default prisma;
     ```
     
-    This code ensures that only one instance of the Prisma Client runs in your local development environment, preventing potential issues with multiple instances during hot reloading. The `globalThis` approach is recommended for modern Next.js applications. For more details, refer to the [Prisma Next.js guide](https://www.prisma.io/docs/guides/nextjs#26-set-up-prisma-client).
+    This code:
+    
+    - Imports the Prisma Client from the custom generated location (`../generated/prisma/client`)
+    - Sets up the Better SQLite3 adapter for Prisma 7
+    - Ensures that only one instance of the Prisma Client runs in your local development environment, preventing potential issues with multiple instances during hot reloading
 
-     <Aside>
-      If you're using TypeScript, make sure your `tsconfig.json` has the path alias configured. The `@/lib/prisma` import assumes you have `"@/*": ["./*"]` (for root-level `lib`) or `"@/*": ["./src/*"]` (for `src/lib`) in your `tsconfig.json` paths. This is typically configured automatically when creating a Next.js project with TypeScript. For more information, see the [official Prisma Next.js guide](https://www.prisma.io/docs/guides/nextjs).
-     </Aside>
+10. Open `next.config.js` (or create it if it doesn't exist) and add the following configuration:
+    
+    ```javascript
+    /** @type {import('next').NextConfig} */
+    const nextConfig = {
+      webpack: (config, { isServer }) => {
+        if (isServer) {
+          // Fix for Prisma 7 ESM imports in Next.js
+          // Resolve .js imports to .ts files in the generated Prisma client
+          config.resolve.extensionAlias = {
+            '.js': ['.js', '.ts', '.tsx'],
+            '.jsx': ['.jsx', '.tsx'],
+          };
+        }
+        return config;
+      },
+    };
 
-## Step 3: Save user data to the database after authentication
+    module.exports = nextConfig;
+    ```
+    
+    This configuration is required for Prisma 7 to work correctly with Next.js, as Prisma 7 generates ESM-style imports with `.js` extensions that need to be resolved to `.ts` files.
 
-1. Create a new directory named `success` inside the **app/api/auth/** directory (or **src/app/api/auth/** if using a `src` directory) by typing the following command in your terminal:
+## Step 2: Save user data to the database after authentication
+
+1. Create a new directory named `success` and a `route.ts` file inside the **src/app/api/auth/** directory by typing the following command in your terminal:
     
     ```bash
-    mkdir -p app/api/auth/success
+    mkdir -p src/app/api/auth/success && touch src/app/api/auth/success/route.ts
     ```
     
-    <Aside>
-      If your Next.js project uses a `src` directory, use `mkdir -p src/app/api/auth/success` instead.
-    </Aside>
+2. Open the `route.ts` file in your code editor, add the following code, and then save the file.
     
-2. Create a `route.ts` file inside the newly created directory by running the following command.
-    
-    This file will act as a GET route to interface with the database and handle user authentication data.
-    
-    ```bash
-    touch app/api/auth/success/route.ts
-    ```
-    
-3. Open the `route.ts` file in your code editor, add the following code, and then save the file.
-    
-    ```tsx
+    ```typescript
     import prisma from "@/lib/prisma"
     import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
     import { NextResponse } from "next/server"
@@ -238,44 +252,37 @@ If you haven’t already set up an application in Kinde with Next.js, here’s t
     - Defines a **GET** route to retrieve the authenticated user's information.
     - Checks if the user is already stored in the database and creates a new user record if not.
     - Includes proper error handling and uses environment variables for the redirect URL.
-4. Open the `.env` or `.env.local` file in your project and ensure you have the following environment variables configured:
+
+3. Open the `.env.local` file in your project and update the following environment variables:
     
     ```env
-    DATABASE_URL="file:./dev.db"
     KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000/api/auth/success
-    KINDE_SITE_URL=http://localhost:3000
-    ```
-    
-    The `DATABASE_URL` should already be set by Prisma init. The `KINDE_POST_LOGIN_REDIRECT_URL` ensures that after a successful login, the user is redirected to this route, which updates the database and then redirects the user. The `KINDE_SITE_URL` is used for constructing redirect URLs.
-    
-5. Go to the **Details** page of your Kinde dashboard and add `http://localhost:3000/api/auth/success` to the list of **Callback URLs.** 
-6. Select **Save**.
-    
-    ![callback urls](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/05d49ca9-edfc-4ac0-e141-a52fa94bac00/public)
-    
+    ``` 
 
-You’re now ready to test your database integration to ensure that user data is successfully stored and retrieved.
+You’re now ready to test your database integration.
 
-## Step 4: Test the Prisma integration
+## Step 3: Test the Prisma integration
 
 1. Start your development server by running the following command in your terminal:
     
-    ```tsx
-    	npm run dev
+    ```bash
+    npm run dev
     ```
     
-2. Open your web browser and navigate to [`http://localhost:3000`](http://localhost:3000/) to view your Kinde application. 
+2. Open your web browser and navigate to http://localhost:3000/ to view your Kinde application. 
 3. Select **Sign Up** to create a new user account. Enter the required details and complete the sign-up process.
 4. Open your terminal and start the Prisma Studio by typing the following command:
     
     ```tsx
     npx prisma studio
     ```
+    Prisma Studio will open in your default web browser.
+
+    <Aside title="About Prisma Studio">
+      Prisma Studio is a visual tool for managing your database. It provides an intuitive interface to view, edit, and manage data in your database, making it easier to inspect records and make updates without writing SQL queries. It integrates directly with your Prisma schema, streamlining database interactions during development.
+    </Aside>
     
-    Prisma Studio is a visual tool for managing your database. It provides an intuitive interface to view, edit, and manage data in your database, making it easier to inspect records and make updates without writing SQL queries. It integrates directly with your Prisma schema, streamlining database interactions during development.
-    
-5. Go to [`http://localhost:5555`](http://localhost:5555/) in your web browser to access the Prisma studio and view your database.
-6. In Prisma Studio, select the **User** model to see the newly registered user details.
+4. In Prisma Studio, select the **User** model to see the newly registered user details.
     
     ![open model](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f006d409-c719-4983-dd38-079bc7118b00/public)
     
@@ -289,5 +296,3 @@ You have now stored the user details in your local database using Prisma.
 You've successfully set up Kinde authentication with your Next.js application and integrated it with Prisma for user management. You've also configured Prisma Studio to easily view and manage your database. 
 
 With the user data now stored in your local database, you can build further features and enhance your application as needed.
-
-For more information about using Prisma with Next.js, see the [official Prisma Next.js guide](https://www.prisma.io/docs/guides/nextjs). You can also explore more of [Prisma's documentation](https://www.prisma.io/docs) to continue refining your application's authentication and database integration.
