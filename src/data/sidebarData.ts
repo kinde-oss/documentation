@@ -246,6 +246,11 @@ const sidebarData = [
         label: "Billing user experience",
         autogenerate: {directory: "billing/billing-user-experience"},
         collapsed: false
+      },
+      {
+        label: "Implementation guides",
+        autogenerate: {directory: "billing/implementation-guide"},
+        collapsed: false
       }
     ]
   },
