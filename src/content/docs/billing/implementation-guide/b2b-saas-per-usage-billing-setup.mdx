@@ -3,7 +3,7 @@ page_id: 9c7d4e5a-6b8f-4c2a-9e3d-1f5a7c8b2d6e
 title: B2B SaaS billing with organizations and per-user pricing
 sidebar:
   order: 1
-description: Implement a standard B2B SaaS architecture in Kinde with organization-scoped access control, administrator-managed billing, and per-user pricing via metered features.
+description: Implement a standard B2B SaaS architecture with organization-scoped access control, administrator-managed billing, and per-user pricing using metered features.
 metadata:
   topics: [billing, b2b, organizations, per-user pricing, metered usage, implementation]
   sdk: []
@@ -14,149 +14,161 @@ metadata:
   updated: 2026-01-15
 featured: false
 deprecated: false
-ai_summary: Complete guide to implementing B2B SaaS billing in Kinde with organizations, per-user seat-based pricing, metered features, and multiple user join patterns for administrators to manage subscriptions.
+ai_summary: Complete guide to implementing B2B SaaS billing with organizations, per-user seat-based pricing, metered features, and administrator-managed subscriptions.
 ---
 
-This guide describes how to implement a **standard B2B SaaS architecture** in **Kinde** using:
+This guide explains how to implement a **standard B2B SaaS billing architecture** using organizations, administrator-managed billing, and **per-user (seat-based) pricing** with metered features.
+
+By the end of this guide, you will have:
 
 - Organization-scoped access control
-- Administrator-managed billing
-- Fixed **per-user (seat-based)** pricing via metered features
+- A per-user billing model backed by metered features
+- A billing admin role to manage subscriptions
 - Multiple supported organization join patterns
+- A strategy for tracking seat usage accurately
 
-This guide is intended for developers building B2B products on Kinde, who want to reproduce a typical organization-based billing model.
 
-## Guide Overview
 
-The recommended high-level implementation flow is:
+### What you need
 
-1. Configure a per-user billing plan
-2. Define who can manage billing at the organization level
-3. Enable organization creation
-4. Handle the first user (organization creator)
-5. Allow additional users to join the organization
-6. Track seat usage for billing
+- A Kinde account
+- A Stripe account
+- An application connected to Kinde
+- Access to the Kinde dashboard
 
-Kinde is **API-first and flexible**. Some organization join flows are supported out of the box, while others can be implemented using the Management API depending on product requirements.
 
-## 1. Connect Stripe
+
+## Step 1: Connect Stripe
 
 Connect your **Stripe** account from the Kinde dashboard.
 
-Notes:
+1. Go to **Dashboard > Billing > Payment management**
+2. Select **Connect Stripe**
+3. Follow the Stripe onboarding flow
+
+After connecting Stripe:
 
 - Test and live environments are supported
-- Published plans are automatically synced to Stripe
+- Billing plans published in Kinde automatically sync to Stripe
 - Stripe products and prices are managed by Kinde
 
 **Learn more:** [Manage Stripe connection](https://docs.kinde.com/billing/payment-management/manage-stripe-connection/)
 
-## 2. Configure a per-user billing plan
 
-Create a billing plan with a **metered feature** representing users or seats. The plan must be created for **Organizations**.
 
-### Create an organization plan
+## Step 2: Create an organization billing plan
 
-1. Go to **Billing**
+Create a billing plan that is scoped to **Organizations**.
+
+1. Go to **Dashboard > Billing**
 2. Select **Add a plan**
 3. In **This plan is for**, select **Organizations**
-4. Provide a name, description, key, and currency
-5. Save the plan
+4. Enter a name, description, key, and currency
+5. Select **Save**
 
 ![Create an organization plan](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/1c756f99-8534-4805-8b42-5e8a6ee48b00/public)
 
-### Add a metered feature to the plan
+This plan represents the subscription that organizations will purchase.
 
-1. In the plan, scroll to **Features and pricing**
-2. Select **Add feature**
-3. Choose **New metered**
+
+
+## Step 3: Add a metered feature for user seats
+
+Add a **metered feature** to represent per-user (seat-based) pricing.
+
+1. Open the organization plan
+2. Scroll to **Features and pricing**
+3. Select **Add feature**
+4. Select **New metered**
 
 Configure the feature:
 
-- **Feature name**
-    
-    `Users`
-    
-- **Key**
-    
-    `user`
-    
-    This key is required when submitting metered usage.
-    
-- **Maximum units**
-    
-    Leave empty for unlimited users, or set a limit if required.
-    
-- **Unit measurement name**
-    
-    `user` or `seat`
-    
-- **Pricing model**
-    
-    Per unit
-    
-- **Price per unit**
-    
-    Fixed price per user
-    
-- **Line item description**
-    
-    Example: `User seats`
-    
+- **Feature name:** `Users`
+- **Key:** `user`  
+  This key is required when submitting metered usage.
+- **Maximum units:**  
+  Leave empty for unlimited users, or set a limit if required.
+- **Unit measurement name:** `user` or `seat`
+- **Pricing model:** Per unit
+- **Price per unit:** Fixed price per user
+- **Line item description:** `User seats`
 
-Save the feature.
+Select **Save**.
 
-### Optional: Add a base subscription charge
 
-If your pricing model requires a fixed base fee:
 
-- Add a fixed charge to the plan
-- Example name: `Base subscription fee`
-- The price can be `$0.00` if billing is fully per-user
+## Step 4: Add an optional base subscription charge
+
+If your pricing model requires a fixed base fee in addition to per-user pricing:
+
+1. In the same plan, select **Add feature**
+2. Select **Fixed charge**
+3. Configure the feature:
+   - **Name:** Base subscription fee
+   - **Price:** Optional (can be `$0.00`)
 
 ![Base subscription fee](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/fbbe9660-8386-4791-f06b-52f7c787e900/public)
 
-### Publish the plan
+This allows you to combine a flat subscription fee with per-user billing.
 
-Plans must be **published** before they:
 
-- Appear in pricing tables
-- Are selectable during signup
-- Sync to Stripe
 
-## 3. Generate a pricing table
+## Step 5: Publish the billing plan
 
-1. Go to **Dashboard → Billing → Pricing tables**
+Billing plans must be published before they can be used.
+
+1. Open the billing plan
+2. Select **Publish**
+
+After publishing, the plan:
+
+- Appears in pricing tables
+- Can be selected during signup
+- Syncs to Stripe
+
+
+
+## Step 6: Create a pricing table
+
+Pricing tables allow users to select a plan during signup.
+
+1. Go to **Dashboard > Billing > Pricing tables**
 2. Create or customize a pricing table
 3. Toggle **Make live**
 
-The pricing table key is required when initiating signup with plan selection.
+Save the **pricing table key**, as it is required during signup.
 
 
-## 4. Create a Billing Admin role
 
-Organization administrators require a role that allows them to manage billing.
+## Step 7: Create a Billing Admin role
 
-**Steps**
+Organization billing should be managed by administrators.
 
-1. Go to **Settings → Roles**
+1. Go to **Settings > Roles**
 2. Select **Add role**
-3. Configure:
-    - **Name:** Billing Admin
-    - **Key:** billing-admin
-    - **Assign to the creator if organizations self-sign up:** Enabled
-    - **System permission:** `org:write:billing`
-4. Save
+3. Configure the role:
+   - **Name:** Billing Admin
+   - **Key:** `billing-admin`
+   - **Assign to the creator if organizations self-sign up:** Enabled
+   - **System permission:** `org:write:billing`
+4. Select **Save**
 
 Users with this role can manage subscriptions, plans, and payment methods for their organization.
 
-## 5. Organization creation (first user)
 
-Enable organization creation during signup.
 
-- Go to **Settings → Environment → Organizations**
-- Enable **Organization creation during signup**
+## Step 8: Enable organization creation during signup
 
+Allow users to create organizations when signing up.
+
+1. Go to **Settings > Environment > Organizations**
+2. Enable **Organization creation during signup**
+
+
+
+## Step 9: Handle the first user (organization creator)
+
+The first user creates the organization and selects a plan.
 
 ### Trigger organization creation from your application
 
@@ -166,14 +178,13 @@ Enable organization creation during signup.
   isCreateOrg
   pricingTableKey="your_pricing_table_key"
 >
-Sign up your company
+  Sign up your company
 </RegisterLink>
-
 ```
 
-### Direct authorization URL
+### Use a direct authorization URL
 
-```
+```bash
 https://<your_subdomain>.kinde.com/oauth2/auth
   ?response_type=code
   &client_id=YOUR_CLIENT_ID
@@ -181,11 +192,9 @@ https://<your_subdomain>.kinde.com/oauth2/auth
   &scope=openid profile email
   &is_create_org=true
   &pricing_table_key=YOUR_PRICING_TABLE_KEY
-
 ```
 
-
-### Signup flow behavior
+### Organization Signup behavior
 
 1. The user registers
 2. A new organization is created
@@ -195,57 +204,52 @@ https://<your_subdomain>.kinde.com/oauth2/auth
 6. The organization is created with an active subscription
 
 
-## 6. Adding users to an existing organization
 
-Once an organization exists, additional users can join using multiple supported approaches.
+## Step 10: Add users to an existing organization
 
-- The appropriate authentication (email + password, email + code, etc.) method is enabled
-- **Org → Policies → Allow org members to be auto-added** is enabled
+Additional users can join an existing organization using multiple supported approaches.
 
+Before enabling any join flow:
 
+- Ensure the required authentication methods are enabled
+- Go to **Org > Policies** and enable **Allow org members to be auto-added**
 
-### Option 1: Manual addition (dashboard)
+### Option 1: Manually add users (dashboard)
+
+Administrators can add users directly from the dashboard.
 
 - No custom code required
-- Intended for internal or low-volume use
+- Intended for internal or low-volume usage
 
+### Option 2: Allow self sign-up using an organization code (recommended)
 
-
-### Option 2: Self sign-up using `orgCode` (recommended)
-
-Users sign up or log in using an organization code.
+Users join by signing up or logging in with an organization code.
 
 ```jsx
 <RegisterLink orgCode="org_8d350c10295bf">
-Sign up
+  Sign up
 </RegisterLink>
 ```
 
 ```jsx
 <LoginLink orgCode="org_8d350c10295bf">
-Sign in
+  Sign in
 </LoginLink>
 ```
 
-
-
 Behavior:
 
-- User authenticates
-- User is automatically added to the specified organization
+- The user authenticates
+- The user is automatically added to the organization
 
-This is the **recommended default** for most B2B SaaS applications.
-
-
+This is the recommended default for most B2B SaaS applications.
 
 ### Option 3: Auto-add users from allowed domains
 
-Users are automatically added to an organization based on their email domain.
+Users are automatically added based on their email domain.
 
-Enable:
-
-1. Allow org members to be auto-added
-2. Enable auto-add users from allowed domains
+1. Enable **Allow org members to be auto-added**
+2. Enable **Auto-add users from allowed domains**
 3. Add allowed domains (for example, `company.com`)
 
 Example:
@@ -254,9 +258,9 @@ A user signing up with `jane@acme.com` is automatically added to the Acme organi
 
 
 
-## 7. Tracking seat usage for billing
+## Step 11: Track seat usage for billing
 
-Kinde does **not automatically calculate seat counts** for metered billing. Applications must submit usage updates.
+Kinde does not automatically calculate seat counts for metered billing. Your application must submit usage updates.
 
 ### When to submit usage
 
@@ -268,21 +272,31 @@ Common triggers include:
 
 ### How to submit usage
 
-Usage can be submitted using:
+Submit usage using one of the following:
 
 - Management API
-- Workflows (example: [Track org seat usage workflow](https://github.com/kinde-starter-kits/workflow-examples/blob/main/billing/trackOrgSeatUsageWorkflow.ts))
+- Workflows  
+  Example: [Track org seat usage workflow](https://github.com/kinde-starter-kits/workflow-examples/blob/main/billing/trackOrgSeatUsageWorkflow.ts)
 - Billing webhooks
 
-This ensures billed usage reflects the number of **active users** in the organization.
+This ensures billing reflects the number of active users in the organization.
+
 
 
 ## Troubleshooting
 
 ### Pricing table not shown during signup
 
-Verify:
+Verify the following:
 
 - The pricing table is **live**
-- **Settings → Billing → Billing experience → Show pricing table during signup** is enabled
+- **Settings > Billing > Billing experience > Show pricing table during signup** is enabled
 - The `pricingTableKey` matches the intended pricing table
+
+
+
+## Conclusion
+
+You now have a complete B2B SaaS billing setup with organization-scoped access control, administrator-managed subscriptions, and per-user pricing using metered features.
+
+From here, you can extend this architecture with additional metered features, scheduled usage reconciliation, or custom organization join flows using the Management API.
