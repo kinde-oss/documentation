@@ -38,17 +38,17 @@ ai_summary: Complete guide for Remix SDK including installation, route handlers,
 
 This SDK is for developers using Remix.
 
-New to Kinde? [Get started here](/get-started/guides/first-things-first/).
+New to Kinde? [Refer to the Getting Started guide](/get-started/guides/first-things-first/).
 
-## Install for a new project
+## Installation – New Project
 
-The quickest way to start is with the [Remix starter kit](https://github.com/kinde-starter-kits/kinde-remix-starter-kit). Clone it and add your Kinde application details.
+The fastest way to start is with the [Remix starter kit](https://github.com/kinde-starter-kits/kinde-remix-starter-kit). Clone the repository and add your Kinde application details.
 
-## Install for an existing project
+## Installation – Existing Project
 
 <PackageManagers pkg="@kinde-oss/kinde-remix-sdk" />
 
-If you plan to use the optional client-side `KindeProvider` example below, also install `@kinde-oss/kinde-auth-react`:
+If you intend to use the optional client-side `KindeProvider` component (illustrated in the example below), also install the React authentication helpers:
 
 ```bash
 npm install @kinde-oss/kinde-auth-react
@@ -56,7 +56,7 @@ npm install @kinde-oss/kinde-auth-react
 yarn add @kinde-oss/kinde-auth-react
 ```
 
-If you want to use portal navigation helpers (for example `PortalPage`), install `@kinde/js-utils`:
+To utilize portal navigation utilities (e.g. `PortalPage`), install the JavaScript utilities package:
 
 ```bash
 npm install @kinde/js-utils
@@ -68,15 +68,17 @@ yarn add @kinde/js-utils
 
 The Remix SDK works with back-end applications. Create one in Kinde. See [Add and manage applications](/build/applications/add-and-manage-applications/).
 
-1. In Kinde, go to **Settings > Applications > [Your app] > View details**.
-2. Add your callback URLs in the relevant fields. For example:
-   - Allowed callback URLs (also known as redirect URIs) - for example `http://localhost:3000/kinde-auth/callback`
-   - Allowed logout redirect URLs - for example `http://localhost:3000`
-3. Select **Save**.
+1. In the Kinde dashboard, go to **Settings > Applications > [Your app] > View details**.
+2. Add your callback URLs in the corresponding fields. For example:
+   - Allowed callback URLs (redirect URIs) - e.g. `http://localhost:3000/kinde-auth/callback`
+   - Allowed logout redirect URLs - e.g. `http://localhost:3000`
+3. Click **Save**.
 
-## Configure environment variables
+## Environment Variables
 
-While you are in your Kinde backend application, copy the Client ID and Client secret, redirect URLs, etc. Add these details to the environment variables for your application. Add `KINDE_AUDIENCE` if you need to call a protected API.
+While configuring your backend application in the Kinde dashboard, copy the `Client ID`, `Client Secret`, `Issuer URL`, and any required redirect URIs. Store these values securely in your application's environment variables.
+Add `KINDE_AUDIENCE` if your application needs to call protected APIs (this populates the `aud` claim in access tokens).
+
 
 `.env`
 
@@ -90,9 +92,11 @@ KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000
 KINDE_AUDIENCE=<optional-audience>
 ```
 
-## Set up Kinde Auth Route Handlers
+## Authentication Route Handler
 
-Create `app/routes/kinde-auth.$index.tsx`. This single route file handles login, logout, register, callback, health, etc.
+Create a catch-all route to handle all Kinde authentication endpoints (login, logout, callback, register, health check, etc.) - e.g. `app/routes/kinde-auth.$index.tsx`
+
+
 
 ```jsx
 import { handleAuth } from "@kinde-oss/kinde-remix-sdk";
@@ -103,14 +107,16 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 }
 ```
 
-## Customising Kinde Auth API paths
+## Custom Base Path
 
-By default, Kinde endpoints live at `/kinde-auth/*`. If you want a different base path, rename the route file (for example `app/routes/auth.$index.tsx`) and update any links that point to `/kinde-auth/...` to the new path.
+By default, authentication endpoints are mounted at `/kinde-auth/`. To use a different prefix (e.g. `/auth/`):
 
-## Set up middleware
+1. Rename the file → `app/routes/auth.$index.tsx`
+2. Update all references (links, redirects) from `/kinde-auth/...` to the new path
 
-Remix does not require a separate middleware file. Use loaders to validate the session and pass the returned `headers` through your responses so refresh tokens can rotate in the background.
+## Session Management
 
+Remix handles protection and session validation via `loaders`. Always return the `headers` object from `getKindeSession` in your responses to enable automatic background refresh token rotation.
 ```ts
 import { json, LoaderFunctionArgs } from "@remix-run/node";
 import { getKindeSession } from "@kinde-oss/kinde-remix-sdk";
@@ -127,9 +133,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 ```
 
-## Set up the Kinde Auth Provider
+## Client-Side Auth Context (KindeProvider)
 
-The Remix SDK works server-side, but you can wrap your root to expose auth state to components. Use the React provider and feed it data from your loader.
+Although the SDK is primarily server-oriented, you can expose authentication state to React components using the KindeProvider.
 
 ```tsx
 // app/root.tsx
