@@ -185,13 +185,93 @@ Playwright supports saving and reusing browser authentication state. This is the
 
     You should see the tests pass.
 
-    ![Playwright saved user tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/67f6fda3-5f9e-4826-59f5-d8cf13d37200/public)
+    ![Playwright saved user tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/67f6fda3-5f9e-4826-59f5-d8cf13d37200/socialsharingimage)
 
 ## Approach 2: API Testing with Token Refresh
 
+When testing backend APIs, it is recommended to add your API to Kinde. Here's how to do it:
+
+1. In Kinde, go to **Settings > APIs**.
+2. Select **Add API**.
+3. Enter an **API name** and **Audience** (e.g., `https://api.mysite.com`). The audience (aud) is a unique identifier for this API. Often a short code or the URL of the API is used.
+4. Select **Save**. The details window for the API opens. You’ll notice that an ID has been created, but it is not editable and neither is the audience. You can copy these details, however.
+5. To authorize this API for your apps, select **Applications** in the left menu.
+6. Select the three dots menu next to the relevant application (your test application), then choose **Authorize application**.
+7. To include the audience claim in your token, add the following value in your `.env` file in your Next.js test application:
+    ```env
+    # .env
+    KINDE_AUDIENCE=<your-api-audience>
+    ```
+### Token validation in your backend
+
+You can validate the test API request with the Kinde JWT validator and JWT decoder packages.
+
+1. Install the required dependencies:
+
+    ```bash
+    npm install @kinde/jwt-validator @kinde/jwt-decoder
+    ```
+
+Here is sample code showing how to validate your JWT token:
+
+```javascript
+import { validateToken } from "@kinde/jwt-validator";
+import { jwtDecoder } from "@kinde/jwt-decoder";
+
+// ... get the token from the request headers
+
+try {
+    // Validate the token
+    const result = await validateToken({
+      token,
+      domain, // KINDE_ISSUER_URL
+    });
+
+    if (!result.valid) {
+      console.log("Token validation failed:", result.message);
+      return null;
+    }
+
+    // Decode after validation
+    const decoded = jwtDecoder(token);
+    return decoded;
+
+  } catch (error) {
+    // The validator throws for JWKS or validation errors
+    console.error("Token is invalid:", error);
+    return null;
+  }
+```
+
+If you are protecting your API with Kinde, you should also check for the `audience` claim to ensure the token is valid for your API. This way, only authorized apps can access your API. Here is sample code:
+
+```javascript
+// ... validate token using previous code ...
+const expectedAudience = process.env.KINDE_AUDIENCE; // or hardcoded value
+
+if (expectedAudience) {
+  const audience = decoded.aud;
+  // Handle both string and array audience values
+  const audiences = Array.isArray(audience) ? audience : [audience];
+
+  if (!audiences.includes(expectedAudience)) {
+    console.log(
+      "Token audience validation failed. Expected:",
+      expectedAudience,
+      "Got:",
+      audience
+    );
+    return null;
+  }
+  return decoded;
+}
+```
+
+### Sample integration with test application (Next.js)
+
 1. Login to your test application and get the `refresh_token` cookie value. 
     
-    Learn how to [obtain the refresh token](/developer-tools/testing/backend-api-testing/#step-1-obtain-initial-tokens) here.
+    Learn how to [obtain the refresh token](/developer-tools/testing/backend-api-testing/#step-2-obtain-initial-tokens) here.
 
 2. Update the `.env` file with the following values:
 
@@ -342,7 +422,7 @@ Playwright supports saving and reusing browser authentication state. This is the
 
     You should see the tests pass.
 
-    ![Playwright API tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/76c4ced9-2be0-4220-b9e7-f7e5c362da00/public)
+    ![Playwright API tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/76c4ced9-2be0-4220-b9e7-f7e5c362da00/socialsharingimage)
 
 ## Complete project structure
 
