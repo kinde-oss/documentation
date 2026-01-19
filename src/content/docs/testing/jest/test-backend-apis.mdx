@@ -1,44 +1,40 @@
 ---
-page_id: 4882de7b-07f3-4cc8-ac01-b096e17dcc35
-title: Backend API testing with Jest
+page_id: 6086016d-1eec-42fc-b6d9-c942a14e5437
+title: Test backend APIs
 description: "Guide to testing backend APIs with Jest using Kinde refresh tokens for maintaining long-running authenticated sessions in automated tests."
 sidebar:
-  order: 3
-relatedArticles:
-  - c1b1ea81-35f9-467e-8079-042d6a786e55
-  - f38ed786-7234-44d1-a564-f7269ce536c5
-  - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  order: 2
 topics:
   - developer-tools
   - testing
+  - jest
   - api-testing
   - refresh-tokens
 sdk: []
 languages:
   - JavaScript
-  - curl
+  - TypeScript
 audience: developers
 complexity: intermediate
 keywords:
+  - jest
   - backend testing
   - API testing
   - refresh tokens
   - token rotation
   - automated testing
-  - test automation
-  - jest
-updated: 2026-01-17
+updated: 2025-01-15
 featured: false
 deprecated: false
-ai_summary: Guide to testing backend APIs with Jest using Kinde refresh tokens for maintaining authenticated sessions in automated tests, including token rotation.
 ---
 
 In this guide, we'll show you how to test backend APIs with Jest. We will use Kinde refresh tokens for maintaining authenticated sessions in automated tests, including token rotation.
 
-### What you need
+### Prerequisites
 
-- A [test user with email and password](/developer-tools/testing/setup-test-user-environment/).
-- [Node.js](https://nodejs.org/en/download/) version 20 or higher.
+Before you begin, make sure you have:
+- Completed the [Jest setup](/developer-tools/testing/jest/)
+- A [test user with email and password](/developer-tools/testing/setup-test-user-environment/)
 
 ## How it works
 
@@ -56,10 +52,11 @@ The access token obtained this way is identical to what your production users re
 1. In Kinde, go to **Settings > APIs**.
 2. Select **Add API**.
 3. Enter an **API name** and **Audience** (e.g., `https://api.mysite.com`). The audience (aud) is a unique identifier for this API. Often a short code or the URL of the API is used.
-4. Select **Save**. The details window for the API opens. You’ll notice that an ID has been created, but it is not editable and neither is the audience. You can copy these details, however.
+4. Select **Save**. The details window for the API opens. You'll notice that an ID has been created, but it is not editable and neither is the audience. You can copy these details, however.
 5. To authorize this API for your apps, select **Applications** in the left menu.
 6. Select the three dots menu next to the relevant application (your test application), then choose **Authorize application**.
-7. To include the audience claim in your token, add the following value in your `.env` file in your Next.js test application:
+7. To include the audience claim in your token, add the following value in your `.env` file:
+
     ```env
     # .env
     KINDE_AUDIENCE=<your-api-audience>
@@ -77,19 +74,7 @@ The access token obtained this way is identical to what your production users re
 
 ## Step 3: Set up Jest testing suite
 
-1. Install the required dependencies:
-
-    ```bash
-    npm install --save-dev jest dotenv
-    ```
-
-2. Create a new `.env` file in your project root:
-
-    ```bash
-    touch .env
-    ```
-
-3. Open the `.env` file and add your Kinde configuration from your test application
+1. Update your `.env` file with your Kinde configuration:
 
     ```env
     # .env
@@ -109,13 +94,13 @@ The access token obtained this way is identical to what your production users re
     
     </Aside>
 
-4. Create a `jest.global-setup.js` file:
+2. Create a `jest.global-setup.js` file:
 
     ```bash
     touch jest.global-setup.js
     ```
 
-5. Open `jest.global-setup.js` and add the following code that refreshes tokens before tests run:
+3. Open `jest.global-setup.js` and add the following code that refreshes tokens before tests run:
 
     ```javascript
     // jest.global-setup.js
@@ -164,7 +149,7 @@ The access token obtained this way is identical to what your production users re
     module.exports = refreshTokens
     ```
 
-6. Create or update your `package.json` file to configure Jest. Add the following to your `package.json`:
+4. Create or update your `package.json` file to configure Jest. Add the following to your `package.json`:
 
     ```json
     {
@@ -322,6 +307,7 @@ Here is a sample test you can run using the [Kinde test application](/developer-
       Time:        x s, estimated 2 s
       Ran all test suites.
     ```
+
 You have successfully run the tests and validated that the API is working as expected. Use this approach to test your API endpoints and ensure they are working as expected.
 
 ## Important considerations
@@ -351,4 +337,3 @@ The following limitations apply to backend API testing with refresh tokens:
 - **Rotate credentials regularly**: Even test credentials should follow security best practices
 - **Handle token expiry gracefully**: Build retry logic into your tests for token refresh failures
 - **Monitor test reliability**: Track flaky tests related to authentication timing issues
-

@@ -1,0 +1,274 @@
+---
+page_id: 94e37b7f-3f0a-452e-845e-be69b67344e8
+title: Test authentication flows
+description: "Guide to testing authentication flows with Playwright."
+sidebar:
+  order: 2
+topics:
+  - developer-tools
+  - testing
+  - playwright
+  - e2e-testing
+  - authentication
+sdk: []
+languages:
+  - JavaScript
+  - TypeScript
+audience: developers
+complexity: intermediate
+keywords:
+  - playwright
+  - testing
+  - authentication flows
+  - sign-up
+  - sign-in
+  - sign-out
+updated: 2025-01-15
+featured: false
+deprecated: false
+---
+
+Learn how to test authentication flows (sign-up, sign-in, sign-out) with Playwright for applications using Kinde authentication.
+
+### Prerequisites
+
+Before you begin, make sure you have:
+- Completed the [Playwright setup](/developer-tools/testing/playwright/)
+- A [test user with email and password](/developer-tools/testing/setup-test-user-environment/)
+- A [running test application](/developer-tools/testing/setup-test-user-environment/#step-3-create-a-test-application) for testing locally
+
+## Testing sign-in flows
+
+For sign-in flows:
+
+1. **Use existing test user**: Create a verified test user beforehand
+2. **Test both success and failure**: Test valid credentials and invalid credentials
+3. **Verify session**: Ensure the user is properly authenticated after sign-in
+4. **Test redirects**: Verify redirects to intended pages
+
+### General pattern
+
+The typical sign-in flow involves:
+
+1. Navigate to your application
+2. Click the sign-in button (redirects to Kinde)
+3. Enter email and submit
+4. Enter password and submit
+5. Wait for redirect back to your application
+6. Verify the user is authenticated
+
+**Key selectors to use:**
+- Email input: `input[name="p_email"]`
+- Password input: `input[name="p_password"]`
+- Submit button: `button[type="submit"]`
+
+### Example: Sign in with Playwright
+
+1. Create a new test file:
+    ```bash
+    touch tests/auth.spec.ts
+    ```
+
+2. Add the following to the `auth.spec.ts` file:
+
+    ```ts
+    // tests/auth.spec.ts
+    import { test, expect } from '@playwright/test';
+
+    test.describe('Authentication Flows', () => {
+
+      test('user can sign in with email and password', async ({ page }) => {
+        await page.goto(process.env.TEST_APP_URL!);
+        await page.click('[data-testid="sign-in-button"]');
+
+        // Wait for Kinde login page
+        await expect(page).toHaveURL(/kinde\.com/);
+
+        // Enter credentials
+        await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
+        await page.click('button[type="submit"]');
+
+        await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
+        await page.click('button[type="submit"]');
+
+        // Wait for redirect back to app
+        const appUrl = new URL(process.env.TEST_APP_URL!);
+        await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
+        await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
+      });
+
+      test('user can sign out', async ({ page }) => {
+        // First authenticate
+        await page.goto(process.env.TEST_APP_URL!);
+        await page.click('[data-testid="sign-in-button"]');
+        await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
+        await page.click('button[type="submit"]');
+        await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
+        await page.click('button[type="submit"]');
+        const appUrl = new URL(process.env.TEST_APP_URL!);
+        await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace('.', '\\.')));
+
+        // Now sign out
+        await page.click('[data-testid="sign-out-button"]');
+
+        // Should show signed-out state
+        await expect(page.locator('[data-testid="sign-in-button"]')).toBeVisible();
+      });
+    });
+    ```
+
+3. Run the Playwright tests in UI mode:
+    ```bash
+    npx playwright test --ui
+    ```
+
+    You should now see the Playwright tests in the browser.
+
+## Testing sign-up flows
+
+Kinde requires OTP email verification when signing up for a new user. See the [Testing Passwordless Flows](/developer-tools/testing/playwright/test-passwordless-flows/) guide for details on how to handle OTP verification in your test methods.
+
+When testing sign-up flows, ensure:
+
+1. **Test user doesn't exist**: Use unique email addresses for each test run (e.g., `test-${timestamp}@example.com`)
+2. **Handle email verification**: Use an email testing service to test user sign up
+3. **Verify redirect**: Check that users are redirected to the correct page after sign-up
+4. **Test error cases**: Test with invalid emails, weak passwords, etc.
+
+### General pattern
+
+The typical sign-up flow involves:
+
+1. Navigate to your application
+2. Click the sign-up button (redirects to Kinde)
+3. Fill in first name, last name, email, accept the terms, and submit the form
+4. Handle OTP email verification (extract code from email and enter it)
+5. Fill in password and submit the form
+6. Wait for redirect back to your application
+7. Verify the user is authenticated
+
+**Key selectors to use:**
+- First name input: `input[name="p_first_name"]`
+- Last name input: `input[name="p_last_name"]`
+- Email input: `input[name="p_email"]`
+- Password input: `input[name="p_first_password"]` 
+- Password confirmation: `input[name="p_second_password"]`
+- Terms and conditions checkbox: `input[name="p_has_clickwrap_accepted"]`
+- OTP input: `input[name="p_confirmation_code"]`
+- Submit button: `button[type="submit"]`
+
+### Example: Sign up flow with Playwright
+
+Check out the full working example in the [Testing Passwordless Flows](/developer-tools/testing/playwright/test-passwordless-flows/) guide.
+
+```ts
+// tests/email-password-signup.spec.ts
+import { test, expect } from '@playwright/test'
+import MailosaurClient from 'mailosaur'
+require('dotenv').config()
+
+const mailosaur = new MailosaurClient(process.env.MAILOSAUR_API_KEY!)
+const serverId = process.env.MAILOSAUR_SERVER_ID!
+
+test.describe('Authentication Flows', () => {
+  test('user can sign up with email and password', async ({ page }) => {
+    // Generate unique email for this test run
+    const timestamp = Date.now()
+    const testEmail = `test-${timestamp}@${serverId}.mailosaur.net`
+
+    await page.goto(process.env.TEST_APP_URL!)
+    await page.click('[data-testid="sign-up-button"]')
+
+    // Wait for Kinde sign-up page
+    await expect(page).toHaveURL(/kinde\.com/)
+
+    // Fill sign-up form
+    await page.fill('input[name="p_first_name"]', 'John')
+    await page.fill('input[name="p_last_name"]', 'Doe')
+    await page.fill('input[name="p_email"]', testEmail)
+    await page.check('input[name="p_has_clickwrap_accepted"]') // Accept terms and conditions
+    await page.click('button[type="submit"]')
+
+    // Wait for OTP email
+    const email = await mailosaur.messages.get(serverId, {
+      sentTo: testEmail,
+    })
+
+    // Extract 6-digit OTP code from email
+    const otpMatch = email.text?.body?.match(/\b(\d{6})\b/)
+    const otpCode = otpMatch?.[1]
+
+    if (!otpCode) {
+      throw new Error('Could not extract OTP code from email')
+    }
+
+    // Enter OTP
+    await page.fill('input[name="p_confirmation_code"]', otpCode)
+    await page.click('button[type="submit"]')
+
+    // Enter password
+    await page.fill(
+      'input[name="p_first_password"]',
+      process.env.TEST_USER_PASSWORD!
+    )
+    await page.fill(
+      'input[name="p_second_password"]',
+      process.env.TEST_USER_PASSWORD!
+    )
+    await page.click('button[type="submit"]')
+
+    // Wait for successful auth
+    const appUrl = new URL(process.env.TEST_APP_URL!)
+    await expect(page).toHaveURL(
+      new RegExp(appUrl.hostname.replace('.', '\\.'))
+    )
+    await expect(page.locator('[data-testid="user-profile"]')).toBeVisible()
+
+    // Save state
+    await page.context().storageState({ path: 'playwright/.auth/user.json' })
+
+    // Clean up - delete the email
+    await mailosaur.messages.del(email.id!)
+  })
+})
+```
+
+## Testing sign-out flows
+
+Test that sign-out:
+
+1. **Clears session**: User is no longer authenticated
+2. **Redirects correctly**: User is redirected to the intended page
+3. **Protects routes**: Protected routes are no longer accessible
+
+### General pattern
+
+The typical sign-out flow involves:
+
+1. Authenticate the user first
+2. Click the sign-out button
+3. Verify the user is signed out (sign-in button visible)
+4. Attempt to access protected routes
+5. Verify redirect to sign-in page
+
+## Best practices
+
+1. **Use data-testid attributes**: Add test IDs to your UI elements for reliable selectors
+2. **Handle redirects gracefully**: Add appropriate waits for Kinde redirects (they can take time)
+3. **Isolate test users**: Use separate test users for each test run when possible
+4. **Clean up test data**: Delete test users or test data after test runs when possible
+5. **Handle flakiness**: Add retry logic for network-related failures
+6. **Use environment variables**: Store test credentials securely, never commit to source control
+
+## What's not supported
+
+The following limitations apply to UI authentication flow testing:
+
+- **Social provider flows**: Automated testing of Google, GitHub, or other social sign-in flows is not directly supported due to third-party provider restrictions
+- **Enterprise SSO flows**: Testing SAML/SSO enterprise connections requires coordination with identity providers
+- **MFA flows**: Testing multi-factor authentication may require manual intervention
+- **Real email delivery**: Testing with real email addresses requires manual code entry (use test email services instead)
+
+## Passwordless authentication flows
+
+If your application uses passwordless authentication with email OTP, see the dedicated guide on **[Testing Passwordless Flows](/developer-tools/testing/playwright/test-passwordless-flows/)**.

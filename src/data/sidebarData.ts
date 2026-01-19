@@ -68,11 +68,6 @@ const sidebarData = [
         collapsed: false
       },
       {
-        label: "Testing",
-        autogenerate: {directory: "developer-tools/testing"},
-        collapsed: false
-      },
-      {
         label: "Front end SDKs",
         autogenerate: {directory: "developer-tools/sdks/frontend"},
         collapsed: false
@@ -175,6 +170,35 @@ const sidebarData = [
       {
         label: "Device authorization flow",
         autogenerate: {directory: "authenticate/device-authorization-flow"},
+        collapsed: false
+      }
+    ]
+  },
+  {
+    label: "Testing",
+    description: "Test your application's authentication flows, passwordless flows, and backend APIs",
+    icon: "build",
+    cardLink: "/testing/",
+    collapsed: false,
+    items: [
+      {label: "Overview", link: "/testing/"},
+      {label: "Setup test user and environment", link: "/testing/setup-test-user-environment/"},
+      {label: "Testing authentication flows", link: "/testing/testing-authentication-flows/"},
+      {label: "Testing passwordless flows", link: "/testing/testing-passwordless-flows/"},
+      {label: "Testing backend APIs", link: "/testing/testing-backend-apis/"},
+      {
+        label: "Cypress",
+        autogenerate: {directory: "testing/cypress"},
+        collapsed: false
+      },
+      {
+        label: "Playwright",
+        autogenerate: {directory: "testing/playwright"},
+        collapsed: false
+      },
+      {
+        label: "Jest",
+        autogenerate: {directory: "testing/jest"},
         collapsed: false
       }
     ]

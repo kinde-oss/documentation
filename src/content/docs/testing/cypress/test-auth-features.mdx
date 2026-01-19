@@ -1,0 +1,249 @@
+---
+page_id: 19775ed3-565e-46e3-aaa0-321f826c79e2
+title: Test authenticated features
+description: "Comprehensive guide to testing authenticated features using Cypress, including reusing authentication state and CI/CD integration."
+sidebar:
+  order: 4
+topics:
+  - developer-tools
+  - testing
+  - cypress
+  - e2e-testing
+  - authenticated-testing
+sdk: []
+languages:
+  - JavaScript
+  - TypeScript
+audience: developers
+complexity: intermediate
+keywords:
+  - cypress
+  - testing
+  - authenticated features
+  - session state
+updated: 2025-01-15
+featured: false
+deprecated: false
+---
+
+Learn how to efficiently test authenticated features in applications using Kinde authentication with Cypress. This guide covers reusing authentication state to test protected routes and features after authentication.
+
+### Prerequisites
+
+Before you begin, make sure you have:
+- Completed the [Cypress setup](/developer-tools/testing/cypress/)
+- A [test user with email and password](/developer-tools/testing/setup-test-user-environment/)
+- A [running test application](/developer-tools/testing/setup-test-user-environment/#step-3-create-a-test-application) for testing locally
+
+## Reusing Authentication State
+
+Cypress supports saving and reusing browser authentication state using `cy.session()`. This is the most efficient approach for testing authenticated features. By saving the authentication state once and reusing it across tests, you can significantly speed up your test suite while maintaining test isolation.
+
+### Setup Cypress session
+
+1. Create a custom command for authentication:
+
+    ```ts
+    // cypress/support/commands.ts
+    declare global {
+      namespace Cypress {
+        interface Chainable {
+          login(): Chainable<void>
+        }
+      }
+    }
+
+    Cypress.Commands.add('login', () => {
+      cy.session('user', () => {
+        cy.visit(Cypress.env('TEST_APP_URL'))
+        cy.get('[data-testid="sign-in-button"]').click()
+
+        // Wait for Kinde login page
+        cy.url().should('include', 'kinde.com')
+
+        cy.origin(Cypress.env('KINDE_ISSUER_URL'), () => {
+          // Enter email
+          cy.get('input[name="p_email"]').type(Cypress.env('TEST_USER_EMAIL'))
+          cy.get('button[type="submit"]').click()
+
+          // Enter password
+          cy.get('input[name="p_password"]').type(Cypress.env('TEST_USER_PASSWORD'))
+          cy.get('button[type="submit"]').click({ multiple: true })
+        })
+
+        // Wait for redirect back to your app
+        cy.url().should('include', new URL(Cypress.env('TEST_APP_URL')).hostname)
+        cy.get('[data-testid="user-profile"]').should('be.visible')
+      })
+    })
+    ```
+
+2. Create a test file that uses the saved session:
+
+    ```ts
+    // cypress/e2e/dashboard.cy.ts
+    describe('Authenticated Features', () => {
+      beforeEach(() => {
+        // Restore session before each test
+        cy.login()
+      })
+
+      it('user can view dashboard', () => {
+        cy.visit('/dashboard')
+        // No login required - already authenticated
+        cy.get('[data-testid="start-hero-intro"]').should('contain.text', 'Woohoo!')
+      })
+
+      it('user can update profile', () => {
+        cy.visit('/profile')
+
+        cy.get('[data-testid="display-name-input"]').type('Test User')
+        cy.get('[data-testid="display-name-submit"]').click()
+
+        cy.get('.toast-success').should('be.visible')
+      })
+    })
+    ```
+
+3. Run the tests:
+
+    ```bash
+    npx cypress open
+    ```
+
+    You should see the tests pass.
+
+### Advanced: Custom session validation
+
+You can add custom validation to ensure the session is still valid:
+
+```ts
+// cypress/support/commands.ts
+Cypress.Commands.add('login', () => {
+  cy.session(
+    'user',
+    () => {
+      // Authentication logic here
+      cy.visit(Cypress.env('TEST_APP_URL'))
+      cy.get('[data-testid="sign-in-button"]').click()
+      // ... rest of login flow
+    },
+    {
+      validate: () => {
+        // Check if session is still valid
+        cy.request({
+          url: `${Cypress.env('TEST_APP_URL')}/api/profile`,
+          failOnStatusCode: false,
+        }).then((response) => {
+          expect(response.status).to.eq(200)
+        })
+      },
+    }
+  )
+})
+```
+
+## Complete project structure
+
+```
+your-project/
+├── cypress.config.ts
+├── cypress.env.json          # Environment variables (gitignored)
+├── cypress/
+│   ├── e2e/
+│   │   ├── auth.cy.ts         # Authentication flow tests
+│   │   └── dashboard.cy.ts   # Tests using saved auth
+│   └── support/
+│       └── commands.ts        # Custom commands
+└── package.json
+```
+
+## CI/CD integration (GitHub Actions)
+
+```yaml
+# .github/workflows/e2e-tests.yml
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Cypress
+        run: npm install cypress --save-dev
+
+      - name: Run Cypress tests
+        run: npx cypress run
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          TEST_APP_URL: ${{ secrets.TEST_APP_URL }}
+          KINDE_ISSUER_URL: ${{ secrets.KINDE_ISSUER_URL }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+          retention-days: 30
+```
+
+## Best practices
+
+1. **Use cy.session()**: Save auth state once, reuse across tests for speed
+2. **Isolate auth tests**: Test login flows separately with fresh browser context
+3. **Use test-specific users**: Never use real user accounts
+4. **Secure credentials**: Use GitHub Secrets or similar; never commit passwords
+5. **Handle flakiness**: Add appropriate waits for Kinde redirects
+6. **Use data-testid**: Add test IDs to your UI elements for reliable selectors
+7. **Clean up**: Delete test data after test runs when possible
+8. **Use cy.origin()**: Always use `cy.origin()` when interacting with Kinde's domain
+
+## Troubleshooting
+
+### Tests fail with "Navigation timeout"
+
+Kinde redirects can take time. Increase timeout:
+
+```ts
+cy.url({ timeout: 30000 }).should('include', 'your-app.com')
+```
+
+### Session not persisting
+
+Ensure `cy.session()` is called in `beforeEach` or at the start of each test. Check Cypress configuration for session storage settings.
+
+### Kinde form selectors changed
+
+Kinde may update the UI. Use more resilient selectors:
+
+```ts
+// Instead of specific class names
+cy.origin(Cypress.env('KINDE_ISSUER_URL'), () => {
+  cy.get('input[type="email"]').type(email)
+  cy.get('input[type="password"]').type(password)
+})
+```
+
+## What's not supported
+
+The following limitations apply to Cypress testing with Kinde:
+
+- **Social provider flows**: Automated testing of Google, GitHub, or other social sign-in flows is not directly supported
+- **Enterprise SSO flows**: Testing SAML/SSO enterprise connections requires coordination with identity providers
+- **MFA flows**: Testing multi-factor authentication may require manual intervention

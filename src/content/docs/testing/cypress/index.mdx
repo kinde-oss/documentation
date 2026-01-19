@@ -1,0 +1,191 @@
+---
+page_id: 4919854a-1d38-4f5a-a369-0af966119744
+title: Setup Cypress
+description: "Guide to setting up Cypress for testing Kinde authentication flows."
+sidebar:
+  order: 1
+topics:
+  - developer-tools
+  - testing
+  - cypress
+  - e2e-testing
+sdk: []
+languages:
+  - JavaScript
+  - TypeScript
+audience: developers
+complexity: beginner
+keywords:
+  - cypress
+  - testing
+  - setup
+updated: 2025-01-15
+featured: false
+deprecated: false
+---
+
+Learn how to set up Cypress for testing applications using Kinde authentication. This guide covers installation, configuration, and basic setup for end-to-end testing.
+
+### What you need
+
+- A [test user with email and password](/developer-tools/testing/setup-test-user-environment/).
+- A [running test application](/developer-tools/testing/setup-test-user-environment/#step-3-create-a-test-application) for testing locally.
+- [Node.js](https://nodejs.org/en/download/) version 20 or higher.
+
+## Installation
+
+1. Install Cypress with the following command:
+    ```bash
+    npm install cypress --save-dev
+    ```
+
+2. Run Cypress configuration wizard and follow the setup:
+    ```bash
+    npx cypress open
+    ```
+
+    This will create the basic Cypress folder structure and configuration files.
+
+## Configuration
+
+### Environment variables
+
+1. Create the Cypress env file:
+    ```bash
+    touch cypress.env.json
+    ```
+
+2. Add the following to the `cypress.env.json` file:
+    ```json
+    {
+      "TEST_APP_URL": "https://your-app-url.com",
+      "TEST_USER_EMAIL": "test@example.com",
+      "TEST_USER_PASSWORD": "your-test-password",
+      "KINDE_ISSUER_URL": "https://YOUR_KINDE_DOMAIN.kinde.com"
+    }
+    ```
+
+    <Aside type="warning" title="Important">
+      Make sure to add the `cypress.env.json` file to your `.gitignore` file to prevent committing sensitive information to source control.
+    </Aside>
+
+### Cypress configuration
+
+Update your `cypress.config.ts` file (or `cypress.config.js`) with the following basic configuration:
+
+```ts
+// cypress.config.ts
+import { defineConfig } from 'cypress'
+
+export default defineConfig({
+  e2e: {
+    baseUrl: process.env.TEST_APP_URL || 'http://localhost:3000',
+    setupNodeEvents(on, config) {
+      // implement node event listeners here
+    },
+    supportFile: 'cypress/support/e2e.ts',
+    specPattern: 'cypress/e2e/**/*.cy.{js,jsx,ts,tsx}',
+  },
+  env: {
+    // Environment variables can be accessed via Cypress.env()
+    TEST_APP_URL: process.env.TEST_APP_URL,
+    TEST_USER_EMAIL: process.env.TEST_USER_EMAIL,
+    TEST_USER_PASSWORD: process.env.TEST_USER_PASSWORD,
+    KINDE_ISSUER_URL: process.env.KINDE_ISSUER_URL,
+  },
+})
+```
+
+## Project structure
+
+After setup, your project should have the following structure:
+
+```
+your-project/
+├── cypress.config.ts
+├── cypress.env.json          # Environment variables (gitignored)
+├── cypress/
+│   ├── e2e/
+│   │   └── spec.cy.ts        # Example test file
+│   ├── fixtures/             # Test data
+│   └── support/
+│       ├── commands.ts       # Custom commands
+│       └── e2e.ts            # Support file
+└── package.json
+```
+
+## Basic test example
+
+Create your first test file to verify the setup:
+
+```ts
+// cypress/e2e/auth.cy.ts
+describe('Authentication', () => {
+  it('can visit the application', () => {
+    cy.visit(Cypress.env('TEST_APP_URL'))
+    cy.url().should('include', new URL(Cypress.env('TEST_APP_URL')).hostname)
+  })
+})
+```
+
+## Running tests
+
+### Interactive mode (recommended for development)
+
+Open Cypress in interactive mode:
+
+```bash
+npx cypress open
+```
+
+This opens the Cypress Test Runner where you can:
+- Select a browser
+- See tests run in real-time
+- Debug tests interactively
+
+### Headless mode (for CI/CD)
+
+Run tests in headless mode:
+
+```bash
+npx cypress run
+```
+
+## Next steps
+
+Now that Cypress is set up, you can proceed with:
+
+- **[Test Authentication Flows](/developer-tools/testing/cypress/test-auth-flows/)** - Learn how to test sign-up, sign-in, and sign-out flows
+- **[Test Passwordless Flows](/developer-tools/testing/cypress/test-passwordless-flows/)** - Test passwordless authentication with email OTP
+- **[Test Auth Features](/developer-tools/testing/cypress/test-auth-features/)** - Test authenticated features using session state
+- **[Test Backend APIs](/developer-tools/testing/cypress/test-backend-apis/)** - Test backend APIs with refresh tokens
+
+## Troubleshooting
+
+### Cypress not found
+
+If you get a "command not found" error, make sure Cypress is installed locally:
+
+```bash
+npm install cypress --save-dev
+```
+
+### Environment variables not loading
+
+Make sure `cypress.env.json` exists and contains valid JSON. You can also use environment variables directly:
+
+```bash
+TEST_APP_URL=https://your-app.com npx cypress open
+```
+
+### Cross-origin errors
+
+When testing with Kinde, you'll need to use `cy.origin()` for cross-origin requests. See the [Test Authentication Flows](/developer-tools/testing/cypress/test-auth-flows/) guide for examples.
+
+## Best practices
+
+1. **Use environment variables**: Store sensitive data in `cypress.env.json` (gitignored)
+2. **Organize tests**: Group related tests in separate files
+3. **Use custom commands**: Create reusable commands in `cypress/support/commands.ts`
+4. **Add test IDs**: Use `data-testid` attributes in your application for reliable selectors
+5. **Handle async operations**: Use Cypress commands for waiting and assertions
