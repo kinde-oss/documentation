@@ -28,7 +28,7 @@ Learn how to set up Jest for testing applications using Kinde authentication. Th
 
 ### What you need
 
-- A [test user with email and password](/developer-tools/testing/setup-test-user-environment/).
+- A [test user and application](/testing/setup-test-user-environment/).
 - [Node.js](https://nodejs.org/en/download/) version 20 or higher.
 
 ## Installation
@@ -43,7 +43,7 @@ Learn how to set up Jest for testing applications using Kinde authentication. Th
     touch .env
     ```
 
-3. Open the `.env` file and add your Kinde configuration:
+3. Open the `.env` file and add your Kinde configuration from your test user and application.
 
     ```env
     # .env
@@ -79,13 +79,62 @@ Create or update your `package.json` file to configure Jest:
 
 ### Global setup file
 
-Create a `jest.global-setup.js` file:
+1. Create a `jest.global-setup.js` file:
 
-```bash
-touch jest.global-setup.js
-```
+    ```bash
+    touch jest.global-setup.js
+    ```
 
-This file will be used to refresh tokens before tests run. See the [Test Backend APIs](/developer-tools/testing/jest/test-backend-apis/) guide for the complete setup.
+2. Open `jest.global-setup.js` and add the following code that refreshes tokens before tests run:
+
+    ```javascript
+    // jest.global-setup.js
+    require('dotenv').config()
+
+    async function refreshTokens() {
+      const tokenUrl = `${process.env.KINDE_ISSUER_URL}/oauth2/token`
+
+      try {
+        const requestBody = new URLSearchParams({
+          grant_type: 'refresh_token',
+          client_id: process.env.KINDE_CLIENT_ID,
+          client_secret: process.env.KINDE_CLIENT_SECRET,
+          refresh_token: process.env.KINDE_REFRESH_TOKEN,
+        }).toString()
+
+        const response = await fetch(tokenUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: requestBody,
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(
+            `Token refresh failed: ${response.status} ${response.statusText} - ${errorText}`
+          )
+        }
+
+        const tokens = await response.json()
+
+        // Update environment variables for current test run
+        process.env.KINDE_ACCESS_TOKEN = tokens.access_token
+        process.env.KINDE_REFRESH_TOKEN = tokens.refresh_token
+
+        console.log('✓ Tokens refreshed successfully')
+      } catch (error) {
+        console.warn('⚠ Failed to refresh tokens:', error.message)
+        console.warn('⚠ Continuing with existing tokens from .env file')
+        // Don't throw - allow tests to run with existing tokens
+      }
+    }
+
+    module.exports = refreshTokens
+    ```
+
+This file will be used to refresh tokens before tests run.
 
 ## Project structure
 
@@ -133,12 +182,6 @@ Or run Jest directly:
 ```bash
 npx jest
 ```
-
-## Next steps
-
-Now that Jest is set up, you can proceed with:
-
-- **[Test Backend APIs](/developer-tools/testing/jest/test-backend-apis/)** - Learn how to test backend APIs with Jest using refresh tokens
 
 ## Troubleshooting
 

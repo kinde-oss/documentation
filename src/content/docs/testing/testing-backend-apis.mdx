@@ -1,7 +1,7 @@
 ---
 page_id: 4882de7b-07f3-4cc8-ac01-b096e17dcc35
 title: Testing backend APIs
-description: "Guide to testing backend APIs using Kinde refresh tokens for maintaining long-running authenticated sessions in automated tests."
+description: "Overview and setup instructions for testing backend APIs with Kinde refresh tokens."
 sidebar:
   order: 3
 relatedArticles:
@@ -33,7 +33,7 @@ deprecated: false
 ai_summary: Guide to testing backend APIs with Jest using Kinde refresh tokens for maintaining authenticated sessions in automated tests, including token rotation.
 ---
 
-In this guide, we'll show you how to test backend APIs with Jest. We will use Kinde refresh tokens for maintaining authenticated sessions in automated tests, including token rotation.
+In this guide, we'll show you how to do the general setup for testing backend APIs in Kinde. You will need to register your API in Kinde, obtain initial tokens, set up Jest testing suite, and validate the API request.
 
 ### What you need
 
@@ -51,7 +51,7 @@ For automated backend tests, you can establish a long-running auth session using
 
 The access token obtained this way is identical to what your production users receive.
 
-## Step 1: Register your API in Kinde
+## Register your API in Kinde
 
 1. In Kinde, go to **Settings > APIs**.
 2. Select **Add API**.
@@ -59,13 +59,15 @@ The access token obtained this way is identical to what your production users re
 4. Select **Save**. The details window for the API opens. You’ll notice that an ID has been created, but it is not editable and neither is the audience. You can copy these details, however.
 5. To authorize this API for your apps, select **Applications** in the left menu.
 6. Select the three dots menu next to the relevant application (your test application), then choose **Authorize application**.
-7. To include the audience claim in your token, add the following value in your `.env` file in your Next.js test application:
-    ```env
-    # .env
-    KINDE_AUDIENCE=<your-api-audience>
-    ```
+7. To include the audience claim in your token, add the audience value in your SDK. 
 
-## Step 2: Obtain initial tokens
+    For example, in your Next.js test application, you can add the audience value in your `.env` file:
+        ```env
+        # .env
+        KINDE_AUDIENCE=<your-api-audience>
+        ```
+
+## Obtain initial access token
 
 1. Run your test application locally
 2. Sign in with your test user in a browser
@@ -75,110 +77,7 @@ The access token obtained this way is identical to what your production users re
 
     ![Screenshot of browser developer tools showing the refresh_token cookies](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/01c24cf2-4334-46f4-8414-7aa4d5eda100/socialsharingimage)
 
-## Step 3: Set up Jest testing suite
-
-1. Install the required dependencies:
-
-    ```bash
-    npm install --save-dev jest dotenv
-    ```
-
-2. Create a new `.env` file in your project root:
-
-    ```bash
-    touch .env
-    ```
-
-3. Open the `.env` file and add your Kinde configuration from your test application
-
-    ```env
-    # .env
-    KINDE_ISSUER_URL=https://your_kinde_domain.kinde.com
-    KINDE_CLIENT_ID=your_client_id
-    KINDE_CLIENT_SECRET=your_client_secret
-    KINDE_TEST_APP_URL=http://localhost:3000
-    TEST_USER_EMAIL=your_test_user_email
-    KINDE_REFRESH_TOKEN=your_refresh_token_from_step_2
-    ```
-
-    Replace the placeholder values with your actual Kinde credentials. The refresh token should come from Step 2.
-
-    <Aside type="warning">
-    
-    **Important**: Make sure to add `.env` to your `.gitignore` file to prevent committing tokens to source control.
-    
-    </Aside>
-
-4. Create a `jest.global-setup.js` file:
-
-    ```bash
-    touch jest.global-setup.js
-    ```
-
-5. Open `jest.global-setup.js` and add the following code that refreshes tokens before tests run:
-
-    ```javascript
-    // jest.global-setup.js
-    require('dotenv').config()
-
-    async function refreshTokens() {
-      const tokenUrl = `${process.env.KINDE_ISSUER_URL}/oauth2/token`
-
-      try {
-        const requestBody = new URLSearchParams({
-          grant_type: 'refresh_token',
-          client_id: process.env.KINDE_CLIENT_ID,
-          client_secret: process.env.KINDE_CLIENT_SECRET,
-          refresh_token: process.env.KINDE_REFRESH_TOKEN,
-        }).toString()
-
-        const response = await fetch(tokenUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: requestBody,
-        })
-
-        if (!response.ok) {
-          const errorText = await response.text()
-          throw new Error(
-            `Token refresh failed: ${response.status} ${response.statusText} - ${errorText}`
-          )
-        }
-
-        const tokens = await response.json()
-
-        // Update environment variables for current test run
-        process.env.KINDE_ACCESS_TOKEN = tokens.access_token
-        process.env.KINDE_REFRESH_TOKEN = tokens.refresh_token
-
-        console.log('✓ Tokens refreshed successfully')
-      } catch (error) {
-        console.warn('⚠ Failed to refresh tokens:', error.message)
-        console.warn('⚠ Continuing with existing tokens from .env file')
-        // Don't throw - allow tests to run with existing tokens
-      }
-    }
-
-    module.exports = refreshTokens
-    ```
-
-6. Create or update your `package.json` file to configure Jest. Add the following to your `package.json`:
-
-    ```json
-    {
-      "scripts": {
-        "test": "jest"
-      },
-      "jest": {
-        "globalSetup": "<rootDir>/jest.global-setup.js",
-        "testEnvironment": "node"
-      }
-    }
-    ```
-
-## Step 4: Set up backend API validation
+## Set up backend API validation
 
 You can validate the test API request with the Kinde JWT validator and JWT decoder packages.
 
@@ -243,87 +142,6 @@ if (expectedAudience) {
 }
 ```
 
-## Step 5: Run tests
-
-Here is a sample test you can run using the [Kinde test application](/developer-tools/testing/setup-test-user-environment/).
-
-1. Create a test file:
-
-    ```bash
-    touch kinde-api.test.js
-    ```
-
-2. Open `kinde-api.test.js` and add the following example tests:
-
-    ```javascript
-    // kinde-api.test.js
-    require('dotenv').config()
-
-    const testAppUrl = process.env.KINDE_TEST_APP_URL
-    const accessToken = process.env.KINDE_ACCESS_TOKEN
-
-    describe('Kinde API Tests', () => {
-      test('can fetch user profile', async () => {
-        const response = await fetch(`${testAppUrl}/api/profile`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        })
-
-        expect(response.ok).toBeTruthy()
-
-        const data = await response.json()
-        expect(data.email).toBe(process.env.TEST_USER_EMAIL)
-      })
-
-      test('cannot fetch user profile with invalid token', async () => {
-        const response = await fetch(`${testAppUrl}/api/profile`, {
-          headers: {
-            Authorization: `Bearer invalid-token`,
-          },
-        })
-        expect(response.status).toBe(401)
-      })
-
-      test('can update user settings', async () => {
-        const response = await fetch(`${testAppUrl}/api/settings`, {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            theme: 'dark',
-          }),
-        })
-
-        expect(response.ok).toBeTruthy()
-      })
-    })
-    ```
-
-3. Run the tests using the following command:
-
-    ```bash
-    npm test
-    ```
-
-    You should see the following output:
-
-    ```bash
-     PASS  ./kinde-api.test.js
-        Kinde API Tests
-          ✓ can fetch user profile (x ms)
-          ✓ cannot fetch user profile with invalid token (x ms)
-          ✓ can update user settings (x ms)
-
-      Test Suites: 1 passed, 1 total
-      Tests:       3 passed, 3 total
-      Snapshots:   0 total
-      Time:        x s, estimated 2 s
-      Ran all test suites.
-    ```
-You have successfully run the tests and validated that the API is working as expected. Use this approach to test your API endpoints and ensure they are working as expected.
-
 ## Important considerations
 
 ### Token rotation
@@ -352,3 +170,10 @@ The following limitations apply to backend API testing with refresh tokens:
 - **Handle token expiry gracefully**: Build retry logic into your tests for token refresh failures
 - **Monitor test reliability**: Track flaky tests related to authentication timing issues
 
+## Next steps
+
+To see complete backend API testing examples, see the following guides:
+
+- [Cypress](/testing/cypress/test-backend-apis/)
+- [Playwright](/testing/playwright/test-backend-apis/)
+- [Jest](/testing/jest/test-backend-apis/)
