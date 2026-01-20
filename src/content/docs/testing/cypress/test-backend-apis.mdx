@@ -172,20 +172,6 @@ Here is a sample test you can run using the [Kinde test application](/testing/se
 
 You have successfully run the tests and validated that the API is working as expected. Use this approach to test your API endpoints and ensure they are working as expected.
 
-## Important considerations
-
-### Token rotation
-
-After exchange, the previous refresh token remains valid for approximately 30 seconds (grace period), then becomes invalid. Always use the most recently issued refresh token.
-
-### Secure storage
-
-Never commit tokens to source control. Make sure to add `cypress.env.json` to your `.gitignore` file. For CI/CD environments, use secret managers like GitHub Secrets, AWS Secrets Manager, or similar to inject environment variables securely.
-
-### Token refresh frequency
-
-Refresh tokens at the start of each test run to ensure fresh access tokens. You can do this in a `before()` hook or in a custom command.
-
 ## CI/CD integration
 
 For CI/CD environments, use environment variables instead of `cypress.env.json`:
@@ -219,19 +205,3 @@ jobs:
           TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
           KINDE_AUDIENCE: ${{ secrets.KINDE_AUDIENCE }}
 ```
-
-## What's not supported
-
-The following limitations apply to backend API testing with refresh tokens:
-
-- **Social provider tokens**: Refresh tokens obtained through social sign-in may have different expiration behaviors
-- **Organization-scoped tokens**: If testing organization-specific APIs, ensure your test user belongs to the correct organization
-- **M2M tokens**: Machine-to-machine applications use different token mechanisms (see [M2M documentation](/machine-to-machine-applications/about-m2m/))
-
-## Best practices
-
-- **Rotate credentials regularly**: Even test credentials should follow security best practices
-- **Handle token expiry gracefully**: Build retry logic into your tests for token refresh failures
-- **Monitor test reliability**: Track flaky tests related to authentication timing issues
-- **Use environment variables in CI**: Never commit tokens to source control
-- **Validate tokens server-side**: Always validate tokens on your backend, not just in tests

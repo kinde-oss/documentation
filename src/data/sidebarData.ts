@@ -186,21 +186,17 @@ const sidebarData = [
       {label: "Testing authentication flows", link: "/testing/testing-authentication-flows/"},
       {label: "Testing passwordless flows", link: "/testing/testing-passwordless-flows/"},
       {label: "Testing backend APIs", link: "/testing/testing-backend-apis/"},
+      {label: "Test backend APIs with Jest", link: "/testing/test-backend-apis-jest/"},
       {
         label: "Cypress",
         autogenerate: {directory: "testing/cypress"},
-        collapsed: false
+        collapsed: true
       },
       {
         label: "Playwright",
         autogenerate: {directory: "testing/playwright"},
-        collapsed: false
+        collapsed: true
       },
-      {
-        label: "Jest",
-        autogenerate: {directory: "testing/jest"},
-        collapsed: false
-      }
     ]
   },
   {
