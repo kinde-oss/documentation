@@ -29,58 +29,20 @@ deprecated: false
 
 In this guide, we'll show you how to test backend APIs with Playwright. We will use Kinde refresh tokens for maintaining authenticated sessions in automated tests, including token rotation.
 
-### Prerequisites
+### What you need
 
-Before you begin, make sure you have:
-- Completed the [Playwright setup](/developer-tools/testing/playwright/)
-- A [test user with email and password](/developer-tools/testing/setup-test-user-environment/)
+- Completed the [Playwright setup](/testing/playwright/)
+- A [test user and application](/testing/setup-test-user-environment/)
 
-## How it works
+For guidance on how to test backend APIs with Kinde, see [Testing backend APIs](/testing/testing-backend-apis/).
 
-For automated backend tests, you can establish a long-running auth session using refresh tokens. This allows your test infrastructure to maintain authentication without manual sign-ins.
+## Configure Kinde refresh tokens
 
-1. Perform a one-time browser-based sign-in with a test user
-2. Extract the refresh token from that session
-3. Store the refresh token securely (e.g., GitHub Secrets, AWS Secrets Manager)
-4. Rotate tokens programmatically at the start of each test run
-
-The access token obtained this way is identical to what your production users receive.
-
-## Step 1: Register your API in Kinde
-
-1. In Kinde, go to **Settings > APIs**.
-2. Select **Add API**.
-3. Enter an **API name** and **Audience** (e.g., `https://api.mysite.com`). The audience (aud) is a unique identifier for this API. Often a short code or the URL of the API is used.
-4. Select **Save**. The details window for the API opens. You'll notice that an ID has been created, but it is not editable and neither is the audience. You can copy these details, however.
-5. To authorize this API for your apps, select **Applications** in the left menu.
-6. Select the three dots menu next to the relevant application (your test application), then choose **Authorize application**.
-7. To include the audience claim in your token, add the following value in your `.env` file:
+1. Update your `.env` file with the `refresh token`. You can obtain the refresh token by following [this step](/testing/testing-backend-apis/#obtain-initial-access-token).
 
     ```env
-    KINDE_AUDIENCE=your-api-audience
-    ```
-
-## Step 2: Obtain initial tokens
-
-1. Run your test application locally
-2. Sign in with your test user in a browser
-3. Right click on the page and select **Inspect** to open the browser developer tools
-4. Navigate to the **Application** tab and select **Cookies** > `http://localhost:3000`
-5. Select the `refresh_token` cookie and copy its value. You will need this in Step 3.
-
-    ![Screenshot of browser developer tools showing the refresh_token cookies](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/01c24cf2-4334-46f4-8414-7aa4d5eda100/socialsharingimage)
-
-## Step 3: Set up Playwright for API testing
-
-1. Update your `.env` file with your Kinde configuration:
-
-    ```env
-    TEST_APP_URL=http://your-app-url.com
-    TEST_USER_EMAIL=test@example.com
-    KINDE_CLIENT_ID=your_client_id
-    KINDE_ISSUER_URL=https://your-subdomain.kinde.com
-    KINDE_REFRESH_TOKEN=your_refresh_token_from_step_2
-    KINDE_AUDIENCE=your-api-audience
+    // ...your other environment variables...
+    KINDE_REFRESH_TOKEN=your-kinde-refresh-token
     ```
 
     <Aside type="warning">
@@ -89,7 +51,7 @@ The access token obtained this way is identical to what your production users re
     
     </Aside>
 
-2. Create and update a new `api.setup.ts` file with the following content:
+2. Create a setup file to refresh tokens before tests run:
 
     ```ts
     // tests/api/api.setup.ts
@@ -137,53 +99,7 @@ The access token obtained this way is identical to what your production users re
     })
     ```
 
-3. Create and update a new `users.spec.ts` file with the following content:
-
-    ```ts
-    // tests/api/users.spec.ts
-    import { test, expect } from '@playwright/test'
-    import { readFileSync } from 'fs'
-    import { join } from 'path'
-
-    test.describe('API Tests', () => {
-      let accessToken: string
-
-      test.beforeAll(() => {
-        // Load access token from file created by api.setup.ts
-        const tokenPath = join(__dirname, '../../playwright/.auth/api-token.json')
-        const tokenData = JSON.parse(readFileSync(tokenPath, 'utf-8'))
-        accessToken = tokenData.access_token
-      })
-
-      test('can fetch user profile', async ({ request }) => {
-        const response = await request.get('/api/profile', {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        })
-
-        expect(response.ok()).toBeTruthy()
-
-        const data = await response.json()
-        expect(data.email).toBe(process.env.TEST_USER_EMAIL)
-      })
-
-      test('can update user settings', async ({ request }) => {
-        const response = await request.patch('/api/settings', {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          data: {
-            theme: 'dark',
-          },
-        })
-
-        expect(response.ok()).toBeTruthy()
-      })
-    })
-    ```
-
-4. Update the `playwright.config.ts` file to add the following:
+3. Update the `playwright.config.ts` file to add the following:
 
     ```ts
     // playwright.config.ts
@@ -206,13 +122,13 @@ The access token obtained this way is identical to what your production users re
       },
 
       projects: [
-        // Setup project - authenticates and saves state
+        // Setup project - refreshes tokens
         {
           name: 'setup',
           testMatch: /api\/.*\.setup\.ts/,
         },
 
-        // Main tests - use saved auth state
+        // Main tests - use refreshed tokens
         {
           name: 'api-tests',
           testMatch: /api\/.*\.spec\.ts/,
@@ -222,7 +138,72 @@ The access token obtained this way is identical to what your production users re
     })
     ```
 
-5. Run the tests using the following command:
+## Create and run the tests
+
+Here is a sample test you can run using the [Kinde test application](/testing/setup-test-user-environment/).
+
+1. Create a test file:
+
+    ```bash
+    touch tests/api/kinde-api.spec.ts
+    ```
+
+2. Open `kinde-api.spec.ts` and add the following example tests:
+
+    ```ts
+    // tests/api/kinde-api.spec.ts
+    import { test, expect } from '@playwright/test'
+    import { readFileSync } from 'fs'
+    import { join } from 'path'
+
+    test.describe('Kinde API Tests', () => {
+      let accessToken: string
+
+      test.beforeAll(() => {
+        // Load access token from file created by api.setup.ts
+        const tokenPath = join(__dirname, '../../playwright/.auth/api-token.json')
+        const tokenData = JSON.parse(readFileSync(tokenPath, 'utf-8'))
+        accessToken = tokenData.access_token
+      })
+
+      test('can fetch user profile', async ({ request }) => {
+        const response = await request.get('/api/profile', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        })
+
+        expect(response.ok()).toBeTruthy()
+        const data = await response.json()
+        expect(data.email).toBe(process.env.TEST_USER_EMAIL)
+      })
+
+      test('cannot fetch user profile with invalid token', async ({ request }) => {
+        const response = await request.get('/api/profile', {
+          headers: {
+            Authorization: `Bearer invalid-token`,
+          },
+        })
+
+        expect(response.status()).toBe(401)
+      })
+
+      test('can update user settings', async ({ request }) => {
+        const response = await request.patch('/api/settings', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          data: {
+            theme: 'dark',
+          },
+        })
+
+        expect(response.ok()).toBeTruthy()
+      })
+    })
+    ```
+
+3. Run the tests using the following command:
 
     ```bash
     npx playwright test --ui
@@ -232,70 +213,7 @@ The access token obtained this way is identical to what your production users re
 
     ![Playwright API tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/76c4ced9-2be0-4220-b9e7-f7e5c362da00/socialsharingimage)
 
-## Step 4: Set up backend API validation
-
-You can validate the test API request with the Kinde JWT validator and JWT decoder packages.
-
-1. Install the required dependencies:
-
-    ```bash
-    npm install @kinde/jwt-validator @kinde/jwt-decoder
-    ```
-
-Here is sample code showing how to validate your JWT token:
-
-```javascript
-import { validateToken } from "@kinde/jwt-validator";
-import { jwtDecoder } from "@kinde/jwt-decoder";
-
-// ... get the token from the request headers
-
-try {
-    // Validate the token
-    const result = await validateToken({
-      token,
-      domain, // KINDE_ISSUER_URL
-    });
-
-    if (!result.valid) {
-      console.log("Token validation failed:", result.message);
-      return null;
-    }
-
-    // Decode after validation
-    const decoded = jwtDecoder(token);
-    return decoded;
-
-  } catch (error) {
-    // The validator throws for JWKS or validation errors
-    console.error("Token is invalid:", error);
-    return null;
-  }
-```
-
-If you are protecting your API with Kinde, you should also check for the `audience` claim to ensure the token is valid for your API. This way, only authorized apps can access your API. Here is sample code:
-
-```javascript
-// ... validate token using previous code ...
-const expectedAudience = process.env.KINDE_AUDIENCE; // or hardcoded value
-
-if (expectedAudience) {
-  const audience = decoded.aud;
-  // Handle both string and array audience values
-  const audiences = Array.isArray(audience) ? audience : [audience];
-
-  if (!audiences.includes(expectedAudience)) {
-    console.log(
-      "Token audience validation failed. Expected:",
-      expectedAudience,
-      "Got:",
-      audience
-    );
-    return null;
-  }
-  return decoded;
-}
-```
+You have successfully run the tests and validated that the API is working as expected. Use this approach to test your API endpoints and ensure they are working as expected.
 
 ## Important considerations
 
