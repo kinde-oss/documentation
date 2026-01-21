@@ -28,8 +28,7 @@ Learn how to set up Playwright for testing applications using Kinde authenticati
 
 ### What you need
 
-- A [test user with email and password](/testing/setup-test-user-environment/).
-- A [running test application](/testing/setup-test-user-environment/#step-3-create-a-test-application) for testing locally.
+- A [test user and application](/testing/setup-test-user-environment/).
 - [Node.js](https://nodejs.org/en/download/) version 20 or higher.
 
 ## Installation
@@ -38,6 +37,11 @@ Learn how to set up Playwright for testing applications using Kinde authenticati
     ```bash
     npm init playwright@latest
     ```
+    Pick the following options:
+    - Do you want to use TypeScript or JavaScript?: **TypeScript**
+    - Where to put your end-to-end tests?: **tests**
+    - Add a GitHub Actions workflow?: **true**
+    - Install Playwright browsers?: **true**
 
     This will create the basic Playwright folder structure and configuration files.
 
@@ -55,19 +59,20 @@ Learn how to set up Playwright for testing applications using Kinde authenticati
     touch .env
     ```
 
-2. Add the following to the `.env` file:
+2. Add the following to the `.env` file from your test user and Kinde application:
     ```env
     TEST_APP_URL=https://your-app-url.com
-    TEST_USER_EMAIL=test@example.com
+    TEST_USER_EMAIL=your-test-email
     TEST_USER_PASSWORD=your-test-password
     KINDE_ISSUER_URL=https://your-subdomain.kinde.com
     KINDE_CLIENT_ID=your-kinde-client-id
     KINDE_CLIENT_SECRET=your-kinde-client-secret
     ```
+3. Add the `.env` file to your `.gitignore` file:
 
-    <Aside type="warning" title="Important">
-      Make sure to add the `.env` file to your `.gitignore` file to prevent committing sensitive information to source control.
-    </Aside>
+    ```bash
+    echo ".env" >> .gitignore
+    ```
 
 ### Playwright configuration
 
@@ -111,6 +116,7 @@ After setup, your project should have the following structure:
 your-project/
 ├── playwright.config.ts
 ├── .env                         # Environment variables (gitignored)
+├── .gitignore                   
 ├── tests/
 │   └── example.spec.ts          # Example test file
 └── package.json
@@ -162,15 +168,6 @@ Run a specific test file:
 npx playwright test tests/auth.spec.ts
 ```
 
-## Next steps
-
-Now that Playwright is set up, you can proceed with:
-
-- **[Test Authentication Flows](/testing/playwright/test-auth-flows/)** - Learn how to test sign-up, sign-in, and sign-out flows
-- **[Test Passwordless Flows](/testing/playwright/test-passwordless-flows/)** - Test passwordless authentication with email OTP
-- **[Test Authenticated Features](/testing/playwright/test-auth-features/)** - Test authenticated features using saved session state
-- **[Test Backend APIs](/testing/playwright/test-backend-apis/)** - Test backend APIs with refresh tokens
-
 ## Troubleshooting
 
 ### Playwright not found
@@ -199,12 +196,13 @@ TEST_APP_URL=https://your-app.com npx playwright test
 
 ### Cross-origin errors
 
-When testing with Kinde, you'll need to handle redirects properly. See the [Test Authentication Flows](/testing/playwright/test-auth-flows/) guide for examples.
+When testing with Kinde, you'll need to handle redirects properly. See the [Test authentication flows](/testing/playwright/test-auth-flows/) guide for examples.
 
-## Best practices
+## Next steps
 
-1. **Use environment variables**: Store sensitive data in `.env` (gitignored)
-2. **Organize tests**: Group related tests in separate files
-3. **Use fixtures**: Create reusable test fixtures for common setup
-4. **Add test IDs**: Use `data-testid` attributes in your application for reliable selectors
-5. **Handle async operations**: Use Playwright's built-in waiting mechanisms
+Now that Playwright is set up, you can proceed with:
+
+- **[Test authentication flows](/testing/playwright/test-auth-flows/)** - Learn how to test sign-up, sign-in, and sign-out flows
+- **[Test passwordless flows](/testing/playwright/test-passwordless-flows/)** - Test passwordless authentication with email OTP
+- **[Test authenticated features](/testing/playwright/test-auth-features/)** - Test authenticated features using saved session state
+- **[Test backend APIs](/testing/playwright/test-backend-apis/)** - Test backend APIs with refresh tokens
