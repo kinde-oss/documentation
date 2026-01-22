@@ -23,7 +23,7 @@ keywords:
   - test automation
   - CI/CD
   - authentication state
-updated: 2025-01-15
+updated: 2026-01-22
 featured: false
 deprecated: false
 ---
@@ -35,32 +35,15 @@ Playwright supports saving and reusing browser authentication state using storag
 ### What you need
 
 - Completed the [Playwright setup](/testing/playwright/)
-- A [test user and application](/testing/setup-test-user-environment/)
+- A [test user and a running test application](/testing/setup-test-user-environment/)
 
 ## Setup Playwright session
 
-1. Edit the `playwright.config.ts` file to add the following:
+1. Update the `playwright.config.ts` file to add the following projects configuration:
 
-    ```ts
+    ```typescript
     // playwright.config.ts
-    import { defineConfig, devices } from '@playwright/test';
-    import * as dotenv from 'dotenv';
-
-    dotenv.config();
-
-    export default defineConfig({
-      testDir: './tests',
-      fullyParallel: true,
-      forbidOnly: !!process.env.CI,
-      retries: process.env.CI ? 2 : 0,
-      workers: process.env.CI ? 1 : undefined,
-      reporter: 'html',
-
-      use: {
-        baseURL: process.env.TEST_APP_URL,
-        trace: 'on-first-retry',
-      },
-
+    //... previous code ...
       projects: [
         // Setup project - authenticates and saves state
         {
@@ -70,7 +53,7 @@ Playwright supports saving and reusing browser authentication state using storag
 
         // Main tests - use saved auth state
         {
-          name: 'chromium',
+          name: 'auth-tests',
           use: {
             ...devices['Desktop Chrome'],
             storageState: 'playwright/.auth/user.json',
@@ -78,12 +61,16 @@ Playwright supports saving and reusing browser authentication state using storag
           dependencies: ['setup'],
         },
       ],
-    });
     ```
 
-2. Create an `auth.setup.ts` file and add the following:
+2. Create an `auth.setup.ts` file:
 
-    ```ts
+    ```bash
+    touch tests/auth.setup.ts
+    ```
+3. Add the following to the file:
+
+    ```typescript
     // tests/auth.setup.ts
     import { test as setup, expect } from '@playwright/test';
 
@@ -117,10 +104,17 @@ Playwright supports saving and reusing browser authentication state using storag
       await page.context().storageState({ path: authFile });
     });
     ```
+## Create and run sample tests
 
-3. Create a new `dashboard.spec.ts` file and add the following:
+You can run sample tests using the test application you created during setup.
 
-    ```ts
+1. Create a new `dashboard.spec.ts` file:
+    ```bash
+    touch tests/dashboard.spec.ts
+    ```
+2. Add the following sample tests to the file:
+
+    ```typescript
     // tests/dashboard.spec.ts
     import { test, expect } from '@playwright/test';
 
@@ -141,7 +135,7 @@ Playwright supports saving and reusing browser authentication state using storag
     });
     ```
 
-4. Run the tests using the following command:
+3. Run the tests using the following command:
 
     ```bash
     npx playwright test --ui
@@ -150,33 +144,6 @@ Playwright supports saving and reusing browser authentication state using storag
     You should see the tests pass.
 
     ![Playwright saved user tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/67f6fda3-5f9e-4826-59f5-d8cf13d37200/socialsharingimage)
-
-## Custom session validation
-
-You can add custom validation to ensure the session is still valid:
-
-```ts
-// tests/auth.setup.ts
-import { test as setup, expect } from '@playwright/test';
-
-const authFile = 'playwright/.auth/user.json';
-
-setup('authenticate', async ({ page, baseURL, request }) => {
-  // Authentication logic here
-  await page.goto(baseURL!);
-  await page.click('[data-testid="sign-in-button"]');
-  // ... rest of login flow
-  
-  // Save authentication state
-  await page.context().storageState({ path: authFile });
-  
-  // Validate session is still valid
-  const response = await request.get(`${baseURL}/api/profile`);
-  if (response.status() !== 200) {
-    throw new Error('Session validation failed');
-  }
-});
-```
 
 ## Complete project structure
 
@@ -270,11 +237,3 @@ Kinde may update the UI. Use more resilient selectors:
 await page.locator('input[type="email"]').fill(email);
 await page.locator('input[type="password"]').fill(password);
 ```
-
-## What's not supported
-
-The following limitations apply to Playwright testing with Kinde:
-
-- **Social provider flows**: Automated testing of Google, GitHub, or other social sign-in flows is not directly supported
-- **Enterprise SSO flows**: Testing SAML/SSO enterprise connections requires coordination with identity providers
-- **MFA flows**: Testing multi-factor authentication may require manual intervention

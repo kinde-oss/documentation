@@ -32,7 +32,7 @@ In this guide, we'll show you how to test backend APIs with Playwright. We will 
 ### What you need
 
 - Completed the [Playwright setup](/testing/playwright/)
-- A [test user and application](/testing/setup-test-user-environment/)
+- A [test user and a running test application](/testing/setup-test-user-environment/)
 
 For guidance on how to test backend APIs with Kinde, see [Testing backend APIs](/testing/testing-backend-apis/).
 
@@ -51,9 +51,16 @@ For guidance on how to test backend APIs with Kinde, see [Testing backend APIs](
     
     </Aside>
 
-2. Create a setup file to refresh tokens before tests run:
+2. Create an API setup file:
 
-    ```ts
+    ```bash
+    mkdir tests/api
+    touch tests/api/api.setup.ts
+    ```
+
+3. Add the following to the file to refresh tokens before tests run:
+
+    ```typescript
     // tests/api/api.setup.ts
     import { test as setup, expect } from '@playwright/test'
     import { writeFileSync, mkdirSync } from 'fs'
@@ -86,6 +93,7 @@ For guidance on how to test backend APIs with Kinde, see [Testing backend APIs](
         JSON.stringify(
           {
             access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
             expires_at: Date.now() + tokens.expires_in * 1000,
           },
           null,
@@ -99,48 +107,30 @@ For guidance on how to test backend APIs with Kinde, see [Testing backend APIs](
     })
     ```
 
-3. Update the `playwright.config.ts` file to add the following:
+3. Update the `playwright.config.ts` projects configuration to add the following:
 
-    ```ts
+    ```typescript
     // playwright.config.ts
-    import { defineConfig, devices } from '@playwright/test'
-    import * as dotenv from 'dotenv'
-
-    dotenv.config()
-
-    export default defineConfig({
-      testDir: './tests',
-      fullyParallel: true,
-      forbidOnly: !!process.env.CI,
-      retries: process.env.CI ? 2 : 0,
-      workers: process.env.CI ? 1 : undefined,
-      reporter: 'html',
-
-      use: {
-        baseURL: process.env.TEST_APP_URL,
-        trace: 'on-first-retry',
+    //... previous code ...
+    projects: [
+      // API setup project - refreshes tokens
+      {
+        name: 'setup',
+        testMatch: /api\/.*\.setup\.ts/,
       },
 
-      projects: [
-        // Setup project - refreshes tokens
-        {
-          name: 'setup',
-          testMatch: /api\/.*\.setup\.ts/,
-        },
-
-        // Main tests - use refreshed tokens
-        {
-          name: 'api-tests',
-          testMatch: /api\/.*\.spec\.ts/,
-          dependencies: ['setup'],
-        },
-      ],
-    })
+      // API tests - use refreshed tokens
+      {
+        name: 'api-tests',
+        testMatch: /api\/.*\.spec\.ts/,
+        dependencies: ['setup'],
+      },
+    ]
     ```
 
 ## Create and run the tests
 
-Here is a sample test you can run using the [Kinde test application](/testing/setup-test-user-environment/).
+Here is a sample test you can run using the [Kinde test application](/testing/setup-test-user-environment/). Learn how to [set up backend API validations with Kinde](/testing/testing-backend-apis/#set-up-backend-api-validation).
 
 1. Create a test file:
 
@@ -211,7 +201,7 @@ Here is a sample test you can run using the [Kinde test application](/testing/se
 
     You should see the tests pass.
 
-    ![Playwright API tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/76c4ced9-2be0-4220-b9e7-f7e5c362da00/socialsharingimage)
+    ![Playwright API tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/13e8f818-dfef-4285-9c89-678678e18a00/socialsharingimage)
 
 You have successfully run the tests and validated that the API is working as expected. Use this approach to test your API endpoints and ensure they are working as expected.
 
