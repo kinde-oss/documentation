@@ -22,7 +22,7 @@ keywords:
   - backend APIs
   - API testing
   - refresh tokens
-updated: 2025-01-15
+updated: 2026-01-22
 featured: false
 deprecated: false
 ---
@@ -32,7 +32,7 @@ In this guide, we'll show you how to test backend APIs with Cypress. We will use
 ### What you need
 
 - Completed the [Cypress setup](/testing/cypress/)
-- A [test user and application](/testing/setup-test-user-environment/)
+- A [test user and a running test application](/testing/setup-test-user-environment/)
 
 For guidance on how to test backend APIs with Kinde, see [Testing backend APIs](/testing/testing-backend-apis/).
 
@@ -47,83 +47,157 @@ For guidance on how to test backend APIs with Kinde, see [Testing backend APIs](
     }
     ```
 
-2. Create a custom command to refresh tokens:
+    <Aside type="warning">
+    
+    **Important**: Make sure to add `cypress.env.json` to your `.gitignore` file to prevent committing tokens to source control.
+    
+    </Aside>
 
-    ```ts
-    // cypress/support/commands.ts
-    declare global {
-      namespace Cypress {
-        interface Chainable {
-          refreshAccessToken(): Chainable<string>
-        }
-      }
-    }
+2. Create an API setup file:
 
-    Cypress.Commands.add('refreshAccessToken', () => {
-      const tokenUrl = `${Cypress.env('KINDE_ISSUER_URL')}/oauth2/token`
+    ```bash
+    mkdir -p cypress/e2e/api
+    touch cypress/e2e/api/api.setup.js
+    ```
 
-      return cy
-        .request({
-          method: 'POST',
-          url: tokenUrl,
-          form: true,
-          body: {
-            grant_type: 'refresh_token',
-            client_id: Cypress.env('KINDE_CLIENT_ID'),
-            client_secret: Cypress.env('KINDE_CLIENT_SECRET'),
-            refresh_token: Cypress.env('KINDE_REFRESH_TOKEN'),
-          },
+3. Add the following to the file to refresh tokens before tests run:
+
+    ```javascript
+    // cypress/e2e/api/api.setup.js
+    describe('API Setup', () => {
+      it('refresh API tokens', () => {
+        cy.task('refreshApiTokens', {
+          issuerUrl: Cypress.env('KINDE_ISSUER_URL'),
+          clientId: Cypress.env('KINDE_CLIENT_ID'),
+          refreshToken: Cypress.env('KINDE_REFRESH_TOKEN'),
         })
-        .then((response) => {
-          expect(response.status).to.eq(200)
-          
-          // Update environment variable for current test run
-          const tokens = response.body
-          Cypress.env('KINDE_ACCESS_TOKEN', tokens.access_token)
-          Cypress.env('KINDE_REFRESH_TOKEN', tokens.refresh_token)
-          
-          return tokens.access_token
-        })
+      })
     })
     ```
 
-3. Create a setup file to refresh tokens before tests run:
+4. Update your `cypress.config.js` file with the new task:
 
-    ```ts
-    // cypress/support/e2e.ts
-    before(() => {
-      // Refresh tokens before all tests
-      cy.refreshAccessToken()
+    ```javascript
+    // cypress.config.js
+    const { defineConfig } = require('cypress')
+    const { writeFileSync, mkdirSync, readFileSync } = require('fs')
+    const { join, dirname } = require('path')
+
+    module.exports = defineConfig({
+      e2e: {
+        baseUrl: process.env.TEST_APP_URL || 'http://localhost:3000',
+        setupNodeEvents(on, config) {
+          on('task', {
+            async refreshApiTokens({ issuerUrl, clientId, refreshToken }) {
+              const response = await fetch(`${issuerUrl}/oauth2/token`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                  grant_type: 'refresh_token',
+                  client_id: clientId,
+                  refresh_token: refreshToken,
+                }),
+              })
+
+              if (!response.ok) {
+                throw new Error(`Failed to refresh token: ${response.statusText}`)
+              }
+
+              const tokens = await response.json()
+
+              // Store access token in a file
+              const tokenPath = join(__dirname, 'cypress/.auth/api-token.json')
+              const tokenDir = dirname(tokenPath)
+
+              // Ensure directory exists
+              mkdirSync(tokenDir, { recursive: true })
+
+              writeFileSync(
+                tokenPath,
+                JSON.stringify(
+                  {
+                    access_token: tokens.access_token,
+                    refresh_token: tokens.refresh_token,
+                    expires_at: Date.now() + tokens.expires_in * 1000,
+                  },
+                  null,
+                  2
+                )
+              )
+
+              // Important: Update your secrets manager with the new refresh token
+              // for subsequent test runs
+              // const newRefreshToken = tokens.refresh_token
+
+              return null
+            },
+            readApiToken() {
+              const tokenPath = join(__dirname, 'cypress/.auth/api-token.json')
+              try {
+                const tokenData = JSON.parse(readFileSync(tokenPath, 'utf-8'))
+                return tokenData
+              } catch (error) {
+                if (error.code === 'ENOENT') {
+                  // File doesn't exist, return null to trigger refresh
+                  return null
+                }
+                throw error
+              }
+            },
+          })
+        },
+      },
     })
+    ```
+    This will save the tokens to a file in the `.auth` directory.
+
+5. Add the `.auth` directory to your `.gitignore` file:
+
+    ```bash
+    echo ".auth/" >> .gitignore
     ```
 
 ## Create and run the tests
 
-Here is a sample test you can run using the [Kinde test application](/testing/setup-test-user-environment/).
+Here is a sample test you can run using the [Kinde test application](/testing/setup-test-user-environment/). Learn how to [set up backend API validations with Kinde](/testing/testing-backend-apis/#set-up-backend-api-validation).
 
 1. Create a test file:
 
     ```bash
-    touch cypress/e2e/api/kinde-api.cy.ts
+    touch cypress/e2e/api/kinde-api.cy.js
     ```
 
-2. Open `kinde-api.cy.ts` and add the following example tests:
+2. Open `kinde-api.cy.js` and add the following example tests:
 
-    ```ts
-    // cypress/e2e/api/kinde-api.cy.ts
+    ```javascript
+    // cypress/e2e/api/kinde-api.cy.js
     describe('Kinde API Tests', () => {
-      let accessToken: string
+      let accessToken
 
       before(() => {
-        // Refresh token before all tests
-        cy.refreshAccessToken().then((token) => {
-          accessToken = token
+        // Load access token from file, or refresh if file doesn't exist
+        cy.task('readApiToken').then((tokenData) => {
+          if (!tokenData) {
+            // Token file doesn't exist, refresh tokens first
+            return cy.task('refreshApiTokens', {
+              issuerUrl: Cypress.env('KINDE_ISSUER_URL'),
+              clientId: Cypress.env('KINDE_CLIENT_ID'),
+              refreshToken: Cypress.env('KINDE_REFRESH_TOKEN'),
+            }).then(() => {
+              return cy.task('readApiToken')
+            })
+          }
+          return tokenData
+        }).then((tokenData) => {
+          accessToken = tokenData.access_token
         })
       })
 
       it('can fetch user profile', () => {
         cy.request({
-          url: `${Cypress.env('KINDE_TEST_APP_URL')}/api/profile`,
+          url: `${Cypress.env('TEST_APP_URL')}/api/profile`,
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -135,7 +209,7 @@ Here is a sample test you can run using the [Kinde test application](/testing/se
 
       it('cannot fetch user profile with invalid token', () => {
         cy.request({
-          url: `${Cypress.env('KINDE_TEST_APP_URL')}/api/profile`,
+          url: `${Cypress.env('TEST_APP_URL')}/api/profile`,
           headers: {
             Authorization: `Bearer invalid-token`,
           },
@@ -148,7 +222,7 @@ Here is a sample test you can run using the [Kinde test application](/testing/se
       it('can update user settings', () => {
         cy.request({
           method: 'PATCH',
-          url: `${Cypress.env('KINDE_TEST_APP_URL')}/api/settings`,
+          url: `${Cypress.env('TEST_APP_URL')}/api/settings`,
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -169,6 +243,8 @@ Here is a sample test you can run using the [Kinde test application](/testing/se
     ```
 
     You should see the tests pass.
+
+    ![Cypress API tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/66d3b55a-3cb4-4399-6af5-59a90d819a00/socialsharingimage)
 
 You have successfully run the tests and validated that the API is working as expected. Use this approach to test your API endpoints and ensure they are working as expected.
 
@@ -195,13 +271,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run Cypress API tests
-        run: npx cypress run --spec "cypress/e2e/api/**/*.cy.ts"
+        run: npx cypress run --spec "cypress/e2e/api/**/*.cy.js"
         env:
           KINDE_ISSUER_URL: ${{ secrets.KINDE_ISSUER_URL }}
           KINDE_CLIENT_ID: ${{ secrets.KINDE_CLIENT_ID }}
-          KINDE_CLIENT_SECRET: ${{ secrets.KINDE_CLIENT_SECRET }}
-          KINDE_REFRESH_TOKEN: ${{ secrets.KINDE_REFRESH_TOKEN }}
-          KINDE_TEST_APP_URL: ${{ secrets.KINDE_TEST_APP_URL }}
+          TEST_APP_URL: ${{ secrets.TEST_APP_URL }}
           TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
-          KINDE_AUDIENCE: ${{ secrets.KINDE_AUDIENCE }}
+          KINDE_REFRESH_TOKEN: ${{ secrets.KINDE_REFRESH_TOKEN }}
 ```
