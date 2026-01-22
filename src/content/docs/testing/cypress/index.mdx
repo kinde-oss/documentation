@@ -38,12 +38,18 @@ Learn how to set up Cypress for testing applications using Kinde authentication.
     npm install cypress --save-dev
     ```
 
-2. Run Cypress configuration wizard and follow the setup:
+2. Run the following command, the Cypress configuration wizard opens,
     ```bash
     npx cypress open
     ```
+    - Select **E2E Testing** and select **Continue**.
+    - Select **Start E2E Testing in Chrome**, this will open the Cypress Test Runner.
+    - Select **Create new spec**, the pop-up that opens, select **Create spec**
+        - Select **Okay, run the spec**
+    
+    This will create a basic test file in the `cypress/e2e` folder.
 
-    This will create the basic Cypress folder structure and configuration files.
+3. Close the Cypress Test Runner.
 
 ## Configuration
 
@@ -76,29 +82,20 @@ Learn how to set up Cypress for testing applications using Kinde authentication.
 
 ### Cypress configuration
 
-Update your `cypress.config.ts` file (or `cypress.config.js`) with the following basic configuration:
+Update your `cypress.config.js` file with the following basic configuration:
 
-```ts
-// cypress.config.ts
-import { defineConfig } from 'cypress'
+```javascript
+// cypress.config.js
+const { defineConfig } = require("cypress");
 
-export default defineConfig({
+module.exports = defineConfig({
   e2e: {
     baseUrl: process.env.TEST_APP_URL || 'http://localhost:3000',
     setupNodeEvents(on, config) {
       // implement node event listeners here
     },
-    supportFile: 'cypress/support/e2e.ts',
-    specPattern: 'cypress/e2e/**/*.cy.{js,jsx,ts,tsx}',
   },
-  env: {
-    // Environment variables can be accessed via Cypress.env()
-    TEST_APP_URL: process.env.TEST_APP_URL,
-    TEST_USER_EMAIL: process.env.TEST_USER_EMAIL,
-    TEST_USER_PASSWORD: process.env.TEST_USER_PASSWORD,
-    KINDE_ISSUER_URL: process.env.KINDE_ISSUER_URL,
-  },
-})
+});
 ```
 
 ## Project structure
@@ -123,8 +120,8 @@ your-project/
 
 Create your first test file to verify the setup:
 
-```ts
-// cypress/e2e/auth.cy.ts
+```javascript
+// cypress/e2e/auth.cy.js
 describe('Authentication', () => {
   it('can visit the application', () => {
     cy.visit(Cypress.env('TEST_APP_URL'))
