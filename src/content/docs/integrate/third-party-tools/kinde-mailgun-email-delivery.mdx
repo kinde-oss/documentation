@@ -152,25 +152,23 @@ npm install @kinde-oss/webhook
 // your-route.js
 import { decodeWebhook } from "@kinde-oss/webhook"
 
-export async function POST(req) {
-  try {
-    // Get the token from the request
-    const token = await req.text()
+try {
+  // Get the token from the request
+  const token = await req.text()
 
-    // Validate and decode the webhook token
-    const event = await decodeWebhook(token, {
-      issuerUrl: process.env.KINDE_ISSUER_URL,
-    })
+  // Validate and decode the webhook token
+  const event = await decodeWebhook(token, {
+    issuerUrl: process.env.KINDE_ISSUER_URL,
+  })
 
-    if(event.type === "user.created") {
-      // send welcome email
-    }
-
-    return { status: 200 }
-  } catch (err) {
-    console.error("Webhook validation error:", err)
-    return { status: 400, error: err.message }
+  if(event.type === "user.created") {
+    // send welcome email
   }
+
+  return { status: 200 }
+} catch (err) {
+  console.error("Webhook validation error:", err)
+  return { status: 400, error: err.message }
 }
 ```
 
