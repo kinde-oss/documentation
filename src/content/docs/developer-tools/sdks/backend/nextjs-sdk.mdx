@@ -118,6 +118,7 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
 4. Open the newly created `route.ts` file, enter the following code, and save the file:
     
     ```typescript
+    // app/api/auth/[kindeAuth]/route.ts
     import { handleAuth } from "@kinde-oss/kinde-auth-nextjs/server"
     export const GET = handleAuth()
     ```
@@ -128,7 +129,82 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
 
     You can create an environment file using the command `touch .env.local`
 
-6. Add the register and login links to your pages:
+6. Create a middleware route and add the following code:
+
+    ```bash
+    touch middleware.ts
+    ```
+
+    ```typescript
+    // middleware.ts
+    import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
+
+    export default withAuth(
+      async function middleware(req) {
+      },
+      {
+        // Middleware still runs on all routes, but doesn't protect the home route
+        publicPaths: ["/"], // e.g. ["/api/public", "/blog", "/about"]
+      }
+    );
+
+    export const config = {
+      matcher: [
+        '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+      ],
+    }
+    ```
+
+    The middleware will protect all routes except the ones specified in the `publicPaths` array. It will also ignore Next.js internals and static files.
+
+    Learn more about middlewares in the subsequent sections.
+
+7. Create an `AuthProvider` component in your app directory and add the following code:
+
+    ```bash
+    touch app/AuthProvider.tsx
+    ```
+
+    ```tsx
+    // app/AuthProvider.tsx
+    "use client";
+    import { KindeProvider } from "@kinde-oss/kinde-auth-nextjs";
+
+    export const AuthProvider = ({children}) => {
+      return <KindeProvider>{children}</KindeProvider>;
+    };
+    ```
+
+8. Wrap your `RootLayout` component with the `AuthProvider`:
+
+    ```tsx ins={3, 16, 20}
+    // app/layout.tsx
+    // ... other code
+    import { AuthProvider } from './AuthProvider';
+
+    export const metadata = {
+      title: 'Kinde Auth',
+      description: 'Kinde with Next.js App Router'
+    };
+
+    export default async function RootLayout({
+      children
+    }: {
+      children: React.ReactNode;
+    }) {
+      return (
+        <AuthProvider>
+          <html lang="en">
+            // Your app code here
+          </html>
+        </AuthProvider>
+      );
+    }
+    ```
+
+    This will give you access to the Kinde Auth data in your client components and will ensure that the tokens are refreshed when needed.
+
+9. Add the register and login links to your pages:
 
     ```tsx
     import { RegisterLink, LoginLink } from "@kinde-oss/kinde-auth-nextjs/components"
@@ -137,8 +213,8 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
     <LoginLink>Sign in</LoginLink>
 
     <RegisterLink>Sign up</RegisterLink>
-    ```
-7. Protect your authenticated routes:
+
+10. Check authenticated state within the page component:
 
     ```tsx
     import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
@@ -153,7 +229,7 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
       return <div>Dashboard</div>
     }
     ```
-8. Display logged-in user info and logout link:
+11. Display logged-in user info and logout link:
 
     ```tsx
     import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
@@ -181,19 +257,19 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
     }
     ```
 
-9. Start the development server:
+12. Start the development server:
 
     ```bash
     npm run dev
     ```
-10. Open the browser and navigate to http://localhost:3000 to see the application.
-11. Sign-up for a new user.
+13. Open the browser and navigate to http://localhost:3000 to see the application.
+14. Sign-up for a new user.
 
 Watch the video guide:
 
     <YoutubeVideo videoId="oq3o00E6Xys" />
 
-## **Customising Kinde Auth API paths**
+## Customizing Kinde Auth API paths
 
 The default path for the Kinde Auth API is `/api/auth`. If your Next.js application uses a custom base path for your API, you can override this setting by setting the following variable in your `.env` file:
 
@@ -221,7 +297,7 @@ KINDE_AUTH_LOGIN_ROUTE="app_login"
 
 The Kinde login route for your application will be `/my/custom/path/app_login`.
 
-## **Set up middleware**
+## About the middleware
 
 Middleware is used to protect routes in your Next.js app, and is a requirement for a seamless authentication experience.
 
@@ -328,51 +404,6 @@ export const config = {
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
   ],
 }
-```
-
-## **Set up the Kinde Auth Provider**
-
-Wrap your app in the Kinde Auth Provider. This will give you access to the Kinde Auth data in your app and will ensure that the tokens are refreshed when needed.
-
-Create a file `AuthProvider.tsx` in your app directory.
-
-```jsx
-// AuthProvider.tsx
-
-"use client";
-import {KindeProvider} from "@kinde-oss/kinde-auth-nextjs";
-
-export const AuthProvider = ({children}) => {
-  return <KindeProvider>{children}</KindeProvider>;
-};
-```
-
-Then wrap your app in the `AuthProvider` component.
-
-```jsx
-// layout.tsx
-...
-import {AuthProvider} from './AuthProvider';
-
-export const metadata = {
-  title: 'Kinde Auth',
-  description: 'Kinde with Next.js App Router'
-};
-
-export default async function RootLayout({
-  children
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <AuthProvider>
-      <html lang="en">
-        // Your app code here
-      </html>
-    </AuthProvider>
-  );
-}
-
 ```
 
 ## Authentication
@@ -2068,20 +2099,20 @@ In debug mode you will see more logs in your console that may help with debuggin
 KINDE_DEBUG_MODE = true;
 ```
 
-## Migration guide
+## Migrate from V1
 
-Changes when moving from the previous version.
+If you are migrating from the previous version, there are some changes you need to be aware of.
 
-`handleAuth` - is now imported from `“@kinde-oss/kinde-auth-nextjs/server”`
+1. `handleAuth` is now imported from `@kinde-oss/kinde-auth-nextjs/server`
 
-```jsx
-import {handleAuth} from "@kinde-oss/kinde-auth-nextjs/server";
-export const GET = handleAuth();
-```
+    ```tsx
+    import { handleAuth } from "@kinde-oss/kinde-auth-nextjs/server";
+    export const GET = handleAuth();
+    ```
 
-`getKindeServerSession` - functions returned from `getKindeServerSession` now return promises
-
-```jsx
-const {getUser} = getKindeServerSession();
-const user = await getUser();
-```
+2. `getKindeServerSession` functions now return promises.
+ 
+    ```tsx
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    ```
