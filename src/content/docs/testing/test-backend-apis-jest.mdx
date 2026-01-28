@@ -184,9 +184,16 @@ Here is a sample test file you can run using the [Kinde starter test application
     const { join } = require('path')
 
     // Load access token from file created by jest.global-setup.js
+     // Load access token from file created by jest.global-setup.js
     const tokenPath = join(__dirname, '.auth/api-token.json')
     const tokenData = JSON.parse(readFileSync(tokenPath, 'utf-8'))
-    const accessToken = tokenData.access_token
+    let accessToken
+    try {
+      const tokenData = JSON.parse(readFileSync(tokenPath, 'utf-8'))
+      accessToken = tokenData.access_token
+    } catch (error) {
+      throw new Error(`Token file not found at ${tokenPath}. Run token refresh first or check KINDE_REFRESH_TOKEN.`)
+    }
 
     const testAppUrl = process.env.TEST_APP_URL
 
