@@ -45,7 +45,11 @@ const sidebarData = [
         autogenerate: {directory: "build/set-up-options"},
         collapsed: false
       },
-      {label: "Self-service portal", autogenerate: {directory: "build/self-service-portal"}, collapsed: false},
+      {
+        label: "Self-service portal",
+        autogenerate: {directory: "build/self-service-portal"},
+        collapsed: false
+      },
       {label: "Environments", autogenerate: {directory: "build/environments"}, collapsed: false},
       {label: "Applications", autogenerate: {directory: "build/applications"}, collapsed: false},
       {label: "Organizations", autogenerate: {directory: "build/organizations"}, collapsed: false},
@@ -91,7 +95,7 @@ const sidebarData = [
         label: "Account API",
         autogenerate: {directory: "developer-tools/account-api"},
         collapsed: false
-      },
+      }
     ]
   },
   {
@@ -101,7 +105,11 @@ const sidebarData = [
     collapsed: true,
     cardLink: "/manage-your-apis/about-api-keys/",
     items: [
-      {label: "Register and manage your APIs", autogenerate: {directory: "developer-tools/your-apis"}, collapsed: false},
+      {
+        label: "Register and manage your APIs",
+        autogenerate: {directory: "developer-tools/your-apis"},
+        collapsed: false
+      },
       {
         label: "About API keys",
         autogenerate: {directory: "manage-your-apis/about-api-keys/"},
@@ -112,7 +120,11 @@ const sidebarData = [
         autogenerate: {directory: "manage-your-apis/add-manage-api-keys/"},
         collapsed: false
       },
-      {label: "Test and troubleshoot", autogenerate: {directory: "manage-your-apis/troubleshoot-api-keys/"}, collapsed: false}
+      {
+        label: "Test and troubleshoot",
+        autogenerate: {directory: "manage-your-apis/troubleshoot-api-keys/"},
+        collapsed: false
+      }
     ]
   },
   {
@@ -176,7 +188,8 @@ const sidebarData = [
   },
   {
     label: "Testing",
-    description: "Test your application's authentication flows, passwordless flows, and backend APIs",
+    description:
+      "Test your application's authentication flows, passwordless flows, and backend APIs",
     icon: "build",
     cardLink: "/testing/",
     collapsed: false,
@@ -185,6 +198,7 @@ const sidebarData = [
       {label: "Setup test user and environment", link: "/testing/setup-test-user-environment/"},
       {label: "Testing authentication flows", link: "/testing/testing-authentication-flows/"},
       {label: "Testing passwordless flows", link: "/testing/testing-passwordless-flows/"},
+      {label: "Testing authenticated features", link: "/testing/testing-authenticated-features/"},
       {label: "Testing backend APIs", link: "/testing/testing-backend-apis/"},
       {label: "Test backend APIs with Jest", link: "/testing/test-backend-apis-jest/"},
       {
@@ -196,7 +210,7 @@ const sidebarData = [
         label: "Playwright",
         autogenerate: {directory: "testing/playwright"},
         collapsed: true
-      },
+      }
     ]
   },
   {

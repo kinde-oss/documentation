@@ -3,7 +3,7 @@ page_id: 6086016d-1eec-42fc-b6d9-c942a14e5437
 title: Test backend APIs with Jest
 description: "Guide to testing backend APIs with Jest using Kinde refresh tokens for maintaining long-running authenticated sessions in automated tests."
 sidebar:
-  order: 2
+  order: 7
 topics:
   - developer-tools
   - testing
@@ -32,12 +32,12 @@ In this guide, we'll show you how to test backend APIs with Jest. We will use Ki
 
 ### What you need
 
-- A [test user and a running test application](/testing/setup-test-user-environment/)
+- A [test user and a running Kinde application](/testing/setup-test-user-environment/)
 - [Node.js](https://nodejs.org/en/download/) version 20 or higher
 
 For guidance on how to test backend APIs with Kinde, see [Testing backend APIs](/testing/testing-backend-apis/).
 
-## Installation and setup
+## Installation for new projects
 
 1. Install Jest and dotenv:
 
@@ -51,7 +51,7 @@ For guidance on how to test backend APIs with Kinde, see [Testing backend APIs](
     touch .env
     ```
 
-3. Update your `.env` file with your test application credentials from Kinde. You can obtain the `refresh token` by following [this step](/testing/testing-backend-apis/#obtain-initial-access-token).
+3. Update your `.env` file with your test application credentials from Kinde. You can obtain the refresh token by following [this step](/testing/testing-backend-apis/#obtain-initial-access-token).
 
     ```env
     # .env
@@ -63,7 +63,7 @@ For guidance on how to test backend APIs with Kinde, see [Testing backend APIs](
     KINDE_REFRESH_TOKEN=your-kinde-refresh-token
     ```
 
-4. Add the `.env` and `.auth/` directories to your `.gitignore` file:
+4. Add the `.env` file and `.auth/` directory to your `.gitignore` file:
 
     ```bash
     touch .gitignore
@@ -73,13 +73,13 @@ For guidance on how to test backend APIs with Kinde, see [Testing backend APIs](
     
 ## Configure Kinde refresh tokens
 
-1. Create a `jest.global-setup.js` file:
+1. Create or update your `jest.global-setup.js` file:
 
     ```bash
     touch jest.global-setup.js
     ```
 
-2. Open `jest.global-setup.js` and add the following code that refreshes tokens before tests run:
+2. Open `jest.global-setup.js` and add the following code to refresh tokens before tests run:
 
     ```javascript
     // jest.global-setup.js
@@ -154,7 +154,8 @@ For guidance on how to test backend APIs with Kinde, see [Testing backend APIs](
 
 3. Create or update your `package.json` file to configure Jest:
 
-    ```json
+    ```json ins={7}
+    // package.json
     {
       "scripts": {
         "test": "jest"
@@ -168,7 +169,7 @@ For guidance on how to test backend APIs with Kinde, see [Testing backend APIs](
 
 ## Create and run tests
 
-Here is a sample test you can run using the [Kinde test application](/testing/setup-test-user-environment/). Learn how to [set up backend API validations with Kinde](/testing/testing-backend-apis/#set-up-backend-api-validation).
+Here is a sample test file you can run using the [Kinde starter test application](/testing/setup-test-user-environment/). Learn how to [set up backend API validation with Kinde](/testing/testing-backend-apis/#set-up-backend-api-validation).
 
 1. Create a test file:
 
@@ -252,7 +253,7 @@ Here is a sample test you can run using the [Kinde test application](/testing/se
     Ran all test suites.
       ```
 
-You have successfully run the tests and validated that the API is working as expected. Use this approach to test your API endpoints and ensure they are working as expected.
+You have successfully run the tests and validated that the API is working correctly. Use this approach to test your API endpoints and ensure they function as expected.
 
 ## CI/CD integration
 
@@ -283,6 +284,6 @@ jobs:
           KINDE_CLIENT_ID: ${{ secrets.KINDE_CLIENT_ID }}
           KINDE_CLIENT_SECRET: ${{ secrets.KINDE_CLIENT_SECRET }}
           KINDE_REFRESH_TOKEN: ${{ secrets.KINDE_REFRESH_TOKEN }}
-          KINDE_TEST_APP_URL: ${{ secrets.KINDE_TEST_APP_URL }}
+          TEST_APP_URL: ${{ secrets.TEST_APP_URL }}
           TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
 ```

@@ -1,0 +1,197 @@
+---
+page_id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+title: Testing authenticated features
+description: "Overview of testing authenticated features with Kinde, including saving authentication state, reusing sessions, and best practices for efficient test suites."
+sidebar:
+  order: 5
+relatedArticles:
+  - c1b1ea81-35f9-467e-8079-042d6a786e55
+  - 4882de7b-07f3-4cc8-ac01-b096e17dcc35
+  - 5a67a5c0-3211-4d66-a090-4df8fde1cdad
+tableOfContents:
+  maxHeadingLevel: 3
+topics:
+  - developer-tools
+  - testing
+  - e2e-testing
+  - authenticated-testing
+sdk: []
+languages: []
+audience: developers
+complexity: intermediate
+keywords:
+  - authenticated testing
+  - session state
+  - test optimization
+  - e2e testing
+  - authentication state
+  - test isolation
+updated: 2026-01-28
+featured: false
+deprecated: false
+ai_summary: Overview of testing authenticated features with Kinde, covering concepts like saving authentication state, reusing sessions across tests, and best practices for efficient test suites.
+---
+
+Testing authenticated features efficiently requires a different approach than testing authentication flows. Instead of signing in for every test, you can authenticate once, save the authentication state, and reuse it across multiple tests. This significantly speeds up your test suite while maintaining test isolation.
+
+## Saving and reusing authentication state
+
+Most browser automation tools support saving browser state (cookies, localStorage, sessionStorage) after authentication:
+
+- **Cypress**: Uses `cy.session()` to cache authentication state
+- **Playwright**: Uses `storageState` to save and restore browser context state
+- **Other tools**: Similar mechanisms exist for saving browser cookies and storage
+
+Once saved, authentication state can be restored before each test:
+
+1. **Setup phase**: Authenticate once and save the state
+2. **Test execution**: Restore the saved state before each test
+3. **Test isolation**: Each test starts with a clean slate but authenticated state
+
+This approach provides:
+- **Speed**: Authentication happens once per test run, not per test
+- **Reliability**: Reduces flakiness from repeated authentication flows
+- **Isolation**: Each test still runs independently with fresh page state
+
+## When to use authenticated feature testing
+
+Use authenticated feature testing when:
+
+- Testing protected routes and pages
+- Testing user-specific features (profile, settings, dashboards)
+- Testing API endpoints that require authentication
+- Testing features that depend on user roles or permissions
+- Running multiple tests that all require authentication
+
+## General pattern
+
+The typical pattern for testing authenticated features follows these steps:
+
+### 1. Setup authentication
+
+Authenticate once and save the state:
+
+**Cypress pattern:**
+```javascript
+Cypress.Commands.add('login', () => {
+  cy.session('user', () => {
+    // Perform authentication
+    cy.visit('/')
+    cy.get('[data-testid="sign-in-button"]').click()
+    // ... complete sign-in flow
+  })
+})
+```
+
+**Playwright pattern:**
+```typescript
+// Setup project runs once
+setup('authenticate', async ({ page }) => {
+  await page.goto('/')
+  await page.click('[data-testid="sign-in-button"]')
+  // ... complete sign-in flow
+  await page.context().storageState({ path: 'auth/user.json' })
+})
+```
+
+### 2. Restore state before tests
+
+Restore the saved state before each test:
+
+**Cypress:**
+```javascript
+beforeEach(() => {
+  cy.login() // Restores cached session
+})
+```
+
+**Playwright:**
+```typescript
+// Configured in playwright.config.ts
+use: {
+  storageState: 'auth/user.json'
+}
+```
+
+### 3. Write tests
+
+Write tests that assume authentication is already complete:
+
+```javascript
+it('user can view dashboard', () => {
+  cy.visit('/dashboard')
+  // No login required - already authenticated
+  cy.get('[data-testid="dashboard-content"]').should('be.visible')
+})
+```
+
+## Advanced patterns
+
+### 1. Single authenticated user
+
+Use one test user for all authenticated feature tests:
+
+```javascript
+// Setup once
+beforeEach(() => {
+  cy.login() // Uses same user for all tests
+})
+
+// All tests use the same authenticated user
+it('can view dashboard', () => { /* ... */ })
+it('can update profile', () => { /* ... */ })
+```
+
+### 2. Multiple authenticated users
+
+Use different users for different test scenarios:
+
+```javascript
+// Different users for different roles
+beforeEach(() => {
+  cy.login('admin') // or cy.login('user')
+})
+
+it('admin can access admin panel', () => { /* ... */ })
+```
+
+### 3. Conditional authentication
+
+Authenticate only when needed:
+
+```javascript
+it('public page works without auth', () => {
+  cy.visit('/public')
+  // No authentication needed
+})
+
+it('protected page requires auth', () => {
+  cy.login()
+  cy.visit('/dashboard')
+  // Authentication required
+})
+```
+
+## Best practices
+
+1. **Separate authentication from feature tests**: Keep authentication setup separate from feature tests
+2. **Use test-specific users**: Never use real user accounts for testing
+3. **Secure credentials**: Never commit credentials to source control - use environment variables for all credentials
+4. **Handle flakiness**: Kinde redirects can take time. Add appropriate waits
+5. **Use reliable selectors**: Use `data-testid` attributes on HTML elements instead of CSS classes
+6. **Maintain test isolation**: Each test should be independent and not rely on test execution order
+
+## Limitations
+
+- **Session expiration**: Saved authentication state may expire. Refresh tokens periodically, or re-authenticate when needed
+- **Cross-origin restrictions**: Kinde authentication happens on a different domain. Use `cy.origin()` in Cypress or handle redirects properly in Playwright
+- **Social provider flows**: Cannot test social sign-in flows (Google, GitHub, etc.) due to third-party restrictions
+- **MFA flows**: Multi-factor authentication may require manual intervention
+- **Enterprise SSO**: Testing SAML/SSO flows requires coordination with identity providers
+
+## Next steps
+
+Test authenticated features with:
+
+- [Cypress](/testing/cypress/test-auth-features/)
+- [Playwright](/testing/playwright/test-auth-features/)
