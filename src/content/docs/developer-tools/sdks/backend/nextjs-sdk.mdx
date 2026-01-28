@@ -222,6 +222,7 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
     <LoginLink>Sign in</LoginLink>
 
     <RegisterLink>Sign up</RegisterLink>
+    ```
 
 10. Check authenticated state within the page component:
 
@@ -322,10 +323,12 @@ Want to learn more about middleware? Check out the [Next.js middleware docs](htt
 
 </Aside>
 
-#### **Middleware configuration**
+### Standard configuration
 
-Create a `middleware.ts` file in your project's root directory and add the following code:
+This is the standard `middleware.ts` file that will protect all routes in your Next.js application.
+
 ```ts
+// middleware.ts
 import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
 
 export default function middleware(req) {
@@ -340,12 +343,16 @@ export const config = {
 };
 ```
 
-#### **Route protection with callback function after authorization**
+### Route protection with a callback function
 
-You can use the `withAuth` helper as shown below with a `middleware` callback function which has access to the `req.kindeAuth` object that exposes the token and user data.
+You can use the `withAuth` helper to pass your middleware as a callback function.
+The callback function has access to `kindeAuth` object via the `req` parameter, which exposes the token and user data. 
+
+Using the `withAuth` helper, you can add additional configuration options object to your middleware.
 
 ```ts
-import {withAuth} from "@kinde-oss/kinde-auth-nextjs/middleware";
+// middleware.ts
+import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
 
 export default withAuth(async function middleware(req) {
   console.log("look at me", req.kindeAuth);
@@ -358,11 +365,12 @@ export const config = {
 };
 ```
 
-#### **Opting routes out of middleware protection**
+### Opting public routes out of middleware protection
 
 As the middleware matcher is set to protect all routes, you can opt routes out of middleware protection by adding them to the `publicPaths` array.
 
 ```ts
+// middleware.ts
 import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
 
 export default withAuth(
@@ -381,16 +389,17 @@ export const config = {
 }
 ```
 
-#### **Additional middleware options**
+### Additional middleware options object
 
-There are options that can be passed into the middleware function to configure its functionality.
+You can pass an additional configuration options object to the `withAuth` helper to configure the middleware functionality.
 
-- `isReturnToCurrentPage` - redirect the user back to the page they were trying to access
-- `loginPage` - define the path of the login page (where the users are redirected to when not authenticated)
-- `publicPaths` - define the public paths
-- `isAuthorized` - define the criteria for authorization
+- `isReturnToCurrentPage`:Boolean - redirect the user back to the page they were trying to access
+- `loginPage`:String - define the path of the login page (where the users are redirected to when not authenticated)
+- `publicPaths`:Array of strings - define the public paths
+- `isAuthorized`:Function - define the criteria for authorization
 
 ```ts
+// middleware.ts
 import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
 
 export default withAuth(
@@ -1795,9 +1804,7 @@ import {PortalLink} from "@kinde-oss/kinde-auth-nextjs/components";
 <PortalLink returnUrl="http://yourdomain.example"></PortalLink>
 ```
 
-## Analytics
-
-### UTM tags
+## UTM tags for analytics
 
 UTM tags can be used with the `LoginLink` and `RegisterLink` components to track auth traffic from its origin. You can then track the tags on the Analytics dashboard from within the Kinde app.
 
