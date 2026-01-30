@@ -4,6 +4,8 @@ title: Search users via the Kinde API
 description: "Guide to searching and filtering users via the Kinde Management API using query parameters and property filters"
 sidebar:
   order: 8
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 51899f7f-3436-46e0-9a1b-6ecc3603a0df
   - 6bf993fc-a195-4836-8eaf-133812be8876
@@ -44,12 +46,6 @@ The query= part is for searching by user name or email, additional filters can b
 
 Here's some examples of search requests with different filter types.
 
-- Filter users based on last activity date using the `active_since` parameter. This filters users by their last login date, useful for identifying inactive accounts or targeting recently active users.
-
-  ```/api/v1/users?active_since=2024-01-01T00:00:00Z```
-
-  The `active_since` parameter accepts an [ISO 8601 formatted date/time string](https://www.cdisc.org/kb/articles/when-would-i-use-iso8601-interval-format). Users with a last login date on or after the specified date will be returned.
-
 - Filter for users with multiple properties using AND(&) statements. 
 
 
@@ -71,44 +67,99 @@ Here's some examples of search requests with different filter types.
 
   ```/api/v1/search/users?query=*&properties[kp_usr_middle_name]=Hornet,Swan&properties[kp_usr_industry]=Construction&expand=identities,properties```
 
-## Example response
+### Example response
 
-```jsx
+```json
 {
-"results": [
-{
-"id": "kp_8ef060c544584c51b255e83416818c12",
-"email": "big.turtle42350@site.com",
-"phone": null,
-"picture": null,
-"username": null,
-"full_name": null,
-"last_name": null,
-"created_on": "2025-02-05T11:23:22.634233+00:00",
-"first_name": null,
-"identities": [
-{
-"type": "email",
-"identity": "big.turtle42350@site.com"
+  "code": "…",
+  "message": "…",
+  "results": [
+    {
+      "id": "kp_0ba7c433e5d648cf992621ce99d42817",
+      "provided_id": "U123456",
+      "email": "user@domain.com",
+      "username": "john.snow",
+      "last_name": "Snow",
+      "first_name": "John",
+      "is_suspended": true,
+      "picture": "https://example.com/john_snow.jpg",
+      "total_sign_ins": 1,
+      "failed_sign_ins": 0,
+      "last_signed_in": "2025-02-12T18:02:23.614638+00:00",
+      "created_on": "2025-02-12T18:02:23.614638+00:00",
+      "organizations": [
+        "…"
+      ],
+      "identities": [
+        {
+          "type": "…",
+          "identity": "…"
+        }
+      ],
+      "properties": {
+        "{{key}}": "…"
+      },
+      "api_scopes": [
+        {
+          "org_code": "…",
+          "scope": "…",
+          "api_id": "…"
+        }
+      ]
+    }
+  ]
 }
-],
-"properties": {
-"kp_usr_industry": "Construction",
-"kp_usr_middle_name": "Hornet"
-},
-"provided_id": null,
-"is_suspended": false,
-"organizations": [
-"org_d36a3f3f3c7
-],
-"last_signed_in": null,
-"total_sign_ins": 0,
-"failed_sign_ins": 0
-}
-]
-"code": "OK",
-"message": "Success"
 ```
 
+## Search users by last activity date
 
+Search users based on last activity date using the `active_since` parameter in the `GET /api/v1/users` endpoint. This searches for users by their last login date, useful for identifying inactive accounts or targeting recently active users.
 
+  ```/api/v1/users?active_since=2024-01-01T00:00:00Z```
+
+  The `active_since` parameter accepts an [ISO 8601 formatted date/time string](https://www.cdisc.org/kb/articles/when-would-i-use-iso8601-interval-format). Users with a last login date on or after the specified date will be returned.
+
+### Example response
+
+```json
+{
+  "code": "…",
+  "message": "…",
+  "users": [
+    {
+      "id": "…",
+      "provided_id": "…",
+      "email": "…",
+      "phone": "…",
+      "username": "…",
+      "last_name": "…",
+      "first_name": "…",
+      "is_suspended": true,
+      "picture": "…",
+      "total_sign_ins": 1,
+      "failed_sign_ins": 1,
+      "last_signed_in": "…",
+      "created_on": "…",
+      "last_organization_sign_ins": [
+        {
+          "org_code": "org_d2d85014942",
+          "last_signed_in": "2026-01-28T14:26:02.448856+00:00"
+        }
+      ],
+      "organizations": [
+        "…"
+      ],
+      "identities": [
+        {
+          "type": "…",
+          "identity": "…"
+        }
+      ],
+      "billing": {
+        "customer_id": "customer_1245adbc6789"
+      }
+    }
+  ],
+  "next_token": "…"
+}
+```
