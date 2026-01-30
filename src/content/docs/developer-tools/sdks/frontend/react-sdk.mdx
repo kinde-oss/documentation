@@ -63,6 +63,10 @@ New to Kinde? Kinde is the all-in-one developer platform for authentication, acc
 
 ![react sdk](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/fda86327-9282-4864-0969-d1809d9a2300/socialsharingimage)
 
+### Using non-production environments
+
+Kinde allows you to have one production environment and multiple non-production environments. If you would like to use different Environments as part of your development process learn more about [environments here](/build/environments/environments/).
+
 ## Option 1: Install the Starter kit
 
 1. On the **Quick start** page, select **Set** for both callback URL and logout URL. This will set `http://localhost:3000` as your default URLs. If you want to use a different URL, you can change it in the **Details** page.
@@ -126,51 +130,38 @@ New to Kinde? Kinde is the all-in-one developer platform for authentication, acc
 
     Replace the `<your_kinde_client_id>` and `<your_kinde_domain>` placeholders in the code block below with the the values from the **Details > App keys** section.
 
-## Environments
+Now that you have setup your Kinde React application, check out the rest of the documentation to configure your app.
 
-If you would like to use different Environments as part of your development process, you will need to [add them within your Kinde business](/build/environments/environments/) first. You will also need to add the Environment subdomain to the code block above.
+## Authentication
 
-## Sign in and sign up
+### Sign in and sign up
 
-Kinde provides a `useKindeAuth` hook with the methods `login` and `register` method to start the flow and also `LoginLink` and `RegisterLink` components
+**Link components:**
 
-Use the button examples below to redirect your users to Kinde, where they authenticate before being redirected back to your site.
+The Kinde React SDK ships with standard components for Login and Register:
 
 ```jsx
 import { LoginLink, RegisterLink } from '@kinde-oss/kinde-auth-react/components';
 
+{/* somewhere in your component */}
 <LoginLink>Sign in</LoginLink>
 <RegisterLink>Sign up</RegisterLink>
 ```
 
+**Hook methods:**
+
+Kinde also comes with a `useKindeAuth` hook with the methods `login` and `register` to start the flow.
+
 ```jsx
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 
+{/* within your component */}
 const { login, register } = useKindeAuth();
 
-<button onClick={() => register(/* params here */)} type="button">Sign up</button>
-<button onClick={() => login(/* params here */)} type="button">Sign In</button>
+<button onClick={() => register()} type="button">Sign up</button>
+<button onClick={() => login()} type="button">Sign In</button>
 ```
-
-### Callback Events
-
-To handle the result of auth there are three callback events. 
-
-- `onSuccess` - On Successful authentication, this includes the user authenticated along with the passed state and context to the Kinde hook
-- `onError` - When an error occurs during authentication, this includes the error along with the passed state and context to the Kinde hook
-
-```jsx
-<KindeProvider
-    callbacks={
-      {
-        onSuccess: (user, state, context) => console.log("onSuccess", user, state, context),
-        onError: (error, state, context) => console.log("onError", error, state, context),
-      }
-    }
->
-  <Routes />
-</KindeProvider>
-```
+With the hook, you can also pass additional parameters to the auth url.
 
 ### Passing additional params to the auth url
 
@@ -181,22 +172,42 @@ Some things you may wish to pass are:
 - `loginHint` this allows you to ask Kinde to prepopulate a users email address on the sign-up and sign-in screens.
 - `lang` if you offer multi-language support Kinde will automatically figure out the best language for your user based on their browser. However, if you want to force a language and override the users preference, you can do so by passing this attribute.
 
-```javascript
-    login({
-      loginHint: "jenny@example.com",
-      lang: "ru"
-    })
+```jsx
+<button onClick={() => 
+  login({ 
+    loginHint: "jenny@example.com", 
+    lang: "ru" 
+  })} type="button">Sign In</button>
+```
+
+### Callback Events
+
+To handle the result of auth there are three callback events. 
+
+- `onSuccess` - On Successful authentication, this includes the user authenticated along with the passed state and context to the Kinde hook
+- `onError` - When an error occurs during authentication, this includes the error along with the passed state and context to the Kinde hook
+- `onEvent` - When an event occurs during authentication, this includes the event along with the passed state and context to the Kinde hook
+
+```jsx
+// App.jsx
+<KindeProvider
+    callbacks={
+      {
+        onSuccess: (user, state, context) => console.log("onSuccess", user, state, context),
+        onError: (error, state, context) => console.log("onError", error, state, context),
+        onEvent: (event, state, context) => console.log("onEvent", event, state, context),
+      }
+    }
+>
+  <Routes />
+</KindeProvider>
 ```
 
 ### Signing out
 
-Kinde provides a `useKindeAuth` hook with the method `logout` and component `LogoutLink` which can be used to end the current session.
+Similar to sign in and sign up, Kinde also provides the `logout` method and `LogoutLink` component which can be used to end the current session.
 
-```jsx
-const { logout } = useKindeAuth();
-
-<button onClick={() => logout(/* params here */)} type="button">Sign out</button>
-```
+**Link component:**
 
 ```jsx
 import { LogoutLink } from '@kinde-oss/kinde-auth-react/components';
@@ -204,28 +215,46 @@ import { LogoutLink } from '@kinde-oss/kinde-auth-react/components';
 <LogoutLink>Sign out</LogoutLink>
 ```
 
+**Hook method:**
+
+```jsx
+const { logout } = useKindeAuth();
+
+<button onClick={() => logout()} type="button">Sign out</button>
+```
+
 ## Test sign up
 
 Register your first user by signing up yourself. You’ll see your newly registered user on the **Users** page in Kinde.
 
-### **View user profile**
+## View user profile
 
 You can get an authorized user’s profile from any component using the Kinde React hook.
 
 ```jsx
+// Profile.jsx
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
-const SayHello = () => {
+
+const Profile = () => {
   const { user } = useKindeAuth();
-  return <p>Hi {user.firstName}!</p>;
+  return (
+    <div>
+        <h2>{user?.givenName} {user?.familyName}</h2>
+        <p>{user?.email}</p>
+      </div>
+  )
 };
 ```
+
+## Check if user is authenticated
 
 To be on the safe side we have also provided `isAuthenticated` and `isLoading` state to prevent rendering errors.
 
 ```jsx
+// Profile.jsx
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 
-const UserProfile = () => {
+const Profile = () => {
   const { user, isAuthenticated, isLoading } = useKindeAuth();
 
   if (isLoading) {
@@ -235,8 +264,8 @@ const UserProfile = () => {
   return ({
     isAuthenticated ?
       <div>
-	<h2>{user.firstName}</h2>
-	<p>{user.preferredEmail}</p>
+        <h2>{user?.givenName} {user?.familyName}</h2>
+        <p>{user?.email}</p>
       </div> 
     :
       <p>Please sign in or register!</p>
@@ -244,26 +273,18 @@ const UserProfile = () => {
 };
 ```
 
-## Access control
-
-### Check if user is authenticated
-
-```jsx
-const { isAuthenticated } = useKindeAuth();
-```
-
-### Check user rights
+## Advanced access control
 
 There are two ways to check if a user has a specific permission:
 
 - Using the `has` function from the `@kinde-oss/kinde-auth-react/utils` package
 - Using the `<ProtectedRoute>` component
 
-#### Using the `has` function
+### Using the `has` function
 
 The `has` function is a helper function that checks if a user has specific roles, permissions, feature flags, or billing entitlements. It returns a boolean value indicating whether the user meets all the specified criteria.
 
-```typescript
+```jsx
 import { has } from '@kinde-oss/kinde-auth-react/utils';
 
 // Basic usage - check multiple criteria at once
@@ -276,6 +297,7 @@ const userHasAccess = has({
 ```
 
 **Parameters:**
+
 - `roles` (optional): Array of role names the user must have
 - `permissions` (optional): Array of permission names the user must have  
 - `featureFlags` (optional): Array of feature flag names the user must have
@@ -283,7 +305,7 @@ const userHasAccess = has({
 
 **Return value:** `boolean` - `true` if user meets all criteria, `false` otherwise
 
-### API vs Token-based checks
+#### API vs Token-based checks
 
 By default, the `has` function performs checks using the user's tokens. You can override this behavior by passing the `forceApi` option to perform server-side validation:
 
@@ -303,7 +325,7 @@ has({
 })
 ```
 
-### Advanced usage with conditions
+#### Advanced usage with conditions
 
 You can add custom conditions to any check by expanding the object structure:
 
@@ -325,7 +347,7 @@ has({
 })
 ```
 
-### Feature flag value checking
+#### Feature flag value checking
 
 For feature flags, you can check both the flag's existence and its specific value:
 
@@ -349,7 +371,7 @@ has({
 })
 ```
 
-### Complete example
+#### Complete example
 
 ```typescript
 import { has } from '@kinde-oss/kinde-auth-react/utils';
@@ -371,7 +393,7 @@ const checkUserAccess = () => {
 };
 ```
 
-### TypeScript type safety
+#### TypeScript type safety
 
 You can enhance type safety by declaring your specific roles, permissions, feature flags and billing entitlements. This provides autocomplete and compile-time checking for your access control.
 
@@ -788,7 +810,7 @@ getClaim("given_name", "idToken");
 // {name: "given_name", "value": "David"}
 ```
 
-## **Persisting authentication state on page refresh or new tab**
+## Persisting authentication state on page refresh or new tab
 
 You will find that when you refresh the browser using a front-end based SDK that the authentication state is lost. This is because there is no secure way to persist this in the front-end.
 
@@ -799,7 +821,9 @@ There are two ways to work around this.
 
 Once you implement one of the above, you don’t need to do anything else.
 
-## **Persisting application state**
+<YoutubeVideo videoId="5_8jlrepCkI"/>
+
+## Persisting application state
 
 The options argument passed into the `login` and `register` methods accepts an `state` key where you can pass in the current application state prior to redirecting to Kinde. This is then returned to you in the second argument of the `onSuccess` callback as seen above.
 
@@ -848,62 +872,6 @@ The trade off with this approach however is that if a page is refreshed or a new
   ...
 >
 ```
-
-## Migration from v4 to v5
-
-### login and register method params
-
-No longer need to use authUrlParams parameter, all url params are now passed at top level and are now camel case instead of snake case.
-
-e.g.
-
-```    
-login({
-  authUrlParams: {
-    login_hint: "jenny@example.com",
-    lang: "ru"
-  }
-})
-```
-becomes
-```    
-login({
-  loginHint: "jenny@example.com",
-  lang: "ru"
-})
-```
-
-### Callbacks
-
-`onRedirectCallback` has been removed in favor of a richer event system. 
-
-This has been replaced by `callbacks > onSuccess`
-
-### Create organization
-
-`createOrg` method has been removed and replaced by using `isCreateOrg` on the login or register methods or Components
-
-### Accessing access token
-
-`getToken` has been replaced by `await getAccessToken`
-
-### Token helpers
-
-all token helpers are now async methods
-
-### getClaims 
-
-token attribute changed to camelCase.
-
-e.g.
-```javascript
-getClaim("given_name", "id_token");
-```
-becomes
-```javascript
-await getClaim("given_name", "idtoken");
-```
-
 
 ## **API References - KindeProvider**
 
@@ -1205,3 +1173,58 @@ Sample:
 ```
 
 If you need any assistance with getting Kinde connected reach out to us at [support@kinde.com](mailto:support@kinde.com).
+
+## Migration from V4 to V5
+
+### login and register method params
+
+No longer need to use authUrlParams parameter, all url params are now passed at top level and are now camel case instead of snake case.
+
+e.g.
+
+```    
+login({
+  authUrlParams: {
+    login_hint: "jenny@example.com",
+    lang: "ru"
+  }
+})
+```
+becomes
+```    
+login({
+  loginHint: "jenny@example.com",
+  lang: "ru"
+})
+```
+
+### Callbacks
+
+`onRedirectCallback` has been removed in favor of a richer event system. 
+
+This has been replaced by `callbacks > onSuccess`
+
+### Create organization
+
+`createOrg` method has been removed and replaced by using `isCreateOrg` on the login or register methods or Components
+
+### Accessing access token
+
+`getToken` has been replaced by `await getAccessToken`
+
+### Token helpers
+
+all token helpers are now async methods
+
+### getClaims 
+
+token attribute changed to camelCase.
+
+e.g.
+```javascript
+getClaim("given_name", "id_token");
+```
+becomes
+```javascript
+await getClaim("given_name", "idtoken");
+```
