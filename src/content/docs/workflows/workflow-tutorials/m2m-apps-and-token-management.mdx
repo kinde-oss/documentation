@@ -1,0 +1,367 @@
+---
+page_id: 3f194279-5d00-4b01-8c20-f74b6f1ac152
+title: Tutorial - M2M apps and token management
+sidebar:
+  order: 40
+relatedArticles:
+  - 62fafade-5d33-4f85-9fd2-712c533db3d0
+  - f499ebb0-d7f5-4244-bf92-6bf0f6082b62
+description: Use Kinde to create tenant-safe M2M access with auditable and easily revocable tokens.
+topics:
+  - "workflows"
+  - "example-workflows"
+  - "authentication"
+  - "machine to machine"
+  - "client credential"
+sdk: "kinde infrastructure"
+languages:
+  - "TypeScript"
+  - "JavaScript"
+audience:
+  - "developers"
+complexity: "intermediate"
+keywords:
+  - "m2m tokens"
+  - "machine to machine token"
+  - "custom token generation"
+  - "client credential auth"
+  - "oauth2 grant"
+updated: "2025-11-07"
+featured: false
+deprecated: false
+ai_summary: "Use Kinde to create tenant-safe M2M access with auditable and easily revocable tokens."
+---
+
+Machine-to-machine (M2M) access is essential for background jobs, webhooks, and internal services. In this guide, we will make M2M access tenant-safe by default, with Kinde. 
+
+We will also add an `org_code` property to your M2M application, use an M2M Token Generation workflow to stamp org context into the JWT, and verify those claims in your API so each request only reaches its own organization’s data. 
+
+The result: clean auditability, easy revocation, and strong isolation across orgs without adding unnecessary complexity.
+
+### What you need
+
+- A [Kinde](https://kinde.com/) account (Sign up for free)
+- A [GitHub](https://github.com/) account (Sign up for free)
+
+## Step 1: Create the workflow
+
+1. Fork the [workflow base template](https://github.com/kinde-starter-kits/workflow-base-template) repo into your GitHub account by selecting **Use this template > Create a new repository.**
+2. Clone the repo into your computer with the following Git command:
+    
+    ```bash
+    git clone https://github.com/your_github_username/workflow-base-template.git
+    ```
+    
+3. Change into the directory:
+    
+    ```bash
+    cd workflow-base-template
+    ```
+    
+4. Remove the sample workflow with the command:
+    
+    ```bash
+    rm -rf kindeSrc/environment/workflows/postUserAuthentication
+    ```
+    
+5. Create a new workflow with the following command. 
+    
+    You can name it anything that resonates with your project structure; we are calling it `m2mCustomClaims`
+    
+    ```bash
+    mkdir kindeSrc/environment/workflows/m2mCustomClaims
+    touch kindeSrc/environment/workflows/m2mCustomClaims/Workflow.ts
+    ```
+    
+6. Open the `Workflow.ts` file with your favorite code editor (e.g, VS Code), add the following code into the file, and save changes:
+    
+    ```tsx
+    import {
+      onM2MTokenGeneratedEvent,
+      WorkflowSettings,
+      WorkflowTrigger,
+      createKindeAPI,
+      m2mTokenClaims,
+    } from "@kinde/infrastructure"
+    
+    export const workflowSettings: WorkflowSettings = {
+      id: "m2mTokenGeneration",
+      name: "M2M custom claims",
+      failurePolicy: {
+        action: "stop",
+      },
+      trigger: WorkflowTrigger.M2MTokenGeneration,
+      bindings: {
+        "kinde.m2mToken": {}, // required to modify M2M access token
+        "kinde.fetch": {}, // Required for API calls
+        "kinde.env": {}, // required to access your environment variables
+        url: {}, // required for url params
+      },
+    }
+    
+    export default async function Workflow(event: onM2MTokenGeneratedEvent) {
+      // Get a token for Kinde management API
+      const kindeAPI = await createKindeAPI(event)
+    
+      const { clientId } = event.context.application
+    
+      // Call Kinde applications properties API
+      const { data } = await kindeAPI.get({
+        endpoint: `applications/${clientId}/properties`,
+      })
+      const properties = data?.properties ?? []
+    
+      // Get the org code property to make the correlation
+      const orgProp = properties.find((p: any) => p.key === "org_code")
+      if (!orgProp?.value) {
+        throw new Error("Missing org_code application property")
+      }
+    
+      // Get org data from Kinde management API
+      const { data: orgsData } = await kindeAPI.get({
+        endpoint: "organizations",
+      })
+    
+      const organizations =
+        orgsData?.data?.organizations ?? orgsData?.organizations ?? []
+      const org = organizations.find((o: any) => o.code === orgProp.value)
+      if (!org) {
+        throw new Error(`No organization found with code '${orgProp.value}'.`)
+      }
+    
+      // set up types for the custom claims
+      const m2mToken = m2mTokenClaims<{
+        applicationId: string
+        orgName: string
+        orgCode: string
+      }>()
+    
+      // Use the data to set the org data on the M2M token
+      m2mToken.applicationId = clientId
+      m2mToken.orgName = org.name
+      m2mToken.orgCode = org.code
+    }
+    ```
+    
+    Optional: Install the Kinde infrastructure dependency with the following bash command for TypeScript intellisense.
+    
+    ```bash
+    npm install
+    ```
+    
+7. Run the following git commands in your terminal to push the changes to your GitHub repo:
+    
+    ```bash
+    git add .
+    git commit -m "add M2M custom claims workflow"
+    git push
+    ```
+    
+
+## Step 2: Deploy the workflow
+
+1. Sign in to your [Kinde dashboard](https://kinde.com/) and select **Workflows** from the sidebar.
+2. If you already have your workflow repo connected, go straight to step 4.
+3. Select **Connect repo → Connect GitHub** and follow the onboarding flow to authorize Kinde to access your GitHub account.
+    
+    ![connect repo to kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c67bef10-5641-4b5a-87fe-46ff8d247f00/public)
+    
+4. From the dropdown, select your GitHub repository that contains the Kinde workflow code, choose the `main` branch, and click **Next**.
+    
+    If you already have a repo connected and want to change it, select **Change repo.**
+    
+5. Select **Sync code** to pull your latest workflow code from GitHub into your Kinde project. 
+You’ll now see your workflow listed inside the dashboard. 
+    
+    ![M2M Workflow](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4cbb766e-b9bb-4b81-f07c-71b834dd7300/public)
+    
+
+## Step 3: Create an M2M application for the workflow
+
+1. [Sign in to Kinde](https://kinde.com/) and on the front page, select **Add application**.
+2. Enter a name for the application (e.g., M2M Custom Claims Workflow) and select **Machine to machine (M2M)** as the application type.
+3. Select **Save**. The details page opens.
+4. Take note of the **Client ID** and **Client secret**.
+5. Go back Home, then go to **Settings > Env variables** and select **Add environment variable**, a popup will open.
+6. Enter `KINDE_WF_M2M_CLIENT_ID` for the **Key** and the **Client ID** of your M2M application for the **value**. You can find them under your **M2M Application > Details** page. Select **Save**.
+7. Create a new Env variable for `KINDE_WF_M2M_CLIENT_SECRET`, enter the **Client secret**, and enable the **Sensitive** option. Select **Save**.
+    
+    ![add environment variables](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ecdd27ba-4ba3-4715-f57e-c61251129e00/public)
+    
+8. Go back to **Kinde home** > **Your M2M Application** > select **View details** 
+9. Go to **APIs** in the side menu.
+10. Select the three dots next to the **Kinde Management API**, and select **Authorize application**.
+    
+    ![authorize kinde management API](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/43d97a26-be13-411c-e6ba-e2d0c5e0df00/public)
+    
+11. Select the three dots again and select **Manage scopes**.
+12. Enable the following scopes and select **Save**.
+    - `read:application_properties`
+    - `read:applications`
+    - `read:organizations`
+        
+        ![manage scopes](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/a13b8ade-7039-48fe-def3-98d955c68800/public)
+        
+
+## Step 4: Set up Kinde organization and API
+
+1. Go to **Kinde home > Organizations**, and select **Add organization**.
+2. Enter the name and handle of the organization, select **Save**.
+    
+    ![add new organization](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/1394ba03-c9db-43cf-806a-f33347164200/public)
+    
+3. Copy the generated Organization Code. You will need it in the next steps. For example, `org_8edbI09lq51`.
+4. Go to **Settings** > **APIs** > **Add API**. 
+5. Type a name for the API (e.g., Acme)
+6. Enter `acme` in the **Audience** field and select **Save**. This will enable your app to add a custom audience claim in your JWT for security.
+    
+    ![add API](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/354f4b51-f163-462c-16e2-d504c2990600/public)
+    
+7. Go to **Settings > Properties**, and select **Add property**.
+    1. Enter a **Name** of the property (e.g., Org code)
+    2. Enter the Key `org_code` 
+    3. Disable the **Private** switch. This is important so the property can be used in the token.
+        
+        ![add property](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f8944958-526b-4f5c-4335-6af5df4b3200/public)
+        
+    4. Scroll down and select **Applications** in the **Definition** section.
+    5. Select **Save**.
+        
+        ![add property definition](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ea18fc5f-c6a5-49eb-eebe-ade523bcc100/public)
+        
+
+## Step 5: Test the workflow
+
+1. Go to Kinde dashboard, select **Add application**.
+2. Enter a name for the application (e.g., Acme M2M Client Application) and select **Machine to machine (M2M)** as the application type.
+3. Select **Save**. The details page opens.
+4. Take note of the **Client ID** and **Client secret.** You will need it to test your application below.
+5. Go to **APIs**, you will see the Acme API you created earlier.
+6. Select the **three dots** next to your Acme API and select **Authorize application**.
+    
+    This will add `acme` into your Kinde JSON web token inside the `aud` field. 
+    
+    ![M2M client application](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/2789e951-0e0e-4771-ed03-bee92d2ffb00/public)
+    
+7. Go to **Properties**, select **Edit** on the **Org Code** property, a pop-up will open.
+8. Enter the **Org Code** you previously copied from the Organization page (`org_xxx`) and select **Save**.
+9. Go to **Tokens**, and select **Customize** under the **M2M Token** section. A pop-up will appear.
+10. Enable the **Org Code** and select **Save**.
+    
+    ![customize m2m token](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ff529f22-757d-4be9-be1e-c0f53709aa00/public)
+    
+11. Make a cURL request by running the following code in your terminal.
+    1. The Kinde domain is the same as your Kinde business URL (e.g, tamalkinde.kinde.org)
+    2. Use the Client ID and Client secret from the new M2M app you just created.
+    
+    ```bash
+    curl https://<your_kinde_domain>.kinde.com/oauth2/token \
+      -H "Content-Type: application/x-www-form-urlencoded" \
+      -d grant_type=client_credentials \
+      -d client_id=<your_acme_m2m_client_id> \
+      -d client_secret=<your_acme_m2m_client_secret> \
+      -d audience=acme
+    ```
+    
+12. You should receive a JSON response with the JWT with custom claims:
+    
+    ```json
+    {
+      "access_token": "the_jwt_code...",
+      "expires_in": 86399,
+      "scope": "",
+      "token_type": "bearer"
+    }
+    ```
+    
+13. [Decode the JWT](https://www.jwt.io/) to find the custom claims:
+    
+    ```json
+    {
+      "applicationId": "47dfff23348d4acc84ab2770a0fa877d",
+      "application_properties": {
+        "org_code": {
+          "v": "org_8ed648340ea9"
+        }
+      },
+      "aud": [
+        "acme"
+      ],
+      "azp": "47dfff23348d4acc84ab2770a0fa877d",
+      "exp": 1755011382,
+      "gty": [
+        "client_credentials"
+      ],
+      "iat": 1754924982,
+      "iss": "https://kindetestingtamal.kinde.com",
+      "jti": "f2cba5a5-12f4-44c4-8311-119ba65d8ca5",
+      "orgCode": "org_8ed648340ea9",
+      "orgName": "Acme Inc",
+      "scope": "",
+      "scp": [],
+      "v": "2"
+    }
+    ```
+    
+14. Go to **Kinde > Workflows > M2M custom claims > Runtime logs** and select the latest time stamp, and you should see the success message:
+    
+    ![workflow runtime logs](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d9eb81a3-8f54-417b-6206-170a6f1cfa00/public)
+    
+
+Now you can use the custom claims to give metered access to your API based on individual M2M clients. Here is a practical example of how you can implement it in an Express backend:
+
+**`requireOrg.ts` middleware:**
+
+```tsx
+import { createRemoteJWKSet, jwtVerify } from "jose"
+import type { Request, Response, NextFunction } from "express"
+
+const ISSUER = "https://YOUR_DOMAIN.kinde.com"
+const AUD = "acme"
+const JWKS = createRemoteJWKSet(new URL(`${ISSUER}/.well-known/jwks.json`))
+
+export async function requireOrg(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const token = req.headers.authorization?.split(" ")[1]
+    if (!token) return res.status(401).send("Missing token")
+
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: ISSUER,
+      audience: AUD,
+    })
+    const orgCode = (payload as any).orgCode
+    if (!orgCode) return res.status(403).send("Missing orgCode claim")
+
+    // If using path-scoped routes, enforce match:
+    if (req.params.orgCode && req.params.orgCode !== orgCode) {
+      // 404 avoids leaking that another org exists
+      return res.status(404).send("Not found")
+    }
+
+    ;(req as any).org = { code: orgCode, name: (payload as any).orgName }
+    next()
+  } catch {
+    return res.status(401).send("Invalid or expired token")
+  }
+}
+```
+
+**`server.ts` with Prisma ORM:**
+
+```tsx
+app.get("/items", requireOrg, async (req, res) => {
+  const org = (req as any).org.code
+  const items = await prisma.item.findMany({ where: { orgCode: org } })
+  res.json(items)
+})
+```
+
+## Well done!
+
+You’ve configured org-aware M2M tokens and updated your API to return **only the caller’s organization data**. With this foundation in place, you can extend the pattern by adding per-org scopes and roles, rate limiting, and usage metering keyed by `orgCode`, and (optionally) database row-level security so isolation is enforced even if an application bug slips through. 
+
+Keep your secrets rotated, rely on JWKS for key rotation, and log `applicationId` + `orgCode` for traceability.

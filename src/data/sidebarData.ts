@@ -128,6 +128,25 @@ const sidebarData = [
     ]
   },
   {
+    label: "MCP Server",
+    description: "Integrate Kinde with AI assistants using the Model Context Protocol",
+    icon: "dev-tools",
+    collapsed: true,
+    cardLink: "/mcp-server/about-mcp-server",
+    items: [
+      {
+        label: "About MCP Server",
+        autogenerate: {directory: "mcp-server/about-mcp-server"},
+        collapsed: false
+      },
+      {
+        label: "Get started",
+        autogenerate: {directory: "mcp-server/get-started"},
+        collapsed: false
+      }
+    ]
+  },
+  {
     label: "Auth and access",
     description: "Configure user sign up, sign in, and security verification",
     icon: "authentication",
