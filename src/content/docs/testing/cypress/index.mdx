@@ -1,0 +1,192 @@
+---
+page_id: 4919854a-1d38-4f5a-a369-0af966119744
+title: Setup Cypress
+description: "Guide to setting up Cypress for end-to-end testing applications using Kinde authentication."
+sidebar:
+  order: 1
+tableOfContents:
+  maxHeadingLevel: 3
+topics:
+  - developer-tools
+  - testing
+  - cypress
+  - e2e-testing
+sdk: []
+languages:
+  - JavaScript
+  - TypeScript
+audience: developers
+complexity: beginner
+keywords:
+  - cypress
+  - testing
+  - setup
+updated: 2026-01-20
+featured: false
+deprecated: false
+---
+
+Learn how to set up Cypress for testing applications using Kinde authentication. This guide covers installation, configuration, and basic setup for end-to-end testing.
+
+### What you need
+
+- A [test user](/testing/setup-test-user-environment/) and optionally a running test application.
+- [Node.js](https://nodejs.org/en/download/) version 20 or higher.
+
+## Installation for new projects
+
+1. Install Cypress with the following command:
+    ```bash
+    npm install cypress --save-dev
+    ```
+
+2. Run the following command. The Cypress configuration wizard opens:
+    ```bash
+    npx cypress open
+    ```
+    - Select **E2E Testing** and select **Continue**.
+    - Select **Start E2E Testing in Chrome**. This will open the Cypress Test Runner.
+    - Select **Create new spec**. In the pop-up that opens, select **Create spec**
+        - Select **Okay, run the spec**
+    
+    This will create a basic test file in the `cypress/e2e` folder.
+
+3. Close the Cypress Test Runner.
+
+## Configuration
+
+### Environment variables
+
+1. Create or update the Cypress env file:
+    ```bash
+    touch cypress.env.json
+    ```
+
+2. Add the following to the `cypress.env.json` file using values from your test user and application:
+
+    ```json
+    {
+      "TEST_APP_URL": "https://your-app-url.com",
+      "TEST_USER_EMAIL": "your-test-email",
+      "TEST_USER_PASSWORD": "your-test-password",
+      "KINDE_ISSUER_URL": "https://your_kinde_domain.kinde.com",
+      "KINDE_CLIENT_ID": "your-kinde-client-id",
+      "KINDE_CLIENT_SECRET": "your-kinde-client-secret"
+    }
+    ```
+    <Aside>Kinde Client Secret is required for confidential clients (backend applications). Public clients (SPAs, mobile apps) do not use a client secret.</Aside>
+
+3. Create a `.gitignore` file and add the environment file to it:
+
+    ```bash
+    touch .gitignore
+    echo "cypress.env.json" >> .gitignore
+    ```
+
+### Cypress configuration
+
+Update your `cypress.config.js` file with the following basic configuration:
+
+```javascript
+// cypress.config.js
+const { defineConfig } = require("cypress");
+
+module.exports = defineConfig({
+  e2e: {
+    baseUrl: 'http://localhost:3000',
+    setupNodeEvents(on, config) {
+      // implement node event listeners here
+    },
+  },
+});
+```
+
+## Project structure
+
+After setup, your project should have the following structure:
+
+```
+your-project/
+├── cypress.config.js
+├── cypress.env.json          # Environment variables (gitignored)
+├── cypress/
+│   ├── e2e/
+│   │   └── spec.cy.js        # Example test file
+│   ├── fixtures/             # Test data
+│   └── support/
+│       ├── commands.js       # Custom commands
+│       └── e2e.js            # Support file
+└── package.json
+```
+
+## Basic test example
+
+Create your first test file to verify the setup:
+
+```javascript
+// cypress/e2e/auth.cy.js
+describe('Authentication', () => {
+  it('can visit the application', () => {
+    cy.visit(Cypress.env('TEST_APP_URL'))
+    cy.url().should('include', new URL(Cypress.env('TEST_APP_URL')).hostname)
+  })
+})
+```
+
+## Running tests
+
+### Interactive mode (recommended for development)
+
+Open Cypress in interactive mode:
+
+```bash
+npx cypress open
+```
+
+This opens the Cypress Test Runner where you can:
+- Select a browser
+- See tests run in real-time
+- Debug tests interactively
+
+### Headless mode (for CI/CD)
+
+Run tests in headless mode:
+
+```bash
+npx cypress run
+```
+
+
+
+## Troubleshooting
+
+### Cypress not found
+
+If you get a "command not found" error, make sure Cypress is installed locally:
+
+```bash
+npm install cypress --save-dev
+```
+
+### Environment variables not loading
+
+Make sure `cypress.env.json` exists and contains valid JSON. You can also use environment variables directly:
+
+```bash
+CYPRESS_TEST_APP_URL=https://your-app.com npx cypress open
+```
+
+### Cross-origin errors
+
+When testing with Kinde, you'll need to use `cy.origin()` for cross-origin requests.
+
+For additional troubleshooting or configuration guidance, refer to the [official Cypress documentation](https://docs.cypress.io/app/end-to-end-testing/writing-your-first-end-to-end-test).
+
+## Next steps
+
+Now that Cypress is set up, you can proceed with:
+
+- **[Test Authentication Flows](/testing/cypress/test-auth-flows/)** - Learn how to test sign-up, sign-in, and sign-out flows
+- **[Test Passwordless Flows](/testing/cypress/test-passwordless-flows/)** - Test passwordless authentication with email OTP
+- **[Test Auth Features](/testing/cypress/test-auth-features/)** - Test authenticated features using session state
+- **[Test Backend APIs](/testing/cypress/test-backend-apis/)** - Test backend APIs with refresh tokens

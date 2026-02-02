@@ -1,0 +1,205 @@
+---
+page_id: 37aaab8d-1674-49a6-b81e-418981d0c5fd
+title: Setup Playwright
+description: "Guide to setting up Playwright for testing Kinde authentication flows."
+sidebar:
+  order: 1
+tableOfContents:
+  maxHeadingLevel: 3
+topics:
+  - developer-tools
+  - testing
+  - playwright
+  - e2e-testing
+sdk: []
+languages:
+  - JavaScript
+  - TypeScript
+audience: developers
+complexity: beginner
+keywords:
+  - playwright
+  - testing
+  - setup
+updated: 2026-01-23
+featured: false
+deprecated: false
+---
+
+Learn how to set up Playwright for testing applications using Kinde authentication. This guide covers installation, configuration, and basic setup for end-to-end testing.
+
+### What you need
+
+- A [test user](/testing/setup-test-user-environment/) and optionally a running test application.
+- [Node.js](https://nodejs.org/en/download/) version 20 or higher.
+
+## Installation for new projects
+
+1. Install Playwright with the following command:
+    ```bash
+    npm init playwright@latest
+    ```
+    Pick the following options:
+    - Do you want to use TypeScript or JavaScript?: **TypeScript**
+    - Where to put your end-to-end tests?: **tests**
+    - Add a GitHub Actions workflow?: **true**
+    - Install Playwright browsers?: **true**
+
+    This will create the basic Playwright folder structure and configuration files.
+
+2. Install dotenv for environment variable management:
+    ```bash
+    npm install dotenv --save-dev
+    ```
+
+## Configuration
+
+### Environment variables
+
+1. Create a new `.env` file:
+    ```bash
+    touch .env
+    ```
+
+2. Add the following to the `.env` file using values from your test user and Kinde application:
+    ```env
+    TEST_APP_URL=https://your-app-url.com
+    TEST_USER_EMAIL=your-test-email
+    TEST_USER_PASSWORD=your-test-password
+    KINDE_ISSUER_URL=https://your-subdomain.kinde.com
+    KINDE_CLIENT_ID=your-kinde-client-id
+    KINDE_CLIENT_SECRET=your-kinde-client-secret
+    ```
+    <Aside>Kinde Client Secret is required for confidential clients (backend applications). Public clients (SPAs, mobile apps) do not use a client secret.</Aside>
+
+3. Add the `.env` file to your `.gitignore` file:
+
+    ```bash
+    echo ".env" >> .gitignore
+    ```
+
+### Playwright configuration
+
+Update your `playwright.config.ts` file with the following basic configuration:
+
+```ts
+// playwright.config.ts
+import { defineConfig, devices } from '@playwright/test';
+import * as dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+export default defineConfig({
+  testDir: './tests',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: 'html',
+
+  use: {
+    baseURL: process.env.TEST_APP_URL,
+    trace: 'on-first-retry',
+  },
+
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+});
+```
+
+## Project structure
+
+After setup, your project should have the following structure:
+
+```
+your-project/
+├── playwright.config.ts
+├── .env                         # Environment variables (gitignored)
+├── .gitignore                   
+├── tests/
+│   └── example.spec.ts          # Example test file
+└── package.json
+```
+
+## Basic test example
+
+Create your first test file to verify the setup:
+
+```ts
+// tests/auth.spec.ts
+import { test, expect } from '@playwright/test';
+
+test('can visit the application', async ({ page }) => {
+  await page.goto(process.env.TEST_APP_URL!);
+  await expect(page).toHaveURL(new RegExp(new URL(process.env.TEST_APP_URL!).hostname));
+});
+```
+
+## Running tests
+
+### Interactive mode (recommended for development)
+
+Open Playwright in interactive mode:
+
+```bash
+npx playwright test --ui
+```
+
+This opens the Playwright Test UI where you can:
+- Select a browser
+- See tests run in real-time
+- Debug tests interactively
+
+### Headless mode (for CI/CD)
+
+Run tests in headless mode:
+
+```bash
+npx playwright test
+```
+
+## Troubleshooting
+
+### Playwright not found
+
+If you get a "command not found" error, make sure Playwright is installed:
+
+```bash
+npm init playwright@latest
+```
+
+### Browsers not installed
+
+Install Playwright browsers:
+
+```bash
+npx playwright install
+```
+
+### Environment variables not loading
+
+Make sure `.env` exists and contains valid environment variables. You can also use environment variables directly:
+
+```bash
+TEST_APP_URL=https://your-app.com npx playwright test
+```
+
+### Cross-origin errors
+
+When testing with Kinde, you'll need to handle redirects properly. See the [Test authentication flows](/testing/playwright/test-auth-flows/) guide for examples.
+
+For additional troubleshooting or configuration guidance, refer to the [official Playwright documentation](https://playwright.dev/docs/writing-tests).
+
+## Next steps
+
+Now that Playwright is set up, you can proceed with:
+
+- **[Test authentication flows](/testing/playwright/test-auth-flows/)** - Learn how to test sign-up, sign-in, and sign-out flows
+- **[Test passwordless flows](/testing/playwright/test-passwordless-flows/)** - Test passwordless authentication with email OTP
+- **[Test authenticated features](/testing/playwright/test-auth-features/)** - Test authenticated features using saved session state
+- **[Test backend APIs](/testing/playwright/test-backend-apis/)** - Test backend APIs with refresh tokens

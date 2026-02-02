@@ -1,0 +1,128 @@
+---
+page_id: 94e37b7f-3f0a-452e-845e-be69b67344e8
+title: Test authentication flows
+description: "Guide to testing authentication flows with Playwright."
+sidebar:
+  order: 2
+tableOfContents:
+  maxHeadingLevel: 3
+topics:
+  - developer-tools
+  - testing
+  - playwright
+  - e2e-testing
+  - authentication
+sdk: []
+languages:
+  - JavaScript
+  - TypeScript
+audience: developers
+complexity: intermediate
+keywords:
+  - playwright
+  - testing
+  - authentication flows
+  - sign-up
+  - sign-in
+  - sign-out
+updated: 2026-01-21
+featured: false
+deprecated: false
+---
+
+Learn how to test authentication flows (sign-up, sign-in, sign-out) with Playwright for applications using Kinde authentication. Learn more about [testing authentication flows with Kinde](/testing/testing-authentication-flows/).
+
+### What you need
+
+- Completed the [Playwright setup](/testing/playwright/)
+- A [test user](/testing/setup-test-user-environment/) and a running Kinde application.
+
+## Test sign-in flow
+
+1. Create a new test file:
+    ```bash
+    touch tests/sign-in.spec.ts
+    ```
+
+2. Add the following to the `sign-in.spec.ts` file:
+
+    ```typescript
+    // tests/sign-in.spec.ts
+    import { test, expect } from '@playwright/test';
+
+    test.describe('Sign in Flows', () => {
+
+      test('user can sign in with email and password', async ({ page }) => {
+        await page.goto(process.env.TEST_APP_URL!);
+        await page.click('[data-testid="sign-in-button"]');
+
+        // Wait for Kinde login page
+        await expect(page).toHaveURL(/kinde\.com/);
+
+        // Enter credentials
+        await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
+        await page.click('button[type="submit"]');
+
+        await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
+        await page.click('button[type="submit"]');
+
+        // Wait for redirect back to app
+        const appUrl = new URL(process.env.TEST_APP_URL!);
+        await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace(/\./g, '\\.')));
+        await expect(page.locator('[data-testid="user-profile"]')).toBeVisible();
+      });
+    });
+    ```
+
+## Test sign-out flow
+
+1. Create a new test file:
+    ```bash
+    touch tests/sign-out.spec.ts
+    ```
+
+2. Add the following to the `sign-out.spec.ts` file:
+
+    ```typescript
+    // tests/sign-out.spec.ts
+    import { test, expect } from '@playwright/test';
+
+    test.describe('Sign-out flows', () => {
+
+      test('user can sign in and then sign out', async ({ page }) => {
+        // First authenticate
+        await page.goto(process.env.TEST_APP_URL!);
+        await page.click('[data-testid="sign-in-button"]');
+        await page.fill('input[name="p_email"]', process.env.TEST_USER_EMAIL!);
+        await page.click('button[type="submit"]');
+        await page.fill('input[name="p_password"]', process.env.TEST_USER_PASSWORD!);
+        await page.click('button[type="submit"]');
+        const appUrl = new URL(process.env.TEST_APP_URL!);
+        await expect(page).toHaveURL(new RegExp(appUrl.hostname.replace(/\./g, '\\.')));
+
+        // Now sign out
+        await page.click('[data-testid="sign-out-button"]');
+
+        // Should show signed-out state
+        await expect(page.locator('[data-testid="sign-in-button"]')).toBeVisible();
+      });
+    });
+    ```
+
+
+## Run the tests
+
+1. Use the following command:
+
+    ```bash
+    npx playwright test --ui
+    ```
+2. Select the test spec to run.
+
+    You should now see the Playwright tests passing in the browser.
+
+    ![Playwright tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/3cca87bc-e203-46d1-904f-baf0c6dd3500/socialsharingimage)
+
+## Testing sign-up flows
+
+Kinde requires OTP email verification when signing up for a new user. See the [Testing passwordless flows](/testing/playwright/test-passwordless-flows/) guide for the detailed sign-up flow examples.

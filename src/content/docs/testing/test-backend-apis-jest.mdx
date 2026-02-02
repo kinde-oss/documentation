@@ -1,0 +1,294 @@
+---
+page_id: 6086016d-1eec-42fc-b6d9-c942a14e5437
+title: Test backend APIs with Jest
+description: "Guide to testing backend APIs with Jest using Kinde refresh tokens for maintaining long-running authenticated sessions in automated tests."
+sidebar:
+  order: 7
+topics:
+  - developer-tools
+  - testing
+  - jest
+  - api-testing
+  - refresh-tokens
+sdk: []
+languages:
+  - JavaScript
+  - TypeScript
+audience: developers
+complexity: intermediate
+keywords:
+  - jest
+  - backend testing
+  - API testing
+  - refresh tokens
+  - token rotation
+  - automated testing
+updated: 2026-01-20
+featured: false
+deprecated: false
+---
+
+In this guide, we'll show you how to test backend APIs with Jest. We will use Kinde refresh tokens for maintaining authenticated sessions in automated tests, including token rotation. Learn more about [testing backend APIs with Kinde](/testing/testing-backend-apis/).
+
+### What you need
+
+- A [test user](/testing/setup-test-user-environment/) and a running Kinde application.
+- [Node.js](https://nodejs.org/en/download/) version 20 or higher
+
+## Installation for new projects
+
+1. Install Jest and dotenv:
+
+    ```bash
+    npm install --save-dev jest dotenv
+    ```
+
+2. Create a new `.env` file in your project root:
+
+    ```bash
+    touch .env
+    ```
+
+3. Update your `.env` file with your test application credentials from Kinde. You can obtain the refresh token by following [this step](/testing/testing-backend-apis/#obtain-initial-access-token).
+
+    ```env
+    # .env
+    KINDE_CLIENT_ID=your_client_id
+    KINDE_CLIENT_SECRET=your_client_secret
+    KINDE_ISSUER_URL=https://your_kinde_domain.kinde.com
+    TEST_APP_URL=http://localhost:3000
+    TEST_USER_EMAIL=your_test_user_email
+    KINDE_REFRESH_TOKEN=your-kinde-refresh-token
+    ```
+
+4. Add the `.env` file and `.auth/` directory to your `.gitignore` file:
+
+    ```bash
+    touch .gitignore
+    echo ".env" >> .gitignore
+    echo ".auth/" >> .gitignore
+    ```
+    
+## Configure Kinde refresh tokens
+
+1. Create or update your `jest.global-setup.js` file:
+
+    ```bash
+    touch jest.global-setup.js
+    ```
+
+2. Open `jest.global-setup.js` and add the following code to refresh tokens before tests run:
+
+    ```javascript
+    // jest.global-setup.js
+    require('dotenv').config()
+    const { writeFileSync, mkdirSync, existsSync, readFileSync } = require('fs')
+    const { join, dirname } = require('path')
+
+    async function refreshTokens() {
+      const tokenUrl = `${process.env.KINDE_ISSUER_URL}/oauth2/token`
+      const tokenPath = join(__dirname, '.auth/api-token.json')
+      const tokenDir = dirname(tokenPath)
+
+      // Ensure directory exists
+      mkdirSync(tokenDir, { recursive: true })
+
+      try {
+        // Try to read existing refresh token from file, fallback to env
+        let refreshToken = process.env.KINDE_REFRESH_TOKEN
+        if (existsSync(tokenPath)) {
+          const tokenData = JSON.parse(readFileSync(tokenPath, 'utf-8'))
+          refreshToken = tokenData.refresh_token || refreshToken
+        }
+
+        const requestBody = new URLSearchParams({
+          grant_type: 'refresh_token',
+          client_id: process.env.KINDE_CLIENT_ID,
+          client_secret: process.env.KINDE_CLIENT_SECRET,
+          refresh_token: refreshToken,
+        }).toString()
+
+        const response = await fetch(tokenUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: requestBody,
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(
+            `Token refresh failed: ${response.status} ${response.statusText} - ${errorText}`
+          )
+        }
+
+        const tokens = await response.json()
+
+        // Store tokens in a file
+        writeFileSync(
+          tokenPath,
+          JSON.stringify(
+            {
+              access_token: tokens.access_token,
+              refresh_token: tokens.refresh_token,
+              expires_at: Date.now() + tokens.expires_in * 1000,
+            },
+            null,
+            2
+          )
+        )
+
+        console.log('✓ Tokens refreshed successfully')
+      } catch (error) {
+        console.warn('⚠ Failed to refresh tokens:', error.message)
+        console.warn('⚠ Continuing with existing tokens from file or .env')
+        // Don't throw - allow tests to run with existing tokens
+      }
+    }
+
+    module.exports = refreshTokens
+    ```
+
+3. Create or update your `package.json` file to configure Jest:
+
+    ```json ins={7}
+    // package.json
+    {
+      "scripts": {
+        "test": "jest"
+      },
+      "jest": {
+        "globalSetup": "<rootDir>/jest.global-setup.js",
+        "testEnvironment": "node"
+      }
+    }
+    ```
+
+## Create and run tests
+
+Here is a sample test file you can run using the [Kinde starter test application](/testing/setup-test-user-environment/). Learn how to [set up backend API validation with Kinde](/testing/testing-backend-apis/#set-up-backend-api-validation).
+
+1. Create a test file:
+
+    ```bash
+    touch kinde-api.test.js
+    ```
+
+2. Open `kinde-api.test.js` and add the following example tests:
+
+    ```javascript
+    // kinde-api.test.js
+    require('dotenv').config()
+    const { readFileSync } = require('fs')
+    const { join } = require('path')
+
+    // Load access token from file created by jest.global-setup.js
+     // Load access token from file created by jest.global-setup.js
+    const tokenPath = join(__dirname, '.auth/api-token.json')
+    const tokenData = JSON.parse(readFileSync(tokenPath, 'utf-8'))
+    let accessToken
+    try {
+      const tokenData = JSON.parse(readFileSync(tokenPath, 'utf-8'))
+      accessToken = tokenData.access_token
+    } catch (error) {
+      throw new Error(`Token file not found at ${tokenPath}. Run token refresh first or check KINDE_REFRESH_TOKEN.`)
+    }
+
+    const testAppUrl = process.env.TEST_APP_URL
+
+    describe('Kinde API Tests', () => {
+      test('can fetch user profile', async () => {
+        const response = await fetch(`${testAppUrl}/api/profile`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        })
+
+        expect(response.ok).toBeTruthy()
+
+        const data = await response.json()
+        expect(data.email).toBe(process.env.TEST_USER_EMAIL)
+      })
+
+      test('cannot fetch user profile with invalid token', async () => {
+        const response = await fetch(`${testAppUrl}/api/profile`, {
+          headers: {
+            Authorization: `Bearer invalid-token`,
+          },
+        })
+        expect(response.status).toBe(401)
+      })
+
+      test('can update user settings', async () => {
+        const response = await fetch(`${testAppUrl}/api/settings`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            theme: 'dark',
+          }),
+        })
+
+        expect(response.ok).toBeTruthy()
+      })
+    })
+    ```
+
+3. Run the tests using the following command:
+
+    ```bash
+    npm test
+    ```
+
+    You should see the tests pass.
+
+    ```bash
+    PASS  ./kinde-api.test.js
+      Kinde API Tests
+        ✓ can fetch user profile (904 ms)
+        ✓ cannot fetch user profile with invalid token (185 ms)
+        ✓ can update user settings (452 ms)
+
+    Test Suites: 1 passed, 1 total
+    Tests:       3 passed, 3 total
+    Snapshots:   0 total
+    Time:        1.683 s
+    Ran all test suites.
+      ```
+
+You have successfully run the tests and validated that the API is working correctly. Use this approach to test your API endpoints and ensure they function as expected.
+
+## CI/CD integration
+
+For CI/CD environments, use environment variables instead of `.env`:
+
+```yaml
+# .github/workflows/e2e-tests.yml
+name: API Tests
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Jest API tests
+        run: npm test
+        env:
+          KINDE_ISSUER_URL: ${{ secrets.KINDE_ISSUER_URL }}
+          KINDE_CLIENT_ID: ${{ secrets.KINDE_CLIENT_ID }}
+          KINDE_CLIENT_SECRET: ${{ secrets.KINDE_CLIENT_SECRET }}
+          KINDE_REFRESH_TOKEN: ${{ secrets.KINDE_REFRESH_TOKEN }}
+          TEST_APP_URL: ${{ secrets.TEST_APP_URL }}
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+```
