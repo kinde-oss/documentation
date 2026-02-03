@@ -57,70 +57,74 @@ In this guide, we will set up a webhook in Kinde and configure it with a Next.js
     touch app/api/webhook/route.ts
     ```
 
-   ```typescript
-   // app/api/webhook/route.ts
-   import { NextResponse } from "next/server";
-   import { decodeWebhook } from "@kinde/webhooks";
+    <Aside>
+    If you are using the `src` directory structure, create the file in `src/app/api/webhook/route.ts` instead.
+    </Aside>
 
-   export async function POST(req: Request) {
-     try {
-   		// Get the token from the request
-       const token = await req.text();
+    ```typescript
+    // app/api/webhook/route.ts
+    import { NextResponse } from "next/server";
+    import { decodeWebhook } from "@kinde/webhooks";
 
-       // Decode the token
-       const decodedToken = await decodeWebhook(
-         token,
-         process.env.KINDE_ISSUER_URL
-       );
+    export async function POST(req: Request) {
+      try {
+      // Get the token from the request
+        const token = await req.text();
 
-       if (!decodedToken) {
-         return NextResponse.json({ message: "Invalid token" }, { status: 400 });
-       }
+        // Decode the token
+        const decodedToken = await decodeWebhook(
+          token,
+          process.env.KINDE_ISSUER_URL
+        );
 
-       const { 
+        if (!decodedToken) {
+          return NextResponse.json({ message: "Invalid token" }, { status: 400 });
+        }
+
+        const { 
         data, 
         type, 
         event_id, 
         event_timestamp, 
         timestamp,
         source 
-       } = decodedToken;
+        } = decodedToken;
 
-       // Run further validation if needed based on:
-       // - event_id
-       // - event_timestamp
-       // - timestamp
-       // - source
+        // Run further validation if needed based on:
+        // - event_id
+        // - event_timestamp
+        // - timestamp
+        // - source
 
-   		// Handle the event based on the type
-       switch (type) {
-         case "user.updated":
-           // handle user updated event
-   				// e.g. update database with data.user.email
-   				console.log(data);
+      // Handle the event based on the type
+        switch (type) {
+          case "user.updated":
+            // handle user updated event
+          // e.g. update database with data.user.email
+          console.log(data);
           return NextResponse.json({ status: 200, statusText: "success" });
-           break;
-         case "user.created":
-           // handle user created event
-   				// e.g. add user to database with data.user.email
-   				console.log(data);
-           return NextResponse.json({ status: 200, statusText: "success" });
-           break;
-         default:
-           // other events that we don't handle
-           return NextResponse.json({ status: 200, statusText: "success" });
-           break; 
-       }
+            break;
+          case "user.created":
+            // handle user created event
+          // e.g. add user to database with data.user.email
+          console.log(data);
+            return NextResponse.json({ status: 200, statusText: "success" });
+            break;
+          default:
+            // other events that we don't handle
+            return NextResponse.json({ status: 200, statusText: "success" });
+            break; 
+        }
 
-     } catch (err) {
-       if (err instanceof Error) {
-         console.error(err.message);
-         return NextResponse.json({ message: err.message }, { status: 400 });
-       }
-     }
-     return NextResponse.json({ status: 200, statusText: "success" });
-   }
-   ```
+      } catch (err) {
+        if (err instanceof Error) {
+          console.error(err.message);
+          return NextResponse.json({ message: err.message }, { status: 400 });
+        }
+      }
+      return NextResponse.json({ status: 200, statusText: "success" });
+    }
+    ```
 
    Whenever an event occurs in Kinde, a POST request is sent to this route endpoint, so that your project can react to the event. For example, refreshing a token or updating data in your database.
 
@@ -148,14 +152,14 @@ For this example, we will use localtunnel to create a public proxy URL.
     npm run dev
     ```
 
-2. Install the localtunnel package with the following command:
+2. Open a new terminal window and install the localtunnel package with the following command:
 
     ```bash
     npm install -g localtunnel
     ```
     This will install the localtunnel package globally on your computer.
 
-3. Open a new terminal window and start the localtunnel server with the following command:
+3. Start the localtunnel server with the following command:
 
     ```bash
     lt --port 3000
@@ -186,11 +190,12 @@ For this example, we will use localtunnel to create a public proxy URL.
 
 ## Step 4: Test the webhook
 
-1. Create a new user or update an existing one in Kinde.
-2. Switch back to the terminal where your server is running and you should see the data in your server console.
+1. Go to your Kinde dashboard > **Users**
+2. Create a new user or update an existing one to trigger the webhook
+3. Switch back to the terminal where your server is running and you should see the data in your server console
 
     ```bash
-    POST /api/webhook 200 in 1680ms
+    POST /api/webhook 200 in 000ms
     {
       user: {
         email: null,
