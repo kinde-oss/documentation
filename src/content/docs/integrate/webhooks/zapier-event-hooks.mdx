@@ -111,8 +111,9 @@ Since Kinde sends webhook data as a JWT token, you'll need to decode it to acces
         throw new Error('Invalid JWT token');
       }
       
-      const payload = parts[1];
-      const decoded = JSON.parse(Buffer.from(payload, 'base64').toString('utf-8'));
+      const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4);
+      const decoded = JSON.parse(Buffer.from(padded, 'base64').toString('utf-8'));
       return decoded;
     }
 
@@ -142,7 +143,7 @@ Since Kinde sends webhook data as a JWT token, you'll need to decode it to acces
 
     <Aside>
 
-    The JWT payload structure from Kinde includes a `data` object containing the user information. The Code action extracts fields like `given_name`, `family_name`, and `email` from this data object. See the [webhook payload example](/integrate/webhooks/about-webhooks#example-decoded-payload) for more details.
+    The JWT payload structure from Kinde includes a `data` object containing the user information. The Code action extracts fields like `first_name`, `last_name`, and `email` from this data object. See the [webhook payload example](/integrate/webhooks/about-webhooks#example-decoded-payload) for more details.
 
     </Aside>
 
