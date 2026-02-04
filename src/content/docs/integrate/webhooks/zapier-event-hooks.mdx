@@ -1,15 +1,16 @@
 ---
 page_id: c9e65865-caac-45ed-a71c-2a5dd2ecd4d8
 title: Connect Zapier to Kinde
-description: Guide to connecting Zapier with Kinde for automation and event-driven workflows using webhooks and event hooks
+description: Step-by-step guide to connecting Kinde webhooks with Zapier for automation and event-driven workflows using webhooks and event hooks
 sidebar:
   order: 4
 relatedArticles:
-  - 4cf32822-c02b-41d1-9396-f292bdbe5577
-  - f1ba22b9-b35f-478a-be09-4524d060fe36
+  - 7fe91aba-930c-4a63-8996-85af6bb605a7
+  - 95bf5e04-3415-4dc8-9ff6-953171df3f8b
+  - 84581694-59d6-4a02-ab8b-c7a2889713d5
 app_context:
   - m: settings
-    s: event_hooks
+    s: webhooks
 topics:
   - integrate
   - webhooks
@@ -25,14 +26,166 @@ keywords:
   - automation
   - integration
   - webhooks
-updated: 2024-01-15
+  - catch hook
+updated: 2026-02-04
 featured: false
 deprecated: false
-ai_summary: Guide to connecting Zapier with Kinde for automation and event-driven workflows using webhooks and event hooks.
+ai_summary: Step-by-step guide to connecting Kinde webhooks with Zapier for automation and event-driven workflows using webhooks and event hooks.
 ---
 
-When we first introduced a Zapier connection, it was to offer approximate webhooks functionality, until we had [actual webhooks](/integrate/webhooks/about-webhooks/).
+This guide will walk you through connecting Kinde webhooks to Zapier, allowing you to automate workflows based on events that occur in your Kinde account. When events like user creation or authentication happen in Kinde, they can trigger automated actions in Zapier.
 
-Now that we have webhooks, you can still integrate with Zapier, it just works a bit different. Here’s how:
+### What you need
+
+- A [Kinde](https://www.kinde.com/register) account with an available webhook slot (Sign up for free)
+- A [Zapier](https://zapier.com/) account (Professional plan or higher required for webhook triggers)
+- A [Google account](https://accounts.google.com/) with access to a Google Sheets (Sign up for free)
+
+## Step 1: Create a Zap in Zapier
+
+1. Log in to your Zapier account and click **Create Zap**.
+2. In the **Trigger** step, search for **Webhooks by Zapier**.
+3. Select **Webhooks by Zapier** from the results.
+4. In the **Event** dropdown, select **Catch Raw Hook**.
+   
+   <Aside>
+   
+   **Catch Raw Hook** is required for Kinde webhooks because Kinde sends webhook data as a JWT token string. The raw hook will capture the complete webhook payload including the JWT token.
+   
+   </Aside>
+
+5. Click **Continue**.
+
+## Step 2: Get your Zapier webhook URL
+
+1. In the **Test** tab, Zapier will generate a unique webhook URL for your Zap.
+2. The URL will look like: `https://hooks.zapier.com/hooks/catch/1234567/abcdefg/`
+3. **Copy this URL** - you'll need it in the next step.
+   
+   <Aside>
+   
+   If your application needs an empty response, you can append `/silent` to the webhook URL.
+   
+   </Aside>
+
+4. Keep this Zap open - you'll return to it after configuring the webhook in Kinde.
+
+## Step 3: Create a webhook in Kinde
+
+1. In your Kinde dashboard, go to **Settings > Webhooks**.
+2. Click **Add webhook**.
+3. Give your webhook a descriptive name (e.g., "Kinde Zapier Google Sheets").
+4. Enter a description explaining what this webhook is for (e.g., "When user is created").
+5. In the **Endpoint URL** field, paste the Zapier webhook URL you copied in Step 2.
+6. Click **Add event** to select which events you want to trigger this webhook.
+   
+   For this example, select `user.created` to trigger the webhook when a new user is created.
+   
+   Common events you might want to monitor:
+   - `user.created` - When a new user signs up
+   - `user.updated` - When user information is updated
+   - `user.authenticated` - When a user logs in
+   - `organization.created` - When a new organization is created
+   
+   For a complete list of available events, see [Add and manage webhooks](/integrate/webhooks/add-manage-webhooks#webhook-triggers).
+
+7. Click **Save** to create the webhook.
+
+## Step 4: Test the webhook trigger
+
+1. Return to your Zap in Zapier.
+2. In your Kinde dashboard, create a test user to trigger the webhook:
+   - Go to **Users** and click **Add user**
+   - Enter test user details (e.g., name: "Test User", email: "test@example.com")
+   - Click **Save**
+3. Return to Zapier and click **Test trigger** in the trigger step.
+4. You should see the webhook data appear. The data will be a raw JWT token string in the body.
+5. Click **Continue** to proceed to the next step.
+
+## Step 5: Decode the JWT using Zapier Code action
+
+Since Kinde sends webhook data as a JWT token, you'll need to decode it to access the user information. Zapier's Code action allows you to run JavaScript to decode the JWT.
+
+1. In your Zap, click **+** to add a new step.
+2. Search for **Code by Zapier** and select it.
+3. Choose **Run JavaScript** as the action.
+4. In the **Input Data** field, add a field called `jwt` and map it to the raw body from the webhook trigger.
+5. In the **Code** field, paste the following JavaScript to decode the JWT:
+
+```javascript
+// Function to decode a JWT token
+function decodeJWT(token) {
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    throw new Error('Invalid JWT token');
+  }
+  
+  const payload = parts[1];
+  const decoded = JSON.parse(Buffer.from(payload, 'base64').toString('utf-8'));
+  return decoded;
+}
+
+// Get the JWT from input data
+const jwt = inputData.jwt;
+
+// Decode the JWT
+const decoded = decodeJWT(jwt);
+
+// Extract user data from the decoded payload
+const userData = decoded.data || {};
+
+// Return the decoded data
+return {
+  firstName: userData.given_name || '',
+  lastName: userData.family_name || '',
+  email: userData.email || '',
+  fullName: `${userData.given_name || ''} ${userData.family_name || ''}`.trim(),
+  userId: userData.id || '',
+  rawData: decoded
+};
+```
+
+6. Click **Continue** and then **Test step** to verify the JWT is decoded correctly.
+7. You should see the decoded user data including first name, last name, and email.
+
+<Aside>
+
+The JWT payload structure from Kinde includes a `data` object containing the user information. The Code action extracts fields like `given_name`, `family_name`, and `email` from this data object.
+
+</Aside>
+
+## Step 6: Configure your Zap action
+
+Now that you have decoded the JWT, you can use the extracted data in your Zap action. For this example, we'll add the user to a Google Sheet.
+
+1. Click **+** to add another step after the Code action.
+2. Search for **Google Sheets** and select it.
+3. Choose **Create Spreadsheet Row** as the action.
+4. Connect your Google account if prompted.
+5. Select the spreadsheet and worksheet where you want to add the user data.
+6. Map the fields:
+   - **Name**: Use the `fullName` field from the Code step output
+   - **Email**: Use the `email` field from the Code step output
+   - Or create separate columns for first name and last name using `firstName` and `lastName`
+7. Click **Continue** and then **Test step** to verify it works.
+8. Click **Publish** to activate your Zap.
+
+## Step 7: Test the complete integration
+
+1. In your Kinde dashboard, go to **Users**.
+2. Create a new user with a name and email address.
+3. Click **Save** to create the user.
+4. The webhook will automatically trigger, sending the user data to Zapier.
+5. Zapier will decode the JWT, extract the user information, and add it to your Google Sheet.
+6. Check your Google Sheet to verify the user was added with the correct name and email.
+7. You can also check Zapier's **Task History** to see if your Zap ran successfully.
+
+<Aside>
+
+If you see the raw JWT token in your Google Sheet instead of the decoded name and email, make sure you've added the Code action step between the webhook trigger and the Google Sheets action, and that you're mapping the decoded fields (not the raw body) to your Google Sheets columns.
+
+</Aside>
+
+## Watch the video
 
 <YoutubeVideo videoId={"2C0GNM0t-sY"} />
