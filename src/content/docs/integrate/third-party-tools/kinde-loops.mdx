@@ -1,0 +1,241 @@
+---
+page_id: 5e97601f-3b77-4034-ae12-31737020b254
+title: Connect Loops to Kinde (via Zapier)
+description: Step-by-step guide to connecting Kinde webhooks with Loops via Zapier for email automation and marketing campaigns using webhooks and event hooks
+sidebar:
+  order: 14
+relatedArticles:
+  - 7fe91aba-930c-4a63-8996-85af6bb605a7
+  - 95bf5e04-3415-4dc8-9ff6-953171df3b8b
+  - 84581694-59d6-4a02-ab8b-c7a2889713d5
+  - c9e65865-caac-45ed-a71c-2a5dd2ecd4d8
+topics:
+  - integrate
+  - third-party-tools
+sdk: []
+languages: []
+audience:
+  - developers
+  - business owners
+complexity: beginner
+keywords:
+  - loops
+  - email marketing
+  - automation
+  - integration
+  - webhooks
+  - zapier
+  - email campaigns
+updated: 2026-02-04
+featured: false
+deprecated: false
+ai_summary: Step-by-step guide to connecting Kinde webhooks with Loops via Zapier for email automation and marketing campaigns using webhooks and event hooks.
+---
+
+This guide will walk you through connecting Kinde webhooks to Loops via Zapier, allowing you to automatically sync your Kinde users to Loops for email marketing and automation. When events like user creation or authentication happen in Kinde, they can trigger automated actions to add or update contacts in Loops.
+
+### What you need
+
+- A [Kinde](https://www.kinde.com/register) account with an available webhook slot (Sign up for free)
+- A [Loops](https://loops.so/) account (Sign up for free)
+- A [Zapier](https://zapier.com/) account (Professional plan or higher required for webhook triggers)
+
+## Step 1: Create a Zap in Zapier
+
+1. Log in to your Zapier account and select **Create** > **Zaps**
+2. In the **Trigger** step, search for **Webhooks** and select it.
+3. In the **Event** dropdown, select **Catch Raw Hook**, then select **Continue**
+   
+   <Aside>
+   
+   **Catch Raw Hook** is required for Kinde webhooks because Kinde sends webhook data as a JWT token string. The raw hook will capture the complete webhook payload including the JWT token.
+   
+   </Aside>
+
+4. In the **Test** tab, Zapier will generate a unique webhook URL for your Zap. The URL will look like: `https://hooks.zapier.com/hooks/catch/1234567/abcdefg/` 
+
+    Copy this URL - you'll need it in the next step.
+
+    Keep this Zap open - you'll return to it after configuring the webhook in Kinde.
+
+## Step 2: Create a webhook in Kinde
+
+1. In your Kinde dashboard, go to **Settings > Webhooks**
+2. Select **Add webhook**
+3. Give your webhook a descriptive name (e.g., "Kinde Zapier Loops")
+4. Enter a description explaining what this webhook is for (e.g., "Sync users to Loops when created")
+5. In the **Endpoint URL** field, paste the Zapier webhook URL you copied in Step 1
+6. Select **Add event** to select which events you want to trigger this webhook
+   
+   For this example, select `user.created` to trigger the webhook when a new user is created
+   
+   Common events you might want to monitor:
+   - `user.created` - When a new user signs up
+   - `user.updated` - When user information is updated
+   - `user.authenticated` - When a user logs in
+   - `organization.created` - When a new organization is created
+   
+   For a complete list of available events, see [Add and manage webhooks](/integrate/webhooks/add-manage-webhooks#webhook-triggers)
+
+7. Select **Save** to create the webhook
+
+## Step 3: Test the webhook trigger
+
+1. In your Kinde dashboard, create a test user to trigger the webhook:
+   - Go to **Users** and select **Add user**
+   - Enter test user details (e.g., name: "Test User", email: "test@example.com")
+   - Select **Save**
+2. Return to Zapier and select **Test trigger** in the trigger step
+3. You should see the webhook data appear (request A). The data will be a raw JWT token string in the body
+4. Select **Continue with selected record** to proceed to the next step
+5. Zapier will open a new popup. Search for **Code** and select it
+
+## Step 4: Decode the JWT using Zapier Code action
+
+Since Kinde sends webhook data as a JWT token, you'll need to decode it to access the user information. Zapier's Code action allows you to run JavaScript to decode the JWT.
+
+1. Select **Code by Zapier** and from the Action event dropdown, select **Run JavaScript** as the action. Select **Continue**
+2. In the **Input Data** field, add a field called `jwt` and map it to the **Raw Body** from the webhook trigger
+3. In the **Code** field, paste the following JavaScript to decode the JWT, replacing the existing code:
+
+    ```javascript
+    // Function to decode a JWT token
+    function decodeJWT(token) {
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        throw new Error('Invalid JWT token');
+      }
+      
+      const payload = parts[1];
+      const decoded = JSON.parse(Buffer.from(payload, 'base64').toString('utf-8'));
+      return decoded;
+    }
+
+    // Get the JWT from input data
+    const jwt = inputData.jwt;
+
+    // Decode the JWT
+    const decoded = decodeJWT(jwt);
+
+    // Extract user data from the decoded payload
+    const userData = decoded.data.user || {};
+
+    // Return the decoded data
+    return {
+      firstName: userData.first_name || '',
+      lastName: userData.last_name || '',
+      email: userData.email || '',
+      fullName: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
+      userId: userData.id || '',
+      rawData: decoded
+    };
+    ```
+
+4. Select **Continue**, then **Test step** to verify the JWT is decoded correctly.
+5. You should see the decoded user data including first name, last name, and email
+6. Select **Continue**
+
+    <Aside>
+
+    The JWT payload structure from Kinde includes a `data` object containing the user information. The Code action extracts fields like `first_name`, `last_name`, and `email` from this data object. See the [webhook payload example](/integrate/webhooks/about-webhooks#example-decoded-payload) for more details.
+
+    </Aside>
+
+## Step 5: Add Loops action
+
+Now that you have decoded the JWT, you can use the extracted data to add contacts to Loops. This will sync your Kinde users to Loops for email marketing and automation.
+
+1. In Zapier, edit your Zap and select the plus icon **+** to add another step after the Code action
+2. Search for **Loops** and select it
+3. From the Action event dropdown, select **Add Contact** as the action
+4. Connect your Loops account:
+   - Click **Sign in to Loops**
+   - Enter your Loops API key (you can find this in your Loops dashboard under **Settings > API Keys**)
+   - Select **Continue**
+5. Map the fields from your decoded JWT to Loops:
+   - **Email**: Map to the `Email` field from the Code step output (required)
+   - **First Name**: Map to the `First Name` field from the Code step output
+   - **Last Name**: Map to the `Last Name` field from the Code step output
+   - **User ID**: Map to the `User ID` field from the Code step output (useful for syncing with Kinde)
+   - **Source**: Set to `kinde` or `zapier` (optional)
+   - **Subscribed**: Set to `true` (default) to ensure users receive emails
+
+6. Select **Continue**
+7. Select **Test step** to verify the contact is created in Loops
+8. Check your Loops dashboard to confirm the contact was added with the correct information
+9. Select **Publish** to activate your Zap
+
+    <Aside>
+
+    **Tip**: If you want to update existing contacts instead of creating duplicates, use the **Update Contact** action instead. Loops will update the contact if the email already exists, or create a new one if it doesn't.
+
+    </Aside>
+
+## Step 6: Test the complete integration
+
+1. In your Kinde dashboard, go to **Users** and select **Add user**
+2. Create a new user with a name and email address
+3. Select **Save** to create the user
+4. The webhook will automatically trigger, sending the user data to Zapier
+5. Zapier will decode the JWT, extract the user information, and add the contact to Loops
+6. Check your Loops dashboard to verify the contact was added with the correct name and email
+7. You can also check Zapier's **Task History** to see if your Zap ran successfully
+
+## What you can do with Loops
+
+Once your Kinde users are synced to Loops, you can:
+
+### Automated email workflows
+
+- **Welcome emails**: Automatically send welcome emails to new users when they sign up
+- **Onboarding sequences**: Create multi-step email sequences to guide users through your product
+- **Re-engagement campaigns**: Automatically email users who haven't logged in recently
+- **Product updates**: Send targeted announcements based on user properties
+
+### Email segmentation
+
+- **Segment by organization**: Use Loops segments to group users by their Kinde organization
+- **Dynamic segments**: Create segments that automatically update based on user properties
+- **Targeted campaigns**: Send personalized emails based on user roles, permissions, or other Kinde attributes
+
+### Personalization
+
+- **User data**: Use Kinde user data (name, email, organization) to personalize your emails
+- **Dynamic content**: Show different content based on user properties from Kinde
+- **Event-based triggers**: Trigger emails based on user authentication or other Kinde events
+
+### Analytics and engagement
+
+- Track email opens, clicks, and engagement rates
+- Monitor email performance and optimize your campaigns
+- Identify high-engagement users and create segments for them
+
+## Advanced workflows
+
+You can extend this integration to create more sophisticated workflows:
+
+### Update contacts on user changes
+
+Create a separate Zap for the `user.updated` event to keep Loops contacts in sync when user information changes in Kinde.
+
+### Segment users by organization
+
+Use Zapier's filtering or branching features to add users to different Loops mailing lists based on their organization or other properties from Kinde.
+
+### Multi-step automation
+
+Create complex workflows that:
+1. Add contact to Loops
+2. Add to specific mailing lists based on user properties
+3. Trigger immediate emails or add to automated sequences
+
+### Conclusion 
+
+Now that you've successfully connected Kinde webhooks to Loops via Zapier, you can automate your email marketing and keep your user base synchronized. This integration enables you to:
+
+- Automatically sync new users to Loops for email marketing
+- Create personalized email campaigns based on Kinde user data
+- Build automated email workflows triggered by Kinde events
+- Segment your audience using data from Kinde
+
+For more information about Loops features and capabilities, visit the [Loops documentation](https://loops.so/docs).
