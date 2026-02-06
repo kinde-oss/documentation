@@ -40,7 +40,13 @@ This guide will walk you through connecting Kinde webhooks to Loops via Zapier, 
 - A [Loops](https://loops.so/) account (Sign up for free)
 - A [Zapier](https://zapier.com/) account (Professional plan or higher required for webhook triggers)
 
-## Step 1: Create a Zap in Zapier
+## Step 1: Generate a Loops API key 
+
+1. Sign in to your Loops account and go to [**Settings > API**](https://app.loops.so/settings?page=api)
+2. Select **Generate key**
+3. Select the newly generated key to copy it. You will need this in the next step.
+
+## Step 2: Create a Zap in Zapier
 
 1. Log in to your Zapier account and select **Create** > **Zaps**
 2. In the **Trigger** step, search for **Webhooks** and select it.
@@ -58,13 +64,13 @@ This guide will walk you through connecting Kinde webhooks to Loops via Zapier, 
 
     Keep this Zap open - you'll return to it after configuring the webhook in Kinde.
 
-## Step 2: Create a webhook in Kinde
+## Step 3: Create a webhook in Kinde
 
 1. In your Kinde dashboard, go to **Settings > Webhooks**
 2. Select **Add webhook**
 3. Give your webhook a descriptive name (e.g., "Kinde Zapier Loops")
 4. Enter a description explaining what this webhook is for (e.g., "Sync users to Loops when created")
-5. In the **Endpoint URL** field, paste the Zapier webhook URL you copied in Step 1
+5. In the **Endpoint URL** field, paste the Zapier webhook URL you copied in Step 2
 6. Select **Add event** to select which events you want to trigger this webhook
    
    For this example, select `user.created` to trigger the webhook when a new user is created
@@ -79,7 +85,7 @@ This guide will walk you through connecting Kinde webhooks to Loops via Zapier, 
 
 7. Select **Save** to create the webhook
 
-## Step 3: Test the webhook trigger
+## Step 4: Test the webhook trigger
 
 1. In your Kinde dashboard, create a test user to trigger the webhook:
    - Go to **Users** and select **Add user**
@@ -90,7 +96,7 @@ This guide will walk you through connecting Kinde webhooks to Loops via Zapier, 
 4. Select **Continue with selected record** to proceed to the next step
 5. Zapier will open a new popup. Search for **Code** and select it
 
-## Step 4: Decode the JWT using Zapier Code action
+## Step 5: Decode the JWT using Zapier Code action
 
 Since Kinde sends webhook data as a JWT token, you'll need to decode it to access the user information. Zapier's Code action allows you to run JavaScript to decode the JWT.
 
@@ -106,8 +112,9 @@ Since Kinde sends webhook data as a JWT token, you'll need to decode it to acces
         throw new Error('Invalid JWT token');
       }
       
-      const payload = parts[1];
-      const decoded = JSON.parse(Buffer.from(payload, 'base64').toString('utf-8'));
+      const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4);
+      const decoded = JSON.parse(Buffer.from(padded, 'base64').toString('utf-8'));
       return decoded;
     }
 
@@ -127,6 +134,7 @@ Since Kinde sends webhook data as a JWT token, you'll need to decode it to acces
       email: userData.email || '',
       fullName: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
       userId: userData.id || '',
+      orgCode: userData.organizations[0].code || '',
       rawData: decoded
     };
     ```
@@ -141,7 +149,7 @@ Since Kinde sends webhook data as a JWT token, you'll need to decode it to acces
 
     </Aside>
 
-## Step 5: Add Loops action
+## Step 6: Add Loops action
 
 Now that you have decoded the JWT, you can use the extracted data to add contacts to Loops. This will sync your Kinde users to Loops for email marketing and automation.
 
@@ -150,13 +158,14 @@ Now that you have decoded the JWT, you can use the extracted data to add contact
 3. From the Action event dropdown, select **Add Contact** as the action
 4. Connect your Loops account:
    - Click **Sign in to Loops**
-   - Enter your Loops API key (you can find this in your Loops dashboard under **Settings > API Keys**)
+   - Enter your Loops API key you copied from Step 1
    - Select **Continue**
 5. Map the fields from your decoded JWT to Loops:
    - **Email**: Map to the `Email` field from the Code step output (required)
    - **First Name**: Map to the `First Name` field from the Code step output
    - **Last Name**: Map to the `Last Name` field from the Code step output
    - **User ID**: Map to the `User ID` field from the Code step output (useful for syncing with Kinde)
+   - **User Group**: Map to the `Org Code` field from the Code step output (useful for segmentation by user or audience groups)
    - **Source**: Set to `kinde` or `zapier` (optional)
    - **Subscribed**: Set to `true` (default) to ensure users receive emails
 
@@ -180,6 +189,23 @@ Now that you have decoded the JWT, you can use the extracted data to add contact
 5. Zapier will decode the JWT, extract the user information, and add the contact to Loops
 6. Check your Loops dashboard to verify the contact was added with the correct name and email
 7. You can also check Zapier's **Task History** to see if your Zap ran successfully
+
+## Import Kinde users to Loops
+
+You can import all your Kinde users to Loops using the Kinde's export user feature. Follow the steps: 
+
+1. In your Kinde dashboard, go to **Settings > Business > Details**
+2. Scroll down to the **Export data** section and select **Export**
+3. In the pop-up window, select **All data (except passwords)**, then select **Next**
+4. Enter the one-time verification code sent to your email and select **Next**
+5. You will be able to download the `kinde_export.zip` file
+6. Unzip the file and you will see the `users.ndjson` file with all your Kinde users data
+7. Create a new `.csv` file with the following columns: `First Name`, `Last Name`, `Email`, `User Group`. Copy the Kinde contacts to this `.csv` file
+8. Go to Loops > **Audience**, and select **Import**, a pop-up opens 
+9. Select **CSV** and select **Upload CSV**
+10. On the new screen, upload your `.csv` file you created earlier and select **Next**
+11. Map the CSV columns and select **Import contacts**
+12. You will see the imported users in Loops **Audience** page
 
 ## What you can do with Loops
 
