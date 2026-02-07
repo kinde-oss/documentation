@@ -1,20 +1,21 @@
 ---
 page_id: a07f8f6b-5d6a-4096-be52-7b13b4a3b0a5
 title: Kinde and edge worker services
-description: Guide to integrating Kinde with edge worker services including Cloudflare Workers, Vercel, Next.js Edge Runtime, and Deno Deploy with JWT handling
+description: Overview of integrating Kinde with edge worker services including Cloudflare Workers, Vercel, Next.js Edge Runtime, and Deno Deploy with links to detailed guides
 sidebar:
   order: 1
 relatedArticles:
+  - e7809c64-99c7-4640-b7d1-c22b35ed3222
+  - 96f72b3a-a9e8-4a9a-8ff9-407404f9511d
   - 7d311fcf-ca33-49ec-9286-419da4a91f41
-  - f74a81d3-3588-4fd4-a0ba-13eba550eff1
   - 17385e98-bfb1-4209-8ce0-e94244eb956b
-  - 4cf32822-c02b-41d1-9396-f292bdbe5577
 topics:
   - integrate
   - third-party-tools
 sdk: []
 languages:
   - javascript
+  - typescript
   - bash
 audience:
   - developers
@@ -28,61 +29,88 @@ keywords:
   - deno deploy
   - jwt
   - wrangler
-updated: 2024-01-15
+updated: 2026-02-07
 featured: false
 deprecated: false
-ai_summary: Guide to integrating Kinde with edge worker services including Cloudflare Workers, Vercel, Next.js Edge Runtime, and Deno Deploy with JWT handling.
+ai_summary: Overview of integrating Kinde with edge worker services including Cloudflare Workers, Vercel, Next.js Edge Runtime, and Deno Deploy with links to detailed guides.
 ---
 
-Kinde works with edge worker services and providers. We have tested the following:
+Kinde works seamlessly with edge worker services and providers, enabling you to deploy authentication at the edge for improved performance and lower latency. We have tested and provide guides for the following platforms:
 
-- [Nuxt on Vercel](https://vercel.com/docs/frameworks/nuxt#edge-functions)
-- [Next.js Edge Runtime](https://nextjs.org/docs/pages/api-reference/edge)
-- [Deno Deploy](https://deno.com/deploy)
-- [Cloudflare Workers](https://workers.cloudflare.com/)
+- **Cloudflare Workers** - Serverless edge runtime
+- **Next.js Edge Runtime** - Edge functions for Next.js applications
+- **Nuxt on Vercel** - Edge functions for Nuxt applications
+- **Deno Deploy** - Edge runtime for Deno applications
 
-You will need to follow the edge worker service instructions linked above, to get things running. Here’s an example of how we set up Cloudflare Workers.
+## Choose your integration path
 
-## Example Cloudflare Workers integration
+The approach you take depends on your use case:
 
-<Aside>
+### Deploying a Next.js application to Cloudflare Workers
 
-With server-side SDKs, you'll need to handle JWT implementation (generate & validate JWT tokens) without relying on external libraries, so it is suitable to deploy within the Cloudflare environment. [Here’s some docs to help](https://github.com/tsndr/cloudflare-worker-jwt).
+If you're deploying a **Next.js application** with Kinde authentication to Cloudflare Workers, follow our comprehensive deployment guide:
+
+**[Deploy a Kinde app on Cloudflare Workers →](/developer-tools/guides/deploy-on-cloudflare-workers)**
+
+This guide covers:
+- Setting up the OpenNext adapter for Cloudflare Workers
+- Configuring `wrangler.toml` with proper compatibility flags
+- Environment variable setup for Cloudflare Workers
+- Callback URL configuration
+- Troubleshooting common deployment issues
+
+### Verifying JWTs in Cloudflare Workers
+
+If you need to **verify JWT tokens** in Cloudflare Workers (for API protection or custom authentication flows), use our JWT verification guide:
+
+**[Verifying JWTs in Cloudflare Workers →](/integrate/third-party-tools/verifying-jwts-cloudflare-workers)**
+
+This guide covers:
+- Using `cloudflare-worker-jwt` library
+- Using `jose` library for JWT verification
+- Fetching JWKS from Kinde
+- Implementing token verification at the edge
+
+### Other edge platforms
+
+For other edge platforms, you'll need to handle JWT implementation (generate & validate JWT tokens) without relying on Node.js-specific libraries. Here are some general considerations:
+
+#### Next.js Edge Runtime
+
+Next.js Edge Runtime works well with Kinde's Next.js SDK. When using API routes with `export const runtime = 'edge'`, ensure you:
+
+- Use server-side authentication methods from the Kinde Next.js SDK
+- Avoid using `KindeProvider` in edge runtime contexts
+- Handle environment variables appropriately for your deployment platform
+
+For detailed Next.js integration, see the [Next.js SDK documentation](/developer-tools/sdks/backend/nextjs-sdk).
+
+#### Nuxt on Vercel
+
+When deploying Nuxt applications to Vercel with edge functions, follow Vercel's [Nuxt edge functions documentation](https://vercel.com/docs/frameworks/nuxt#edge-functions) and use Kinde's server-side authentication patterns.
+
+#### Deno Deploy
+
+For Deno Deploy, you'll need to implement JWT verification manually using Deno-compatible libraries. Consider using the `jose` library which works across different JavaScript runtimes including Deno.
+
+## Key considerations for edge workers
+
+<Aside type="warning" title="Important">
+
+Edge worker environments have different runtime constraints than traditional Node.js servers. Keep these in mind:
 
 </Aside>
 
-1. Set up a Cloudflare account.
-2. Install Wrangler. This is Cloudflare’s CLI.
+- **Environment variables**: Edge workers may require different configuration methods (e.g., `wrangler.toml` for Cloudflare Workers vs `.env.local` for standard deployments)
+- **JWT libraries**: Standard Node.js JWT libraries may not work. Use edge-compatible libraries like `cloudflare-worker-jwt` or `jose`
+- **SDK limitations**: Some SDK features may not be available in edge environments. Use server-side authentication patterns instead of client-side providers where possible
+- **Cookie handling**: Ensure cookies are properly configured for your edge platform's requirements
 
-   ```bash
-   brew install wrangler
-   ```
+## Next steps
 
-3. Run the Wrangler login to authenticate into your Cloudflare account:
+1. **Choose your platform** from the options above
+2. **Follow the specific guide** for your use case (Cloudflare Workers deployment or JWT verification)
+3. **Configure your Kinde application** with the correct callback URLs for your edge deployment
+4. **Test locally** before deploying to production
 
-   ```bash
-   wrangler login
-   ```
-
-4. Create a repository to install dependencies using the below command. During this process, answer any questions best suited to your app:
-
-   ```bash
-   wrangler init
-   ```
-
-5. Combine the folder created for Cloudflare + kinde sdk/starter kit.
-   1. Sort out any conflicts in the code (including your package.json / package-lock.json files), such as conflicting scripts, commands, dependencies, etc.
-   2. Merge into the one file.
-6. Install Kinde dependencies if required. Here’s an example for React:
-
-   ```bash
-   npm install @kinde-oss/kinde-auth-react
-   ```
-
-7. Deploy your project. We suggest you deploy to your local environment for testing.
-
-   ```bash
-   npm run pages\:deploy
-   ```
-
-   You’ll get a link to see the changes.
+For platform-specific questions, refer to your edge provider's documentation or our detailed guides linked above.
