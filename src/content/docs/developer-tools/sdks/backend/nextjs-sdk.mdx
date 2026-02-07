@@ -137,7 +137,9 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
 
     You can create an environment file using the command `touch .env.local`
 
-6. Create a middleware route and add the following code:
+### Add middleware
+
+Create a middleware route and add the following code:
 
     ```bash
     touch middleware.ts
@@ -165,9 +167,15 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
 
     The middleware will protect all routes except the ones specified in the `publicPaths` array. It will also ignore Next.js internals and static files.
 
-    Learn more about middlewares in the subsequent sections.
+    Learn more about middlewares in the [Middleware](#about-the-middleware) sections.
 
-7. Create an `AuthProvider` component in your app directory and add the following code:
+### Add KindeProvider (Optional)
+
+The `KindeProvider` component is designed for client-side context. You don't need to use it if you are using server-side components only. If you are deploying your application to edge environments like Cloudflare Workers, this might lead to SSR issues.
+
+If you want to configure it for client-side context, follow the steps below:
+
+Create an `AuthProvider` component in your app directory and add the following code:
 
     ```bash
     touch app/AuthProvider.tsx
@@ -183,7 +191,7 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
     };
     ```
 
-8. Wrap your `RootLayout` component with the `AuthProvider`:
+Wrap your `RootLayout` component with the `AuthProvider`:
 
     ```tsx ins={3, 18, 21}
     // app/layout.tsx
@@ -195,7 +203,7 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
       description: 'Kinde with Next.js App Router'
     };
 
-    export default async function RootLayout({
+    export default function RootLayout({
       children
     }: {
       children: React.ReactNode;
@@ -215,23 +223,28 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
 
     This will give you access to the Kinde Auth data in your client components and will ensure that the tokens are refreshed when needed.
 
-9. Add the register and login links to your pages:
+### Add auth links
+
+1. Add the register and login links to your pages:
 
     ```tsx
     import { RegisterLink, LoginLink } from "@kinde-oss/kinde-auth-nextjs/components"
 
-    // ... somewhere in your page component ...
-    <LoginLink>Sign in</LoginLink>
-
-    <RegisterLink>Sign up</RegisterLink>
+    export default function Home() {
+      return (
+        <>
+          <LoginLink>Sign in</LoginLink>
+          <RegisterLink>Sign up</RegisterLink>
+        </>
+      )}
     ```
 
-10. Check authenticated state within the page component:
+2. Check authenticated state within the page component:
 
     ```tsx
     import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
 
-    export default async function Dashboard() {
+    export default function Dashboard() {
       const { isAuthenticated } = getKindeServerSession()
 
       if (!isAuthenticated()) {
@@ -241,7 +254,8 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
       return <div>Dashboard</div>
     }
     ```
-11. Display logged-in user info and logout link:
+
+3. Display logged-in user info and logout link:
 
     ```tsx
     import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
@@ -269,13 +283,12 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
     }
     ```
 
-12. Start the development server:
+4. Start the development server:
 
     ```bash
     npm run dev
     ```
-13. Open the browser and navigate to http://localhost:3000 to see the application.
-14. Sign-up for a new user.
+5. Open the browser and navigate to http://localhost:3000 to see the application.
 
 Watch the video guide:
 
