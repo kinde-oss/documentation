@@ -63,55 +63,117 @@ Before diving into setup, understand these critical differences when deploying K
 | `process.env` access | Works by default | Requires `nodejs_compat_populate_process_env` flag |
 | KindeProvider | Can be used in providers | Avoid for SSR - use server-side auth patterns |
 
-## Set up environment variables
+## Step 1: Configure Cloudflare Workers in your existing project
 
-Cloudflare Workers don't populate `process.env` by default. The Kinde SDK reads configuration from `process.env`, so you need to enable this explicitly.
+1. Open your project in a terminal and install the OpenNext.js adapter for Cloudflare Workers with the following command:
 
-### Step 1: Add the compatibility flag
+    ```bash
+    npm install @opennextjs/cloudflare@latest
+    ```
 
-Open your `wrangler.toml` file and add the `nodejs_compat_populate_process_env` flag to `compatibility_flags`:
+2. Install Wrangler CLI as a dev dependency:
 
-```toml
-name = "your-app-name"
-compatibility_date = "2024-01-01"
-compatibility_flags = ["nodejs_compat", "nodejs_compat_populate_process_env"]
-```
+    ```bash
+    npm i -D wrangler@latest
+    ```
 
-<Aside type="warning" title="Why this matters">
+3. Create a new file called `wrangler.toml` in the root of your project and add the following content:
 
-Without this flag, all environment variables will be `undefined` at runtime. The Kinde SDK will fall back to development defaults (localhost URLs), causing login redirects to fail.
+    ```bash
+    touch wrangler.toml
+    ```
 
-</Aside>
+    ```toml
+    # wrangler.toml
+    "$schema" = "./node_modules/wrangler/config-schema.json"
+    main = ".open-next/worker.js"
+    name = "my-app"
+    compatibility_date = "2026-02-06"
+    compatibility_flags = [ "nodejs_compat", "nodejs_compat_populate_process_env"]
 
-### Step 2: Add Kinde variables to wrangler.toml
+    [assets]
+    directory = ".open-next/assets"
+    binding = "ASSETS"
+    ```
 
-Add all required Kinde environment variables to the `[vars]` section of your `wrangler.toml`:
+4. Update your `package.json` to include the following scripts:
 
-```toml
-[vars]
-KINDE_CLIENT_ID = "your_client_id"
-KINDE_CLIENT_SECRET = "your_client_secret"
-KINDE_ISSUER_URL = "https://yourbusiness.kinde.com"
-KINDE_SITE_URL = "https://your-production-url.com"
-KINDE_POST_LOGIN_REDIRECT_URL = "https://your-production-url.com/dashboard"
-KINDE_POST_LOGOUT_REDIRECT_URL = "https://your-production-url.com"
-```
+    ```json
+    // package.json
+    "scripts": {
+      ...your other scripts...
+      "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+      "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+      "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    }
+    ```
 
-<Aside type="warning" title="Important">
+5. Preview your project in the Cloudflare environment using the following command:
 
-Even if you've set these variables in the Cloudflare Dashboard, Worker bindings aren't automatically translated to `process.env`. The SDK needs these variables defined in `wrangler.toml` to access them at runtime.
+    ```bash
+    npm run preview
+    ```
 
-</Aside>
+## Step 2: Deploy your project to Cloudflare Workers
 
-### Handling secrets
+1. Authorize Wrangler to access your Cloudflare account using the following command:
 
-For sensitive values like `KINDE_CLIENT_SECRET`, you can use Wrangler secrets instead of plain text in your config:
+    ```bash
+    wrangler login
+    ```
 
-```bash
-wrangler secret put KINDE_CLIENT_SECRET
-```
+    This will open your default web browser, prompting you to log in to your Cloudflare account and authorize Wrangler. Once logged in, you’ll see a confirmation page.
 
-Then reference it in your code or ensure your deployment process handles the secret injection appropriately.
+2. Deploy your project to Cloudflare Workers using the following command:
+
+    ```bash
+    npm run deploy
+    ```
+
+    This will deploy your project to Cloudflare Workers. You’ll get a link to see the changes.
+
+    ```bash
+    https://<your-app-name>.<your-account-name>.workers.dev
+    ```
+
+3. Verify your deployment by visiting the URL you got from the previous command.
+
+    ```bash
+    https://<your-app-name>.<your-account-name>.workers.dev/api/auth/health
+    ```
+
+    Here you should see `localhost:3000` as the `KINDE_SITE_URL`. We will update this in the next step.
+
+## Step 3: Add Kinde env variables and redeploy
+
+1. In your Kinde dashboard, go to your application > **Details** and add the following URLs: 
+
+    - **Allowed callback URLs**: `https://your_app_name.your_account_name.workers.dev/api/auth/kinde_callback`
+    - **Allowed logout redirect URLs**: `https://your_app_name.your_account_name.workers.dev`
+
+    Select **Save**
+
+2. Update your `wrangler.toml` to include the following variables. You can get these from your Kinde application's **Quick start** page.
+
+    ```toml
+    # wrangler.toml
+    # ...your existing config...
+    [vars]
+    KINDE_CLIENT_ID = "your_client_id"
+    KINDE_CLIENT_SECRET = "your_client_secret"
+    KINDE_ISSUER_URL = "https://your_business.kinde.com"
+    KINDE_SITE_URL = "https://your_app_name.your_account_name.workers.dev"
+    KINDE_POST_LOGIN_REDIRECT_URL = "https://your_app_name.your_account_name.workers.dev/dashboard"
+    KINDE_POST_LOGOUT_REDIRECT_URL = "https://your_app_name.your_account_name.workers.dev"
+    ```
+
+3. Redeploy your project to Cloudflare Workers using the following command:
+
+    ```bash
+    npm run deploy
+    ```
+
+4. Verify your deployment by visiting your app in the browser. Sign in or sign up with Kinde and you should be redirected to the dashboard page.
 
 ## Configure authentication patterns
 
@@ -295,3 +357,6 @@ This endpoint will show your SDK configuration (with secrets redacted) to help d
 - [Kinde and edge worker services](/integrate/third-party-tools/kinde-edge-workers/)
 - [Set callback and redirect URLs](/get-started/connect/callback-urls/)
 - [Cloudflare Workers documentation](https://developers.cloudflare.com/workers/)
+
+Cloudflare Next.js documentation: https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/ 
+
