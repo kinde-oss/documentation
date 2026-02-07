@@ -10,6 +10,8 @@ relatedArticles:
   - 7d311fcf-ca33-49ec-9286-419da4a91f41
   - a07f8f6b-5d6a-4096-be52-7b13b4a3b0a5
   - b3081ca1-2aa1-45e3-a42f-5295aac49bc3
+tableOfContents:
+  maxHeadingLevel: 3
 topics:
   - developer-tools
   - guides
@@ -104,7 +106,7 @@ Before diving into setup, understand these critical differences when deploying K
       ...your other scripts...
       "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
       "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-      "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+      "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
     }
     ```
 
@@ -112,6 +114,12 @@ Before diving into setup, understand these critical differences when deploying K
 
     ```bash
     npm run preview
+    ```
+
+6. Add the generated `.open-next` directory to your `.gitignore` file.
+
+    ```bash
+    echo "/.open-next/" >> .gitignore
     ```
 
 ## Step 2: Deploy your project to Cloudflare Workers
@@ -133,16 +141,18 @@ Before diving into setup, understand these critical differences when deploying K
     This will deploy your project to Cloudflare Workers. You’ll get a link to see the changes.
 
     ```bash
+    Uploaded my-app (.. sec)
+    Deployed my-app triggers (.. sec)
     https://<your-app-name>.<your-account-name>.workers.dev
     ```
 
-3. Verify your deployment by visiting the URL you got from the previous command.
+3. Verify your deployment by visiting the health endpoint at the URL you got from the previous command:
 
-    ```bash
+    ```
     https://<your-app-name>.<your-account-name>.workers.dev/api/auth/health
     ```
 
-    Here you should see `localhost:3000` as the `KINDE_SITE_URL`. We will update this in the next step.
+    You may see `localhost:3000` as the redirect URLs in the response. This is expected because Cloudflare Workers doesn't read variables from the `.env.local` file. We will update this in the next step.
 
 ## Step 3: Add Kinde env variables and redeploy
 
@@ -175,171 +185,9 @@ Before diving into setup, understand these critical differences when deploying K
 
 4. Verify your deployment by visiting your app in the browser. Sign in or sign up with Kinde and you should be redirected to the dashboard page.
 
-## Configure authentication patterns
-
-### Avoid KindeProvider in App Router for Cloudflare Workers
-
-The `KindeProvider` component from `@kinde-oss/kinde-auth-nextjs` is designed for client-side context. When used in App Router's server-side rendering on Cloudflare Workers, it can cause SSR failures resulting in blank pages (200 OK with empty body).
-
-**Don't do this** for Cloudflare Workers deployments:
-
-```tsx
-// app/providers.tsx - This pattern can cause issues on Cloudflare Workers
-"use client";
-
-import { KindeProvider } from "@kinde-oss/kinde-auth-nextjs";
-
-export const AuthProvider = ({children}) => {
-  return <KindeProvider>{children}</KindeProvider>;
-};
-```
-
-### Use server-side authentication instead
-
-The Next.js App Router SDK already handles authentication server-side through:
-
-1. **Middleware** - The `withAuth` wrapper protects routes
-2. **Server components** - Use `getKindeServerSession` for auth data
-3. **API routes** - The `/api/auth/[kindeAuth]` route handles the auth flow
-
-This is the recommended pattern for Cloudflare Workers:
-
-```tsx
-// middleware.ts
-import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
-
-export default withAuth(
-  async function middleware(req) {
-    // Your middleware logic
-  },
-  {
-    publicPaths: ["/", "/about"],
-  }
-);
-
-export const config = {
-  matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-  ],
-};
-```
-
-```tsx
-// app/dashboard/page.tsx - Server component
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { redirect } from "next/navigation";
-
-export default async function Dashboard() {
-  const { isAuthenticated, getUser } = getKindeServerSession();
-
-  if (!(await isAuthenticated())) {
-    redirect("/api/auth/login");
-  }
-
-  const user = await getUser();
-
-  return (
-    <div>
-      <h1>Welcome, {user?.given_name}</h1>
-    </div>
-  );
-}
-```
-
-### Client-side auth data
-
-If you need auth data in client components, fetch it from a server component and pass it down as props, or use a lightweight client-side check after the initial server render:
-
-```tsx
-// app/dashboard/page.tsx
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { DashboardClient } from "./DashboardClient";
-
-export default async function Dashboard() {
-  const { getUser, getPermissions } = getKindeServerSession();
-
-  const user = await getUser();
-  const permissions = await getPermissions();
-
-  return <DashboardClient user={user} permissions={permissions} />;
-}
-```
-
-```tsx
-// app/dashboard/DashboardClient.tsx
-"use client";
-
-export function DashboardClient({ user, permissions }) {
-  // Use the server-fetched data
-  return <div>Hello {user?.given_name}</div>;
-}
-```
-
-## Complete wrangler.toml example
-
-Here's a complete example configuration:
-
-```toml
-name = "my-nextjs-kinde-app"
-main = ".open-next/worker.js"
-compatibility_date = "2024-09-23"
-compatibility_flags = ["nodejs_compat", "nodejs_compat_populate_process_env"]
-
-# Assets configuration (adjust based on your setup)
-assets = { directory = ".open-next/assets", binding = "ASSETS" }
-
-[vars]
-KINDE_CLIENT_ID = "your_client_id_here"
-KINDE_CLIENT_SECRET = "your_client_secret_here"
-KINDE_ISSUER_URL = "https://yourbusiness.kinde.com"
-KINDE_SITE_URL = "https://your-app.your-domain.workers.dev"
-KINDE_POST_LOGIN_REDIRECT_URL = "https://your-app.your-domain.workers.dev/dashboard"
-KINDE_POST_LOGOUT_REDIRECT_URL = "https://your-app.your-domain.workers.dev"
-```
-
 ## Troubleshooting
 
-### Blank white screen after deployment
-
-**Symptom:** The server returns 200 OK but the HTML body is empty.
-
-**Cause:** Usually caused by `KindeProvider` being used in a way that breaks SSR on Cloudflare Workers.
-
-**Solution:** Remove `KindeProvider` from your providers and rely on server-side authentication patterns instead. See [Configure authentication patterns](#configure-authentication-patterns) above.
-
-### Login redirects to localhost
-
-**Symptom:** Clicking login redirects to `localhost:3000` instead of your Kinde domain.
-
-**Cause:** Environment variables are not being read correctly. The SDK falls back to development defaults when it can't find the configuration.
-
-**Solution:**
-
-1. Ensure `nodejs_compat_populate_process_env` is in your `compatibility_flags`
-2. Add all Kinde environment variables to the `[vars]` section of `wrangler.toml`
-3. Redeploy your application
-
-### "State not found" error
-
-**Symptom:** After authenticating with Kinde, you're redirected back with a "state not found" error.
-
-**Cause:** The authentication state cookie isn't being persisted correctly between the redirect.
-
-**Solution:**
-
-- Ensure your `KINDE_SITE_URL` exactly matches the URL you're accessing the app from
-- Check that cookies are being set correctly in your Cloudflare Workers configuration
-- If using a custom domain, ensure it's properly configured in both Cloudflare and Kinde
-
-### Environment variables undefined in production
-
-**Symptom:** Auth works locally but fails in production with undefined configuration errors.
-
-**Cause:** Cloudflare Dashboard environment variables aren't automatically available via `process.env`.
-
-**Solution:** Environment variables must be defined in `wrangler.toml` for the SDK to access them. The Cloudflare Dashboard variables are available as Worker bindings but not through `process.env` without the compatibility flag.
-
-## Verify your configuration
+### Verify your configuration
 
 After deploying, you can verify your Kinde configuration by visiting:
 
@@ -347,16 +195,52 @@ After deploying, you can verify your Kinde configuration by visiting:
 https://your-app-url.com/api/auth/health
 ```
 
-This endpoint will show your SDK configuration (with secrets redacted) to help debug any issues.
+This endpoint will show your SDK configuration (with secrets redacted) to help debug any issues. You should see your Kinde application's details.
 
-## Related resources
+### Blank white screen after deployment
 
-- [Next.js App Router SDK](/developer-tools/sdks/backend/nextjs-sdk/)
-- [Deploy an app on Vercel](/developer-tools/guides/deploy-on-vercel/)
-- [Deploy a Kinde App on Netlify](/developer-tools/guides/deploy-on-netlify/)
-- [Kinde and edge worker services](/integrate/third-party-tools/kinde-edge-workers/)
-- [Set callback and redirect URLs](/get-started/connect/callback-urls/)
-- [Cloudflare Workers documentation](https://developers.cloudflare.com/workers/)
+**Cause:**
 
-Cloudflare Next.js documentation: https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/ 
+The server returns 200 OK but the HTML body is empty. This is usually caused by `KindeProvider` being used in a way that breaks SSR on Cloudflare Workers.
+
+**Fix:**
+
+Remove `KindeProvider` from your providers and rely on server-side authentication patterns instead. Use the server-side authentication methods provided by the Kinde Next.js SDK.
+
+### Login redirects to localhost
+
+**Cause:**
+
+Clicking login redirects to `localhost:3000` instead of your Kinde domain. Environment variables are not being read correctly, so the SDK falls back to development defaults when it can't find the configuration.
+
+**Fix:**
+
+1. Ensure `nodejs_compat_populate_process_env` is in your `compatibility_flags` in `wrangler.toml`
+2. Add all Kinde environment variables to the `[vars]` section of `wrangler.toml`
+3. Update the callback and logout redirect URLs in your Kinde application to match the URL you're accessing the app from
+4. Redeploy your application
+
+### "State not found" error
+
+**Cause:**
+
+After authenticating with Kinde, you're redirected back with a "state not found" error. The authentication state cookie isn't being persisted correctly between the redirect.
+
+**Fix:**
+
+- Ensure your `KINDE_SITE_URL` exactly matches the URL you're accessing the app from
+- Check that cookies are being set correctly in your Cloudflare Workers configuration
+- If using a custom domain, ensure it's properly configured in both Cloudflare and Kinde
+
+### Environment variables undefined in production
+
+**Cause:**
+
+Auth works locally but fails in production with undefined configuration errors. Cloudflare Dashboard environment variables aren't automatically available via `process.env`.
+
+**Fix:**
+
+Environment variables must be defined in `wrangler.toml` for the SDK to access them. The Cloudflare Dashboard variables are available as Worker bindings but not through `process.env` without the `nodejs_compat_populate_process_env` compatibility flag.
+
+For more troubleshooting and information, see the [Cloudflare Next.js documentation](https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/)
 
