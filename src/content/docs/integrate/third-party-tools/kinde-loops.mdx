@@ -202,7 +202,88 @@ You can import all your Kinde users to Loops using Kinde's export user feature. 
 4. Enter the one-time verification code sent to your email and select **Next**
 5. You will be able to download the `kinde_export.zip` file
 6. Unzip the file and you will see the `users.ndjson` file with all your Kinde users data
-7. Create a new `.csv` file with the following columns: `First Name`, `Last Name`, `Email`, `User Group`. Copy the user data from the `users.ndjson` file to this `.csv` file
+7. Create a new `.csv` file with the following columns: `First Name`, `Last Name`, `Email`, `User Group`. 
+
+    Copy the user data from the `users.ndjson` file to this `.csv` file
+
+    You can use the following Python script to convert `users.ndjson` to `.csv` file: 
+
+    ```python
+    #!/usr/bin/env python3
+    # convert_users_to_csv.py
+    """
+    Convert users.ndjson to CSV with columns: 
+    First Name, Last Name, Email, User Group
+    """
+
+    import json
+    import csv
+    import os
+
+    def extract_user_groups(user_data):
+        """Extract user groups from organizations field."""
+        if 'organizations' in user_data and user_data['organizations']:
+            # Extract organization codes and join them with comma
+            org_codes = [org.get('code', '') for org in user_data['organizations'] if isinstance(org, dict)]
+            return ', '.join(org_codes)
+        return ''
+
+    def convert_ndjson_to_csv(input_file, output_file):
+        """Convert NDJSON file to CSV."""
+        rows = []
+        
+        # Read and parse NDJSON file
+        with open(input_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                try:
+                    user_data = json.loads(line)
+                    
+                    # Extract fields with fallback to empty string
+                    first_name = user_data.get('first_name', '')
+                    last_name = user_data.get('last_name', '')
+                    email = user_data.get('email', '')
+                    user_group = extract_user_groups(user_data)
+                    
+                    rows.append({
+                        'First Name': first_name,
+                        'Last Name': last_name,
+                        'Email': email,
+                        'User Group': user_group
+                    })
+                except json.JSONDecodeError as e:
+                    print(f"Warning: Skipping invalid JSON line: {e}")
+                    continue
+        
+        # Write to CSV
+        if rows:
+            fieldnames = ['First Name', 'Last Name', 'Email', 'User Group']
+            with open(output_file, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(rows)
+            
+            print(f"Successfully converted {len(rows)} users to {output_file}")
+        else:
+            print("No data found to convert")
+
+    if __name__ == '__main__':
+        # Get the directory of this script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        input_file = os.path.join(script_dir, 'users.ndjson')
+        output_file = os.path.join(script_dir, 'users_output.csv')
+        
+        convert_ndjson_to_csv(input_file, output_file)
+    ```
+    Run the script using the following command (You will need Python 3.x installed):
+
+    ```bash
+    python3 python convert_users_to_csv.py
+    ```
+
 8. Go to Loops > **Audience**, and select **Import**. A pop-up opens 
 9. Select **CSV** and select **Upload CSV**
 10. On the new screen, upload your `.csv` file you created earlier and select **Next**
