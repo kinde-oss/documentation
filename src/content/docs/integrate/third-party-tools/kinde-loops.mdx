@@ -108,6 +108,10 @@ Since Kinde sends webhook data as a JWT token, you'll need to decode it to acces
     ```javascript
     // Function to decode a JWT token
     function decodeJWT(token) {
+      if (!token) {
+        throw new Error('JWT token is missing');
+      }
+      
       const parts = token.split('.');
       if (parts.length !== 3) {
         throw new Error('Invalid JWT token');
@@ -120,13 +124,20 @@ Since Kinde sends webhook data as a JWT token, you'll need to decode it to acces
     }
 
     // Get the JWT from input data
-    const jwt = inputData.jwt;
+    const jwt = inputData?.jwt;
 
-    // Decode the JWT
-    const decoded = decodeJWT(jwt);
+    // Decode the JWT with error handling
+    let decoded = null;
+    try {
+      decoded = decodeJWT(jwt);
+    } catch (error) {
+      return {
+        error: error.message || 'Failed to decode JWT'
+      };
+    }
 
     // Extract user data from the decoded payload
-    const userData = decoded.data.user || {};
+    const userData = decoded?.data?.user || {};
 
     // Return the decoded data
     return {
@@ -135,7 +146,7 @@ Since Kinde sends webhook data as a JWT token, you'll need to decode it to acces
       email: userData.email || '',
       fullName: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
       userId: userData.id || '',
-      orgCode: (userData.organizations && userData.organizations[0] && userData.organizations[0].code) || '',
+      orgCode: userData?.organizations?.[0]?.code || '',
       rawData: decoded
     };
     ```
