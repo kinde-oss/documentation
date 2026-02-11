@@ -55,6 +55,22 @@ Apologies that we can’t offer instructions for all situations, as this will be
 
    </Aside>
 
+## CAA records (if you use them)
+
+If your domain has **CAA (Certificate Authority Authorization)** records, they restrict which certificate authorities can issue SSL certificates for your domain. Kinde provisions and renews certificates using **ZeroSSL** and **Let's Encrypt**, so you must allow both in your CAA records or certificate issuance will fail.
+
+Add CAA records that authorize both providers. For your custom domain (or the subdomain you use, e.g. `account`), add two CAA records like this:
+
+| Host | Record type | Value |
+|------|-------------|--------|
+| `account` (or your subdomain) | CAA | `0 issue "sectigo.com"` |
+| `account` (or your subdomain) | CAA | `0 issue "letsencrypt.org"` |
+
+- **ZeroSSL** uses the CA domain **sectigo.com**
+- **Let's Encrypt** uses the CA domain **letsencrypt.org**
+
+If you only list one CA in your CAA records, add the other. If you have no CAA records, you don't need to add any; certificate issuance will work as normal.
+
 ## Check verification status in Kinde
 
 Once you have created the DNS entries, Kinde will start the verification process. This can take anywhere from a few minutes to a couple of hours. When it completes, the verification status will change to 'Provisioned' and an SSL certificate will be provisioned. 
