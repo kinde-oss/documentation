@@ -1,0 +1,165 @@
+---
+page_id: 19b5cea3-bfce-4fe9-94ac-ddd8b872af3e
+title: Search users via the Kinde API
+description: "Guide to searching and filtering users via the Kinde Management API using query parameters and property filters"
+sidebar:
+  order: 8
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - 51899f7f-3436-46e0-9a1b-6ecc3603a0df
+  - 6bf993fc-a195-4836-8eaf-133812be8876
+  - 601dd8c5-6ee1-474f-ad36-201e65280462
+topics:
+  - developer-tools
+  - kinde-api
+sdk: []
+languages: []
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - search users
+  - api search
+  - user filtering
+  - properties filter
+  - wildcard search
+  - management api
+updated: 2024-01-15
+featured: false
+deprecated: false
+ai_summary: Guide to searching and filtering users via the Kinde Management API using query parameters and property filters
+---
+
+You can search users and filter results via the Kinde Management API. You might need to do this to isolate users with specific properties defined, for example, to find users in a particular city.
+
+## Make an API search request
+
+Search with `GET` request: `/api/v1/search/users?query=searchterm`
+
+Add additional filters to the request: `&filterA=X&filterB=Y`
+
+Search and filter: GET `/api/v1/search/users?query=searchterm&filterA=X&filterB=Y`
+
+The query= part is for searching by user name or email, additional filters can be applied separately. For example, use /api/v1/search/users?query=*&properties[kp_user_city]=Sydney to find all users from Sydney based on the kp_user_city property.
+
+Here's some examples of search requests with different filter types.
+
+- Filter for users with multiple properties using AND(&) statements. 
+
+
+  ```/api/v1/search/users?query=properties[kp_usr_last_name]=Swan&properties[kp_usr_industry]=Construction```
+
+
+- Filter for users with any property filter using OR(comma) statements.
+
+
+  ```/api/v1/search/users?query=properties[kp_usr_last_name]=Hornet,Swan```
+  
+
+- Use a combination of filters.
+
+  ```/api/v1/search/users?query=properties[kp_usr_last_name]=Hornet,Swan&properties[kp_usr_industry]=Construction&expand=identities,properties```
+
+
+- Wildcards can also be used. 
+
+  ```/api/v1/search/users?query=*&properties[kp_usr_middle_name]=Hornet,Swan&properties[kp_usr_industry]=Construction&expand=identities,properties```
+
+### Example response
+
+```json
+{
+  "code": "…",
+  "message": "…",
+  "results": [
+    {
+      "id": "kp_0ba7c433e5d648cf992621ce99d42817",
+      "provided_id": "U123456",
+      "email": "user@domain.com",
+      "username": "john.snow",
+      "last_name": "Snow",
+      "first_name": "John",
+      "is_suspended": true,
+      "picture": "https://example.com/john_snow.jpg",
+      "total_sign_ins": 1,
+      "failed_sign_ins": 0,
+      "last_signed_in": "2025-02-12T18:02:23.614638+00:00",
+      "created_on": "2025-02-12T18:02:23.614638+00:00",
+      "organizations": [
+        "…"
+      ],
+      "identities": [
+        {
+          "type": "…",
+          "identity": "…"
+        }
+      ],
+      "properties": {
+        "{{key}}": "…"
+      },
+      "api_scopes": [
+        {
+          "org_code": "…",
+          "scope": "…",
+          "api_id": "…"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Search users by last activity date
+
+Search users based on last activity date using the `active_since` parameter in the `GET /api/v1/users` endpoint. This searches for users by their last login date, useful for identifying inactive accounts or targeting recently active users.
+
+  ```/api/v1/users?active_since=2024-01-01T00:00:00Z```
+
+  The `active_since` parameter accepts an [ISO 8601 formatted date/time string](https://www.cdisc.org/kb/articles/when-would-i-use-iso8601-interval-format). Users with a last login date on or after the specified date will be returned.
+
+### Example response
+
+```json
+{
+  "code": "…",
+  "message": "…",
+  "users": [
+    {
+      "id": "…",
+      "provided_id": "…",
+      "email": "…",
+      "phone": "…",
+      "username": "…",
+      "last_name": "…",
+      "first_name": "…",
+      "is_suspended": true,
+      "picture": "…",
+      "total_sign_ins": 1,
+      "failed_sign_ins": 1,
+      "last_signed_in": "…",
+      "created_on": "…",
+      "last_organization_sign_ins": [
+        {
+          "org_code": "org_d2d85014942",
+          "last_signed_in": "2026-01-28T14:26:02.448856+00:00"
+        }
+      ],
+      "organizations": [
+        "…"
+      ],
+      "identities": [
+        {
+          "type": "…",
+          "identity": "…"
+        }
+      ],
+      "billing": {
+        "customer_id": "customer_1245adbc6789"
+      }
+    }
+  ],
+  "next_token": "…"
+}
+```

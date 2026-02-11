@@ -2,14 +2,31 @@
 page_id: b663dbde-2045-4f51-bab4-84d0c9fbe15b
 title: Google social sign in
 sidebar:
-  order: 9
+  order: 10
+description: Step-by-step guide to setting up Google social sign-in including Google Cloud project setup, OAuth credentials, and Kinde integration.
+metadata:
+  topics: [authenticate]
+  sdk: []
+  languages: []
+  audience: [developer, integration-engineer]
+  complexity: intermediate
+  keywords: [Google sign-in, OAuth, Google Cloud, client ID, client secret, callback URL, webview limitations]
+  updated: 2025-01-16
+featured: false
+deprecated: false
 ---
 
 You can enable users to sign up and sign in using their Google credentials. To set this up, you need a Google cloud account and project, and a little technical know-how.
 
+<Aside type="warning" title="Social sign in for production environments">
+
+Before you make your production environment live, you must add your own social app's Client ID and Client secret in the Kinde connection (as per below). Do not use Kinde's app credentials by leaving the fields blank, as this poses a security and performance risk, and makes it difficult to change auth providers without service disruptions for your users.
+
+</Aside>
+
 Note that Google has provided a topic about [Google’s Create authorization credentials](https://developers.google.com/identity/sign-in/web/sign-in#create_authorization_credentials), but the steps don’t quite work. Until they update their docs, we recommend you use ours.
 
-<Aside type="warning" title="Google does not allow sign in auth to work in webview">
+<Aside title="Google does not allow sign in auth to work in webview">
 
 Before connecting Google as a sign in option, be aware that Google does not support auth in webview. This means if a user opens a sign in window to your app in a webview (say via Instagram or from Facebook) they will receive an error.
 
@@ -26,12 +43,12 @@ Before connecting Google as a sign in option, be aware that Google does not supp
 1. Sign in to Kinde.
 2. Go to the **Settings** page and select **Authentication**.
 3. In the **Social connections** section, select **Add connection.**
-4. In the window that opens, select **Google**, then select **Save**.
-5. On the Google tile, select the **Configure** link.
-6. In the **Callback URL** section:
+4. In the window that opens, select **Google**, then select **Next**.
+5. In the **Callback URL** section:
    1. If you use Kinde’s domain as your default, copy the Kinde domain URL.
    2. If you use custom domains, select the **Use custom domain instead** switch.
    3. If you have only one custom domain, copy the Custom domain URL. If you have custom domains for multiple organizations, select each one from the list and copy the callbacks for each. You need to enter all custom domain callbacks in the Google app.
+6. Select **Save**.
 7. Use the copied Callback URL to set up the app, see below.
 
 ## **Get Google credentials**
@@ -84,5 +101,6 @@ Before connecting Google as a sign in option, be aware that Google does not supp
 2. On the Google tile, select the **Configure** link.
 3. Paste your **Client ID** and **Client Secret** into the two fields.
 4. Select if you want to treat this connection as a trusted provider (this is on by default for Google). A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified. We recommend leaving this off for maximum security.
-5. Select which applications to switch this on for.
-6. Select **Save**. Your users will now be able to sign in using their Google credentials.
+5. Add any [upstream params](/authenticate/auth-guides/pass-params-idp/) that you want to pass to the IdP. For example, you can pass a param that forces the Google account selector to display.
+6. Select which applications to switch this on for.
+7. Select **Save**. Your users will now be able to sign in using their Google credentials.

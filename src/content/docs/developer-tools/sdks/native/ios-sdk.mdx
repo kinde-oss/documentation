@@ -1,6 +1,7 @@
 ---
 page_id: 4b44982b-ec53-4888-838f-5da4a89e3236
 title: iOS SDK
+description: "Complete guide for iOS SDK including CocoaPods installation, multiple environment configuration, custom logging, and native iOS authentication integration."
 sidebar:
   order: 18
 head:
@@ -8,6 +9,34 @@ head:
     attrs:
       property: "og:image"
       content: "https://kinde.com/assets/images/open-graph/DOCS-SSI-SDK_iOS.png"
+topics:
+  - developer-tools
+  - sdks
+  - ios
+  - native
+sdk:
+  - ios
+languages:
+  - swift
+  - objective-c
+  - json
+  - ruby
+audience:
+  - developers
+complexity: intermediate
+keywords:
+  - ios sdk
+  - swift
+  - objective-c
+  - cocoapods
+  - appauth
+  - multiple environments
+  - custom logger
+  - url schemes
+updated: 2024-01-15
+featured: false
+deprecated: false
+ai_summary: Complete guide for iOS SDK including CocoaPods installation, multiple environment configuration, custom logging, and native iOS authentication integration.
 ---
 
 The Kinde iOS SDK allows developers to quickly and securely integrate a new or existing application into the Kinde platform.
@@ -106,6 +135,59 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 ```
 
+## Multiple environments
+
+You may need to test or deploy your app across different environments, such as development, staging, or production. The Kinde iOS SDK now supports configuration for multiple environments, allowing you to easily switch between them. Follow these steps to set up and configure environments in your Kinde account and integrate them into your iOS app.
+
+> **Note:** Unless you are on a Kinde Plus or Scale plan, you can only create one additional non-production environment.
+
+### Setting up environments
+
+Before you can configure multiple environments in your iOS app, you must first create these environments in your Kinde dashboard. After setting up your environments, create an application under each environment. You will get different App Details (such as issuer, clientId, redirectUri, etc.) for each environment you create. These details will be used to configure your iOS app for the specific environment.
+
+- On the Kinde home page, click the **Environment** dropdown in the top-left corner and select **All environments**.
+- Click **Add environment** and follow the prompts to create each new non-production environment (**deployment, staging, etc**).
+- For each environment, create a new application under the respective environment.
+- After creating the app, you'll receive different **App Details** (such as `issuer`, `clientId`, `redirectUri`, etc.) for each environment.
+
+### Configuring multiple environments
+
+Once the environments are set up in your Kinde dashboard, you can configure your iOS app to handle multiple environments by using a JSON file for each environment. Create a JSON file for each environment in your project. For example:
+
+- `kinde-auth-production.json`
+- `kinde-auth-development.json`
+- `kinde-auth-staging.json` (if applicable)
+
+Each file should contain the configuration details for that specific environment. Here's an example configuration:
+
+```json
+{
+  "issuer": "https://<your-business>.kinde.com",
+  "clientId": "<your-client-id>",
+  "redirectUri": "<your-url-scheme>://kinde_callback",
+  "postLogoutRedirectUri": "<your-url-scheme>://kinde_logoutcallback",
+  "scope": "offline openid email profile"
+}
+```
+
+To set up multiple environments in your iOS app, use the `KindeSDKAPI.configure()` method and pass the environment configuration file name. Here's how to do it:
+
+#### Example: switch to the production environment
+
+```swift
+// Use the 'production' environment configuration
+KindeSDKAPI.configure(fileName: "kinde-auth-production")
+```
+
+#### Example: switch to the development environment
+
+```swift
+// Switch to the 'development' environment
+KindeSDKAPI.configure(fileName: "kinde-auth-development")
+```
+
+To switch to a different environment, simply change the configuration file name in the `KindeSDKAPI.configure()` method.
+
 ## Custom Logger (Optional)
 
 You can use your own Custom Logger as well by extending `LoggerProtocol`.
@@ -178,6 +260,41 @@ override func viewDidLoad() {
 }
 ```
 
+### Use custom auth pages
+
+You can use a custom sign-up and sign-in page by passing the `connectionId` parameter to the `login`, `register` and `createOrg` methods. 
+
+
+```swift
+KindeSDKAPI.auth.login(connectionId: CONNECTION_ID)
+
+KindeSDKAPI.auth.register(connectionId: CONNECTION_ID)
+
+KindeSDKAPI.auth.createOrg(connectionId: CONNECTION_ID)
+```
+
+See [Custom sign-up and sign-in pages](/authenticate/custom-configurations/custom-authentication-pages/) to learn more.
+
+#### Bypassing the Kinde initial login page
+
+To skip the initial Kinde login page, pass the `loginHint` and `connectionId` parameters to the `login` and `register` methods.
+
+```swift
+KindeSDKAPI.auth.login(
+	connectionId: CONNECTION_ID, 
+	loginHint: "alex@example.com"
+)
+
+KindeSDKAPI.auth.register(
+	connectionId: CONNECTION_ID, 
+	loginHint: "phone:+61466043123:au"
+)
+```
+
+This takes the user directly to the Kinde verification page, skipping the page where the user enters their identity, as the `loginHint` parameter [prepopulates the user identity](/authenticate/custom-configurations/prepopulate-identity-sign-in/).
+
+See [Step 3: Add the Connection ID to your design code](/authenticate/custom-configurations/custom-authentication-pages/#step-3-add-the-connection-id-to-your-design-code) of the "Custom sign-up and sign-in pages" page for more information.
+
 ## Handle redirect
 
 Once your user is redirected back to your site from Kinde (it means you’ve logged in successfully), use the `getToken` method from `KindeSDKAPI` class to get a user token from Kinde.
@@ -212,7 +329,7 @@ private func asyncGetToken() async -> String {
     let token = try await KindeSDKAPI.auth.getToken()
     return token
   } catch {
-    return ""
+    return "
   }
 }
 ```
@@ -332,7 +449,7 @@ KindeSDKAPI.auth.getClaim(key: "aud");
 // ["api.yourapp.com"]
 
 KindeSDKAPI.auth.getClaim(key: "given_name", token: .idToken);
-// "David"
+// "David
 ```
 
 ## Organizations
@@ -551,13 +668,17 @@ Constructs redirect url and sends user to Kinde to sign in.
 Arguments:
 
 ```swift
-orgCode?: String
+orgCode?: String, 
+loginHint?: String, 
+connectionId?: String
 ```
 
 Usage:
 
 ```swift
-KindeSDKAPI.auth.login(); or KindeSDKAPI.auth.login(orgCode: “your organization code”) //
+KindeSDKAPI.auth.login(); 
+// or 
+KindeSDKAPI.auth.login(orgCode: “your organization code”)
 ```
 
 Allow `orgCode` to be provided if a specific org is signed in to.
@@ -569,16 +690,22 @@ Constructs redirect url and sends user to Kinde to sign up.
 Arguments:
 
 ```swift
-orgCode?: String
+orgCode?: String, 
+loginHint?: String, 
+planInterest?: String,
+pricingTableKey?: String,
+connectionId?: String
 ```
 
 Usage:
 
 ```swift
-KindeSDKAPI.auth.register(); or KindeSDKAPI.auth.register(orgCode: “your organization code”) //
+KindeSDKAPI.auth.register();
+// or
+KindeSDKAPI.auth.register(orgCode: “your organization code”)
 ```
 
-Allow `orgCode` to be provided if a specific org is registered to.
+Allow `orgCode` to be provided if a specific org is registered to.
 
 ### `enablePrivateAuthSession`
 
@@ -623,7 +750,8 @@ Constructs a redirect URL and sends the user to Kinde to sign up and create a ne
 Arguments:
 
 ```swift
-orgName: String
+orgName: String, 
+connectionId?: String
 ```
 
 Usage:

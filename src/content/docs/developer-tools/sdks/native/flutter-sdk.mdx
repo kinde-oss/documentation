@@ -1,6 +1,7 @@
 ---
 page_id: 4ab29e69-2f16-43f6-9ad9-862408abcc2c
 title: Flutter SDK
+description: "Complete guide for Flutter SDK including authentication setup, Android/iOS configuration, PKCE flow, and mobile app integration for Flutter 3.10+ applications."
 sidebar:
   order: 21
 relatedArticles:
@@ -10,6 +11,32 @@ head:
     attrs:
       property: "og:image"
       content: "https://kinde.com/assets/images/open-graph/DOCS-SSI-SDK_Flutter.png"
+topics:
+  - developer-tools
+  - sdks
+  - flutter
+  - native
+sdk:
+  - flutter
+languages:
+  - dart
+  - groovy
+  - xml
+audience:
+  - developers
+complexity: intermediate
+keywords:
+  - flutter sdk
+  - dart
+  - mobile authentication
+  - android setup
+  - ios setup
+  - pkce flow
+  - custom schemes
+updated: 2025-11-21
+featured: false
+deprecated: false
+ai_summary: Complete guide for Flutter SDK including authentication setup, Android/iOS configuration, PKCE flow, and mobile app integration for Flutter 3.10+ applications.
 ---
 
 The Kinde’s Flutter SDK allows developers to integrate Kinde Authentication into their Flutter projects. Integrate [Kinde](https://kinde.com/) authentication with your Flutter app. When you configure, register, log in, and log out, the authentication state is securely stored across app restarts.
@@ -92,25 +119,124 @@ KINDE_AUDIENCE=myapp.kinde.com/api
 
 ## Configure your app
 
-**Android Setup**
+### Android Setup
 
-Go to the `build.gradle` file in the **Android > App** folder for your Android app.
+1. **Set up your custom scheme**
 
-Specify the custom scheme similar to the following, but replace `<your_custom_scheme>` with your own value.
+    - Go to the `build.gradle` file in the **Android > App** folder for your Android app.
 
-```groovy
-  android {
-    ...
-    defaultConfig {
-        ...
-        manifestPlaceholders += [
-                'appAuthRedirectScheme': '<your_custom_scheme>'
-        ]
-    }
-}
-```
+    - Specify the custom scheme similar to the following, but replace `<your_custom_scheme>` with your own value.
 
-**iOS Setup**
+        ```groovy
+          android {
+            ...
+            defaultConfig {
+                ...
+                manifestPlaceholders += [
+                        'appAuthRedirectScheme': '<your_custom_scheme>'
+                ]
+            }
+        }
+        ```
+
+2. **Configure authentication redirect**
+
+    To ensure your app redirects correctly after authentication, confirm the following is set up correctly. 
+    
+    Check your `android/app/build.gradle` file to find your `minSdkVersion`. 
+
+        <Tabs>
+        <TabItem label="minSdkVersion >= 30">
+
+        If your `minSdkVersion` is 30 or higher, ensure your main Activity in `AndroidManifest.xml` does not have an empty `taskAffinity` attribute. 
+        
+        Remove it if present.
+
+        ```diff lang="xml"
+        <application
+            <activity
+                android:name=".MainActivity"
+                android:exported="true"
+                android:launchMode="singleTop"
+                android:theme="@style/LaunchTheme"
+        -        android:taskAffinity=""
+            >
+            <!-- ... -->
+            </activity>
+        </application>
+        ```
+
+        <Aside type="info">
+
+        If you're on `minSdkVersion >= 30` and you need to have a `taskAffinity` attribute, follow the instructions for `minSdkVersion < 30`.
+
+        </Aside>
+
+        
+        </TabItem>
+        
+        <TabItem label="minSdkVersion < 30">
+        
+        If your `minSdkVersion` is less than 30, do the following:
+
+         1. Set the `taskAffinity` attribute of your main Activity in `AndroidManifest.xml` to a custom value. 
+
+              ```diff lang="xml"
+              <application
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:launchMode="singleTop"
+              +        android:taskAffinity="<your_custom_task_affinity>"
+                  >
+                      <!-- ... -->
+                  </activity>
+    
+                   <!-- ... -->     
+              </application>
+              ```
+
+              <Aside type="warning">
+             
+              This value must be **entirely different** from your app's namespace specified in the `android` block in the `android/app/build.gradle` file (e.g., `com.example.redirect` if your namespace is `com.example.app`).
+             
+              </Aside>
+
+
+         2. Add the `net.openid.appauth.AuthorizationManagementActivity` activity to your manifest and set its `taskAffinity` to the same value as that of your main activity.
+
+              ```diff lang="xml"
+              <application
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:launchMode="singleTop"
+                      android:taskAffinity="<your_custom_task_affinity>" 
+                  >
+                      <!-- ... -->
+                  </activity>
+          
+              +    <activity
+              +        android:name="net.openid.appauth.AuthorizationManagementActivity"
+              +        android:taskAffinity="<your_custom_task_affinity>"
+              +    />   
+    
+                   <!-- ... -->     
+              </application>
+              ```
+        </TabItem>
+        </Tabs>
+
+        <details>
+        <summary>Why do we need this configuration?</summary>
+        Flutter protects against the Android [StrandHogg vulnerability](https://developer.android.com/privacy-and-security/risks/strandhogg) by setting an empty `taskAffinity` but the empty `taskAffinity` prevents the authentication browser from redirecting to the app.
+ 
+        Android SDK versions 30 and higher are safe from this vulnerability and so apps with `minSdkVersion >= 30` can safely remove the empty `taskAffinity` attribute.
+
+        For apps with `minSdkVersion < 30`, a custom `taskAffinity` attribute is required to mitigate this vulnerability.
+        </details>
+
+### iOS Setup
 
 Go to the `Info.plist` located at **ios > Runner** for your iOS/macOS app.
 
@@ -130,7 +256,7 @@ Specify the custom scheme similar to the following but replace `<your_custom_sc
 </array>
 ```
 
-**Note:** `<your_custom_scheme>` has been defined previously as [`com.kinde.app`](http://com.kinde.app/) You can define your own custom scheme to correspond to the package name.
+**Note:** `<your_custom_scheme>` has been defined previously as `com.kinde.myapp`. You can define your own custom scheme to correspond to your app's package name.
 
 ## Set callback URLs
 
@@ -146,8 +272,8 @@ Replace the values you see in `<code brackets>` with your own values.
    - Allowed logout redirect URLs: `<your_custom_scheme>://kinde_logoutcallback`
 
 ```dart
-  loginRedirectUri: com.kinde.myapp://kinde_callback,
-  logoutRedirectUri: com.kinde.myapp://kinde_logoutcallback,
+  loginRedirectUri: "com.kinde.myapp://kinde_callback",
+  logoutRedirectUri: "com.kinde.myapp://kinde_logoutcallback",
 ```
 
 5. Select **Save**.
@@ -178,15 +304,31 @@ The Kinde client provides methods for a simple login / register flow which authe
 
 ```dart
 ...
-final String token = await sdk.login();
-// or sdk.login(type: AuthFlowType.pkce) for apply pkce flow
+final String token = await sdk.login(context: context);
+// or sdk.login(type: AuthFlowType.pkce, context: context) for apply pkce flow
 ...
-await sdk.register();
-// or sdk.register(type: AuthFlowType.pkce) for apply pkce flow
+await sdk.register(context: context);
+// or sdk.register(type: AuthFlowType.pkce, context: context) for apply pkce flow
 ...
 ```
 
-**Note:** Kinde supports the PKCE extension, in which the `code_challenge` and  `code_challenge_method`  parameters are also required. For More information, visit [Using OAuth Scopes.](/build/tokens/oath-scopes/#authorization-code-flow-with-proof-key-for-code-exchange-pkce)
+You can pass optional parameters to sign users up for a billing plan or subscription through the login() or register() functions:
+
+```dart
+await sdk.login(
+  type: AuthFlowType.pkce,
+  additionalParameters: AdditionalParameters(planInterest: 'pro_monthly')
+);
+
+await sdk.register(
+  additionalParameters: AdditionalParameters(
+    planInterest: 'pro_monthly',
+    pricingTableKey: 'spring_promo'
+  )
+);
+```
+
+**Note:** Kinde supports the PKCE extension, in which the `code_challenge` and  `code_challenge_method`  parameters are also required. For More information, visit [Using OAuth Scopes.](/build/tokens/oath-scopes/#authorization-code-flow-with-proof-key-for-code-exchange-pkce)
 
 ### Signing out
 
@@ -200,7 +342,7 @@ await sdk.logout()
 
 ### Test sign up
 
-Register your first user by signing up yourself. You’ll see your newly registered user on the **Users** page in Kinde.
+Register your first user by signing up yourself. You'll see your newly registered user on the **Users** page in Kinde.
 
 ## Get user information
 
@@ -677,6 +819,40 @@ int getTeamCount() {
 }
 ```
 
+## Self-serve portal
+
+The Flutter SDK provides the `generatePortalUrl` method to generate a one-time link to the Kinde self-serve portal. This allows users to manage their profile, billing, and organization settings.
+
+### Generate a portal URL
+
+```dart
+final portalUrl = await sdk.generatePortalUrl();
+```
+
+### With subnav parameter
+
+Direct users to a specific portal section using the `subnav` parameter:
+
+```dart
+final portalUrl = await sdk.generatePortalUrl(
+  subnav: PortalUrlSubnav.organizationDetails,
+);
+```
+
+### With return URL
+
+Specify where users should return after exiting the portal:
+
+```dart
+final portalUrl = await sdk.generatePortalUrl(
+  returnUrl: 'https://yourapp.com/dashboard',
+);
+```
+
+## Limitations
+
+- **WebView authentication on mobile:** When using the Flutter SDK on mobile platforms (iOS/Android), users will need to authenticate separately when accessing content in in-app WebViews. This occurs because the SDK uses ephemeral web authentication sessions for security, which do not share authentication state with WebViews. Authentication tokens are stored in native secure storage (Keychain/KeyStore) and are not accessible to WebView contexts, which maintain separate cookie storage. For applications requiring seamless authentication between native and web contexts, contact [support@kinde.com](mailto:support@kinde.com) for guidance.
+
 ## SDK API Reference
 
 ### `authDomain`
@@ -737,7 +913,31 @@ Type: `string`
 
 Required: No
 
-Default: `openid` `profile` `email` `offline`
+Default: `openid` `profile` `email` `offline`
+
+---
+
+### `additionalParameters`
+
+Optional parameters that can be passed to authentication methods for billing and organization flows.
+
+Type: `AdditionalParameters`
+
+Required: No
+
+**Available fields:**
+
+- `planInterest` (String?) - Pre-selects a billing plan for the user
+- `pricingTableKey` (String?) - Specifies which pricing table to display
+
+**Usage:**
+
+```dart
+AdditionalParameters(
+  planInterest: 'pro_monthly',
+  pricingTableKey: 'spring_promo'
+)
+```
 
 ---
 
@@ -753,6 +953,14 @@ Constructs redirect url and sends user to Kinde to sign in.
 sdk.login();
 ```
 
+**With additional parameters:**
+
+```dart
+sdk.login(
+  additionalParameters: AdditionalParameters(planInterest: 'pro_monthly')
+);
+```
+
 ### `register`
 
 Constructs redirect url and sends user to Kinde to sign up.
@@ -761,6 +969,17 @@ Constructs redirect url and sends user to Kinde to sign up.
 
 ```dart
 sdk.register();
+```
+
+**With additional parameters:**
+
+```dart
+sdk.register(
+  additionalParameters: AdditionalParameters(
+    planInterest: 'pro_monthly',
+    pricingTableKey: 'spring_promo'
+  )
+);
 ```
 
 ### `logout`
@@ -796,10 +1015,12 @@ Constructs redirect url and sends user to Kinde to sign up and create a new org 
 **Arguments:**
 
 ```dart
- options?: CreateOrgURLOptions {
-   org_name?: "string";
-   org_code?: "string";
-   state?: "string";
+{
+  orgName?: "string";
+  orgCode?: "string";
+  planInterest?: "string";
+  pricingTableKey?: "string";
+  type?: AuthFlowType;
 }
 ```
 
@@ -807,9 +1028,13 @@ Constructs redirect url and sends user to Kinde to sign up and create a new org 
 
 ```dart
 sdk.createOrg(
-  org_name: "org_1234"
+  orgName: "org_1234",
+  planInterest: "enterprise_annual", // optional
+  pricingTableKey: "enterprise_2024" // optional
 );
 ```
+
+**Note:** This method accepts `planInterest` and `pricingTableKey` as direct named parameters, unlike `login()` and `register()` which use the `additionalParameters` wrapper.
 
 ### `getClaim`
 
@@ -1060,4 +1285,29 @@ sdk.getIntegerFlag(code:"team_count");
 2
 ```
 
-If you need help connecting to Kinde, contact us at [support@kinde.com](mailto:support@kinde.com).
+### `generatePortalUrl`
+
+Generate a one-time link to the self-serve portal.
+
+**Arguments:**
+
+```dart
+subnav?: PortalUrlSubnav
+returnUrl?: "string"
+```
+
+**Usage:**
+
+```dart
+sdk.generatePortalUrl();
+sdk.generatePortalUrl(subnav: PortalUrlSubnav.organizationDetails);
+sdk.generatePortalUrl(returnUrl: "https://yourapp.com/dashboard");
+```
+
+**Sample output:**
+
+```dart
+"https://yourapp.kinde.com/portal/..."
+```
+
+If you need help connecting to Kinde, contact us at [support@kinde.com](mailto:support@kinde.com).

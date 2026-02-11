@@ -1,23 +1,103 @@
 ---
 page_id: 2b425ccb-d328-41ff-afb2-016019f46839
 title: Python SDK
+description: "Complete guide for Python SDK including Flask and FastAPI integration, OAuth configuration, environment variables, and session management for Python 3.9+ applications."
 sidebar:
   order: 15
-head:
+head: 
   - tag: meta
     attrs:
       property: "og:image"
-      content: "https://kinde.com/assets/images/open-graph/DOCS-SSI-SDK_python.png"
+      content: "https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7696a047-06ef-4955-5720-d630fd88ab00/socialsharingimage"
+topics:
+  - developer-tools
+  - sdks
+  - python
+  - backend
+sdk:
+  - python
+languages:
+  - python
+  - bash
+  - html
+audience: developers
+complexity: intermediate
+keywords:
+  - Python SDK
+  - Flask
+  - FastAPI
+  - OAuth
+  - environment variables
+  - callback URLs
+  - session management
+updated: 2026-01-23
+featured: false
+deprecated: false
+ai_summary: Complete guide for Python SDK including Flask and FastAPI integration, OAuth configuration, environment variables, and session management for Python 3.9+ applications.
 ---
 
-The Kinde Python SDK allows developers to quickly and securely integrate a new or an existing Python application into the Kinde platform.
+The Kinde Python SDK allows developers to quickly and securely integrate a new or an existing Python application into the Kinde platform. The SDK supports both Flask and FastAPI frameworks through a single unified interface.
 
-## Before you begin
+### What you need
 
-- Kinde Python SDK supports Python 3.8+
-- If you haven’t already got a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). Registering gives you a Kinde domain, which you need to get started, e.g. `yourapp.kinde.com`.
+- A [Kinde](https://www.kinde.com) account (Sign up for free)
+- [Python](https://www.python.org/downloads/) version 3.9 or up
 
-For new projects, you can also find our [Starter Kit on GitHub](https://github.com/kinde-starter-kits/python-starter-kit).
+If you are using a previous version of Python, you may need to refer to the [previous v1 SDK](/developer-tools/sdks/backend/python-sdk-v1/).
+
+For new projects, you can find our [Starter Kit on GitHub](https://github.com/kinde-starter-kits/python-starter-kit).
+
+## Migration from v1 SDK
+
+If you're migrating from an older version of the SDK or switching between client types, follow these recommendations:
+
+The current SDK (v2+) provides a more flexible architecture with multiple client types:
+
+**Old v1 SDK code**
+
+```python
+from kinde_sdk.kinde_api_client import KindeApiClient
+
+kinde_client = KindeApiClient(**kinde_api_client_params)
+login_url = kinde_client.get_login_url()
+```
+
+**New SDK code (OAuth client)**
+
+```python
+from kinde_sdk.auth.oauth import OAuth
+import asyncio
+
+oauth = OAuth(framework="flask", app=app)
+login_url = asyncio.get_event_loop().run_until_complete(oauth.login())
+```
+
+### Choosing the right client for migration
+
+1. **If you're using Flask/FastAPI**: Continue using `OAuth` client
+2. **If you're building async-only applications**: Migrate to `AsyncOAuth`
+3. **If you need flexibility**: Consider `SmartOAuth` for context-aware behavior
+
+### Migration steps
+
+1. **Update imports**: Change from `kinde_sdk.kinde_api_client` to the appropriate client type
+2. **Update initialization**: Use the new client initialization pattern
+3. **Update method calls**: Most methods are now async - use `await` or `asyncio.run_until_complete()`
+4. **Update error handling**: Use new exception types from `kinde_sdk.exceptions`
+5. **Test thoroughly**: Verify all authentication flows work correctly
+
+### Client selection recommendations
+
+| Scenario | Recommended Client | Reason |
+|----------|-------------------|--------|
+| Flask application | `OAuth` | Framework integration, session management |
+| FastAPI application | `OAuth` or `AsyncOAuth` | Both work well, choose based on preference |
+| Pure async app | `AsyncOAuth` | Native async support, better performance |
+| Serverless/Lambda | `AsyncOAuth` | No framework dependencies, async-friendly |
+| Library/Utility | `SmartOAuth` | Works in both sync and async contexts |
+| Mixed codebase | `SmartOAuth` | Context-aware behavior |
+
+For more detailed migration instructions, see our [GitHub migration guide](https://github.com/kinde-oss/kinde-python-sdk/blob/main/MIGRATION.md).
 
 ## Install
 
@@ -25,6 +105,57 @@ Install [PIP](https://pip.pypa.io/en/stable/installation/) and then execute the 
 
 ```bash
 pip install kinde-python-sdk
+```
+
+### Environment variables
+
+The Kinde Python SDK uses environment variables for configuration. Here are all the supported variables:
+
+#### Required variables
+- `KINDE_CLIENT_ID` - Your application's client ID from Kinde
+- `KINDE_CLIENT_SECRET` - Your application's client secret from Kinde
+- `KINDE_REDIRECT_URI` - The callback URL where Kinde will redirect after authentication
+- `KINDE_HOST` - Your Kinde domain (e.g., `https://yourdomain.kinde.com`)
+- `KINDE_ISSUER_URL` - Your Kinde issuer URL (typically same as KINDE_HOST)
+- `GRANT_TYPE` - The OAuth grant type to use (e.g., `AUTHORIZATION_CODE_WITH_PKCE`)
+
+#### Optional variables
+- `KINDE_AUDIENCE` - The intended recipient of the access token (for API access)
+- `KINDE_CALLBACK_URL` - Alternative name for KINDE_REDIRECT_URI
+- `LOGOUT_REDIRECT_URL` - Where users are redirected after logout
+- `SITE_HOST` - Your application's host (default: `127.0.0.1`)
+- `SITE_PORT` - Your application's port (default: `5000`)
+- `SITE_URL` - Your application's base URL
+- `CODE_VERIFIER` - Required for PKCE flow (auto-generated if not provided)
+
+**Session management variables** (core SDK features):
+- `SECRET_KEY` - Used for session management and token security
+- `SESSION_TYPE` - Session storage type (e.g., `filesystem`)
+- `SESSION_PERMANENT` - Whether sessions are permanent (default: `False`)
+
+**Application configuration**:
+- `TEMPLATES_AUTO_RELOAD` - Whether to auto-reload templates (default: `True`)
+
+**Management API variables** (only needed if using Management API features):
+- `MGMT_API_CLIENT_ID` - Management API client ID
+- `MGMT_API_CLIENT_SECRET` - Management API client secret
+
+Example `.env` file:
+```bash
+KINDE_CLIENT_ID=your_client_id
+KINDE_CLIENT_SECRET=your_client_secret
+KINDE_REDIRECT_URI=http://localhost:5000/api/auth/kinde_callback
+KINDE_HOST=https://yourdomain.kinde.com
+KINDE_ISSUER_URL=https://yourdomain.kinde.com
+GRANT_TYPE=AUTHORIZATION_CODE_WITH_PKCE
+SITE_HOST=localhost
+SITE_PORT=5000
+SITE_URL=http://localhost:5000
+LOGOUT_REDIRECT_URL=http://localhost:8000
+SECRET_KEY=your_secret_key
+SESSION_TYPE=filesystem
+SESSION_PERMANENT=False
+TEMPLATES_AUTO_RELOAD=True
 ```
 
 ### Set callback URLs
@@ -39,49 +170,239 @@ pip install kinde-python-sdk
 
 Kinde comes with a production environment, but you can set up other environments if you want to. Note that each environment needs to be set up independently, so you need to use the Environment subdomain in the code block above for those new environments.
 
+## Choose your OAuth client
+
+The Kinde Python SDK provides three client types to suit different application needs:
+
+### Client selection guide
+
+**Use `OAuth` client when:**
+- You're using Flask or FastAPI frameworks
+- You want framework-specific integrations (automatic route registration, session management)
+- Your application follows traditional request-response patterns
+- You need synchronous operations with async support via framework adapters
+
+**Use `AsyncOAuth` client when:**
+- You're building a native async application (e.g., pure async Python, async web frameworks)
+- You want direct async/await support without framework abstractions
+- You're using async libraries that don't fit traditional framework patterns
+- You need maximum performance with async I/O operations
+
+**Use `SmartOAuth` client when:**
+- Your application uses both sync and async contexts
+- You want context-aware behavior (automatically sync or async based on usage)
+- You're building libraries or utilities that need to work in various contexts
+- You need flexibility to work with both sync and async code
+
+### Comparison table
+
+| Feature | OAuth | AsyncOAuth | SmartOAuth |
+|---------|-------|------------|------------|
+| Framework support | Flask, FastAPI | Any async framework | Any context |
+| Sync operations | ✅ | ❌ | ✅ (context-aware) |
+| Async operations | ✅ (via adapters) | ✅ (native) | ✅ (native) |
+| Route registration | ✅ Automatic | ❌ Manual | ❌ Manual |
+| Session management | ✅ Built-in | ⚠️ Custom | ⚠️ Custom |
+| Best for | Framework apps | Pure async apps | Mixed contexts |
+
 ## Configure your app
 
-**Environment variables**
+### Using the OAuth client (Framework-based)
 
-The following variables need to be replaced in the code snippets below.
-
-- `KINDE_HOST` - your Kinde domain, e.g. `https://yourdomain.kinde.com`
-- `KINDE_CLIENT_ID` - In Kinde, go to **Settings > Applications > [your application] > View details**.
-- `KINDE_CLIENT_SECRET` - In Kinde, go to **Settings > Applications > [your application] > View details**.
-- `KINDE_REDIRECT_URL` - your callback urls or redirect URIs, e.g. `http://localhost:8000/callback`
-- `KINDE_POST_LOGOUT_REDIRECT_URL` - where you want users to be redirected to after signing out, e.g. `http://localhost:8000`
-
-## Integrate with your app
-
-Create a new instance of the Kinde Auth client object before you initialize your app.
+The `OAuth` client is automatically configured based on the framework you're using. Simply import the OAuth class from the auth module and create an instance:
 
 ```python
-...
-from kinde_sdk import Configuration
-from kinde_sdk.kinde_api_client import GrantType, KindeApiClient
-...
+from kinde_sdk.auth.oauth import OAuth
 
-configuration = Configuration(host=KINDE_HOST)
-kinde_api_client_params = {
-    "configuration": configuration,
-    "domain": KINDE_HOST,
-    "client_id": KINDE_CLIENT_ID,
-    "client_secret": KINDE_CLIENT_SECRET,
-    "grant_type": GRANT_TYPE, # client_credentials | authorization_code | authorization_code_with_pkce
-    "callback_url": KINDE_REDIRECT_URL
-}
-kinde_client = KindeApiClient(**kinde_api_client_params)
+# For Flask applications
+from flask import Flask
+app = Flask(__name__)
+oauth = OAuth(
+    framework="flask",
+    app=app  # optional: pass your Flask app instance
+)
+
+# For FastAPI applications
+from fastapi import FastAPI
+app = FastAPI()
+oauth = OAuth(
+    framework="fastapi",
+    app=app  # optional: pass your FastAPI app instance
+)
 ```
 
-With **PKCE** flow, the `code_verifier` is required.
+The SDK will automatically detect and configure the appropriate framework implementation based on the framework parameter and app instance you provide.
+
+### Using the AsyncOAuth client (Native async)
+
+The `AsyncOAuth` client is designed for native async applications. It provides direct async/await support without framework abstractions:
 
 ```python
-from authlib.common.security import generate_token
-CODE_VERIFIER = generate_token(48)
-kinde_api_client_params["code_verifier"] = CODE_VERIFIER
+from kinde_sdk.auth.async_oauth import AsyncOAuth
+
+# Initialize AsyncOAuth client
+oauth = AsyncOAuth()
+
+# All methods are async
+login_url = await oauth.login()
+register_url = await oauth.register()
 ```
 
-## Sign in and sign up
+**Key features:**
+- Native async/await support
+- No framework dependencies
+- Direct control over async operations
+- Ideal for pure async applications and serverless functions
+
+### Using the SmartOAuth client (Context-aware)
+
+The `SmartOAuth` client automatically adapts to sync or async contexts:
+
+```python
+from kinde_sdk.auth.smart_oauth import SmartOAuth
+
+# Initialize SmartOAuth client
+oauth = SmartOAuth()
+
+# Works in async context
+async def async_function():
+    login_url = await oauth.login()  # Returns coroutine
+
+# Works in sync context
+def sync_function():
+    login_url = oauth.login()  # Returns URL directly
+```
+
+**Key features:**
+- Context-aware behavior (sync/async)
+- Works in both sync and async code
+- Flexible usage patterns
+- Ideal for libraries and utilities
+
+## Standalone usage (Serverless/Lambda)
+
+For serverless functions (AWS Lambda, Google Cloud Functions, Azure Functions), you can use the SDK in standalone mode without framework dependencies.
+
+### AWS Lambda example
+
+```python
+import json
+from kinde_sdk.auth.async_oauth import AsyncOAuth
+
+# Initialize client (can be outside handler for reuse)
+oauth = AsyncOAuth()
+
+async def lambda_handler(event, context):
+    """AWS Lambda handler for authentication."""
+    try:
+        # Handle login
+        if event.get('path') == '/login':
+            login_url = await oauth.login()
+            return {
+                'statusCode': 302,
+                'headers': {'Location': login_url}
+            }
+        
+        # Handle callback
+        if event.get('path') == '/callback':
+            code = event.get('queryStringParameters', {}).get('code')
+            state = event.get('queryStringParameters', {}).get('state')
+            
+            if not code:
+                return {
+                    'statusCode': 400,
+                    'body': json.dumps({'error': 'No code provided'})
+                }
+            
+            result = await oauth.handle_redirect(code, state)
+            return {
+                'statusCode': 200,
+                'body': json.dumps({'message': 'Authenticated successfully'})
+            }
+        
+        # Check authentication
+        if event.get('path') == '/user':
+            if await oauth.is_authenticated(event):
+                user_info = await oauth.get_user_info(event)
+                return {
+                    'statusCode': 200,
+                    'body': json.dumps(user_info)
+                }
+            else:
+                login_url = await oauth.login()
+                return {
+                    'statusCode': 302,
+                    'headers': {'Location': login_url}
+                }
+    
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)})
+        }
+```
+
+### Google Cloud Functions example
+
+```python
+from flask import Request
+from kinde_sdk.auth.async_oauth import AsyncOAuth
+import asyncio
+
+oauth = AsyncOAuth()
+
+def cloud_function_handler(request: Request):
+    """Google Cloud Function handler."""
+    async def handle_request():
+        if request.path == '/login':
+            url = await oauth.login()
+            return redirect(url, code=302)
+        
+        if request.path == '/callback':
+            code = request.args.get('code')
+            state = request.args.get('state')
+            await oauth.handle_redirect(code, state)
+            return {'message': 'Authenticated'}, 200
+    
+    return asyncio.run(handle_request())
+```
+
+### Token storage for serverless
+
+In serverless environments, you'll need to implement custom token storage:
+
+```python
+from kinde_sdk.auth.async_oauth import AsyncOAuth
+
+class ServerlessTokenStorage:
+    """Custom token storage for serverless environments."""
+    
+    def __init__(self, storage_backend):  # e.g., Redis, DynamoDB, etc.
+        self.storage = storage_backend
+    
+    async def store_tokens(self, user_id: str, tokens: dict):
+        await self.storage.set(f"tokens:{user_id}", tokens, ttl=3600)
+    
+    async def get_tokens(self, user_id: str) -> dict:
+        return await self.storage.get(f"tokens:{user_id}")
+    
+    async def clear_tokens(self, user_id: str):
+        await self.storage.delete(f"tokens:{user_id}")
+
+# Usage
+storage = ServerlessTokenStorage(redis_client)
+oauth = AsyncOAuth(token_storage=storage)
+```
+
+## Authentication flow
+
+The authentication flow consists of several steps. Here's a comprehensive guide to implementing authentication with the Kinde Python SDK.
+
+### Step 1: Initialize the client
+
+Choose the appropriate client based on your application type (see [Client Selection Guide](#choose-your-oauth-client)).
+
+### Step 2: Sign in and sign up
 
 The Kinde client provides methods for easy sign in and sign up. You can add buttons in your HTML as follows:
 
@@ -92,218 +413,870 @@ The Kinde client provides methods for easy sign in and sign up. You can add butt
 </div>
 ```
 
-You will also need to route `/login` and `/register` to the SDK methods:
+### Automatic Route Registration
+
+The framework wrapper can automatically register all necessary routes. For Flask:
 
 ```python
-@app.route("/login")
+from kinde_sdk.auth.oauth import OAuth
+from flask import Flask
+
+app = Flask(__name__)
+oauth = OAuth(
+    framework="flask",
+    app=app
+)
+```
+
+For FastAPI:
+
+```python
+from kinde_sdk.auth.oauth import OAuth
+from fastapi import FastAPI
+
+app = FastAPI()
+oauth = OAuth(
+    framework="fastapi",
+    app=app
+)
+```
+
+### Framework-specific implementation guides
+
+#### Flask implementation
+
+Flask applications use the `OAuth` client with framework support, or `AsyncOAuth` for async patterns.
+
+**Using OAuth client (recommended for Flask):**
+
+```python
+from flask import Flask, request, session, redirect, url_for
+from kinde_sdk.auth.oauth import OAuth
+import asyncio
+
+app = Flask(__name__)
+app.secret_key = 'your-secret-key'
+
+oauth = OAuth(
+    framework="flask",
+    app=app
+)
+
+@app.route('/login')
 def login():
-    return app.redirect(kinde_client.get_login_url())
+    """Redirect to Kinde login page."""
+    loop = asyncio.get_event_loop()
+    login_url = loop.run_until_complete(oauth.login())
+    return redirect(login_url)
 
-
-@app.route("/register")
+@app.route('/register')
 def register():
-    return app.redirect(kinde_client.get_register_url())
-```
+    """Redirect to Kinde registration page."""
+    loop = asyncio.get_event_loop()
+    register_url = loop.run_until_complete(oauth.register())
+    return redirect(register_url)
 
-## Manage redirects
-
-When the user is redirected back to your site from Kinde, this will call your callback URL defined in the `KINDE_REDIRECT_URL` variable. You will need to route `/callback` to call a function to handle this.
-
-```python
-@app.route("/callback")
+@app.route('/callback')
 def callback():
-    kinde_client.fetch_token(authorization_response=request.url)
-    print(configuration.access_token) # Token here
-```
+    """Handle the OAuth callback from Kinde."""
+    try:
+        code = request.args.get('code')
+        state = request.args.get('state')
+        
+        if not code:
+            return "Authentication failed: No code provided", 400
+        
+        user_id = session.get('user_id') or str(uuid.uuid4())
+        loop = asyncio.get_event_loop()
+        result = loop.run_until_complete(oauth.handle_redirect(code, user_id, state))
+        session['user_id'] = user_id
+        return redirect(url_for('index'))
+    except Exception as e:
+        return f"Authentication failed: {str(e)}", 400
 
-You can also get the current authentication status with `is_authenticated`.
-
-```python
-if kinde_client.is_authenticated():
-		# Core here
-```
-
-**Note:** The kinde_client object that is created stores the access_token. This means you need to create a kinde_client object for each unique user that is signing in to your application, so that you can keep track of whether the user is authenticated or not.
-
-## Logout
-
-The SDK comes with a logout method that returns a logout URL.
-
-```python
-kinde_client.logout(redirect_to=KINDE_POST_LOGOUT_REDIRECT_URL)
-
-@app.route("/logout")
+@app.route('/logout')
 def logout():
-    return app.redirect(
-        kinde_client.logout(redirect_to=KINDE_POST_LOGOUT_REDIRECT_URL)
-    )
+    """Logout the user and redirect to Kinde logout page."""
+    user_id = session.get('user_id')
+    session.clear()
+    loop = asyncio.get_event_loop()
+    logout_url = loop.run_until_complete(oauth.logout(user_id))
+    return redirect(logout_url)
+
+@app.route('/user')
+def get_user():
+    """Get the current user's information."""
+    try:
+        if not oauth.is_authenticated(request):
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                login_url = loop.run_until_complete(oauth.login())
+                return redirect(login_url)
+            finally:
+                loop.close()
+        return oauth.get_user_info(request)
+    except Exception as e:
+        return f"Failed to get user info: {str(e)}", 400
 ```
 
-## Get user information
+#### FastAPI implementation
 
-To access the user information, use the `get_user_details` helper function:
+FastAPI natively supports async/await, making it ideal for async operations.
+
+**Using OAuth client with FastAPI:**
 
 ```python
-kinde_client.get_user_details();
-{
-	"given_name":"Dave",
-	"id":"abcdef",
-	"family_name":"Smith",
-	"email":"dave@smith.com",
-	"picture": "https://link_to_avatar_url.kinde.com"
-}
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import RedirectResponse
+from kinde_sdk.auth.oauth import OAuth
+
+app = FastAPI()
+
+oauth = OAuth(
+    framework="fastapi",
+    app=app
+)
+
+@app.get("/login")
+async def login(request: Request):
+    """Redirect to Kinde login page."""
+    url = await oauth.login()
+    return RedirectResponse(url=url)
+
+@app.get("/register")
+async def register(request: Request):
+    """Redirect to Kinde registration page."""
+    url = await oauth.register()
+    return RedirectResponse(url=url)
+
+@app.get("/callback")
+async def callback(request: Request, code: str, state: str = None):
+    """Handle the OAuth callback from Kinde."""
+    try:
+        result = await oauth.handle_redirect(code, state)
+        return RedirectResponse(url="/")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Authentication failed: {str(e)}")
+
+@app.get("/logout")
+async def logout(request: Request):
+    """Logout the user and redirect to Kinde logout page."""
+    await oauth.logout()
+    return RedirectResponse(url="/")
+
+@app.get("/user")
+async def get_user(request: Request):
+    """Get the current user's information."""
+    if not await oauth.is_authenticated(request):
+        url = await oauth.login()
+        return RedirectResponse(url=url)
+    return await oauth.get_user_info(request)
 ```
 
-### View users in Kinde
+**Using AsyncOAuth client with FastAPI (for more control):**
 
-Go to the **Users** page in Kinde to see who has registered.
+```python
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import RedirectResponse
+from kinde_sdk.auth.async_oauth import AsyncOAuth
+
+app = FastAPI()
+oauth = AsyncOAuth()
+
+@app.get("/login")
+async def login(request: Request):
+    url = await oauth.login()
+    return RedirectResponse(url=url)
+
+@app.get("/callback")
+async def callback(request: Request, code: str, state: str = None):
+    try:
+        result = await oauth.handle_redirect(code, state)
+        return RedirectResponse(url="/")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+```
+
+### Manual route implementation
+
+If you prefer to implement the routes manually, here's how you can do it:
+
+For Flask:
+
+```python
+import asyncio
+from flask import Flask, request, session, redirect
+from kinde_sdk.auth.oauth import OAuth
+
+app = Flask(__name__)
+oauth = OAuth(
+    framework="flask",
+    app=app
+)
+
+@app.route('/login')
+def login():
+    """Redirect to Kinde login page.""
+    loop = asyncio.get_event_loop()
+    login_url = loop.run_until_complete(oauth.login())
+    return redirect(login_url)
+
+@app.route('/register')
+def register():
+    """Redirect to Kinde registration page.""
+    loop = asyncio.get_event_loop()
+    register_url = loop.run_until_complete(oauth.register())
+    return redirect(register_url)
+
+@app.route('/callback')
+def callback():
+    """Handle the OAuth callback from Kinde.""
+    try:
+        code = request.args.get('code')
+        state = request.args.get('state')
+        
+        if not code:
+            return "Authentication failed: No code provided", 400
+        
+        # Generate a unique user ID for the session
+        user_id = session.get('user_id') or str(uuid.uuid4())
+        
+        # Use OAuth's handle_redirect method to process the callback
+        loop = asyncio.get_event_loop()
+        result = loop.run_until_complete(oauth.handle_redirect(code, user_id, state))
+        
+        # Store user ID in session
+        session['user_id'] = user_id
+        
+        return redirect('/')
+    except Exception as e:
+        return f"Authentication failed: {str(e)}", 400
+
+@app.route('/logout')
+def logout():
+    """Logout the user and redirect to Kinde logout page.""
+    user_id = session.get('user_id')
+    session.clear()
+    loop = asyncio.get_event_loop()
+    logout_url = loop.run_until_complete(oauth.logout(user_id))
+    return redirect(logout_url)
+
+@app.route('/user')
+def get_user():
+    """Get the current user's information.""
+    try:
+        if not oauth.is_authenticated(request):
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                login_url = loop.run_until_complete(oauth.login())
+                return redirect(login_url)
+            finally:
+                loop.close()
+        
+        return oauth.get_user_info(request)
+    except Exception as e:
+        return f"Failed to get user info: {str(e)}", 400
+```
+
+For FastAPI:
+
+```python
+from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
+
+@app.get("/login")
+async def login(request: Request):
+    url = await oauth.login()
+    return RedirectResponse(url=url)
+
+@app.get("/register")
+async def register(request: Request):
+    url = await oauth.register()
+    return RedirectResponse(url=url)
+
+@app.get("/callback")
+async def callback(request: Request, code: str, state: Optional[str] = None):
+    try:
+        result = await oauth.handle_redirect(code, state)
+        return RedirectResponse(url="/")
+    except Exception as e:
+        return HTMLResponse(f"Authentication failed: {str(e)}")
+
+@app.get("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url=await oauth.logout())
+
+@app.get("/user")
+async def get_user(request: Request):
+    if not oauth.is_authenticated(request):
+        return RedirectResponse(url=await oauth.login())
+    return oauth.get_user_info(request)
+```
+
+The manual implementation gives you more control over the authentication flow and allows you to add custom logic like session management, error handling, and logging. Note that Flask requires special handling of async methods using `asyncio` since it doesn't natively support async/await like FastAPI does.
+
+### Authentication flow steps
+
+1. **User initiates login/registration**: User clicks login/register button
+2. **Redirect to Kinde**: Application redirects user to Kinde's authorization server
+3. **User authenticates**: User signs in/up on Kinde's hosted pages
+4. **Callback handling**: Kinde redirects back to your callback URL with authorization code
+5. **Token exchange**: SDK exchanges authorization code for access tokens
+6. **Session creation**: SDK stores tokens and creates user session
+7. **Protected resources**: User can now access protected routes and resources
 
 ## User permissions
 
-After a user signs in and they are verified, the token return includes permissions for that user. [User permissions are set in Kinde](/manage-users/roles-and-permissions/user-permissions/), but you must also configure your application to unlock these functions.
+The Kinde Python SDK provides a simple way to check user permissions in your application. The API supports both sync and async patterns depending on your client type.
+
+### With OAuth client (Framework-based)
 
 ```python
-permissions = [
-    "create:todos",
-    "update:todos",
-    "read:todos",
-    "delete:todos",
-    "create:tasks",
-    "update:tasks",
-    "read:tasks",
-    "delete:tasks",
-]
+from kinde_sdk.auth.oauth import OAuth
+from flask import request
+import asyncio
+
+oauth = OAuth(framework="flask", app=app)
+
+# Async pattern (required for OAuth client)
+def check_permission_sync():
+    loop = asyncio.get_event_loop()
+    permission = loop.run_until_complete(
+        oauth.get_permission("create:todos", request)
+    )
+    return permission["isGranted"]
+
+# In FastAPI (native async)
+@app.get("/todos")
+async def create_todo(request: Request):
+    permission = await oauth.get_permission("create:todos", request)
+    if not permission["isGranted"]:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    # Create todo logic...
 ```
 
-We provide helper functions to more easily access permissions:
+### With AsyncOAuth client (Native async)
 
 ```python
-kinde_client.get_permission("create:todos")
+from kinde_sdk.auth.async_oauth import AsyncOAuth
 
-kinde_client.get_permissions()
+oauth = AsyncOAuth()
+
+# Native async pattern
+async def check_permission():
+    permission = await oauth.get_permission("create:todos")
+    if permission["isGranted"]:
+        print(f"User has permission in organization: {permission['orgCode']}")
+        return True
+    return False
+
+# Get all permissions
+async def get_all_permissions():
+    all_permissions = await oauth.get_permissions()
+    print(f"User belongs to organization: {all_permissions['orgCode']}")
+    print("User permissions:", all_permissions["permissions"])
+    return all_permissions
 ```
 
-A practical example in code might look something like:
+### With SmartOAuth client (Context-aware)
 
 ```python
-if kinde_client.get_permission("create:todos").get("is_granted")):
+from kinde_sdk.auth.smart_oauth import SmartOAuth
+
+oauth = SmartOAuth()
+
+# Works in async context
+async def async_check():
+    permission = await oauth.get_permission("create:todos")
+    return permission["isGranted"]
+
+# Works in sync context (if available)
+def sync_check():
+    permission = oauth.get_permission("create:todos")
+    return permission["isGranted"]
 ```
 
-## Feature Flags
+### Checking permissions
 
-We have provided a helper to grab any feature flag from `access_token`:
+### Practical examples
+
+Here's how to use permissions in your application with different client types:
+
+**Example 1: Permission check in FastAPI (OAuth client)**
 
 ```python
-kinde_client.get_flag("theme");
+from fastapi import FastAPI, Request, HTTPException
+from kinde_sdk.auth.oauth import OAuth
+
+app = FastAPI()
+oauth = OAuth(framework="fastapi", app=app)
+
+@app.post("/todos")
+async def create_todo(request: Request, todo_data: dict):
+    permission = await oauth.get_permission("create:todos", request)
+    if not permission["isGranted"]:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    # Create todo logic here...
+    return {"message": "Todo created"}
+
+@app.get("/todos")
+async def list_todos(request: Request):
+    permission = await oauth.get_permission("read:todos", request)
+    if not permission["isGranted"]:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    # List todos logic...
+    return {"todos": []}
+```
+
+**Example 2: Permission check with AsyncOAuth client**
+
+```python
+from kinde_sdk.auth.async_oauth import AsyncOAuth
+
+oauth = AsyncOAuth()
+
+async def create_todo_handler(request):
+    permission = await oauth.get_permission("create:todos")
+    if not permission["isGranted"]:
+        return {"error": "Permission denied"}, 403
+    
+    org_code = permission.get("orgCode")
+    # Create todo with organization context
+    return {"message": "Todo created", "org_code": org_code}
+
+async def get_all_user_permissions():
+    all_permissions = await oauth.get_permissions()
+    return {
+        "org_code": all_permissions["orgCode"],
+        "permissions": all_permissions["permissions"]
+    }
+```
+
+**Example 3: Permission-based conditional rendering (Flask)**
+
+```python
+from flask import Flask, request, render_template
+from kinde_sdk.auth.oauth import OAuth
+import asyncio
+
+app = Flask(__name__)
+oauth = OAuth(framework="flask", app=app)
+
+@app.route("/dashboard")
+def dashboard():
+    loop = asyncio.get_event_loop()
+    can_create = loop.run_until_complete(
+        oauth.get_permission("create:todos", request)
+    )["isGranted"]
+    
+    can_delete = loop.run_until_complete(
+        oauth.get_permission("delete:todos", request)
+    )["isGranted"]
+    
+    return render_template("dashboard.html", 
+                         can_create=can_create, 
+                         can_delete=can_delete)
+```
+
+### Common permission patterns
+
+Here are some common permission patterns you might use:
+
+```python
+# Resource-based permissions
+"create:todos
+"read:todos
+"update:todos
+"delete:todos
+
+# Feature-based permissions
+"can:export_data
+"can:manage_users
+"can:view_analytics
+
+# Organization-based permissions
+"org:manage_members
+"org:view_billing
+"org:update_settings
+```
+
+For more information about setting up permissions in Kinde, see [User permissions](/manage-users/roles-and-permissions/user-permissions/).
+
+## Feature flags
+
+The Kinde Python SDK provides a simple way to access feature flags from your application. Feature flags support both sync and async patterns.
+
+### With OAuth client (Framework-based)
+
+```python
+from kinde_sdk.auth.oauth import OAuth
+from flask import request
+import asyncio
+
+oauth = OAuth(framework="flask", app=app)
+
+# Async pattern (required for OAuth client)
+def get_theme_sync():
+    loop = asyncio.get_event_loop()
+    theme_flag = loop.run_until_complete(
+        oauth.get_flag("theme", request, default_value="light")
+    )
+    return theme_flag.value
+
+# In FastAPI (native async)
+@app.get("/settings")
+async def get_settings(request: Request):
+    theme = await oauth.get_flag("theme", request, default_value="light")
+    dark_mode = await oauth.get_flag("is_dark_mode", request, default_value=False)
+    return {
+        "theme": theme.value,
+        "dark_mode": dark_mode.value
+    }
+```
+
+### With AsyncOAuth client (Native async)
+
+```python
+from kinde_sdk.auth.async_oauth import AsyncOAuth
+
+oauth = AsyncOAuth()
+
+# Native async pattern
+async def get_feature_flags():
+    # Get a string feature flag
+    theme_flag = await oauth.get_flag("theme", default_value="light")
+    print(f"Current theme: {theme_flag.value}")
+    
+    # Get a boolean feature flag with default value
+    dark_mode = await oauth.get_flag("is_dark_mode", default_value=False)
+    if dark_mode.value:
+        print("Dark mode is enabled")
+    
+    # Get a numeric feature flag
+    competitions_limit = await oauth.get_flag("competitions_limit", default_value=3)
+    print(f"User can create up to {competitions_limit.value} competitions")
+    
+    return {
+        "theme": theme_flag.value,
+        "dark_mode": dark_mode.value,
+        "limit": competitions_limit.value
+    }
+```
+
+### Getting feature flags
+
+To get a specific feature flag value:
+
+### Practical examples
+
+Here's how to use feature flags in your application with different client types:
+
+**Example 1: Conditional feature rendering (FastAPI with OAuth)**
+
+```python
+from fastapi import FastAPI, Request
+from kinde_sdk.auth.oauth import OAuth
+
+app = FastAPI()
+oauth = OAuth(framework="fastapi", app=app)
+
+@app.get("/competitions/create-button")
+async def render_create_button(request: Request):
+    can_create = await oauth.get_flag("create_competition", request, default_value=False)
+    if can_create.value:
+        return {"html": "<button>Create Competition</button>"}
+    return {"html": ""}
+```
+
+**Example 2: Theme configuration (AsyncOAuth)**
+
+```python
+from kinde_sdk.auth.async_oauth import AsyncOAuth
+
+oauth = AsyncOAuth()
+
+async def get_user_theme():
+    theme = await oauth.get_flag("theme", default_value="light")
+    dark_mode = await oauth.get_flag("is_dark_mode", default_value=False)
+    return {
+        "theme": theme.value,
+        "is_dark_mode": dark_mode.value
+    }
+```
+
+**Example 3: Feature limits with validation (FastAPI)**
+
+```python
+from fastapi import FastAPI, Request, HTTPException
+from kinde_sdk.auth.oauth import OAuth
+
+app = FastAPI()
+oauth = OAuth(framework="fastapi", app=app)
+
+@app.post("/competitions")
+async def create_competition(request: Request, competition_data: dict):
+    limit_flag = await oauth.get_flag("competitions_limit", request, default_value=3)
+    current_count = await get_user_competition_count(request)
+    
+    if current_count >= limit_flag.value:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Competition limit reached (max: {limit_flag.value})"
+        )
+    # Create competition logic here...
+    return {"message": "Competition created"}
+```
+
+**Example 4: Type-safe flag access (AsyncOAuth)**
+
+```python
+from kinde_sdk.auth.async_oauth import AsyncOAuth
+
+oauth = AsyncOAuth()
+
+async def get_all_flags():
+    # Get all feature flags
+    all_flags = await oauth.get_all_flags()
+    result = {}
+    for code, flag in all_flags.items():
+        result[code] = {
+            "value": flag.value,
+            "type": flag.type,
+            "is_default": flag.is_default
+        }
+    return result
+
+# Type-specific getters
+async def get_boolean_flag(flag_name: str, default: bool = False):
+    return await oauth.get_boolean_flag(flag_name, default_value=default)
+
+async def get_string_flag(flag_name: str, default: str = ""):
+    return await oauth.get_string_flag(flag_name, default_value=default)
+
+async def get_integer_flag(flag_name: str, default: int = 0):
+    return await oauth.get_integer_flag(flag_name, default_value=default)
+```
+
+### Feature flag types
+
+The SDK supports the following feature flag types:
+
+```python
+# String flags
 {
-    "code": "theme",
-    "type": "string",
-    "value": "pink",
-    "is_default": False # whether the fallback value had to be used
+    "t": "s",
+    "v": "pink"
 }
 
-kinde_client.get_flag("is_dark_mode");
+# Boolean flags
 {
-    "code": "is_dark_mode",
-    "type": "boolean",
-    "value": True,
-    "is_default": False
+    "t": "b",
+    "v": true
 }
 
-kinde_client.get_flag("create_competition", default_value = False);
+# Integer flags
 {
-    "code": "create_competition",
-    "type" => "boolean",
-    "value": False,
-    "is_default": True # because fallback value had to be used
+    "t": "i",
+    "v": 5
 }
-
-kinde_client.get_flag("competitions_limit", default_value = 3, flat_type = "s");
-
-
-kinde_client.get_flag("new_feature");
 ```
 
-We also provide wrapper functions which should leverage `getFlag` above.
-
-**Get boolean flags**
+### Common use cases
 
 ```python
-kinde_client.get_boolean_flag("is_dark_mode");
+# Feature Toggles
+can_use_feature = await feature_flags.get_flag("enable_new_feature", default_value=False)
 
-kinde_client.get_boolean_flag("is_dark_mode", False);
+# User Preferences
+theme = await feature_flags.get_flag("theme", default_value="light")
+dark_mode = await feature_flags.get_flag("is_dark_mode", default_value=False)
 
-kinde_client.get_boolean_flag("new_feature", False);
+# Usage Limits
+max_uploads = await feature_flags.get_flag("max_uploads", default_value=10)
 
-kinde_client.get_boolean_flag("new_feature");
-
-kinde_client.get_boolean_flag("theme", False);
+# A/B Testing
+test_group = await feature_flags.get_flag("ab_test_group", default_value="control")
 ```
 
-**Get string flags**
+## Claims
+
+The Kinde Python SDK provides a simple way to access user claims from your application. Claims support both sync and async patterns.
+
+### With OAuth client (Framework-based)
 
 ```python
-kinde_client.get_string_flag("theme");
+from kinde_sdk.auth.oauth import OAuth
+from flask import request
+import asyncio
 
-kinde_client.get_string_flag("theme", False);
+oauth = OAuth(framework="flask", app=app)
 
-kinde_client.get_string_flag("cta_color", False);
+# Async pattern (required for OAuth client)
+def get_user_name_sync():
+    loop = asyncio.get_event_loop()
+    claim = loop.run_until_complete(
+        oauth.get_claim("given_name", request, token_type="id_token")
+    )
+    return claim["value"]
 
-kinde_client.get_string_flag("cta_color");
-
-kinde_client.get_string_flag("is_dark_mode", False);
+# In FastAPI (native async)
+@app.get("/profile")
+async def get_profile(request: Request):
+    given_name = await oauth.get_claim("given_name", request, token_type="id_token")
+    family_name = await oauth.get_claim("family_name", request, token_type="id_token")
+    email = await oauth.get_claim("email", request, token_type="id_token")
+    return {
+        "name": f"{given_name['value']} {family_name['value']}",
+        "email": email["value"]
+    }
 ```
 
-**Get integer flags**
+### With AsyncOAuth client (Native async)
 
 ```python
-kinde_client.get_integer_flag("competitions_limit");
+from kinde_sdk.auth.async_oauth import AsyncOAuth
 
-kinde_client.get_integer_flag("competitions_limit", 3);
+oauth = AsyncOAuth()
 
-kinde_client.get_integer_flag("team_count", 2);
-
-kinde_client.get_integer_flag("team_count");
-
-kinde_client.get_integer_flag("is_dark_mode", False);
-```
-
-## Audience
-
-An `audience` is the intended recipient of an access token - for example the API for your application. The audience argument can be passed to the Kinde client to request an audience be added to the provided token.
-
-The audience of a token is the intended recipient of the token.
-
-```python
-kinde_api_client_params["audience"] = "api.yourapp.com"
-```
-
-For details on how to connect, see [Register an API](/developer-tools/your-apis/register-manage-apis/)
-
-## Overriding scope
-
-By default the `KindeSDK` requests the following scopes:
-
-- profile
-- email
-- offline
-- openid
-
-You can override this by passing scope into the `KindeSDK`.
-
-```python
-kinde_api_client_params["scope"] = "profile email offline openid"
+# Native async pattern
+async def get_claims():
+    # Get the audience claim from the access token
+    aud_claim = await oauth.get_claim("aud")
+    print(f"Token audience: {aud_claim['value']}")
+    
+    # Get the given_name claim from the ID token
+    name_claim = await oauth.get_claim("given_name", token_type="id_token")
+    print(f"User's given name: {name_claim['value']}")
+    
+    return {
+        "audience": aud_claim["value"],
+        "name": name_claim["value"]
+    }
 ```
 
 ### Getting claims
 
-We have provided a helper to grab any claim from your id or access tokens. The helper defaults to access tokens:
+To get a specific claim from the user's tokens:
+
+### Practical examples
+
+Here's how to use claims in your application with different client types:
+
+**Example 1: Accessing user information (FastAPI with OAuth)**
 
 ```python
-kinde_client.get_claim("aud")
+from fastapi import FastAPI, Request
+from kinde_sdk.auth.oauth import OAuth
 
-kinde_client.get_claim("given_name", "id_token")
+app = FastAPI()
+oauth = OAuth(framework="fastapi", app=app)
+
+@app.get("/profile")
+async def get_user_profile(request: Request):
+    given_name = await oauth.get_claim("given_name", request, token_type="id_token")
+    family_name = await oauth.get_claim("family_name", request, token_type="id_token")
+    email = await oauth.get_claim("email", request, token_type="id_token")
+    
+    if given_name["value"] and family_name["value"]:
+        return {
+            "name": f"{given_name['value']} {family_name['value']}",
+            "email": email["value"]
+        }
+    return None
 ```
+
+**Example 2: Token validation (AsyncOAuth)**
+
+```python
+from fastapi import HTTPException
+from kinde_sdk.auth.async_oauth import AsyncOAuth
+
+oauth = AsyncOAuth()
+
+async def validate_token():
+    aud_claim = await oauth.get_claim("aud")
+    if not aud_claim["value"] or "api.yourapp.com" not in aud_claim["value"]:
+        raise HTTPException(status_code=401, detail="Invalid token audience")
+    return {"message": "Access granted"}
+
+@app.get("/api/protected")
+async def protected_endpoint():
+    return await validate_token()
+```
+
+**Example 3: Getting all claims (AsyncOAuth)**
+
+```python
+from kinde_sdk.auth.async_oauth import AsyncOAuth
+
+oauth = AsyncOAuth()
+
+async def get_all_user_claims():
+    # Get all claims from the access token
+    all_claims = await oauth.get_all_claims()
+    access_token_data = {}
+    for claim_name, claim_value in all_claims.items():
+        access_token_data[claim_name] = claim_value
+    
+    # Get all claims from the ID token
+    id_token_claims = await oauth.get_all_claims(token_type="id_token")
+    id_token_data = {}
+    for claim_name, claim_value in id_token_claims.items():
+        id_token_data[claim_name] = claim_value
+    
+    return {
+        "access_token": access_token_data,
+        "id_token": id_token_data
+    }
+```
+
+**Example 4: Organization context (FastAPI)**
+
+```python
+from fastapi import FastAPI, Request
+from kinde_sdk.auth.oauth import OAuth
+
+app = FastAPI()
+oauth = OAuth(framework="fastapi", app=app)
+
+@app.get("/organization-info")
+async def get_org_info(request: Request):
+    org_code = await oauth.get_claim("org_code", request)
+    org_name = await oauth.get_claim("org_name", request)
+    
+    return {
+        "org_code": org_code["value"],
+        "org_name": org_name["value"] if org_name else None
+    }
+```
+
+### Common claims
+
+Here are some common claims you might want to access:
+
+```python
+# User Information (ID Token)
+"given_name
+"family_name
+"email
+"picture
+
+# Token Information (Access Token)
+"aud"           # Audience
+"iss"           # Issuer
+"exp"           # Expiration time
+"iat"           # Issued at time
+
+# Organization Information
+"org_code
+"org_name
+"org_id
+```
+
+
 
 ## Organizations
 
@@ -312,24 +1285,24 @@ kinde_client.get_claim("given_name", "id_token")
 To create a new organization within your application, you will need to run a similar function to below:
 
 ```python
-return app.redirect(kinde_client.create_org())
+return app.redirect(oauth.create_org())
 ```
 
 ### Sign up and sign in to organizations
 
-Kinde has a unique code for every organization. You’ll have to pass this code through when you register a new user or sign in to a particular organization. Example function below:
+Kinde has a unique code for every organization. You'll have to pass this code through when you register a new user or sign in to a particular organization. Example function below:
 
 ```python
-kinde_api_client_params["org_code"] = 'your_org_code'
+oauth.get_claim("org_code")
 
 @app.route("/login")
 def login():
-    return app.redirect(kinde_client.get_login_url())
+    return app.redirect(oauth.get_login_url())
 
 
 @app.route("/register")
 def register():
-    return app.redirect(kinde_client.get_register_url())
+    return app.redirect(oauth.get_register_url())
 ```
 
 Following authentication, Kinde provides a json web token (jwt) to your application. Along with the standard information we also include the `org_code` and the permissions for that organization (this is important as a user can belong to multiple organizations and have different permissions for each).
@@ -349,7 +1322,7 @@ Example of a returned token:
 		   "openid",
 		   "profile",
 		   "email",
-		   "offline"
+		   "offline
    ],
    "sub": "kp:123457890"
 }
@@ -368,427 +1341,494 @@ The `id_token` will also contain an array of organizations that a user belongs t
 There are two helper functions you can use to extract information:
 
 ```python
-kinde_client.get_organization()
+oauth.get_organization()
 
-kinde_client.get_user_organizations()
+oauth.get_user_organizations()
 ```
 
 For more information about how organizations work in Kinde, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
 
-### Token storage
+### Token and session management
 
-Once the user has successfully authenticated, you'll get a JWT and possibly a refresh token that should be stored securely.
+The Kinde Python SDK automatically handles token and session management for your application. Once a user has successfully authenticated, the SDK manages:
 
-## SDK API reference
+- **Token acquisition and storage**: Automatically obtains and securely stores access tokens, ID tokens, and refresh tokens
+- **Token refresh**: Automatically refreshes tokens when they expire
+- **Session management**: Handles user sessions across requests
+- **Framework integration**: Works seamlessly with Flask and FastAPI session systems
 
-### `domain`
+The SDK uses the session configuration from your environment variables (`SECRET_KEY`, `SESSION_TYPE`, `SESSION_PERMANENT`) to manage sessions appropriately for your chosen framework.
 
-Either your Kinde instance url or your custom domain. e.g. `https://yourapp.kinde.com`.
+#### Token types
 
-Type: `string`
+The SDK supports two types of tokens:
 
-Required: Yes
+1. **Access Token** (`token_type="access_token"`):
+   - Contains authorization information
+   - Used for API access
+   - Contains permissions and organization context
+   - Default token type
 
-### `callback_url`
+2. **ID Token** (`token_type="id_token"`):
+   - Contains user identity information
+   - Used for user profile data
+   - Contains name, email, and other user details
+   - Must be explicitly requested using `token_type="id_token"`
 
-The url that the user will be returned to after authentication.
+#### Session handling
 
-Type: `string`
+The SDK automatically integrates with your framework's session system:
 
-Required: Yes
+- **Flask**: Uses Flask's built-in session management
+- **FastAPI**: Integrates with FastAPI's session handling
 
-### `client_id`
+You don't need to manually manage tokens or sessions - the SDK handles this automatically for you.
 
-The ID of your application in Kinde.
+## Management API
 
-Type: `string`
+The Kinde Python SDK provides a Management API client for interacting with Kinde's management endpoints. This allows you to programmatically manage users, organizations, and other resources. The Management API supports both sync and async patterns.
 
-Required: Yes
+### Getting started
 
-### `grant_type`
-
-Define the grant type when using the SDK.
-
-Type: `string`
-
-Required: Yes
-
-### `client_secret`
-
-The unique client secret associated with your application in Kinde.
-
-Type: `string`
-
-Required: No
-
-### `code_verifier`
-
-PKCE works by having the app generate a random value at the beginning of the flow called a Code Verifier.
-
-Type: `string`
-
-Required: No, except for PKCE flow
-
-### `scope`
-
-The scopes to be requested from Kinde.
-
-Type: `string`
-
-Required: No
-
-Default: `openid profile email offline`
-
-### `audience`
-
-The audience claim for the JWT.
-
-Type: `string`
-
-Required: No
-
-### `org_code`
-
-Additional parameters that will be passed in the authorization request.
-
-Type: `string`
-
-Required: No
-
-## KindeSDK methods
-
-### `get_login_url`
-
-Constructs a redirect URL and sends the user to Kinde to sign in. Optional parameters are used for custom sign-up and sign-in and are documented [here](/authenticate/custom-configurations/custom-authentication-pages/).
-
-Arguments (optional):
+#### With OAuth client (Framework-based)
 
 ```python
-auth_url_params: Optional[Dict[str, Dict[str, str]]]
+from kinde_sdk.auth.oauth import OAuth
+from flask import Flask
+import asyncio
+
+app = Flask(__name__)
+oauth = OAuth(framework="flask", app=app)
+
+# Get the management client
+management = oauth.get_management()
+
+# Use with asyncio in Flask
+def list_users_sync():
+    loop = asyncio.get_event_loop()
+    users = loop.run_until_complete(management.get_users())
+    return users
 ```
 
-Usage:
+#### With AsyncOAuth client (Native async)
 
 ```python
-kinde_client.get_login_url()
+from kinde_sdk.auth.async_oauth import AsyncOAuth
 
-kinde_client.get_login_url({
-		"auth_url_params": {
-			"connection_id": "conn_6a95dec504d34dc286dc80e8df9f6099"
-		}
-})
+oauth = AsyncOAuth()
 
+# Get the management client (native async)
+management = await oauth.get_management()
 
+# All methods are async
+users = await management.get_users()
 ```
 
-Sample output:
+#### With SmartOAuth client (Context-aware)
 
 ```python
-https://your_host.kinde.com/oauth2/auth?response_type=code&…
+from kinde_sdk.auth.smart_oauth import SmartOAuth
+
+oauth = SmartOAuth()
+
+# Works in async context
+async def async_get_users():
+    management = await oauth.get_management()
+    return await management.get_users()
+
+# Works in sync context (if supported)
+def sync_get_users():
+    management = oauth.get_management()
+    return management.get_users()
 ```
 
-### `get_register_url`
+### Available endpoints
 
-Constructs a redirect URL and sends the user to Kinde to sign up. Optional parameters are used for custom sign-up and sign-in and are documented [here](/authenticate/custom-configurations/custom-authentication-pages/).
+The Management API provides methods for common operations on resources. All examples use async patterns:
 
-Arguments (optional):
+**User management:**
 
 ```python
-auth_url_params: Optional[Dict[str, Dict[str, str]]]
+# List users (async)
+users = await management.get_users()
+
+# Get a specific user (async)
+user = await management.get_user(user_id="user_123")
+
+# Create a new user (async)
+new_user = await management.create_user(
+    email="user@example.com",
+    given_name="John",
+    family_name="Doe"
+)
+
+# Update a user (async)
+updated_user = await management.update_user(
+    user_id="user_123",
+    given_name="Johnny"
+)
+
+# Delete a user (async)
+await management.delete_user(user_id="user_123")
 ```
 
-Usage:
+### Organization management
+
+**Using Management API with FastAPI (OAuth client):**
 
 ```python
-kinde_client.get_register_url()
+from fastapi import FastAPI, HTTPException
+from kinde_sdk.auth.oauth import OAuth
 
-kinde_client.get_register_url({
-		"auth_url_params": {
-			"connection_id": "conn_6a95dec504d34dc286dc80e8df9f6099"
-		}
-})
+app = FastAPI()
+oauth = OAuth(framework="fastapi", app=app)
+
+@app.get("/organizations")
+async def list_organizations():
+    management = oauth.get_management()
+    orgs = await management.get_organizations()
+    return orgs
+
+@app.get("/organizations/{org_id}")
+async def get_organization(org_id: str):
+    management = oauth.get_management()
+    org = await management.get_organization(org_id=org_id)
+    return org
+
+@app.post("/organizations")
+async def create_organization(name: str):
+    management = oauth.get_management()
+    new_org = await management.create_organization(name=name)
+    return new_org
+
+@app.put("/organizations/{org_id}")
+async def update_organization(org_id: str, name: str):
+    management = oauth.get_management()
+    updated_org = await management.update_organization(
+        org_id=org_id,
+        name=name
+    )
+    return updated_org
+
+@app.delete("/organizations/{org_id}")
+async def delete_organization(org_id: str):
+    management = oauth.get_management()
+    await management.delete_organization(org_id=org_id)
+    return {"message": "Organization deleted"}
 ```
 
-Sample:
+**Using Management API with AsyncOAuth client:**
 
 ```python
-https://your_host.kinde.com/oauth2/auth?response_type=code&…
+from kinde_sdk.auth.async_oauth import AsyncOAuth
+
+oauth = AsyncOAuth()
+
+async def manage_organizations():
+    # Get management client
+    management = await oauth.get_management()
+    
+    # List organizations
+    orgs = await management.get_organizations()
+    
+    # Get a specific organization
+    org = await management.get_organization(org_id="org_123")
+    
+    # Create a new organization
+    new_org = await management.create_organization(
+        name="My Organization"
+    )
+    
+    # Update an organization
+    updated_org = await management.update_organization(
+        org_id="org_123",
+        name="Updated Name"
+    )
+    
+    # Delete an organization
+    await management.delete_organization(org_id="org_123")
+    
+    return orgs
 ```
 
-### `logout`
+### Error handling
 
-Logs the user out of Kinde.
+The Management API methods will raise exceptions for API errors. It's recommended to handle these appropriately:
 
-Arguments:
+**Example with OAuth client (FastAPI):**
 
 ```python
-redirect_to: str
+from fastapi import FastAPI, HTTPException
+from kinde_sdk.auth.oauth import OAuth
+from kinde_sdk.exceptions import KindeAPIException
+
+app = FastAPI()
+oauth = OAuth(framework="fastapi", app=app)
+
+@app.get("/users/{user_id}")
+async def get_user(user_id: str):
+    management = oauth.get_management()
+    try:
+        user = await management.get_user(user_id=user_id)
+        return user
+    except KindeAPIException as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 ```
 
-Usage:
+**Example with AsyncOAuth client:**
 
 ```python
-kinde_client.logout(redirect_to="KINDE_POST_LOGOUT_REDIRECT_URL")
+from kinde_sdk.auth.async_oauth import AsyncOAuth
+from kinde_sdk.exceptions import KindeAPIException
+
+oauth = AsyncOAuth()
+
+async def get_user_safely(user_id: str):
+    management = await oauth.get_management()
+    try:
+        user = await management.get_user(user_id=user_id)
+        return user
+    except KindeAPIException as e:
+        print(f"API Error {e.status_code}: {e.message}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        return None
 ```
 
-Sample:
+### Token management
+
+The Management API client has its own token management system for API authentication, which is separate from the core SDK's user session token management. The Management API client automatically handles:
+
+- **accessing Kinde Management API endpoints**: Obtains tokens for accessing Kinde's management endpoints
+- **Token refresh**: Automatically refreshes management API tokens when they expire
+- **Token storage**: Securely stores management API tokens
+- **Thread safety**: Ensures thread-safe token handling for concurrent requests
+
+You don't need to manually manage Management API tokens - the client handles this for you. This is different from the core SDK's user session token management, which handles user authentication tokens automatically.
+
+### Best practices
+
+1. **Always use async/await when calling Management API methods**: The Management API is async-native for better performance
+2. **Handle API errors appropriately**: Use try/except blocks and handle `KindeAPIException` specifically
+3. **Cache results when appropriate**: Reduce API calls by caching user data, organizations, and permissions
+4. **Use appropriate error handling for production**: Implement logging, monitoring, and graceful error recovery
+5. **Keep your client credentials secure**: Use environment variables, never commit secrets to version control
+6. **Use connection pooling**: For high-traffic applications, configure HTTP connection pooling
+7. **Implement retry logic**: Add retry logic with exponential backoff for transient failures
+8. **Monitor token expiration**: Handle token refresh gracefully to avoid authentication failures
+
+For more information about the Management API endpoints and capabilities, see the [Kinde Management API documentation](https://docs.kinde.com/kinde-apis/management/).
+
+## Error handling and best practices
+
+Proper error handling is crucial for building robust applications with the Kinde Python SDK. This section covers common error scenarios and best practices.
+
+### Common exceptions
+
+The SDK raises specific exception types that you should handle:
 
 ```python
-https://your_host.kinde.com/logout?redirect=https://…
+from kinde_sdk.exceptions import (
+    KindeAPIException,
+    KindeAuthenticationException,
+    KindeAuthorizationException,
+    KindeValidationException,
+    KindeConfigurationException
+)
 ```
 
-### `fetch_token`
+### Error handling patterns
 
-Returns the raw access token from URL after logged in from Kinde.
-
-Arguments:
+**Pattern 1: Comprehensive error handling (FastAPI)**
 
 ```python
-authorization_response: str
+from fastapi import FastAPI, HTTPException
+from kinde_sdk.auth.oauth import OAuth
+from kinde_sdk.exceptions import (
+    KindeAPIException,
+    KindeAuthenticationException,
+    KindeAuthorizationException
+)
+
+app = FastAPI()
+oauth = OAuth(framework="fastapi", app=app)
+
+@app.get("/protected")
+async def protected_route(request: Request):
+    try:
+        # Check authentication
+        if not await oauth.is_authenticated(request):
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        
+        # Get user info
+        user_info = await oauth.get_user_info(request)
+        return user_info
+    
+    except KindeAuthenticationException as e:
+        # Handle authentication errors
+        raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
+    
+    except KindeAuthorizationException as e:
+        # Handle authorization errors
+        raise HTTPException(status_code=403, detail=f"Authorization failed: {str(e)}")
+    
+    except KindeAPIException as e:
+        # Handle API errors
+        raise HTTPException(status_code=e.status_code, detail=f"API error: {str(e)}")
+    
+    except Exception as e:
+        # Handle unexpected errors
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 ```
 
-Usage:
+**Pattern 2: Error handling with AsyncOAuth**
 
 ```python
-kinde_client.fetch_token(authorization_response=”[http://localhost:8000?code=42..e9&state=d..t](https://example.com/github?code=42..e9&state=d..t)”)
+from kinde_sdk.auth.async_oauth import AsyncOAuth
+from kinde_sdk.exceptions import KindeAPIException
+import logging
+
+oauth = AsyncOAuth()
+logger = logging.getLogger(__name__)
+
+async def safe_get_user():
+    try:
+        user_info = await oauth.get_user_info()
+        return user_info
+    except KindeAPIException as e:
+        logger.error(f"Kinde API error: {e.status_code} - {e.message}")
+        return None
+    except Exception as e:
+        logger.exception(f"Unexpected error: {str(e)}")
+        return None
 ```
 
-Sample:
+**Pattern 3: Permission checking with error handling**
 
 ```python
-eyJhbGciOiJIUzI1...
+from fastapi import HTTPException
+from kinde_sdk.auth.oauth import OAuth
+from kinde_sdk.exceptions import KindeAPIException
+
+oauth = OAuth(framework="fastapi", app=app)
+
+async def check_permission_with_error_handling(request: Request, permission: str):
+    try:
+        perm_result = await oauth.get_permission(permission, request)
+        if not perm_result.get("isGranted"):
+            raise HTTPException(
+                status_code=403,
+                detail=f"Permission '{permission}' not granted"
+            )
+        return perm_result
+    except KindeAPIException as e:
+        raise HTTPException(
+            status_code=e.status_code,
+            detail=f"Error checking permission: {str(e)}"
+        )
 ```
 
-### `refresh_token`
+### Best practices summary
 
-Get new access token from Kinde if existed `refresh_token`.
+#### Authentication and authorization
 
-Usage:
+1. **Always validate authentication**: Check `is_authenticated()` before accessing protected resources
+2. **Handle token expiration**: Implement token refresh logic or redirect to login
+3. **Validate permissions**: Check permissions before allowing operations
+4. **Use appropriate HTTP status codes**: 401 for authentication, 403 for authorization failures
+
+#### Configuration
+
+1. **Use environment variables**: Never hardcode credentials
+2. **Validate configuration**: Check required environment variables at startup
+3. **Use secure storage**: Store tokens securely (encrypted sessions, secure cookies)
+4. **Set appropriate session timeouts**: Balance security and user experience
+
+#### Performance
+
+1. **Cache when appropriate**: Cache user info, permissions, and feature flags
+2. **Use async operations**: Prefer async/await for better performance
+3. **Implement connection pooling**: For high-traffic applications
+4. **Batch operations**: When possible, batch Management API calls
+
+#### Security
+
+1. **Protect client secrets**: Use environment variables or secret management services
+2. **Use HTTPS**: Always use HTTPS in production
+3. **Validate redirect URLs**: Ensure callback URLs are whitelisted
+4. **Implement CSRF protection**: Use state parameters in OAuth flows
+5. **Log security events**: Log authentication failures and authorization denials
+
+#### Error handling
+
+1. **Handle specific exceptions**: Catch specific exception types, not just `Exception`
+2. **Log errors appropriately**: Log errors with context but don't expose sensitive information
+3. **Provide user-friendly messages**: Don't expose internal error details to users
+4. **Implement retry logic**: For transient failures, implement exponential backoff
+5. **Monitor error rates**: Track error rates and patterns in production
+
+#### Development
+
+1. **Use type hints**: Improve code clarity and IDE support
+2. **Write tests**: Test authentication flows, error cases, and edge cases
+3. **Use linting**: Catch errors early with tools like `mypy` and `ruff`
+4. **Document error handling**: Document how your application handles errors
+
+### Example: Complete error handling setup
 
 ```python
-kinde_client.refresh_token()
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
+from kinde_sdk.auth.oauth import OAuth
+from kinde_sdk.exceptions import (
+    KindeAPIException,
+    KindeAuthenticationException,
+    KindeAuthorizationException,
+    KindeValidationException
+)
+import logging
+
+app = FastAPI()
+oauth = OAuth(framework="fastapi", app=app)
+logger = logging.getLogger(__name__)
+
+# Global exception handler
+@app.exception_handler(KindeAuthenticationException)
+async def auth_exception_handler(request: Request, exc: KindeAuthenticationException):
+    logger.warning(f"Authentication failed: {str(exc)}")
+    return JSONResponse(
+        status_code=401,
+        content={"error": "Authentication required", "detail": "Please log in"}
+    )
+
+@app.exception_handler(KindeAuthorizationException)
+async def authz_exception_handler(request: Request, exc: KindeAuthorizationException):
+    logger.warning(f"Authorization failed: {str(exc)}")
+    return JSONResponse(
+        status_code=403,
+        content={"error": "Access denied", "detail": "Insufficient permissions"}
+    )
+
+@app.exception_handler(KindeAPIException)
+async def api_exception_handler(request: Request, exc: KindeAPIException):
+    logger.error(f"Kinde API error {exc.status_code}: {str(exc)}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": "API error", "detail": "An error occurred with the authentication service"}
+    )
+
+@app.get("/api/protected")
+async def protected_endpoint(request: Request):
+    # This will automatically handle exceptions via the handlers above
+    if not await oauth.is_authenticated(request):
+        raise KindeAuthenticationException("Not authenticated")
+    
+    permission = await oauth.get_permission("read:data", request)
+    if not permission.get("isGranted"):
+        raise KindeAuthorizationException("Permission denied")
+    
+    return {"message": "Access granted"}
 ```
-
-### `create_org`
-
-Return the redirect URL to sign up and create a new organization in your business.
-
-Usage:
-
-```python
-kinde_client.create_org()
-```
-
-Sample:
-
-```python
-https://your_host.kinde.com/oauth2/auth?response_type=code&…
-```
-
-### `get_claim`
-
-Gets a claim from an access or ID token.
-
-Arguments:
-
-```python
-claim: str, token_name?: str # default: access_token
-```
-
-Usage:
-
-```python
-kinde_client.get_claim("given_name", "id_token")
-```
-
-Sample:
-
-```python
-{"name": "given_name", "value": "David"}
-```
-
-### `get_permission`
-
-Returns the state of a given permission.
-
-Arguments:
-
-```python
-key: str
-```
-
-Usage:
-
-```python
-kinde_client.get_permission(”read:todos”)
-```
-
-Sample:
-
-```python
-{”org_code”: "org_b235c067b7e4", is_granted: True}
-```
-
-### `get_permissions`
-
-Returns all permissions for the current user for the organization they are signed into.
-
-Usage:
-
-```python
-kinde_client.get_permissions()
-```
-
-Sample:
-
-```python
-{"org_code": "org_b235c067b7e4", permissions: [ "create:users", "view:users" ]}
-```
-
-### `get_organization`
-
-Get details for the organization your user is signed into.
-
-Usage:
-
-```python
-kinde_client.get_organization()
-```
-
-Sample:
-
-```python
-{"org_code": "org_1234"}
-```
-
-### `get_organizations`
-
-Gets an array of all organizations the user has access to.
-
-Usage:
-
-```python
-kinde_client.get_user_organizations()
-```
-
-Sample:
-
-```python
-{"org_codes": ["org_1234", "org_abcd"]}
-```
-
-### `get_user_details`
-
-Returns the profile for the current user.
-
-Usage:
-
-```python
-kinde_client.get_user_details()
-```
-
-Sample:
-
-```python
-{
-	"given_name":"Dave",
-	"id":"abcdef",
-	"family_name":"Smith",
-	"email":"dave@smith.com",
-	"picture": "https://link_to_avatar_url.abc.com"
-}
-```
-
-### `get_flag`
-
-Gets a feature flag from an access token.
-
-Arguments:
-
-```python
-code: str
-default_value?: str
-flag_type?: str
-```
-
-Usage:
-
-```python
-kinde_client.get_flag("theme");
-```
-
-Sample:
-
-```python
-{
-    "code": "theme",
-    "type": "string",
-    "value": "pink",
-    "is_default": False
-}
-```
-
-### `get_boolean_flag`
-
-Gets a boolean feature flag from an access token.
-
-Arguments:
-
-```python
-code: str
-default_value?: str
-```
-
-Usage:
-
-```python
-kinde_client.get_boolean_flag("is_dark_mode");
-```
-
-Sample: `True` or `False`
-
-### `get_string_flag`
-
-Gets a string feature flag from an access token.
-
-Arguments:
-
-```python
-code: str
-default_value?: str
-```
-
-Usage:
-
-```python
-kinde_client.get_string_flag("theme");
-```
-
-Sample: `“pink”`
-
-### `get_integer_flag`
-
-Gets a integer feature flag from an access token
-
-Arguments:
-
-```python
-code: str
-default_value?: str
-```
-
-Usage:
-
-```python
-kinde_client.get_integer_flag("competitions_limit");
-```
-
-Sample: `5`
-
-### `is_authenticated()`
-
-To check user authenticated or not.
-
-Sample: `true` or `false`
-
-If you need help connecting to Kinde, please contact us at [support@kinde.com](mailto:support@kinde.com).

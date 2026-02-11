@@ -3,15 +3,30 @@ page_id: b17ef65e-5153-4764-b699-0e618337d697
 title: Apple social sign in
 sidebar:
   order: 3
+description: Complete guide to setting up Apple social sign-in including Apple Developer account setup, Services ID configuration, and JWT client secret generation.
+metadata:
+  topics: [authenticate]
+  sdk: []
+  languages: [ruby, jwt]
+  audience: [developer, integration-engineer]
+  complexity: advanced
+  keywords: [Apple sign-in, Apple Developer, Services ID, JWT, client secret, private key, token renewal]
+  updated: 2025-01-16
+featured: false
+deprecated: false
 ---
 
-You can enable users to sign up and sign in using their Apple credentials.
+You can enable users to sign up and sign in using their Apple credentials. 
 
-<Aside type="warning" title="Note:">
+<Aside type="warning" title="For Apple auth in production">
 
-Apple limits the information it passes when users sign up this way. Avatars and profile pictures do not flow through to the auth experience in Kinde.
+You MUST set up an Apple app and use the provided Client ID and Client secret in the Kinde Apple connection. Do not use Kinde's credentials (leave the Client ID and Client secret blank) for third party SSO apps in your production environment. This adds a security and performance risk for your business, and makes it difficult to change auth providers without service disruptions for your users.
 
 </Aside>
+
+It's also important to note that Apple limits the information it passes when users sign up this way. Avatars and profile pictures do not flow through to the auth experience in Kinde. 
+
+The user's email may also be excluded or replaced with a private relay email address if they have Apple's "**Hide My Email**" feature enabled. When this feature is active, users receive a unique private email address (like `abc123@privaterelay.appleid.com`) that forwards to their real Apple ID email, which means you'll see this relay address in Kinde instead of their actual email address. 
 
 ## **What you need**
 
@@ -22,12 +37,12 @@ Apple limits the information it passes when users sign up this way. Avatars and 
 ## **Copy the callback URL from Kinde**
 
 1. In Kinde, go to **Settings** > **Authentication**.
-2. If you have not yet added the Apple connection, select **Add connection**, select **Apple**, then **Save**.
-3. On the **Apple auth** tile in the **Social authentication** section, select **Configure**.
-4. In the **Callback URL** section:
+2. If you have not yet added the Apple connection, select **Add connection**, select **Apple**, then **Next**.
+3. In the **Callback URL** section:
    1. If you use Kinde’s domain as your default, copy the **Kinde domain** URL.
    2. If you use custom domains, select the **Use custom domain instead** switch. 
    3. If you have only one custom domain, copy the **Custom domain** URL. If you have custom domains for multiple organizations, select each one from the list and copy the callbacks for each. You need to enter all custom domain callbacks in the provider app.
+4. Select **Save**.
 5. Use the copied Callback URLs to set up the app, see below.
 
 ## **Configure sign in for your app**
@@ -125,8 +140,9 @@ You can use open source libraries for creating and signing JWT tokens for your c
 2. On the Apple tile, select **Configure**.
 3. Paste the **Client ID** (Service ID) and **Client secret** (Private key) into the relevant fields.
 4. Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified. We recommend leaving this off for maximum security.
-5. Select which apps will use Apple sign in.
-6. Select **Save**. Users will now see Apple as an option to sign up and sign in to your product.
+5. Add any [upstream params](/authenticate/auth-guides/pass-params-idp/) that you want to pass to the IdP.
+6. Select which apps will use Apple sign in.
+7. Select **Save**. Users will now see Apple as an option to sign up and sign in to your product.
 
 ## **Renew Apple token periodically**
 

@@ -1,13 +1,38 @@
 ---
 page_id: 30308b27-1d1a-4605-9366-87414c7ad94e
 title: Ruby SDK
+description: "Complete guide for Ruby SDK including Rails integration, OAuth2 flows, AuthController, and configuration for Ruby-based applications."
 sidebar:
   order: 16
 head:
   - tag: meta
     attrs:
       property: "og:image"
-      content: "https://kinde.com/assets/images/open-graph/DOCS-SSI-SDK_Ruby.png"
+      content: "https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ae9c7480-613c-4daa-ebda-d25c503bb500/socialsharingimage"
+topics:
+  - developer-tools
+  - sdks
+  - ruby
+  - backend
+sdk:
+  - ruby
+languages:
+  - ruby
+  - bash
+audience: developers
+complexity: intermediate
+keywords:
+  - Ruby SDK
+  - Rails
+  - OAuth2
+  - client credentials
+  - authorization code
+  - PKCE
+  - AuthController
+updated: 2024-01-15
+featured: false
+deprecated: false
+ai_summary: Complete guide for Ruby SDK including Rails integration, OAuth2 flows, AuthController, and configuration for Ruby-based applications.
 ---
 
 {/* @case-police-ignore Api */}
@@ -27,7 +52,7 @@ If you haven’t already got a Kinde account, [register for free here](https://a
 Add this line into your Gemfile and run a bundler or install manually through a gem command.
 
 ```ruby
-gem 'kinde_sdk', git: '<https://github.com/kinde-oss/kinde-ruby-sdk.git>', branch: 'main'
+gem 'kinde_sdk', '~> 1.6.1'
 
 ```
 
@@ -35,8 +60,8 @@ gem 'kinde_sdk', git: '<https://github.com/kinde-oss/kinde-ruby-sdk.git>', branc
 
 1. In Kinde, go to **Settings > Applications > [Your app] > View details**.
 2. Add your callback URLs in the relevant fields. For example:
-   - Allowed callback URLs (also known as redirect URIs) - for example, `http://localhost:8000/api/auth/kinde_callback`
-   - Allowed logout redirect URLs - for example, `http://localhost:8000`
+   - Allowed callback URLs (also known as redirect URIs) - for example, `http://localhost:3000/kinde_sdk/callback`
+   - Allowed logout redirect URLs - for example, `http://localhost:3000`
 3. Select **Save**.
 
 ## Add environments
@@ -50,8 +75,8 @@ Kinde comes with a production environment, but you can set up other environments
 The following variables need to be replaced in the code snippets below.
 
 - `KINDE_DOMAIN` - your Kinde domain - e.g. `https://your_kinde_domain.kinde.com`
-- `KINDE_REDIRECT_URL` - your callback url, make sure this URL is under your allowed callback redirect URLs. - e.g. `http://localhost:8000/api/auth/kinde_callback`
-- `KINDE_POST_LOGOUT_REDIRECT_URL` - where you want users to be redirected to after logging out, make sure this URL is under your allowed logout redirect URLs. - e.g. `http://localhost:8000`
+- `KINDE_REDIRECT_URL` - your callback url, make sure this URL is under your allowed callback redirect URLs. - e.g. `http://localhost:3000/kinde_sdk/callback`
+- `KINDE_POST_LOGOUT_REDIRECT_URL` - where you want users to be redirected to after logging out, make sure this URL is under your allowed logout redirect URLs. - e.g. `http://localhost:3000`
 - `KINDE_CLIENT_ID` - you can find this on the **Application details** page - e.g. `your_kinde_client_id`
 - `KINDE_CLIENT_SECRET` - you can find this on the **Application details** page - e.g. `your_kinde_client_secret`
 
@@ -120,8 +145,78 @@ The `KINDE_MANAGEMENT_CLIENT_ID` and the `KINDE_MANAGEMENT_CLIENT_SECRET` can be
 ```ruby
 KindeSdk.client_credentials_access(
   client_id: ENV["KINDE_MANAGEMENT_CLIENT_ID"],
-  client_secret: ENV["KINDE_MANAGEMENT_CLIENT_SECRET"]
+  # client_id:            # default to @config.client_id
+  client_secret: ENV["KINDE_MANAGEMENT_CLIENT_SECRET"],
+  # client_secret:        # default to @config.client_secret,
+  # audience:             # default to "#{@config.domain}/api",
+  # domain:               # default to @config.domain
 )
+```
+
+## Rails Authentication integration
+The Kinde Ruby SDK gem provides a Rails authentication integration that simplifies the process of integrating Kinde authentication into your Rails application. This is provided by the AuthController class, which is responsible for handling the authentication flow and redirecting users to the appropriate page.
+
+### AuthController
+
+The AuthController class is responsible for handling the authentication flow and redirecting users to the appropriate page. It is provided by the SDK gem and is located in 'lib/kinde_sdk/controllers/auth_controller.rb'.
+
+### Routes
+To enable the AuthController, you need to add the following routes to your `config/routes.rb` file:
+
+```ruby
+  namespace :kinde_sdk do
+    get "callback" => "auth#callback
+    get "auth" => "auth#auth
+    get "logout" => "auth#logout
+    get "logout_callback" => "auth#logout_callback
+    get "client_credentials_auth" => "auth#client_credentials_auth
+  end
+```
+
+If you decide instead to use the rails engine, you can add the following to your `config/routes.rb` file:
+
+```ruby
+mount KindeSdk::Engine, at: "/kinde_sdk"
+```
+
+### Usage the AuthController in your application
+To use the AuthController consume the routes in your application. For example in a Rails view file use the auth path to trigger the login flow:
+
+```ruby
+        <div class="buttons">
+            <a class="button is-primary" href="<%= kinde_sdk_auth_path %>">
+              <strong>Log in</strong>
+            </a>
+        </div>
+```
+The full list of paths exposed by the controller are the following:
+
+```ruby
+kinde_sdk_auth_path
+kinde_sdk_callback_path
+kinde_sdk_logout_path
+kinde_sdk_logout_callback_path
+kinde_sdk_client_credentials_auth_path
+```
+
+#### Using the engine
+When using the AuthController with the engine your application can use the paths as follows:
+
+```ruby
+        <div class="buttons">
+            <a class="button is-primary" href="<%= kinde_sdk.auth_path %>">
+              <strong>Log in</strong>
+            </a>
+        </div>
+```
+The full list of paths exposed by the engine are the following:
+
+```ruby
+kinde_sdk.auth_path
+kinde_sdk.callback_path
+kinde_sdk.logout_path
+kinde_sdk.logout_callback_path
+kinde_sdk.client_credentials_auth_path
 ```
 
 ## Sign in and registration
@@ -129,7 +224,13 @@ KindeSdk.client_credentials_access(
 The Kinde client provides methods for easy login and registration. For this, you need to acquire an auth URL by calling:
 
 ```ruby
-KindeSdk.auth_url
+KindeSdk.auth_url(
+  # client_id:            # default to @config.client_id,
+  # client_secret:        # default to @config.client_secret,
+  # domain:               # default to @config.domain,
+  # redirect_uri:         # default to @config.callback_url,
+  **kwargs
+)
 {
  url: "https://<domain>/oauth2/auth?client_id=<client_id>&code_challenge=<generated code>&code_challenge_method=S256&redirect_uri=<redirect_uri>&response_type=code&scope=openid+offline+email+profile&state=<random string>",
  code_verifier: "<challenge verifier>"
@@ -165,7 +266,14 @@ Callback is triggered in the body with the code. Use the whole `params` object o
 Next, exchange access and refresh tokens. You will receive `code` as the parameter in the callback endpoint, and `code_verifier` (if PKCE enabled) as per the previous step.
 
 ```ruby
-KindeApi.fetch_tokens(code, code_verifier: code_verifier)
+KindeSdk.fetch_tokens(
+  params_or_code, 
+  # client_id:          # default to @config.client_id,
+  # client_secret:      # default to @config.client_secret,
+  # domain:             # default to @config.domain,
+  # code_verifier:      # default to nil,
+  # redirect_uri:       # default to @config.callback_url
+)
 {"access_token"=>"eyJhbGciOiJSUzI1NiIsIm...",
  "expires_in"=>86399,
  "id_token"=>"eyJhbGciOiJSUz",
@@ -178,8 +286,8 @@ KindeApi.fetch_tokens(code, code_verifier: code_verifier)
 Save the whole hash in your session, redis or any other storage, and use it to build your client.
 
 ```ruby
-session[:kinde_auth] = KindeApi.fetch_tokens(code).slice(:access_token, :refresh_token, :expires_at)
-client = KindeApi.client(session[:kinde_auth]) # => #<KindeApi::Client:0x00007faf31e5ecb8>
+session[:kinde_auth] = KindeSdk.fetch_tokens(code).slice(:access_token, :refresh_token, :expires_at)
+client = KindeSdk.client(session[:kinde_auth]) # => #<KindeSdk::Client:0x00007faf31e5ecb8>
 
 ```
 
@@ -310,7 +418,7 @@ Set the type explicitly (output omitted except value):
 
 ```text
 client.get_flag("undefined_bool", { default_value: true }, "b")# => value = true
-client.get_flag("undefined_string", { default_value: "true" }, "s")# => value = "true"
+client.get_flag("undefined_string", { default_value: "true" }, "s")# => value = "true
 client.get_flag("undefined_int", { default_value: 111 }, "i")# => value = 111
 ```
 
@@ -319,17 +427,17 @@ In the example above if you try to set default_value of different types (for exa
 Also you have wrapper methods, for example:
 
 ```text
-client.get_boolean_flag("eeeeee")# => leads to exception "Flag eeeeee value type is different from requested type"
+client.get_boolean_flag("eeeeee")# => leads to exception "Flag eeeeee value type is different from requested type
 client.get_boolean_flag("asd")# => true
 client.get_boolean_flag("undefined", false)# => false
 
-client.get_integer_flag("asd")# => exception "Flag asd value type is different from requested type"
-client.get_integer_flag("undefined", "true")# => exception "Flag undefined value type is different from requested type"
+client.get_integer_flag("asd")# => exception "Flag asd value type is different from requested type
+client.get_integer_flag("undefined", "true")# => exception "Flag undefined value type is different from requested type
 client.get_integer_flag("eeeeee")# => 111
 client.get_integer_flag("undefined", 123)# => 123
 
-client.get_string_flag("qqq")# => "aa"
-client.get_string_flag("undefined", "111")# => "111"
+client.get_string_flag("qqq")# => "aa
+client.get_string_flag("undefined", "111")# => "111
 ```
 
 ## **Client usage**
@@ -409,7 +517,7 @@ Example of a returned token:
       "openid",
       "profile",
       "email",
-      "offline"
+      "offline
     ],
     "sub" => "kp:123457890",
     "feature_flags" => {
@@ -424,7 +532,7 @@ Example of a returned token:
 The `id_token` will also contain an array of organizations that a user belongs to - this is useful if you wanted to build out an organization switcher for example:
 
 ```ruby
-client.get_claim("org_codes", :id_token) # => {name: "org_codes", value: ["
+client.get_claim("org_codes", :id_token) # => {name: "org_codes", value: [
 ```
 
 For more information about how organizations work in Kinde, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
@@ -494,12 +602,24 @@ client.organizations.add_organization_users(code: "org_1111", users: ["kp:12311.
 For proper refreshing you'll need to use `access_token`, `refresh_token` and probably `expires_in` if you want to know if your access token is still active. Use these two methods to work with refreshing:
 
 ```ruby
-KindeApi.token_expired?(session[:kinde_auth]) # => false
-KindeApi.refresh_token(session[:kinde_auth]) # => {"access_token" => "qwe...", "refresh_token" => "fqw...", .....}
+KindeSdk.token_expired?(
+  session[:kinde_auth],
+  # client_id:                  # default to @config.client_id,
+  # client_secret:              # default to @config.client_secret,
+  # audience:                   # default to "#{@config.domain}/api",
+  # domain:                     # default to @config.domain
+  ) # => false
+KindeSdk.refresh_token(
+  session[:kinde_auth],
+  # client_id:                  # default to @config.client_id,
+  # client_secret:              # default to @config.client_secret,
+  # audience:                   # default to "#{@config.domain}/api",
+  # domain:                     # default to @config.domain
+  ) # => {"access_token" => "qwe...", "refresh_token" => "fqw...", .....}
 
 ```
 
-`KindeApi#refresh_token` returns a new token hash, so it needs to be updated in your storage.
+`KindeSdk#refresh_token` returns a new token hash, so it needs to be updated in your storage.
 
 ## SDK API reference
 
@@ -678,7 +798,7 @@ $kinde->getClaim('given_name', 'id_token');
 Sample output:
 
 ```ruby
-"David"
+"David
 ```
 
 ### `getPermission`

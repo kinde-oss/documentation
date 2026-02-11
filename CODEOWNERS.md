@@ -1,3 +1,0 @@
-clairekinde11
-danielrivers
-DaveOrDead

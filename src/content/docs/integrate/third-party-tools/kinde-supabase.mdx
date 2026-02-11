@@ -1,0 +1,351 @@
+---
+page_id: 78f0242c-3a49-4c8d-8168-019fd69ef838
+title: Kinde and Supabase
+description: Comprehensive guide to integrating Kinde authentication with Supabase database including PostgreSQL RLS policies, Next.js setup, and secure user-specific data access
+sidebar:
+  order: 7
+relatedArticles:
+  - a10aee46-af87-4ad1-b996-61ee6206c9eb
+  - a07f8f6b-5d6a-4096-be52-7b13b4a3b0a5
+  - 1023d9f8-ae2d-4167-98e0-a4aa7b31e80c
+topics:
+  - integrate
+  - third-party-tools
+sdk:
+  - nextjs-sdk
+languages:
+  - typescript
+  - javascript
+  - sql
+  - bash
+audience:
+  - developers
+complexity: advanced
+keywords:
+  - supabase
+  - postgresql
+  - row level security
+  - rls
+  - nextjs
+  - jwt
+  - authentication
+  - database
+  - todo app
+updated: 2025-09-01
+featured: false
+deprecated: false
+ai_summary: Comprehensive guide to integrating Kinde authentication with Supabase database including PostgreSQL RLS policies, Next.js setup, and secure user-specific data access.
+---
+
+User authentication and secure data access are critical components of modern web applications. Kinde simplifies the process by handling user authentication, managing session tokens, and offering robust user management features. 
+
+When combined with Supabase's powerful database management and PostgreSQL’s Row-Level Security (RLS) policies, you can create a secure, scalable application that ensures user-specific data access.
+
+In this guide, we will walk through integrating Kinde and Supabase. We’ll use Next.js as the application framework. You can then go on to build a to-do app following [this doc](/integrate/third-party-tools/kinde-supabase-todo-app/). 
+
+## What you need
+
+- A [Supabase](https://supabase.com/) account (sign up for free)
+- A [Kinde](https://kinde.com/) account (sign up for free)
+
+## Step 1: Set up your Kinde application
+
+1. [Sign in to Kinde](https://kinde.com/) and on the front page, select **Add application**.
+2. Enter a name for the application and select **Back-end web** as the application type. 
+3. Select **Save**. The **Quick start** page opens. 
+4. Select **Next.js** from the list of back-end SDKs, then select **Save**.
+5. On the **Quick Start** page, select either **Starter Kit** or **Existing codebase** and follow the setup steps. For either path:
+    1. Select **Set** for each default callback URL to configure your application's callback settings.
+        
+        ![Callback URLs in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/e3452f72-18ad-4647-3f6f-20a7a7c43300/bloglarge)
+        
+    2. Copy the environment variables. We will use these later.
+        
+        ![Env variables from Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/e748137c-2db9-4f84-54fa-349d28245d00/public)
+        
+6. Select **Authentication** in the menu. 
+7. Enable the authentication types you want your users to sign in with (e.g. Email and Google), and select **Save**.
+    
+    ![Select auth options screen](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6b0c12ba-6aec-4317-47c5-93b78a8afd00/public)
+    
+
+## Step 2: Set up a Supabase project
+
+1. Sign in to your [Supabase dashboard](https://supabase.com/).
+2. Select or add a new organization to add the project to.
+3. Select **New Project.**
+    1. Enter a project name.
+    2. Set a secure password for your database.
+    3. Select a database region that best suits your application. 
+    4. Select **Create new project**.
+        
+        ![Create new project in supabase](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/2c69ee62-35cc-4ebe-4a5b-a50ee30cf900/public)
+        
+4. In the **Project settings**, go to **API Keys** and select **Create new API keys**. 
+    
+    ![Supabase API keys page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/2df82b9c-6bea-4254-3167-548a199c3e00/public)
+    
+5. Copy the **Publishable key**, we will need it in the upcoming steps.
+6. Go to **JWT Keys > JWT Signing Keys**.
+7. Select **Migrate JWT secret**.
+    
+    ![Supabase migrate JWT secret](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/be3c2870-b253-4067-78d7-a080c884b700/public)
+        
+    ![Start using new JWT keys dialog](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/a6e04626-98c0-4bf7-c4a7-2ab21b2cea00/public)
+    
+    You will see a pair of JWT keys in the page. The CURRENT KEY (Legacy HS256) and the STANDBY KEY (ECC P-256). We will mint our own JWT key with a shared secret.
+
+    ![Supabase JWT Keys](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b25a37ad-74cf-413f-f04c-095b43905e00/public)
+    
+8. Select the **three dots** next to the `STANDBY KEY` and select **Move to previously used**. 
+This will enable you to create a new standby key.
+9. Select **Create Standby Key**.
+    
+    ![Supabase new JWT standby keys](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0b4ceff8-3b6b-4412-220a-0f5937bbfb00/public)
+    
+10. From the dropdown of algorithm selection, choose **HS256 (Shared Secret)**.
+    1. Select the **Import an existing secret** option.
+    2. Paste in the Kinde client secret from your application. To find it, go to **Kinde > Applications > Your application > Details >** **Client Secret.**
+    3. Select **Create standby key**.
+    
+    Your new key is listed as a `STANDBY KEY`
+    
+    ![Supabase new standby key window](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/08f09e3c-1711-4a3e-45dd-b8a856ebdd00/public)
+    
+    ![Supabase rotate keys window](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/38b9ece2-8f68-4e5c-21c6-18fa1d07d100/public)
+    
+11. Select **Rotate keys**.
+12. Check both confirmation boxes and select **Rotate signing key**. You will have your shared secret key set as your `CURRENT KEY`.
+    
+    ![Rotate JWT signing key dialog](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9e5e96ed-108f-448d-62d3-6fdd17ad9a00/public)
+    
+    ![standby keys](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6c012dee-38c4-43d3-087d-321af5ba8000/public)
+    
+13. Navigate to **SQL Editor** and select **New SQL Snippet**.
+    
+    ![New SQL Snippet](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/24671391-0aa5-466a-8860-887468ac6200/public)
+    
+14. Paste the following SQL code into the command window and select **Run**:
+    
+    ```sql
+    create or replace function get_user_id()
+    returns text
+    language sql stable
+    as $$
+      select nullif(current_setting('request.jwt.claims', true)::json->>'sub', '')::text;
+    $$;
+    ```
+    
+    This function extracts the `sub` field from the JSON Web Token (JWT) sent by Kinde auth. The `sub` field contains the Kinde user ID, which allows Supabase to authenticate the correct Kinde user.
+
+## Step 3: Setup a Next.js project with Supabase and Kinde
+
+1. Run the following command in your terminal window to start a new project with Next.js and Supabase. Follow the on-screen instructions.
+    
+    ```bash
+    npx create-next-app -e with-supabase
+    ```
+    
+2. Set a name for your project (e.g: `kinde-with-supabase`)
+3. Go into the project directory:
+    
+    ```bash
+    cd kinde-with-supabase
+    
+    ```
+    
+4. Install the Kinde dependency with this command:
+    
+    ```bash
+    npm install @kinde-oss/kinde-auth-nextjs jsonwebtoken
+    npm install --save-dev @types/jsonwebtoken
+    ```
+    
+5. Create the Kinde auth endpoint in this path **app/api/auth/[kindeAuth]**:
+    
+    ```bash
+    mkdir -p "app/api/auth/[kindeAuth]"
+    touch "app/api/auth/[kindeAuth]/route.js"
+    ```
+    
+6. Open the newly created `route.js` file, enter the following code, and save the file:
+    
+    ```bash
+    import { handleAuth } from "@kinde-oss/kinde-auth-nextjs/server"
+    export const GET = handleAuth()
+    ```
+    
+7. Create an environment variables file `.env.local` by typing:
+    
+    ```bash
+    touch .env.local
+    ```
+    
+8. Add the following to your `.env.local` file:
+    - The Kinde environment vars details you copied earlier. You can get these again from your Kinde application Quick start page.
+    - The Supabase Project URL from **Supabase > Project Settings > Data API > Project URL.**
+    - The Publishable key from **Supabase > Project Settings > API Keys > API Keys** tab **→ Publishable key**
+    
+    ```
+    KINDE_CLIENT_ID=<kinde_client_id>
+    KINDE_CLIENT_SECRET=<kinde_client_secret>
+    KINDE_ISSUER_URL=https://<your_kinde_business>.kinde.com
+    KINDE_SITE_URL=http://localhost:3000
+    KINDE_POST_LOGOUT_REDIRECT_URL=http://localhost:3000
+    KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000
+    NEXT_PUBLIC_SUPABASE_URL=https://<supabase_project_id>.supabase.co
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=<supabase_publishable_key>
+    
+    ```
+    
+9. To ensure the user is redirected to the homepage after they sign in, update the `KINDE_POST_LOGIN_REDIRECT_URL` in your `.env.local` file to:
+    
+    ```
+    KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000
+    ```
+    
+10. Open the `components/auth-button.tsx` file and replace the entire content with the following. This code will replace Supabase Auth functions with Kinde Auth.
+    
+    ```tsx
+      import {
+      RegisterLink,
+      LoginLink,
+      LogoutLink,
+      } from "@kinde-oss/kinde-auth-nextjs/components"
+      import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
+    
+      import { Button } from "./ui/button"
+    
+      export async function AuthButton() {
+        const { getUser } = getKindeServerSession()
+        const user = await getUser()
+    
+        return user ? (
+          <div className="flex items-center gap-4">
+            Hey, {user.email}!<LogoutLink className="text-subtle">Log out</LogoutLink>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Button asChild size="sm" variant={"outline"}>
+              <LoginLink className="btn btn-ghost sign-in-btn">Sign in</LoginLink>
+            </Button>
+            <Button asChild size="sm" variant={"default"}>
+              <RegisterLink className="btn btn-dark">Sign up</RegisterLink>
+            </Button>
+          </div>
+        )
+      }
+    ```
+    
+11. Replace `lib/supabase/server.ts` with the following code:
+    
+    ```tsx
+    import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
+    import { createServerClient } from "@supabase/ssr"
+    import { cookies } from "next/headers"
+    import jwt from "jsonwebtoken"
+    
+    export const createClient = async () => {
+      const cookieStore = await cookies()
+    
+      const { getIdToken } = getKindeServerSession()
+      const idToken = await getIdToken()
+    
+      let token: string
+      if (idToken) {
+        token = jwt.sign(idToken, process.env.KINDE_CLIENT_SECRET!)
+      } else {
+        token = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!
+      }
+    
+      return createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+          cookies: {
+            getAll() {
+              return cookieStore.getAll()
+            },
+            setAll(cookiesToSet) {
+              try {
+                cookiesToSet.forEach(({ name, value, options }) => {
+                  cookieStore.set(name, value, options)
+                })
+              } catch (error) {
+                // The `set` method was called from a Server Component.
+                // This can be ignored if you have middleware refreshing
+                // user sessions.
+              }
+            },
+          },
+        }
+      )
+    }
+    ```
+    
+12. Replace `lib/supabase/middleware.ts` with the following code:
+    
+    ```tsx
+    import { NextResponse, type NextRequest } from "next/server"
+    import { hasEnvVars } from "../utils"
+    
+    export async function updateSession(request: NextRequest) {
+      const supabaseResponse = NextResponse.next({
+        request,
+      })
+    
+      // If the env vars are not set, skip middleware check. You can remove this once you setup the project.
+      if (!hasEnvVars) {
+        return supabaseResponse
+      }
+    
+      // Do not run code between createServerClient and
+      // supabase.auth.getUser(). A simple mistake could make it very hard to debug
+      // issues with users being randomly logged out.
+    
+      // IMPORTANT: DO NOT REMOVE auth.getUser()
+    
+      // IMPORTANT: You *must* return the supabaseResponse object as it is.
+      // If you're creating a new response object with NextResponse.next() make sure to:
+      // 1. Pass the request in it, like so:
+      //    const myNewResponse = NextResponse.next({ request })
+      // 2. Copy over the cookies, like so:
+      //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+      // 3. Change the myNewResponse object to fit your needs, but avoid changing
+      //    the cookies!
+      // 4. Finally:
+      //    return myNewResponse
+      // If this is not done, you may be causing the browser and server to go out
+      // of sync and terminate the user's session prematurely!
+    
+      return supabaseResponse
+    }
+    ```
+    
+13. Start the development environment by typing the following in your terminal:
+    
+    ```bash
+    npm run dev
+    
+    ```
+    
+14. Go to [http://localhost:3000](http://localhost:3000/) and sign up/sign in to your Kinde application to test the integration.
+    
+    ![Your local app showing supabase readiness](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/115c087b-d820-444e-7809-a059c37fa400/public)
+    
+
+## Well done!
+
+You've successfully integrated Kinde for authentication with Supabase for database management, creating a secure foundation for user-specific data access.
+
+With this integration in place, your application is now equipped to handle user authentication and manage personalized data securely. You can extend this foundation by adding various features and functionalities specific to your application's requirements, all while maintaining the security and scalability provided by this Kinde-Supabase integration.
+
+Take this one step further by creating a [to-do list application following the next guide](/integrate/third-party-tools/kinde-supabase-todo-app/). 
+
+
+

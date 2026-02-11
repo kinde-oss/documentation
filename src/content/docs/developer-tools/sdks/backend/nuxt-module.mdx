@@ -1,6 +1,7 @@
 ---
 page_id: 17385e98-bfb1-4209-8ce0-e94244eb956b
 title: Nuxt module
+description: "Complete guide for Nuxt module including authentication setup, route protection, permissions management, and feature flags for Nuxt 3+ applications."
 sidebar:
   order: 11
 relatedArticles:
@@ -9,7 +10,32 @@ head:
   - tag: meta
     attrs:
       property: "og:image"
-      content: "https://kinde.com/assets/images/open-graph/DOCS-SSI-SDK_Nuxt.png"
+      content: "https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/eefc68ad-0e59-4675-852e-f27b033a2400/socialsharingimage"
+topics:
+  - developer-tools
+  - sdks
+  - nuxt
+  - backend
+sdk:
+  - nuxt
+languages:
+  - javascript
+  - jsx
+  - typescript
+audience:
+  - developers
+complexity: intermediate
+keywords:
+  - nuxt module
+  - authentication
+  - route protection
+  - permissions
+  - feature flags
+  - middleware
+updated: 2024-01-15
+featured: false
+deprecated: false
+ai_summary: Complete guide for Nuxt module including authentication setup, route protection, permissions management, and feature flags for Nuxt 3+ applications.
 ---
 
 The Nuxt Kinde module allows developers to integrate Kinde authentication into their existing Nuxt projects.
@@ -103,14 +129,43 @@ NUXT_KINDE_POST_LOGIN_REDIRECT_URL=<where_your_project_is_running>
 
 ## Protecting pages
 
-It’s likely that your project will have both pages that are publicly available and private ones which should only be available to logged in users. Add this code snippet to pages you would like to protect.
+It’s likely that your project will have both pages that are publicly available and private ones which should only be available to logged in users. 
+
+Route protection is set up in within the `routeRules` in `nuxt.config.ts`
+
+In the below example,
+
+- `/**` - This protected all routes redirecting the login route. 
+- `/dashboard` - route is protected for users with `admin` permissions.
+- `/public` - this is flagged as a public route and will be open to all visitors.
 
 ```jsx
-<script setup lang="ts">
-	definePageMeta({
-	  middleware: ['auth-logged-in'],
-	})
-</script>
+routeRules: {
+  '/**': {
+    appMiddleware: ['auth-logged-in'],
+    kinde: {
+      redirectUrl: '/api/login',
+      external: true,
+    },
+  },
+  '/dashboard': {
+    appMiddleware: ['auth-logged-in'],
+    kinde: {
+      // list of permissions that are required to access the route
+      permissions: {
+        admin: true,
+      },
+      redirectUrl: '/api/login',
+      external: true,
+    },
+  },
+  '/public': {
+    appMiddleware: ['auth-logged-in'],
+    kinde: {
+      public: true,
+    },
+  },
+},
 ```
 
 ## Getting all permissions for the current user
@@ -128,7 +183,7 @@ const permissions = [
   "create:tasks",
   "update:tasks",
   "read:tasks",
-  "delete:tasks"
+  "delete:tasks
 ];
 ```
 

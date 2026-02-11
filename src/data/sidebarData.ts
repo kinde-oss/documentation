@@ -9,11 +9,7 @@ const sidebarData = [
     collapsed: true,
     cardLink: "/get-started/guides/first-things-first/",
     items: [
-      {
-        label: "Guides",
-        autogenerate: {directory: "get-started/guides"},
-        collapsed: false
-      },
+      {label: "Guides", autogenerate: {directory: "get-started/guides"}, collapsed: false},
       {
         label: "Learn about Kinde",
         autogenerate: {directory: "get-started/learn-about-kinde"},
@@ -24,11 +20,7 @@ const sidebarData = [
         autogenerate: {directory: "get-started/switch-to-kinde"},
         collapsed: false
       },
-      {
-        label: "Connect",
-        autogenerate: {directory: "get-started/connect"},
-        collapsed: false
-      },
+      {label: "Connect", autogenerate: {directory: "get-started/connect"}, collapsed: false},
       {
         label: "APIs and SDKs",
         autogenerate: {directory: "get-started/apis-and-sdks"},
@@ -54,35 +46,16 @@ const sidebarData = [
         collapsed: false
       },
       {
-        label: "Environments",
-        autogenerate: {directory: "build/environments"},
+        label: "Self-service portal",
+        autogenerate: {directory: "build/self-service-portal"},
         collapsed: false
       },
-      {
-        label: "Applications",
-        autogenerate: {directory: "build/applications"},
-        collapsed: false
-      },
-      {
-        label: "Organizations",
-        autogenerate: {directory: "build/organizations"},
-        collapsed: false
-      },
-      {
-        label: "Tokens",
-        autogenerate: {directory: "build/tokens"},
-        collapsed: false
-      },
-      {
-        label: "Env variables",
-        autogenerate: {directory: "build/env-variables"},
-        collapsed: false
-      },
-      {
-        label: "Domain management",
-        autogenerate: {directory: "build/domains"},
-        collapsed: false
-      }
+      {label: "Environments", autogenerate: {directory: "build/environments"}, collapsed: false},
+      {label: "Applications", autogenerate: {directory: "build/applications"}, collapsed: false},
+      {label: "Organizations", autogenerate: {directory: "build/organizations"}, collapsed: false},
+      {label: "Tokens", autogenerate: {directory: "build/tokens"}, collapsed: false},
+      {label: "Env variables", autogenerate: {directory: "build/env-variables"}, collapsed: false},
+      {label: "Domain management", autogenerate: {directory: "build/domains"}, collapsed: false}
     ]
   },
   {
@@ -92,11 +65,7 @@ const sidebarData = [
     collapsed: true,
     cardLink: "/developer-tools/about/our-sdks/",
     items: [
-      {
-        label: "Overview",
-        autogenerate: {directory: "developer-tools/about"},
-        collapsed: false
-      },
+      {label: "Overview", autogenerate: {directory: "developer-tools/about"}, collapsed: false},
       {
         label: "Special guides",
         autogenerate: {directory: "developer-tools/guides"},
@@ -118,13 +87,61 @@ const sidebarData = [
         collapsed: false
       },
       {
-        label: "Kinde API",
+        label: "Kinde Management API",
         autogenerate: {directory: "developer-tools/kinde-api"},
         collapsed: false
       },
       {
-        label: "Your APIs",
+        label: "Account API",
+        autogenerate: {directory: "developer-tools/account-api"},
+        collapsed: false
+      }
+    ]
+  },
+  {
+    label: "Manage your APIs",
+    description: "Manage your API connections and API keys",
+    icon: "api",
+    collapsed: true,
+    cardLink: "/manage-your-apis/about-api-keys/",
+    items: [
+      {
+        label: "Register and manage your APIs",
         autogenerate: {directory: "developer-tools/your-apis"},
+        collapsed: false
+      },
+      {
+        label: "About API keys",
+        autogenerate: {directory: "manage-your-apis/about-api-keys/"},
+        collapsed: false
+      },
+      {
+        label: "Add and manage API keys",
+        autogenerate: {directory: "manage-your-apis/add-manage-api-keys/"},
+        collapsed: false
+      },
+      {
+        label: "Test and troubleshoot",
+        autogenerate: {directory: "manage-your-apis/troubleshoot-api-keys/"},
+        collapsed: false
+      }
+    ]
+  },
+  {
+    label: "MCP Server",
+    description: "Integrate Kinde with AI assistants using the Model Context Protocol",
+    icon: "dev-tools",
+    collapsed: true,
+    cardLink: "/mcp-server/about-mcp-server",
+    items: [
+      {
+        label: "About MCP Server",
+        autogenerate: {directory: "mcp-server/about-mcp-server"},
+        collapsed: false
+      },
+      {
+        label: "Get started",
+        autogenerate: {directory: "mcp-server/get-started"},
         collapsed: false
       }
     ]
@@ -167,6 +184,11 @@ const sidebarData = [
         collapsed: false
       },
       {
+        label: "Self-serve SSO",
+        autogenerate: {directory: "authenticate/self-serve-sso/"},
+        collapsed: false
+      },
+      {
         label: "Multi-factor auth",
         autogenerate: {directory: "authenticate/multi-factor-auth"},
         collapsed: false
@@ -175,48 +197,121 @@ const sidebarData = [
         label: "Social connections",
         autogenerate: {directory: "authenticate/social-sign-in"},
         collapsed: false
+      },
+      {
+        label: "Device authorization flow",
+        autogenerate: {directory: "authenticate/device-authorization-flow"},
+        collapsed: false
       }
     ]
   },
   {
-    label: "Plans and payments",
-    description: "Build plans and pricing so that your users can pay you",
+    label: "Billing",
+    description: "Monetize your product, build plans, and accept payments",
     icon: "billing",
     collapsed: true,
-    cardLink: "/billing/about-payments-and-plans/",
+    cardLink: "/billing/about-billing/about-billing/",
     items: [
       {
-        label: "About payments and plans",
-        autogenerate: {directory: "billing/about-payments-and-plans"},
+        label: "About billing",
+        autogenerate: {directory: "billing/about-billing"},
+        collapsed: false
+      },
+      {
+        label: "Get started",
+        autogenerate: {directory: "billing/get-started"},
+        collapsed: false
+      },
+      {
+        label: "Manage plans",
+        autogenerate: {directory: "billing/manage-plans"},
+        collapsed: false
+      },
+      {
+        label: "Payment management",
+        autogenerate: {directory: "billing/payment-management"},
+        collapsed: false
+      },
+      {
+        label: "Subscription management",
+        autogenerate: {directory: "billing/manage-subscribers"},
+        collapsed: false
+      },
+      {
+        label: "Pricing",
+        autogenerate: {directory: "billing/pricing"},
+        collapsed: false
+      },
+      {
+        label: "Billing user experience",
+        autogenerate: {directory: "billing/billing-user-experience"},
         collapsed: false
       }
     ]
   },
   {
     label: "Design",
-    description: "Integrate your own brand elements for pages and screens",
+    description: "Integrate your brand, and update content for pages and screens",
     icon: "brand",
     collapsed: true,
     cardLink: "/design/brand/apply-branding-for-an-organization/",
     items: [
+      {label: "Brand", autogenerate: {directory: "design/brand"}, collapsed: false},
+      {label: "Page layout", autogenerate: {directory: "design/pages"}, collapsed: false},
       {
-        label: "Your brand",
-        autogenerate: {directory: "design/brand"},
+        label: "Content",
+        autogenerate: {directory: "design/content-customization"},
         collapsed: false
       },
       {
-        label: "Pages",
-        autogenerate: {directory: "design/pages"},
+        label: "Customize with code",
+        autogenerate: {directory: "design/customize-with-code"},
+        collapsed: false
+      }
+    ]
+  },
+  {
+    label: "Workflows",
+    description: "Execute custom code in response to Kinde triggers",
+    collapsed: true,
+    icon: "workflow",
+    cardLink: "/workflows/about-workflows/",
+    items: [
+      {
+        label: "About workflows",
+        autogenerate: {directory: "workflows/about-workflows"},
         collapsed: false
       },
       {
-        label: "Forms",
-        autogenerate: {directory: "design/forms"},
+        label: "Getting started",
+        autogenerate: {directory: "workflows/getting-started"},
         collapsed: false
       },
       {
-        label: "Emails",
-        autogenerate: {directory: "design/emails"},
+        label: "Workflow tutorials",
+        autogenerate: {directory: "workflows/workflow-tutorials"},
+        collapsed: false
+      },
+      {
+        label: "Configuration",
+        autogenerate: {directory: "workflows/configuration"},
+        collapsed: false
+      },
+      {label: "Bindings", autogenerate: {directory: "workflows/bindings"}, collapsed: false},
+      {
+        label: "Triggers",
+        autogenerate: {directory: "workflows/example-workflows"},
+        collapsed: false
+      },
+      {
+        label: "Manage workflows",
+        autogenerate: {directory: "workflows/manage-workflows"},
+        collapsed: false
+      },
+      {label: "Testing", autogenerate: {directory: "workflows/testing"}, collapsed: false},
+      {
+        label: "Observability",
+        autogenerate: {directory: "workflows/observability"},
         collapsed: false
       }
     ]
@@ -241,17 +336,52 @@ const sidebarData = [
     ]
   },
   {
+    label: "Machine-to-Machine (M2M)",
+    description: "Build machine-to-machine applications",
+    collapsed: true,
+    icon: "workflow",
+    cardLink: "/machine-to-machine-applications/about-m2m/",
+    items: [
+      {
+        label: "Overview",
+        autogenerate: {directory: "machine-to-machine-applications/about-m2m"},
+        collapsed: false
+      },
+      {
+        label: "M2M application setup",
+        autogenerate: {directory: "machine-to-machine-applications/m2m-application-setup"},
+        collapsed: false
+      },
+      {
+        label: "Organization-scoped M2M apps",
+        autogenerate: {directory: "machine-to-machine-applications/organization-scoped-m2m-apps"},
+        collapsed: false
+      },
+      {
+        label: "M2M token customization",
+        autogenerate: {directory: "machine-to-machine-applications/m2m-token-customization"},
+        collapsed: false
+      },
+      {
+        label: "Automation",
+        autogenerate: {directory: "machine-to-machine-applications/m2m-workflow-automation"},
+        collapsed: false
+      },
+      {
+        label: "Troubleshooting",
+        autogenerate: {directory: "machine-to-machine-applications/troubleshooting-m2m"},
+        collapsed: false
+      }
+    ]
+  },
+  {
     label: "Manage users",
     description: "Manage user profiles, including roles and permissions",
     icon: "profile",
     collapsed: true,
     cardLink: "/manage-users/about/",
     items: [
-      {
-        label: "Overview",
-        autogenerate: {directory: "manage-users/about"},
-        collapsed: false
-      },
+      {label: "Overview", autogenerate: {directory: "manage-users/about"}, collapsed: false},
       {
         label: "Add and edit",
         autogenerate: {directory: "manage-users/add-and-edit"},
@@ -276,7 +406,7 @@ const sidebarData = [
   },
   {
     label: "Features and releases",
-    description: "Take control of feature development and releases  ",
+    description: "Take control of feature development and app releases",
     icon: "releases",
     collapsed: true,
     cardLink: "/releases/about/about-feature-flags/",
@@ -287,10 +417,16 @@ const sidebarData = [
         collapsed: false
       },
       {
+        label: "Guides",
+        autogenerate: {directory: "releases/guides"},
+        collapsed: false
+      },
+      {
         label: "Feature flags",
         autogenerate: {directory: "releases/feature-flags"},
         collapsed: false
       }
+
       // {
       //   label: "Plan and release",
       //   autogenerate: {directory: "releases/plan-and-release"},
@@ -310,11 +446,7 @@ const sidebarData = [
         autogenerate: {directory: "integrate/connected-apps"},
         collapsed: false
       },
-      {
-        label: "Webhooks",
-        autogenerate: {directory: "integrate/webhooks"},
-        collapsed: false
-      },
+      {label: "Webhooks", autogenerate: {directory: "integrate/webhooks"}, collapsed: false},
       {
         label: "Third-party tools",
         autogenerate: {directory: "integrate/third-party-tools"},
@@ -363,16 +495,8 @@ const sidebarData = [
         autogenerate: {directory: "trust-center/privacy-and-compliance"},
         collapsed: false
       },
-      {
-        label: "Agreements",
-        autogenerate: {directory: "trust-center/agreements"},
-        collapsed: false
-      },
-      {
-        label: "Security",
-        autogenerate: {directory: "trust-center/security"},
-        collapsed: false
-      },
+      {label: "Agreements", autogenerate: {directory: "trust-center/agreements"}, collapsed: false},
+      {label: "Security", autogenerate: {directory: "trust-center/security"}, collapsed: false},
       {
         label: "Kinde performance",
         autogenerate: {directory: "trust-center/kinde-performance"},

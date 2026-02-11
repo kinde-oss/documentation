@@ -1,0 +1,1123 @@
+---
+page_id: f4810865-8db1-4478-975f-26138d68c5d9
+title: Use Kinde auth in an Electron app
+description: "Comprehensive step-by-step guide for integrating Kinde authentication with an Electron desktop application, including Express.js backend setup, OAuth flow implementation, token management, user profile access, login/logout functionality, and secure route protection for admin areas."
+sidebar:
+  order: 11
+relatedArticles:
+  - a07f8f6b-5d6a-4096-be52-7b13b4a3b0a5
+  - 1023d9f8-ae2d-4167-98e0-a4aa7b31e80c
+topics:
+  - developer-tools
+  - guides
+  - electron
+  - desktop-app
+  - oauth
+  - authentication
+sdk:
+  - Node.js
+  - express.js
+languages:
+  - javascript
+  - bash
+  - jsx
+  - json
+audience: developers
+complexity: intermediate
+keywords:
+  - electron
+  - OAuth
+  - express
+  - desktop app
+  - authentication
+  - authorization
+  - callback URLs
+  - client ID
+  - client secret
+  - token management
+  - access token
+  - refresh token
+  - user profile
+  - login
+  - logout
+  - admin area
+  - secure routes
+  - full-stack
+  - Node.js
+  - keytar
+  - PKCE
+updated: 2025-12-09
+featured: false
+deprecated: false
+ai_summary: "Comprehensive guide for building a full-stack Electron desktop application with Kinde authentication. Covers Electron project initialization, Express.js backend setup, OAuth 2.0 flow implementation with PKCE, token storage using keytar, user authentication, profile management, login/logout functionality, and secure route protection for admin areas. Includes complete code examples for main process, renderer process, backend server, and frontend UI components."
+---
+
+This guide shows you how to integrate Kinde authentication into a desktop app built with Electron. You’ll set up a basic Electron project, configure Kinde’s SDK, and implement login, logout, and user profile access.
+
+
+### What you need
+
+- Latest version of Node.js installed on your computer
+- A [Kinde](https://kinde.com/) account (Sign up for free)
+
+## Step 1: Create a Kinde application
+
+1. On the Kinde home page, select **Add application.**
+    1. Enter a name for your application.
+    2. Select **Front-end and mobile** as the type.
+    3. Select **Save**, the Quickstart page opens.
+2. In the **Quick Start** section, select **Other native**, and then select **Save** to continue.
+3. Go to **Details** and make a copy of the **Domain** and **Client ID**.
+4. Scroll down, enter the following in the **Allowed callback URLs,** and select **Save**
+    
+    ```
+    http://127.0.0.1:53180/callback
+    ```
+    
+
+## Step 2: Initialize an Electron app
+
+1. Open a terminal and run the following commands to create a new folder for your Electron app, and then navigate into it.
+    
+    ```bash
+    mkdir electron-kinde-auth
+    cd electron-kinde-auth
+    ```
+    
+2. Create a new `package.json` file:
+    
+    ```bash
+    touch package.json
+    ```
+    
+3. Open the newly created `package.json` file with your code editor and add the following:
+    
+    ```json
+    {
+      "name": "electron-kinde-auth",
+      "description": "A simple Electron app to authenticate with Kinde using OAuth",
+      "productName": "Electron Kinde Auth",
+      "version": "1.0.0",
+      "main": "main.js",
+      "scripts": {
+        "start": "electron .",
+        "dev": "electron ."
+      },
+      "dependencies": {
+        "dotenv": "^17.2.2",
+        "express": "^4.19.2",
+        "keytar": "^7.9.0",
+        "node-fetch": "^3.3.2"
+      },
+      "devDependencies": {
+        "electron": "^31.3.0"
+      }
+    }
+    ```
+    
+4. Run the following command to install the required packages:
+    
+    ```bash
+    npm install
+    ```
+    
+5. Create a `.env` file for environment variables:
+    
+    ```bash
+    touch .env
+    ```
+    
+6. Open it in your editor and paste the Kinde credentials copied from the **Details** page.
+    
+    ```bash
+    KINDE_ISSUER_URL=https://<KINDE_DOMAIN>.kinde.com
+    KINDE_CLIENT_ID=<CLIENT_ID>
+    KINDE_SCOPES=openid profile email offline
+    ```
+    
+7. Create a new `helpers.js` file:
+    
+    ```bash
+    touch helpers.js
+    ```
+    
+8. Add the following code to the `helpers.js` file:
+    
+    ```jsx
+    const crypto = require("crypto")
+    
+    function base64urlencode(buf) {
+      return buf
+        .toString("base64")
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "")
+    }
+    
+    function generateVerifier() {
+      return base64urlencode(crypto.randomBytes(32))
+    }
+    function challengeFromVerifier(v) {
+      return base64urlencode(crypto.createHash("sha256").update(v).digest())
+    }
+    
+    function randomState(len = 12) {
+      return crypto
+        .randomBytes(Math.ceil((len * 3) / 4))
+        .toString("base64url")
+        .slice(0, len)
+    }
+    
+    // Minimal JWT decode (no signature verification)
+    function decodeIdToken(idToken) {
+      try {
+        const [, payload] = idToken.split(".")
+        const pad = (s) => s + "=".repeat((4 - (s.length % 4)) % 4)
+        const json = Buffer.from(
+          pad(payload).replace(/-/g, "+").replace(/_/g, "/"),
+          "base64"
+        ).toString("utf8")
+        return JSON.parse(json)
+      } catch {
+        return null
+      }
+    }
+    
+    function createTokenStore(storage, { serviceName, accountName, logger }) {
+      const safeParse = (s) => {
+        try {
+          return JSON.parse(s)
+        } catch {
+          return null
+        }
+      }
+    
+      return {
+        async load() {
+          const s = await storage.getPassword(serviceName, accountName)
+          const t = s ? safeParse(s) : null
+          if (!t || typeof t.access_token !== "string") return null
+          return t
+        },
+        async save(tokens) {
+          await storage.setPassword(
+            serviceName,
+            accountName,
+            JSON.stringify({ ...tokens })
+          )
+        },
+        async clear() {
+          try {
+            await storage.deletePassword(serviceName, accountName)
+          } catch (e) {
+            logger?.warn?.(e)
+          }
+        },
+        async exists() {
+          return (await this.load()) !== null
+        },
+      }
+    }
+    
+    module.exports = {
+      generateVerifier,
+      challengeFromVerifier,
+      randomState,
+      decodeIdToken,
+      createTokenStore,
+    }
+    
+    ```
+    
+    ### Code explanation for `helpers.js`
+    
+    **PKCE helpers**
+    
+    - `base64urlencode(buf)` converts raw bytes to URL-safe Base64 (no `+`, `/`, or `=`), which OAuth endpoints expect.
+    - `generateVerifier()` returns a high-entropy, URL-safe PKCE **code_verifier** (32 random bytes → Base64URL).
+    - `challengeFromVerifier(v)` derives the **code_challenge** by SHA-256 hashing the verifier and Base64URL-encoding the digest (`S256` method).
+        
+        Together these implement the PKCE half of the authorization flow.
+        
+    
+    **Random state**
+    
+    - `randomState(len = 12)` generates a short, URL-safe random string for the OAuth `state` parameter (CSRF protection). It uses cryptographic randomness and trims the Base64URL output to your requested length.
+    
+    **ID token decoding**
+    
+    - `decodeIdToken(idToken)` decodes the JWT payload so you can read claims (e.g., `name`, `picture`) without verifying the signature.
+        
+        *Note:* This is for **display/convenience only**—don’t make trust decisions on the decoded payload without verifying the signature remotely (which you typically don’t do in a desktop main process).
+        
+    
+    **Token storage (factory + DI)**
+    
+    - `createTokenStore(storage, { serviceName, accountName, logger })` returns a tiny persistence API:
+        - `load()` → parses the secret and ensures there’s an `access_token`, else `null`.
+        - `save(tokens)` → stores the token blob as JSON.
+        - `clear()` → deletes the secret (logs a warning on failure if a `logger` is provided).
+        - `exists()` → convenience check built on `load()`.
+    - It’s dependency-injected: pass a `storage` that looks like **keytar** (`getPassword`, `setPassword`, `deletePassword`). This makes it trivial to test by swapping in an in-memory mock.
+    
+    **Error handling & resilience**
+    
+    - Safe JSON parsing prevents crashes on corrupt secrets and simply returns `null`.
+    - The store doesn’t encrypt itself; it relies on the OS credential vault (e.g., Keychain, Credential Manager) provided by your `storage` implementation.
+    
+9. Create a new `main.js` file:
+    
+    ```bash
+    touch main.js
+    ```
+    
+10. Add the following code to the `main.js` file:
+    
+    ```jsx
+    require("dotenv").config()
+    
+    const { app, BrowserWindow, ipcMain, shell } = require("electron")
+    const path = require("path")
+    const os = require("os")
+    const express = require("express")
+    const keytar = require("keytar")
+    
+    const {
+      generateVerifier,
+      challengeFromVerifier,
+      randomState,
+      decodeIdToken,
+      createTokenStore,
+    } = require("./helpers")
+    
+    // ---------- Config ----------
+    const CALLBACK_HOST = "127.0.0.1"
+    const CALLBACK_PORT = 53180
+    const REDIRECT_URI = `http://${CALLBACK_HOST}:${CALLBACK_PORT}/callback`
+    
+    const ISSUER = process.env.KINDE_ISSUER_URL
+    const CLIENT_ID = process.env.KINDE_CLIENT_ID
+    const AUDIENCE = process.env.KINDE_AUDIENCE || ""
+    const SCOPES = (
+      process.env.KINDE_SCOPES || "openid profile email offline"
+    ).trim()
+    
+    if (!ISSUER || !CLIENT_ID) {
+      console.error("Please configure KINDE_ISSUER_URL and KINDE_CLIENT_ID in .env")
+    }
+    
+    const tokenStore = createTokenStore(keytar, {
+      serviceName: "electron-kinde-pkce-sample",
+      accountName: os.userInfo().username, // or 'default'
+    })
+    
+    // Ensure we have a fetch impl (Electron/Node 18+ has global fetch)
+    const fetchFn =
+      global.fetch ||
+      ((...args) => import("node-fetch").then(({ default: f }) => f(...args)))
+    
+    // ---------- Small helpers ----------
+    function stampIssued(tokens) {
+      const t = { ...tokens }
+      t.issued_at = Date.now()
+      if (typeof t.expires_in === "number")
+        t.expires_at = t.issued_at + t.expires_in * 1000
+      return t
+    }
+    
+    async function postForm(url, data) {
+      const body = new URLSearchParams(data)
+      const res = await fetchFn(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+      })
+      const text = await res.text()
+      if (!res.ok) throw new Error(`${res.status} ${text}`)
+      return JSON.parse(text)
+    }
+    
+    // ---------- OAuth helpers ----------
+    async function exchangeCodeForTokens({ code, codeVerifier, redirectUri }) {
+      const tokenUrl = new URL("/oauth2/token", ISSUER).toString()
+      const json = await postForm(tokenUrl, {
+        grant_type: "authorization_code",
+        code,
+        client_id: CLIENT_ID,
+        redirect_uri: redirectUri,
+        code_verifier: codeVerifier,
+      })
+      return stampIssued(json)
+    }
+    
+    async function refreshTokens(refreshToken) {
+      const tokenUrl = new URL("/oauth2/token", ISSUER).toString()
+      const json = await postForm(tokenUrl, {
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+        client_id: CLIENT_ID,
+      })
+      // Some providers omit refresh_token on refresh → keep the old one
+      if (!json.refresh_token) json.refresh_token = refreshToken
+      return stampIssued(json)
+    }
+    
+    async function getValidAccessToken() {
+      const tokens = await tokenStore.load()
+      if (!tokens) return null
+    
+      const expiresAt =
+        tokens.expires_at ??
+        (tokens.issued_at || 0) + (tokens.expires_in || 0) * 1000
+    
+      const aboutToExpire = !expiresAt || Date.now() + 60_000 >= expiresAt // refresh when <60s left
+      if (!aboutToExpire) return tokens.access_token
+    
+      if (!tokens.refresh_token) return null
+      const refreshed = await refreshTokens(tokens.refresh_token)
+      await tokenStore.save(refreshed)
+      return refreshed.access_token
+    }
+    
+    // ---------- Callback server (single fixed port) ----------
+    function listenForCallback(expectedState) {
+      const appx = express()
+      let server
+    
+      // Promise we resolve/reject from inside the route
+      let resolveLogin, rejectLogin
+      const waitForCode = new Promise((resolve, reject) => {
+        resolveLogin = resolve
+        rejectLogin = reject
+      })
+    
+      appx.get("/callback", (req, res) => {
+        const { code, state, error, error_description } = req.query
+    
+        // Validate state
+        if (state !== expectedState) {
+          res
+            .status(400)
+            .send("<h1>Invalid state</h1><p>Please try signing in again.</p>")
+          try {
+            server?.close()
+          } catch {}
+          return rejectLogin(new Error("Invalid OAuth state"))
+        }
+    
+        if (error) {
+          res
+            .status(400)
+            .send(`<h1>Login error</h1><p>${error}: ${error_description || ""}</p>`)
+          try {
+            server?.close()
+          } catch {}
+          return rejectLogin(new Error(`${error}: ${error_description || ""}`))
+        }
+    
+        res.send(
+          "<h1>Login successful</h1><p>You can close this window and return to the app.</p>"
+        )
+        try {
+          server?.close()
+        } catch {}
+        return resolveLogin({ code: String(code), redirectUri: REDIRECT_URI })
+      })
+    
+      server = appx.listen(CALLBACK_PORT, CALLBACK_HOST)
+      server.on("error", (err) => {
+        const msg =
+          err && err.code === "EADDRINUSE"
+            ? `Callback port ${CALLBACK_PORT} is already in use. Close the other process or change the port.`
+            : String(err)
+        try {
+          server?.close()
+        } catch {}
+        rejectLogin(new Error(msg))
+      })
+    
+      return { waitForCode }
+    }
+    
+    // ---------- Login flow ----------
+    async function startLogin() {
+      const codeVerifier = generateVerifier()
+      const codeChallenge = challengeFromVerifier(codeVerifier)
+      const state = randomState()
+    
+      // Start fixed-port server (closes itself on success/error)
+      const { waitForCode } = listenForCallback(state)
+    
+      const auth = new URL("/oauth2/auth", ISSUER)
+      auth.searchParams.set("client_id", CLIENT_ID)
+      auth.searchParams.set("response_type", "code")
+      auth.searchParams.set("redirect_uri", REDIRECT_URI)
+      auth.searchParams.set("scope", SCOPES)
+      auth.searchParams.set("code_challenge_method", "S256")
+      auth.searchParams.set("code_challenge", codeChallenge)
+      auth.searchParams.set("state", state)
+      if (AUDIENCE) auth.searchParams.set("audience", AUDIENCE)
+    
+      await shell.openExternal(auth.toString())
+    
+      // Exchange the code for tokens
+      const { code } = await waitForCode
+      const tokens = await exchangeCodeForTokens({
+        code,
+        codeVerifier,
+        redirectUri: REDIRECT_URI,
+      })
+    
+      await tokenStore.save(tokens)
+      const claims = decodeIdToken(tokens.id_token)
+      return { tokens, claims }
+    }
+    
+    async function doLogout() {
+      await tokenStore.clear()
+      try {
+        const url = new URL("/logout", ISSUER)
+        url.searchParams.set("client_id", CLIENT_ID)
+        await shell.openExternal(url.toString())
+      } catch {}
+    }
+    
+    // ---------- Electron window ----------
+    let win
+    function createWindow() {
+      win = new BrowserWindow({
+        width: 1000,
+        height: 700,
+        webPreferences: {
+          preload: path.join(__dirname, "preload.js"), // CommonJS preload
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: true,
+        },
+      })
+      win.loadFile(path.join(__dirname, "renderer", "index.html"))
+    }
+    
+    app.whenReady().then(() => {
+      createWindow()
+      app.on("activate", () => {
+        if (BrowserWindow.getAllWindows().length === 0) createWindow()
+      })
+    })
+    
+    app.on("window-all-closed", () => {
+      if (process.platform !== "darwin") app.quit()
+    })
+    
+    // ---------- IPC ----------
+    ipcMain.handle("auth:login", async () => {
+      try {
+        const { claims } = await startLogin()
+        return { ok: true, claims }
+      } catch (e) {
+        return { ok: false, error: String(e) }
+      }
+    })
+    
+    ipcMain.handle("auth:getAccessToken", async () => {
+      try {
+        const token = await getValidAccessToken()
+        return { ok: true, access_token: token }
+      } catch (e) {
+        return { ok: false, error: String(e) }
+      }
+    })
+    
+    ipcMain.handle("auth:logout", async () => {
+      try {
+        await doLogout()
+        return { ok: true }
+      } catch (e) {
+        return { ok: false, error: String(e) }
+      }
+    })
+    
+    ipcMain.handle("auth:getSession", async () => {
+      try {
+        const tokens = await tokenStore.load()
+        if (!tokens) return { ok: true, signedIn: false }
+        // Optional: ensures token freshness (ignore failure for UI)
+        try {
+          await getValidAccessToken()
+        } catch {}
+        const claims = decodeIdToken(tokens.id_token)
+        return { ok: true, signedIn: true, claims }
+      } catch (e) {
+        return { ok: false, error: String(e) }
+      }
+    })
+    
+    ```
+    
+    ### Code explanation for `main.js`
+    
+    **Bootstrapping & configuration**
+    
+    - Loads env vars with `dotenv` and pulls Kinde settings (`ISSUER`, `CLIENT_ID`, optional `AUDIENCE`, `SCOPES`).
+    - Defines a **fixed loopback redirect** (`http://127.0.0.1:53180/callback`) so you can whitelist a single URL in Kinde.
+    - Sets up a secure token store backed by **keytar** (`createTokenStore`), namespaced per OS user.
+    
+    Safe networking & utilities
+    
+    - Ensures a `fetch` implementation: uses Node/Electron’s global `fetch` when available, otherwise lazy-loads `node-fetch`.
+    - Provides two tiny helpers:
+        - `postForm(url, data)`: POSTs `application/x-www-form-urlencoded`, throws on non-2xx, returns JSON.
+        - `stampIssued(tokens)`: annotates tokens with `issued_at` and `expires_at` for easier expiry checks.
+    
+    **OAuth (Authorization Code + PKCE)**
+    
+    - **PKCE bits** come from `helpers`: generates a `code_verifier`, derives `code_challenge`, and creates a random `state`.
+    - **Exchange/refresh**:
+        - `exchangeCodeForTokens(...)` hits `/oauth2/token` with `authorization_code` grant and returns stamped tokens.
+        - `refreshTokens(refreshToken)` refreshes access tokens; if the server omits a new `refresh_token`, it keeps the old one.
+        - `getValidAccessToken()` loads tokens, checks expiry with a 60s buffer, and refreshes if needed; returns a valid access token or `null`.
+    
+    **Local callback server (loopback)**
+    
+    - `listenForCallback(expectedState)` spins up a one-route **Express** server on `127.0.0.1:53180`.
+    - When `/callback` is hit:
+        - Validates the `state` to prevent CSRF.
+        - On error: returns a friendly HTML message and rejects.
+        - On success: replies “Login successful” and resolves with the `code`.
+    - The server is **closed** on success or error; startup errors (e.g., `EADDRINUSE`) are handled gracefully.
+    
+    **Login & logout flows**
+    
+    - `startLogin()`:
+        - Builds the Kinde `/oauth2/auth` URL with PKCE and `state`.
+        - Opens the system browser (`shell.openExternal`) to authenticate (more secure than embedding).
+        - Waits for the loopback callback, exchanges the code for tokens, **persists** them via `tokenStore`, decodes the ID token for UI claims, and returns `{ tokens, claims }`.
+    - `doLogout()`:
+        - Clears local credentials and opens Kinde’s `/logout` URL (best-effort).
+    
+    **Electron window & security**
+    
+    - Creates the main `BrowserWindow` and loads `renderer/index.html`.
+    - Uses a **preload** script with:
+        - `contextIsolation: true`
+        - `nodeIntegration: false`
+        - `sandbox: true`
+        
+        (These keep the renderer locked down and expose only the APIs you allow via preload.)
+        
+    
+    **IPC surface (renderer ↔ main)**
+    
+    Exposes four IPC handlers the renderer can call:
+    
+    - `auth:login` → runs the full PKCE flow and returns ID token **claims**.
+    - `auth:getAccessToken` → returns a fresh access token (refreshing if needed).
+    - `auth:logout` → clears local tokens and calls the provider’s logout.
+    - `auth:getSession` → checks keytar for existing tokens, tries to freshen silently, and returns `{ signedIn, claims }`.
+    
+11. Create a new `preload.js` file:
+    
+    ```bash
+    touch preload.js
+    ```
+    
+12. Add the following code to the file and save changes:
+    
+    ```jsx
+    const { contextBridge, ipcRenderer } = require("electron")
+    
+    contextBridge.exposeInMainWorld("kindeAuth", {
+      login: () => ipcRenderer.invoke("auth:login"),
+      getAccessToken: () => ipcRenderer.invoke("auth:getAccessToken"),
+      logout: () => ipcRenderer.invoke("auth:logout"),
+      getSession: () => ipcRenderer.invoke("auth:getSession"),
+    })
+    ```
+    
+13. Run the following to set up your project structure:
+    
+    ```bash
+    mkdir renderer
+    touch renderer/index.html renderer/style.css renderer/renderer.js
+    ```
+    
+14. Add the following code to `index.html` file to create the UI:
+    
+    ```html
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <title>Kinde Auth App</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <!-- CSP allows local file + external HTTPS connects for token/API calls -->
+        <meta
+          http-equiv="Content-Security-Policy"
+          content="default-src 'self';
+                       script-src 'self';
+                       style-src 'self' 'unsafe-inline';
+                       img-src 'self' https: data:;
+                       connect-src 'self' https: http:;"
+        />
+        <link rel="stylesheet" href="./style.css" />
+        <style>
+          .hidden {
+            display: none !important;
+          }
+        </style>
+      </head>
+    
+      <body>
+        <!-- Header / Nav -->
+        <header>
+          <nav class="nav container">
+            <h1 class="text-display-3">KindeAuth</h1>
+    
+            <!-- Signed-out nav -->
+            <div id="nav-guest">
+              <button class="btn btn-ghost sign-in-btn" id="signInBtn">
+                Sign in
+              </button>
+              <button class="btn btn-dark" id="signUpBtn">Sign up</button>
+            </div>
+    
+            <!-- Signed-in nav -->
+            <div id="nav-authed" class="profile-blob hidden">
+              <img id="avatar" class="avatar" src="" alt="User avatar" />
+              <div>
+                <p class="text-heading-2" id="fullName">—</p>
+                <a class="text-subtle" href="#" id="signOutLink">Sign out</a>
+              </div>
+            </div>
+          </nav>
+        </header>
+    
+        <!-- Main -->
+        <main>
+          <div class="container">
+            <!-- Guest hero -->
+            <section id="guest-hero" class="card hero">
+              <p class="text-display-2 hero-title">
+                Let&rsquo;s start authenticating
+              </p>
+              <p class="text-display-2 hero-title">with KindeAuth</p>
+              <p class="text-body-1 hero-tagline">Configure your app</p>
+              <a
+                class="btn btn-light btn-big"
+                href="https://docs.kinde.com"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Go to docs
+              </a>
+            </section>
+    
+            <!-- Authed hero -->
+            <section id="authed-hero" class="card start-hero hidden">
+              <p class="text-body-2 start-hero-intro">Woohoo!</p>
+              <p class="text-display-2">Your authentication is all sorted.</p>
+              <p class="text-display-2">Build the important stuff.</p>
+            </section>
+    
+            <!-- Next steps -->
+            <section id="next-steps" class="next-steps-section hidden">
+              <h2 class="text-heading-1">Next steps for you</h2>
+              <ul class="next-steps-list">
+                <li class="text-body-3">
+                  Call your API using a fresh access token
+                </li>
+                <li class="text-body-3">
+                  Use ID token claims to personalize the UI
+                </li>
+                <li class="text-body-3">Wire billing/entitlements as needed</li>
+              </ul>
+            </section>
+          </div>
+        </main>
+    
+        <!-- Footer -->
+        <footer class="footer">
+          <div class="container">
+            <strong class="text-heading-2">KindeAuth</strong>
+            <p class="footer-tagline text-body-3">
+              Visit our
+              <a class="link" href="https://kinde.com/docs">help center</a>
+            </p>
+            <small class="text-subtle"
+              >&copy; 2025 KindeAuth, Inc. All rights reserved</small
+            >
+          </div>
+        </footer>
+    
+        <script src="./renderer.js"></script>
+      </body>
+    </html>
+    ```
+    
+15. Add the following code to `style.css` file to style the UI.
+    
+    ```css
+    :root {
+      --g-color-black: #000;
+      --g-color-white: #fff;
+    
+      --g-color-grey-50: #f6f6f6;
+      --g-color-grey-600: #636363;
+      --g-color-grey-700: #4d4d4d;
+      --g-color-grey-900: #0f0f0f;
+    
+      --g-box-shadow: 0px 6px 12px rgba(18, 20, 23, 0.06),
+        0px 15px 24px rgba(18, 20, 23, 0.07), 0px -4px 12px rgba(18, 20, 23, 0.05);
+    
+      --g-font-family: Helvetica, sans-serif;
+    
+      --g-font-size-x-small: 0.75rem; /* 12px */
+      --g-font-size-small: 0.875rem; /* 14px */
+      --g-font-size-base: 1rem; /* 16px */
+      --g-font-size-large: 1.25rem; /* 20x */
+      --g-font-size-x-large: 1.5rem; /* 24px */
+      --g-font-size-2x-large: 2rem; /* 32px */
+      --g-font-size-3x-large: 2.5rem; /* 40px */
+      --g-font-size-4x-large: 4rem; /* 64px */
+    
+      --g-font-weight-base: 400;
+      --g-font-weight-semi-bold: 500;
+      --g-font-weight-bold: 600;
+      --g-font-weight-black: 700;
+    
+      --g-border-radius-small: 0.5rem;
+      --g-border-radius-base: 1rem;
+      --g-border-radius-large: 1.5rem;
+    
+      --g-spacing-small: 0.5rem; /* 8px */
+      --g-spacing-base: 1rem; /* 16px */
+      --g-spacing-large: 1.5rem; /* 24px */
+      --g-spacing-x-large: 2rem; /* 32px */
+      --g-spacing-2x-large: 2.5rem; /* 40px */
+      --g-spacing-3x-large: 3rem; /* 48px */
+      --g-spacing-6x-large: 6rem; /* 96px */
+    }
+    
+    * {
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+    }
+    
+    html,
+    body {
+      font-family: var(--g-font-family);
+    }
+    
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+    
+    .text-subtle {
+      color: var(--g-color-grey-600);
+      font-size: var(--g-font-size-x-small);
+      font-weight: var(--g-font-weight-base);
+    }
+    
+    .text-body-1 {
+      font-size: var(--g-font-size-2x-large);
+      font-weight: var(--g-font-weight-base);
+    }
+    
+    .text-body-2 {
+      font-size: var(--g-font-size-x-large);
+      font-weight: var(--g-font-weight-base);
+    }
+    
+    .text-body-3 {
+      color: var(--g-color-grey-900);
+      font-size: var(--g-font-size-small);
+      font-weight: var(--g-font-weight-base);
+    }
+    
+    .text-display-1 {
+      font-size: var(--g-font-size-4x-large);
+      font-weight: var(--g-font-weight-black);
+      line-height: 1.2;
+    }
+    
+    .text-display-2 {
+      font-size: var(--g-font-size-3x-large);
+      font-weight: var(--g-font-weight-black);
+      line-height: 1.4;
+    }
+    
+    .text-display-3 {
+      font-size: var(--g-font-size-x-large);
+      font-weight: var(--g-font-weight-black);
+    }
+    
+    .text-heading-1 {
+      font-size: var(--g-font-size-large);
+      font-weight: var(--g-font-weight-semi-bold);
+    }
+    
+    .text-heading-2 {
+      font-size: var(--g-font-size-base);
+      font-weight: var(--g-font-weight-semi-bold);
+    }
+    
+    .container {
+      padding: 0 var(--g-spacing-6x-large);
+      margin: auto;
+    }
+    
+    .nav {
+      align-items: center;
+      display: flex;
+      justify-content: space-between;
+      padding-bottom: var(--g-spacing-x-large);
+      padding-top: var(--g-spacing-x-large);
+      width: 100%;
+    }
+    
+    .sign-in-btn {
+      margin-right: var(--g-spacing-small);
+    }
+    
+    .btn {
+      border-radius: var(--g-border-radius-small);
+      display: inline-block;
+      font-weight: var(--g-font-weight-bold);
+      padding: var(--g-spacing-base);
+      cursor: pointer;
+      border: none;
+    }
+    
+    .btn-ghost {
+      color: var(--g-color-grey-700);
+    }
+    
+    .btn-dark {
+      background-color: var(--g-color-black);
+      color: var(--g-color-white);
+    }
+    
+    .btn-light {
+      background: var(--g-color-white);
+      color: var(--g-color-black);
+      font-weight: 600;
+    }
+    
+    .btn-big {
+      font-size: var(--g-font-size-large);
+      padding: var(--g-font-size-large) var(--g-font-size-x-large);
+    }
+    
+    .hero {
+      align-items: center;
+      display: flex;
+      flex-direction: column;
+      height: 30rem;
+      justify-content: center;
+      text-align: center;
+    }
+    
+    .hero-title {
+      margin-bottom: var(--g-spacing-x-large);
+    }
+    
+    .hero-tagline {
+      margin-bottom: var(--g-spacing-x-large);
+    }
+    
+    .card {
+      background: var(--g-color-black);
+      border-radius: var(--g-border-radius-large);
+      box-shadow: var(--g-box-shadow);
+      color: var(--g-color-white);
+    }
+    
+    .link {
+      text-decoration: underline;
+      text-underline-offset: 0.2rem;
+    }
+    
+    .link:hover,
+    .link:focus {
+      background: #f1f2f4;
+    }
+    
+    .footer {
+      padding-bottom: var(--g-spacing-x-large);
+      padding-top: var(--g-spacing-x-large);
+    }
+    
+    .footer-tagline {
+      margin-bottom: var(--g-font-size-x-small);
+      margin-top: var(--g-font-size-x-small);
+    }
+    
+    .start-hero {
+      padding: var(--g-spacing-2x-large);
+      text-align: center;
+    }
+    
+    .start-hero-intro {
+      margin-bottom: var(--g-spacing-base);
+    }
+    
+    .avatar {
+      align-items: center;
+      background-color: var(--g-color-grey-50);
+      border-radius: var(--g-border-radius-large);
+      display: flex;
+      height: var(--g-spacing-3x-large);
+      justify-content: center;
+      text-align: center;
+      width: var(--g-spacing-3x-large);
+    }
+    
+    .profile-blob {
+      align-items: center;
+      display: grid;
+      gap: var(--g-spacing-base);
+      grid-template-columns: auto 1fr;
+    }
+    
+    .next-steps-section {
+      margin-top: var(--g-spacing-2x-large);
+    }
+    ```
+    
+16. Add the following code to `renderer.js` file to make everything work.
+    
+    ```jsx
+    const els = {
+      navGuest: document.getElementById("nav-guest"),
+      navAuthed: document.getElementById("nav-authed"),
+      guestHero: document.getElementById("guest-hero"),
+      authedHero: document.getElementById("authed-hero"),
+      nextSteps: document.getElementById("next-steps"),
+      claimsPre: document.getElementById("claims"),
+      tokenPre: document.getElementById("token"),
+      signInBtn: document.getElementById("signInBtn"),
+      signUpBtn: document.getElementById("signUpBtn"),
+      signOutLink: document.getElementById("signOutLink"),
+      avatar: document.getElementById("avatar"),
+      fullName: document.getElementById("fullName"),
+      getTokenBtn: document.getElementById("getTokenBtn"),
+    }
+    
+    function safeSetText(el, text) {
+      if (el) el.textContent = text
+    }
+    function safeSetSrc(el, src, alt = "") {
+      if (!el) return
+      if (src) {
+        el.src = src
+        el.alt = alt || ""
+      } else {
+        el.removeAttribute("src")
+      }
+    }
+    
+    function setAuthedUI(on, claims) {
+      // guard everything with optional chaining to avoid null errors
+      if (on) {
+        els.navGuest?.classList.add("hidden")
+        els.navAuthed?.classList.remove("hidden")
+        els.guestHero?.classList.add("hidden")
+        els.authedHero?.classList.remove("hidden")
+        els.nextSteps?.classList.remove("hidden")
+    
+        const name =
+          [claims?.given_name, claims?.family_name].filter(Boolean).join(" ") ||
+          claims?.name ||
+          "Signed in"
+        safeSetText(els.fullName, name)
+        safeSetSrc(els.avatar, claims?.picture, name)
+      } else {
+        els.navGuest?.classList.remove("hidden")
+        els.navAuthed?.classList.add("hidden")
+        els.guestHero?.classList.remove("hidden")
+        els.authedHero?.classList.add("hidden")
+        els.nextSteps?.classList.add("hidden")
+        safeSetText(els.claimsPre, "{}")
+        safeSetText(els.tokenPre, '(click "Get access token")')
+      }
+    }
+    
+    // --- Startup: restore session if present ---
+    async function bootstrap() {
+      try {
+        const res = await window.kindeAuth.getSession()
+        if (res?.ok && res.signedIn) {
+          if (els.claimsPre)
+            els.claimsPre.textContent = JSON.stringify(res.claims || {}, null, 2)
+          setAuthedUI(true, res.claims)
+        } else {
+          setAuthedUI(false)
+        }
+      } catch {
+        setAuthedUI(false)
+      }
+    }
+    
+    // Wire buttons (unchanged, but safe to keep)
+    els.signInBtn?.addEventListener("click", async () => {
+      safeSetText(els.claimsPre, "...")
+      const res = await window.kindeAuth.login()
+      if (!res.ok) {
+        safeSetText(els.claimsPre, "Login failed: " + res.error)
+        setAuthedUI(false)
+      } else {
+        if (els.claimsPre)
+          els.claimsPre.textContent = JSON.stringify(res.claims, null, 2)
+        setAuthedUI(true, res.claims)
+      }
+    })
+    
+    els.signUpBtn?.addEventListener("click", async () => {
+      els.signInBtn?.click()
+    })
+    
+    els.getTokenBtn?.addEventListener("click", async () => {
+      safeSetText(els.tokenPre, "...")
+      const res = await window.kindeAuth.getAccessToken()
+      safeSetText(
+        els.tokenPre,
+        res.ok ? res.access_token || "(no token)" : "Error: " + res.error
+      )
+    })
+    
+    els.signOutLink?.addEventListener("click", async (e) => {
+      e.preventDefault()
+      await window.kindeAuth.logout()
+      setAuthedUI(false)
+    })
+    
+    // Ensure DOM is ready, then bootstrap
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", bootstrap)
+    } else {
+      bootstrap()
+    }
+    ```
+    
+## Step 3: Run and test the Electron app
+
+1. To start your Electron application and Express server, run the following command in your terminal:
+    
+    ```bash
+    npm start
+    ```
+    
+    The Kinde app sign up screen opens.
+    
+    ![Electron app with kinde auth](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ca9076c5-3193-48f9-78bb-80ca2bc43b00/public)
+    
+2. Sign in or sign up for a new account and test the auth flow. You should be able to see your admin area, for example:
+    
+    ![Signed in to electron app](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4da712af-5ac0-4798-7260-3f5d9deb5f00/public)
+    
+
+### Finished!
+
+You’ve successfully built a full-stack Electron app with an Express.js backend, including user authentication and an admin area. This setup serves as a solid foundation for further development, allowing you to expand features, improve the user interface, or enhance security. You can now continue adding functionality or explore packaging the app for distribution.

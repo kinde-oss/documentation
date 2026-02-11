@@ -4,17 +4,41 @@ title: Set up phone or SMS authentication
 sidebar:
   order: 5
 relatedArticles:
+  - f18a5a74-23b3-43d8-8db9-440ee485e4d4
   - 26e55a64-13dd-4c7b-b9ad-e7595903ddc8
   - 90f45d2e-cf59-4b5e-a26b-6dafd772e893
+description: Complete setup guide for phone/SMS authentication using Twilio, including configuration, MFA integration, and message formatting.
+metadata:
+  topics: [authenticate]
+  sdk: []
+  languages: []
+  audience: [developer, product-manager]
+  complexity: intermediate
+  keywords: [phone authentication, SMS, Twilio, MFA, A2P messaging, 10DLC, verification code]
+  updated: 2025-01-16
+featured: false
+deprecated: false
 ---
 
-You can allow users to use their phone number as their primary identity for authentication. This is a passwordless method, where the user is sent a code via an SMS to verify them on sign in.
+You can allow users to use their phone as a primary method for authentication. This is a passwordless method, where the user is sent a verification code via SMS. SMS can also be included as a secondary factor if you have [multi-factor authentication](/authenticate/multi-factor-auth/about-multi-factor-authentication/) set up. 
 
 <Aside>
 
 This feature requires paid third-party services to use. Rates and limitations apply.
 
 </Aside>
+
+## (Existing phone auth Twilio users only) Switch on SMS for MFA
+
+1. In Kinde, go to **Settings > Environment > SMS**.
+2. Scroll to the bottom and switch on the **Use this service for SMS MFA** option.
+3. Select **Save**.
+
+## Benefits of using a third-party SMS service instead of Kinde
+
+- Gives you full control over the SMS delivery nuances, such as SenderID, country registrations, and detailed delivery metrics. 
+- You can register dedicated short codes or sender IDs in countries that have strict SMS sending regulations like Ireland, NZ and Canada, which will greatly improve deliverability.
+- Access to delivery logs and other service quality details for troubleshooting.
 
 ## SMS provider requirements (Twilio)
 
@@ -40,15 +64,7 @@ You’ll need the following details that are in the dashboard of your [Twilio ac
 - The Auth Token for your Twilio account
 - Your Twilio phone number or the Messaging Service SID (if you set one up)
 
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/1da93a0a-9fd3-437f-5357-be90f3f3c200/public"
-  alt=""
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
+![Twilio account info](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/1da93a0a-9fd3-437f-5357-be90f3f3c200/public)
 
 Refer to the [Twilio documentation](https://www.twilio.com/docs/messaging/services/tutorials/send-messages-with-messaging-services) for assistance setting up.
 
@@ -56,22 +72,13 @@ Refer to the [Twilio documentation](https://www.twilio.com/docs/messaging/servic
 
 After you set this up, you can use SMS for both phone authentication and SMS MFA.
 
-1. In Kinde, go to **Authentication**.
-2. In the **Passwordless** section, select **Configure** on the **Phone** tile.
-3. Select the **Default country** that you want to show on the authentication screen when users sign in.
-4. Enter the Twilio details from your Twilio account (see above) in the relevant fields.
+1. In Kinde, go to **Settings > Environment > SMS**.
+2. Select the **Default country** that you want to show on the authentication screen when users sign in.
+3. Enter the Twilio details from your Twilio account (see above) in the relevant fields.
 
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4c857ff9-ff87-44ea-a488-3e2b511caf00/public"
-  alt=""
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
-
-5. In the **SMS source** field, select either the **Use** **Messaging service** or **Use phone number**. Verification codes will be sent from whichever you choose.
+   ![twilio details](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4c857ff9-ff87-44ea-a488-3e2b511caf00/public)
+ 
+4. In the **SMS source** field, select either the **Use** **Messaging service** or **Use phone number**. Verification codes will be sent from whichever you choose.
 
    <Aside>
 
@@ -79,33 +86,32 @@ After you set this up, you can use SMS for both phone authentication and SMS MFA
 
    </Aside>
 
-6. Depending on your selection in the previous step, enter either the **Messaging service SID** or Twilio **Phone number** in the relevant field.
+5. Depending on your selection in the previous step, enter either the **Messaging service SID** or Twilio **Phone number** in the relevant field.
 
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/749a80bc-d6b7-40b0-950a-650c7775b900/public"
-  alt=""
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
+   ![Twilio config](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/749a80bc-d6b7-40b0-950a-650c7775b900/public)
 
-7. Select if you want to use a fallback service if the provider service is interrupted.
+6. Select if you want to use a fallback service if the provider service is interrupted.
 
-![option to use kinde sms as fallback](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9bdd2ef1-c308-4307-c84e-bc8ffdbfe200/public)
+   ![option to use kinde sms as fallback](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9bdd2ef1-c308-4307-c84e-bc8ffdbfe200/public)
 
-8. Select which applications you want to switch phone auth on for. Only do this if you want users to be able to sign in with their phone number.
-9. Select **Save**.
+7. Select **Save**.
 
 ## Switch on phone authentication for an application
 
 After you have set up Twilio details, you’re ready to switch on phone or SMS auth for your applications.
 
-1. Go to **Settings > Authentication**.
+1. Go to **Settings > Environment > Authentication**.
 2. In the **Passwordless** section, select **Configure** on the **Phone** tile.
 3. Switch on the auth method for the applications you want.
 4. Select **Save**.
+
+## Switch on SMS as a factor in MFA
+
+If MFA is required or optional for your users, you may want to use the Twilio service for SMS MFA.
+
+1. Go to **Settings > Environment > Multi-factor auth**.
+2. Under **Additional authentication methods**, switch on **SMS**.
+3. Select **Save**.
 
 ## SMS message format
 

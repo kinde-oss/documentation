@@ -8,34 +8,43 @@ relatedArticles:
   - 2c58dabc-fe5c-4919-ade7-4caab8da47e8
   - e100d77b-530b-4327-8216-93c955657e0c
   - cc242fb3-4b06-4842-97c8-dd58e87308df
+description: Guide to setting up enterprise connections for B2B businesses including organization-level connections and domain-based access control.
+metadata:
+  topics: [authenticate]
+  sdk: []
+  languages: []
+  audience: [developer, enterprise-admin, product-manager]
+  complexity: advanced
+  keywords: [B2B, enterprise connections, organization-level, domain restrictions, JIT provisioning, allowed domains]
+  updated: 2025-12-19
+featured: false
+deprecated: false
 ---
 
 <Aside type="upgrade">
 
-You need to be on a [Scale plan](https://kinde.com/pricing/) to get authentication control at the organization level.
+For multiple enterprise connections and other advanced organization features, you may need to [upgrade your plan](https://kinde.com/pricing/)
 
 </Aside>
 
-Enterprise connections are common for B2B setups where each business customer is represented as an organization in Kinde, and that organization is linked to one or more connections.
+Enterprise connections are common for B2B setups where each business customer is represented as an organization in Kinde, and that organization is linked to one or more connections. There are two different ways to scope an enterprise connection and restrict it to the organization level.
 
-There are a number of ways to manage auth at the organization level. This topic discusses access control for organizations with enterprise connections.
-
-## Restrict org access via connections
-
-When you [set custom authentication for an organization](/authenticate/manage-authentication/organization-auth-experience/), you can restrict access via specific enterprise connections.
-
-1. Open the relevant organization in Kinde and select **Authentication** in the menu.
-2. Deselect all auth methods except the enterprise connection you want.
-3. Select **Save**.
-
-Here’s what happens:
-
-- When the `org_code` is passed to Kinde as part of the authentication url, the correct sign-in option is shown.
-- Users can only self-join the organization if they sign up via the enabled authentication connection.
+- When the `org_code` is passed to Kinde as part of the authentication url, the correct sign-in options are shown.
+- Users can only self-join the organization if this was enabled as part of the connection configuration.
 - Organization access is locked down to allow access based only on connection - including switches between organizations.
 - If you are using home realm discovery, connections do not have to be enabled at the application level to support redirects to the correct IDP.
 
 This behaviour is domain-agnostic and is purely concerned with the connection being used.
+
+## (Recommended) Create the enterprise connection in the Kinde organization
+
+The easiest way to restrict an enterprise connection to an organization, is to add the connection to the organization and not create it as a shared connection (at the environment level). To do this, follow the relevant procedure for adding a connection in the relevant topic.
+
+## Select a shared enterprise connection for the organization
+
+1. Open the relevant organization in Kinde and select **Authentication** in the menu.
+2. Add a connection and select **existing connection**. Switch on the relevant enterprise connection from the list.
+3. Select **Save**.
 
 ## Org provisioning and access via allowed domains
 
@@ -56,6 +65,12 @@ Here’s what happens:
 
 <Aside>
 
-If both connection and domain restrictions are in place, both checks must be successful.
+If both enterprise connection and domain restrictions are in place, both checks must be successful.
 
 </Aside>
+
+## Service Provider vs Identity Provider initiated SSO
+
+If you set up an enterprise connection for a customer using their IdP credentials, by default they sign in via your app with Kinde as the auth service provider (SP-initiated SSO). 
+
+However, Kinde also supports **Identity Provider (IdP) initiated** SSO, where users can start at their IdP portal and click on your application. Learn more about [IdP-initiated SAML SSO](/authenticate/enterprise-connections/idp-initiated-saml-sso/).

@@ -7,12 +7,43 @@ relatedArticles:
   - d82207a5-c72b-48d7-b02d-b3d1d77b88a2
   - 692187c5-1b82-467a-b86f-85b9098ecaab
   - 2169707b-af80-435d-883e-feb46de390f9
+  - aa132a66-b7eb-4d81-a039-dd1c3027f93e
 app_context:
   - m: settings
     s: environment_details
   - m: environments
   - m: settings
     s: business_details
+description: Comprehensive guide to exporting Kinde data including secure password export processes, encryption/decryption, and data format specifications.
+topics:
+  - manage-your-account
+  - your-data
+sdk: []
+languages:
+  - json
+  - ndjson
+  - openssl
+audience:
+  - admins
+  - business owners
+complexity: advanced
+keywords:
+  - data export
+  - password export
+  - owner approval
+  - encryption
+  - decryption
+  - openssl
+  - ndjson format
+  - security process
+  - data protection
+  - export approval
+  - access requests
+  - waitlist export
+updated: 2025-11-27
+featured: false
+deprecated: false
+ai_summary: Comprehensive guide to exporting Kinde data including secure password export processes, encryption/decryption, and data format specifications.
 ---
 
 We know it’s really important that you can easily get your data out of Kinde when you need to. It’s equally important that your data - especially password data - is safe and cannot be easily accessed.
@@ -94,152 +125,186 @@ At any time, the person who made the export request can cancel it by going to th
 
 ## What the exported data looks like
 
-Data is exported in JSON format as separate user and business data files. If you have many records, there may be several JSON files in the batch.
+Data is exported in NDJSON format. Your export includes three data files:
 
-Here’s what an exported record looks like.
+| File | Contents |
+|------|----------|
+| `organizations.ndjson` | All your organizations |
+| `users.ndjson` | All registered users (with optional password hashes) |
+| `access_requests.ndjson` | People who've requested access but aren't users yet |
+
+<Aside>
+
+Access requests are people who have submitted a request through your [Request Access page](/design/pages/set-up-the-request-access-page/), such as early adopters on a waitlist or people requesting access to a beta or invite-only product. They're included automatically—no additional setup required. Note that access requests who have been converted to full users will appear in both the `users.ndjson` and `access_requests.ndjson` files.
+
+</Aside>
+
+Here's an example of `users.ndjson`.
 
 ```json
 {
-	"type": "object",
-	"properties": {
-		"users": {
-			"type":  "array",
-			"items": {
-				"type": "object",
-				"properties": {
-					"id": {
-						"type": "string",
-						"description": "Unique identifier for user"
-					},
-					"external_id": {
-						"type": "string",
-						"description": "Imported external system id"
-					},
-					"first_name": {
-						"type": "string",
-						"description": "First name"
-					},
-					"last_name": {
-						"type": "string",
-						"description": "Last name"
-					},
-					"email": {
-						"type": "string",
-						"description": "Email address",
-						"format": "email"
-					},
-					"email_verified": {
-						"type": "boolean",
-						"default": false,
-						"description": "Indicates if the user has confirmed their email address"
-					},
-					"social_logins": {
-						"type": "object",
-						"description": "Social login ids",
-						"patternProperties": {
-							".*": {
-								"type": "string"
-							}
-						}
-					},
-					"business_code": {
-						"type": "string",
-						"description": "The business that the user belongs to"
-					},
-					"organizations": {
-						"type": "array",
-						"description": "Organization codes that the user belongs to",
-						"items": {
-							"type": "string"
-						}
-					},
-					"created_on": {
-						"type": "string",
-						"description": "Timestamp that the user was created"
-					}
-					"password": {
-						"type": "object",
-						"description": "Hashed password",
-						"properties": {
-							"password_hash": {
-								"type": "string",
-								"description": "Hashed password"
-							},
-							"hashing_algorithm": {
-								"type": "string",
-								"description": "Hashing algorithm"
-							},
-							"hashing_config": {
-								"type": "object",
-								"description": "Algorithm specific configuration"
-							},
-						}
-					}
-				}
-			}
-		},
-		"business": {
-			"type": "object",
-			"properties": {
-				"code": {
-					"type": "string",
-					"description": "Unique identifier for business"
-				},
-				"name": {
-					"type": "string",
-					"description": "Business name"
-				},
-				"industry": {
-					"type": "string",
-					"description": "Industry that the business belongs to"
-				},
-				"terms_url": {
-					"type": "string",
-					"description": "URL for business terms"
-				},
-				"privacy_url": {
-					"type": "string",
-					"description": "URL for business privacy policy"
-				},
-				"partner_code": {
-					"type": "string",
-					"description": "Partner code"
-				},
-				"primary_email": {
-					"type": "string",
-					"description": "Primary email address for business"
-				},
-				"primary_phone": {
-					"type": "string",
-					"description": "Primary phone number for business"
-				}
-			}
-		},
-		"organizations": {
-			"type": "array",
-			"items": {
-				"type": "object",
-				"properties": {
-					"organization_code": {
-						"type": "string",
-						"description": "Unique identifier for business"
-					},
-					"name": {
-						"type": "string",
-						"description": "Organization name"
-					},
-					"created_on": {
-						"type": "string",
-						"description": "Timestamp that the organization was created"
-					},
-					"business_code": {
-						"type": "string",
-						"description": "Business code that the organization belongs to"
-					}
-				}
-			}
-		}
-	}
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the object"
+    },
+    "email": {
+      "type": ["string", "null"],
+      "format": "email",
+      "description": "Email address of the user"
+    },
+    "phone": {
+      "type": ["string", "null"],
+      "description": "Phone number of the user, if available"
+    },
+    "username": {
+      "type": ["string", "null"],
+      "description": "Username of the user, if available"
+    },
+    "last_name": {
+      "type": ["string", "null"],
+      "description": "Last name of the user, if available"
+    },
+    "created_on": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the user was created"
+    },
+    "first_name": {
+      "type": ["string", "null"],
+      "description": "First name of the user, if available"
+    },
+    "identities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Type of identity (e.g., email)"
+          },
+          "identity": {
+            "type": "string",
+            "description": "Identity value (e.g., email address)"
+          },
+          "provider": {
+            "type": ["string", "null"],
+            "description": "Provider associated with the identity, if any"
+          }
+        },
+        "required": ["type", "identity"]
+      },
+      "description": "List of identities associated with the user"
+    },
+    "external_id": {
+      "type": ["string", "null"],
+      "description": "External identifier for the user, if available"
+    },
+    "business_code": {
+      "type": "string",
+      "description": "Code representing the associated business"
+    },
+    "organizations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of organizations the user belongs to"
+    },
+    "email_verified": {
+      "type": "boolean",
+      "description": "Indicates if the email address is verified"
+    },
+    "password": {
+      "type": "object",
+      "properties": {
+        "hashing_config": { "type": "object" },
+        "hashed_password": { "type": "string" },
+        "hashing_algorithm": { "type": ["string", "null"] }
+      },
+      "required": ["hashing_config", "hashed_password"]
+    }
+  },
+  "required": ["id", "email", "created_on", "identities", "business_code", "organizations", "email_verified"],
+  "additionalProperties": false
+}
+```
+
+Here's an example of `organizations.ndjson`.
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the organization"
+    },
+    "created_on": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the organization was created"
+    },
+    "business_code": {
+      "type": "string",
+      "description": "Code representing the associated business"
+    },
+    "organization_code": {
+      "type": "string",
+      "description": "Code representing the organization"
+    }
+  },
+  "required": ["name", "created_on", "business_code", "organization_code"],
+  "additionalProperties": false
+}
+```
+
+Here's an example of `access_requests.ndjson`.
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the access request"
+    },
+    "first_name": {
+      "type": ["string", "null"],
+      "description": "First name provided by the requester"
+    },
+    "last_name": {
+      "type": ["string", "null"],
+      "description": "Last name provided by the requester"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Email address of the requester"
+    },
+    "business_code": {
+      "type": "string",
+      "description": "Your Kinde business identifier"
+    },
+    "organizations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Organizations the requester is associated with, if any"
+    },
+    "created_on": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the access request was submitted"
+    }
+  },
+  "required": ["id", "email", "business_code", "created_on"],
+  "additionalProperties": false
 }
 ```
 
