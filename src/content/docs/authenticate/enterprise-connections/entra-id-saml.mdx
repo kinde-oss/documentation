@@ -169,31 +169,61 @@ Make sure you test the connection before enabling in production for your users.
 
 Unless you selected the **Single logout** option in the Kinde connection configuration above, when users sign out of this connection in your app, they are just signing out of Kinde. They are not fully being signed out of Entra ID. It also works this way for social connections, where a third party is the identity provider.
 
-## (Optional) Sync Entra ID groups with Kinde
+## (Optional) Sync Entra ID (SAML) attributes with Kinde
 
-### Add groups claim to MS Entra ID app
+If you want to use additional attributes from Entra ID (SAML), you can sync them from the SAML assertion into Kinde custom user properties using a Post Authentication workflow.
 
-1. Open your application in the [MS Azure Portal](https://portal.azure.com/).
-2. Go to **Token configuration** in the left menu. 
-3. Select **Add groups claim**.
-4. In the window that appears, select the groups to be included in tokens.
+Workflow example: [syncAttributesSamlWorkflow.ts](https://github.com/kinde-starter-kits/workflow-examples/blob/main/postUserAuthentication/syncAttributesSamlWorkflow.ts)
 
-![image of edit groups claim screen](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/fed278be-bdcd-43b6-7130-8c866928b700/public)
+### Step 1: Add attribute and group claims to your Entra ID (SAML) app
 
-5. If you want, customize the token properties by type.
-6. Save your changes.
+1. On the Microsoft Entra admin center home screen, go to **Enterprise apps** and open your application.
+2. Select **Single sign-on**, then select **SAML**.
+3. In the **Attributes & Claims** section, select **Edit**.
+4. Add the claims you want to send in the SAML assertion (for example: `phone_number`, `user_type`, and `groups`).
+5. Make sure the claim **Name** you configure in Entra ID matches one of the values in the workflow’s `samlNames` list.
+6. Select **Save**.
 
-For reference, see this Microsoft doc about [configuring optional claims](https://learn.microsoft.com/en-us/entra/identity-platform/optional-claims?tabs=appui/) 
+### Step 2: Create custom user properties in Kinde
 
-### Customize ID token in Kinde
-
-1. Open your application in Kinde.
-2. Go to **Tokens**.
-3. Scroll to **Token customization** and select **Configure** on the **ID tokens** tile.
-4. Switch on **Social identity** as an additional claim.
+1. In Kinde, go to **Settings > Data management > Properties**.
+2. Select **Add property** and create a **User** property for each SAML attribute you want to store (for example: `phone_number`, `user_type`, `groups`).
+3. Make sure each property key matches the workflow’s `kindeKey` value for that attribute.
+4. If you want these properties to be available in tokens, switch off the **Private** option for each property.
 5. Select **Save**.
 
-### Access group info in tokens
+### Step 3: Add and deploy the workflow
 
-- ID token - `ext_provider > claims > profile > groups`
-- Access token - `ext_groups`
+1. Add the workflow file to your Kinde workflows repository (or copy the example into your existing workflows repo).
+2. Create an M2M application and enable the following scope:
+   - `update:user_properties`
+3. In Kinde, go to **Settings > Environment variables** and set:
+   - `KINDE_WF_M2M_CLIENT_ID`
+   - `KINDE_WF_M2M_CLIENT_SECRET` (mark as sensitive)
+4. Update the workflow configuration to match your Entra ID claims:
+   - `samlNames` is the list of SAML claim names to look for (what Entra ID sends)
+   - `kindeKey` is the Kinde user property key to write the value into
+   - Add new entries to sync additional SAML attributes
+   - Set `multiValue: true` for multi-value claims (for example, `groups`)
+
+<Aside>
+
+In the example workflow, multi-value claims such as `groups` are stored as a comma-separated string in the user property.
+
+</Aside>
+
+### Step 4: Include the properties in tokens
+
+1. Open the relevant application in Kinde.
+2. Select **Tokens** and scroll to **Token customization**.
+3. Select **Customize** on the token type you want to update (ID token and/or access token).
+4. Select the user properties you created.
+5. Select **Save**.
+
+### Access attributes in tokens
+
+Once added via token customization, the values are available under the `user_properties` claim, for example:
+
+- `user_properties > phone_number`
+- `user_properties > user_type`
+- `user_properties > groups`
