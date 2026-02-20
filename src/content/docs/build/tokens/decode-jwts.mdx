@@ -1,0 +1,491 @@
+---
+page_id: 7a8b9c0d-1e2f-3456-7890-123456789abc
+title: Decoding JSON Web Tokens
+description: Learn how to decode JSON Web Tokens (JWTs) using Kinde's JWT libraries, including validation methods, security considerations, and practical implementation examples.
+sidebar:
+  order: 9
+relatedArticles:
+  - 4ed081b0-7853-49be-b5fd-22a84a86bdad
+  - cf687bce-9732-4b67-9da5-580953c8549f
+  - d8069575-dfef-421d-8f3a-8f3efe9ad2f3
+  - c58b1c76-349a-40a1-a539-3b1da3ccb239
+topics:
+  - tokens
+  - security
+  - jwt
+  - decoding
+sdk: []
+languages:
+  - javascript
+  - typescript
+audience: developers
+complexity: intermediate
+keywords:
+  - JWT decoding
+  - token decoding
+  - JWT validation
+  - token security
+  - JWT libraries
+  - token parsing
+updated: 2025-12-15
+featured: false
+deprecated: false
+ai_summary: Comprehensive guide to decoding JSON Web Tokens using Kinde's JWT libraries, including validation methods, security considerations, and practical implementation examples.
+---
+
+JWT decoding involves parsing and validating JSON Web Tokens to extract their payload information securely. While JWTs are typically signed (not encrypted), decoding refers to the process of parsing the token structure and validating its claims.
+
+Before decoding a JWT, it's important to understand its structure. A JWT consists of three parts separated by dots (`.`):
+
+1. **Header** - Contains metadata about the token (algorithm, type)
+2. **Payload** - Contains the claims (user data, permissions, etc.)
+3. **Signature** - Used to verify the token's authenticity
+
+## Using Kinde JWT Decoder
+
+The [@kinde/jwt-decoder](https://www.npmjs.com/package/@kinde/jwt-decoder) library provides a simple, type-safe way to decode JWT tokens.
+
+The decoder extracts and returns the decoded payload containing the token's claims. See an [example access token payload](/build/tokens/about-access-tokens/#example-access-token).
+
+### Installation
+
+```bash
+# npm
+npm install @kinde/jwt-decoder
+
+# yarn
+yarn add @kinde/jwt-decoder
+
+# pnpm
+pnpm install @kinde/jwt-decoder
+```
+
+### Basic Usage
+
+```javascript
+import { jwtDecoder } from "@kinde/jwt-decoder"
+
+const token =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30"
+
+// Simple decode
+const decodedToken = jwtDecoder(token)
+
+console.log(decodedToken)
+// Output: { sub: '1234567890', name: 'John Doe', admin: true, iat: 1516239022 }
+```
+
+### Type-Safe Decoding
+
+```typescript
+import { jwtDecoder, type JWTDecoded } from "@kinde/jwt-decoder"
+
+// Decode with extended type
+type CustomJWT = JWTDecoded & {
+  custom_claim?: string
+  feature_flags?: Record<string, any>
+}
+
+const decodedToken = jwtDecoder<CustomJWT>("ey...")
+```
+
+## Using Kinde JWT Validator
+
+The [@kinde/jwt-validator](https://www.npmjs.com/package/@kinde/jwt-validator) library provides cryptographic JWT validation with support for mobile and edge environments. The `validateToken` method verifies the token's signature and returns an object with a `valid` property indicating whether the token is valid.
+
+### Installation
+
+```bash
+# npm
+npm install @kinde/jwt-validator
+
+# yarn
+yarn add @kinde/jwt-validator
+
+# pnpm
+pnpm install @kinde/jwt-validator
+```
+
+### Validation and Decoding
+
+```javascript
+import { validateToken } from "@kinde/jwt-validator"
+import { jwtDecoder } from "@kinde/jwt-decoder"
+
+const token = "ey..." // your JWT here
+
+const validateAndDecode = async () => {
+  try {
+    // Validate the token
+    const result = await validateToken({
+      token,
+      domain: "https://your-subdomain.kinde.com",
+    })
+
+    if (result.valid) {
+      console.log("Token is valid")
+
+      // Decode after validation
+      const decoded = jwtDecoder(token)
+      console.log("Decoded payload:", decoded)
+    } else {
+      console.log("Token validation failed:", result.message)
+    }
+  } catch (error) {
+    // The validator throws for JWKS or validation errors
+    console.error("Token is invalid:", error)
+  }
+}
+
+validateAndDecode()
+```
+
+## Manual JWT Decoding
+
+If you need to decode JWTs without using Kinde's libraries, you can implement manual decoding:
+
+### Browser/Web Platform
+
+This implementation uses `atob()`, which is available in browsers, web workers, and service workers:
+
+```javascript
+function base64UrlDecode(str) {
+  // Replace Base64URL characters with Base64 characters
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/')
+  
+  // Add padding if needed (Base64 strings must be multiples of 4)
+  while (base64.length % 4) {
+    base64 += '='
+  }
+  
+  return atob(base64)
+}
+
+function decodeJWT(token) {
+  try {
+    // Split the token into its three parts
+    const parts = token.split('.')
+    
+    if (parts.length !== 3) {
+      throw new Error('Invalid JWT format')
+    }
+    
+    // Decode header and payload (base64url)
+    const header = JSON.parse(base64UrlDecode(parts[0]))
+    const payload = JSON.parse(base64UrlDecode(parts[1]))
+    
+    return {
+      header,
+      payload,
+      signature: parts[2]
+    }
+  } catch (error) {
+    throw new Error('Failed to decode JWT: ' + error.message)
+  }
+}
+
+// Usage
+const token = "eyJhbGc..."
+const decoded = decodeJWT(token)
+console.log(decoded.payload)
+```
+
+### Node.js Platform
+
+For Node.js environments, use `Buffer` instead of `atob()`:
+
+```javascript
+function base64UrlDecode(str) {
+  // Replace Base64URL characters with Base64 characters
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/')
+  
+  // Add padding if needed (Base64 strings must be multiples of 4)
+  while (base64.length % 4) {
+    base64 += '='
+  }
+  
+  return Buffer.from(base64, 'base64').toString('utf-8')
+}
+
+function decodeJWT(token) {
+  try {
+    // Split the token into its three parts
+    const parts = token.split('.')
+    
+    if (parts.length !== 3) {
+      throw new Error('Invalid JWT format')
+    }
+    
+    // Decode header and payload (base64url)
+    const header = JSON.parse(base64UrlDecode(parts[0]))
+    const payload = JSON.parse(base64UrlDecode(parts[1]))
+    
+    return {
+      header,
+      payload,
+      signature: parts[2]
+    }
+  } catch (error) {
+    throw new Error('Failed to decode JWT: ' + error.message)
+  }
+}
+```
+
+### Universal/Cross-Platform
+
+For code that works in both browser and Node.js environments:
+
+```javascript
+function base64UrlDecode(str) {
+  // Replace Base64URL characters with Base64 characters
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/')
+  
+  // Add padding if needed (Base64 strings must be multiples of 4)
+  while (base64.length % 4) {
+    base64 += '='
+  }
+  
+  // Use Buffer in Node.js, atob in browser
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(base64, 'base64').toString('utf-8')
+  } else {
+    return atob(base64)
+  }
+}
+```
+
+### TypeScript Implementation
+
+```typescript
+interface JWTHeader {
+  alg: string;
+  typ: string;
+  kid?: string;
+}
+
+interface JWTPayload {
+  iss: string;
+  sub: string;
+  aud: string | string[];
+  exp: number;
+  iat: number;
+  jti?: string;
+  [key: string]: any;
+}
+
+interface DecodedJWT {
+  header: JWTHeader;
+  payload: JWTPayload;
+  signature: string;
+}
+
+function base64UrlDecode(str: string): string {
+  // Replace Base64URL characters with Base64 characters
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/')
+  
+  // Add padding if needed (Base64 strings must be multiples of 4)
+  while (base64.length % 4) {
+    base64 += '='
+  }
+  
+  // Use Buffer in Node.js, atob in browser
+  if (typeof globalThis.Buffer !== 'undefined') {
+    return globalThis.Buffer.from(base64, 'base64').toString('utf-8')
+  } else if (typeof globalThis.atob !== 'undefined') {
+    return globalThis.atob(base64)
+  } else {
+    throw new Error('Neither Buffer nor atob is available in this environment')
+  }
+}
+
+function decodeJWT(token: string): DecodedJWT {
+  try {
+    // Split the token into its three parts
+    const parts = token.split('.')
+    
+    if (parts.length !== 3) {
+      throw new Error('Invalid JWT format')
+    }
+    
+    // Decode header and payload (base64url)
+    const header = JSON.parse(base64UrlDecode(parts[0])) as JWTHeader
+    const payload = JSON.parse(base64UrlDecode(parts[1])) as JWTPayload
+    
+    return {
+      header,
+      payload,
+      signature: parts[2]
+    }
+  } catch (error) {
+    throw new Error('Failed to decode JWT: ' + (error instanceof Error ? error.message : String(error)))
+  }
+}
+```
+
+## Common Use Cases
+
+### Displaying User Information
+
+You can extract user information from decoded tokens, including email, organization code, feature flags, and permissions.
+
+By default, the email claim is not included in the `access_token`. To enable it:
+
+1. Go to **Application** > **View Details** > **Tokens** > **Access Token** and select **Customize**.
+2. Enable the **Email (string)** claim.
+3. Select **Save**.
+
+If you need to access the user's full name and profile picture, use the `id_token` instead of the access token. The `id_token` includes these claims by default. You can decode the `id_token` using the same method as the access token. Learn more about [ID tokens](/build/tokens/about-id-tokens/).
+
+```javascript
+import { jwtDecoder } from "@kinde/jwt-decoder"
+
+function displayUserInfo(token) {
+  try {
+    const payload = jwtDecoder(token)
+
+    // Note: Email must be enabled in token customization for access tokens
+    console.log(`User: ${payload.email}`)
+    console.log(`Organization code: ${payload.org_code}`)
+    console.log(`Permissions: ${payload.permissions?.join(", ")}`)
+
+    return {
+      email: payload?.email || "",
+      org_code: payload.org_code,
+      permissions: payload.permissions || [],
+    }
+  } catch (error) {
+    console.error("Failed to decode token:", error)
+    return null
+  }
+}
+```
+
+**About `org_code` and `permissions` claims**
+
+The `org_code` and `permissions` claims are **not included by default** in access tokens:
+
+- **`org_code`**: Only included when the user belongs to and signs in to an organization. If a user belongs to no organizations, this claim will be omitted.
+- **`permissions`**: Only included when the user signs in to an organization AND has permissions assigned to them or their role. If no permissions are configured or assigned, this claim will be omitted.
+
+Always check if these claims exist before accessing them (as shown in the example above using optional chaining or default values).
+
+### Checking Feature Flags
+
+```javascript
+import { jwtDecoder } from "@kinde/jwt-decoder"
+
+function checkFeatureFlag(token, flagName) {
+  try {
+    const payload = jwtDecoder(token);
+
+    const featureFlags = payload.feature_flags;
+
+    if (featureFlags && featureFlags[flagName]) {
+      return featureFlags[flagName].v;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('Failed to check feature flag:', error);
+    return false;
+  }
+}
+```
+
+**About `feature_flags` claim**
+
+The `feature_flags` claim is **not included by default** in access tokens. It's only included when:
+
+- Feature flags are configured in your Kinde environment and assigned to the user or organization
+- For Machine-to-Machine (M2M) applications, only flags explicitly enabled in the app's token configuration are included
+
+If no feature flags are configured or assigned, this claim will be omitted. Always check if the claim exists before accessing it (as shown in the example above).
+
+Feature flags use a compact format with short keys: `t` for type and `v` for value.
+
+### Extracting Permissions
+
+```javascript
+import { jwtDecoder } from "@kinde/jwt-decoder"
+
+export function getUserPermissions(token) {
+  try {
+    const payload = jwtDecoder(token)
+    return payload.permissions || []
+  } catch (error) {
+    console.error('Failed to extract permissions:', error)
+    return []
+  }
+}
+```
+
+**About `permissions` claim**
+
+The `permissions` claim is **not included by default** in access tokens. It's only included when:
+
+- The user signs in to an organization AND has permissions assigned to them or their role
+
+If no permissions are configured or assigned, this claim will be omitted. Always check if the claim exists before accessing it (as shown in the example above using `|| []` as a fallback).
+
+## Security Considerations
+
+### Important Security Notes
+
+- **Decoding vs. Validation**: Decoding a JWT only extracts the payload - it doesn't verify the token's authenticity or integrity.
+- **Always Validate**: After decoding, always validate the token using proper cryptographic verification.
+- **Never Trust Client-Side Decoding**: Client-side decoding should only be used for display purposes, not for security decisions.
+- **Check Expiration**: Always verify the `exp` claim to ensure the token hasn't expired.
+
+### Validation Checklist
+
+When decoding JWTs, ensure you:
+
+- Verify the token signature using the public key
+- Check the `iss` (issuer) claim matches your Kinde domain
+- Validate the `aud` (audience) claim
+- Verify the `exp` (expiration) claim
+- Check the `iat` (issued at) claim is reasonable
+- Validate any custom claims specific to your application
+
+## Error Handling
+
+### Common Decoding Errors
+
+```javascript
+function safeDecodeJWT(token) {
+  try {
+    if (!token) {
+      throw new Error('Token is required')
+    }
+    
+    if (typeof token !== 'string') {
+      throw new Error('Token must be a string')
+    }
+    
+    const parts = token.split('.')
+    if (parts.length !== 3) {
+      throw new Error('Invalid JWT format - must have 3 parts')
+    }
+    
+    return jwtDecoder(token)
+  } catch (error) {
+    console.error('JWT decoding error:', error.message)
+    return null
+  }
+}
+```
+
+## Best Practices
+
+- **Use Kinde Libraries**: Prefer Kinde's JWT libraries for production applications as they handle edge cases and provide type safety.
+- **Validate Before Decoding**: Always validate the token's signature and claims before trusting the decoded payload.
+- **Handle Errors Gracefully**: Implement proper error handling for malformed or invalid tokens.
+- **Log Security Events**: Log failed decoding attempts for security monitoring.
+- **Keep Libraries Updated**: Regularly update JWT libraries to get security patches and improvements.
+
+## Resources
+
+- [Kinde Online JWT Decoder](https://kinde.com/tools/online-jwt-decoder/)
+- [Kinde JWT Decoder Library](https://www.npmjs.com/package/@kinde/jwt-decoder)
+- [Kinde JWT Validator Library](https://www.npmjs.com/package/@kinde/jwt-validator)
+
