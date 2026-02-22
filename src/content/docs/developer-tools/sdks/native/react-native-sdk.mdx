@@ -90,93 +90,20 @@ Fundamentally, both SDK versions have equivalent functionality, so there should 
 
 <PackageManagers pkg="@kinde-oss/react-native-sdk-0-7x" />
 
-### **Android**
+### **Required dependencies**
 
-The SDK requires the `react-native-keychain` and `react-native-inappbrowser-reborn` packages. Sometimes, they may not be automatically linked correctly, resulting in errors when running your app, such as `"Cannot read properties of undefined (reading 'isAvailable')"`. In such cases, you will need to manually link them:
+The SDK requires the `react-native-app-auth`, `react-native-keychain` and `react-native-get-random-values` packages to be installed.
 
-1. Edit `android/settings.gradle`
-
-   ```java
-   include ':react-native-keychain'
-   project(':react-native-keychain').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-keychain/android')
-
-   include ':react-native-inappbrowser-reborn'
-   project(':react-native-inappbrowser-reborn').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-inappbrowser-reborn/android')
-   ```
-
-2. Edit `android/app/build.gradle`
-
-   ```java
-   apply plugin: 'com.android.application'
-
-   android {
-     ...
-   }
-
-   dependencies {
-     ...
-
-     implementation project(':react-native-keychain')
-   	implementation project(':react-native-inappbrowser-reborn')
-
-     ...
-   }
-   ```
-
-3. Edit `MainApplication.java`
-
-   ```java
-   import com.oblador.keychain.KeychainPackage;
-   import com.proyecto26.inappbrowser.RNInAppBrowserPackage;
-   ...
-
-   public class MainApplication extends Application implements ReactApplication {
-       private final ReactNativeHost mReactNativeHost =
-         new ReactNativeHost(this) {
-           ...
-           @Override
-           protected List<ReactPackage> getPackages() {
-   					...
-             List<ReactPackage> packages = new PackageList(this).getPackages();
-             packages.add(new KeychainPackage());
-             packages.add(new RNInAppBrowserPackage());
-   					...
-             return packages;
-           }
-           ...
-         };
-
-     ...
-   }
-   ```
-
-In React Native version 0.73 or above, the `MainApplication.java` file has been replaced with `MainApplication.kt`
-
-```kotlin
-import com.oblador.keychain.KeychainPackage;
-import com.proyecto26.inappbrowser.RNInAppBrowserPackage;
-...
-
-class MainApplication : Application(), ReactApplication {
-    override val reactNativeHost: ReactNativeHost =
-      object : DefaultReactNativeHost(this) {
-        override fun getPackages(): List<ReactPackage> =
-            PackageList(this).packages.apply {
-              // Packages that cannot be autolinked yet can be added manually here, for example:
-              // add(MyReactNativePackage())
-              add(KeychainPackage());
-              add(RNInAppBrowserPackage());
-            }
-
-        ...
-      }
-
-  ...
-}
-```
+<PackageManagers pkg="react-native-app-auth react-native-keychain react-native-get-random-values" />
 
 ### **iOS**
 
+
+
+
+
+
+#### Update iOS native dependencies
 To update iOS native dependencies, you can use **CocoaPods**. We recommend installing **CocoaPods** using [Homebrew](https://brew.sh/).
 
 ```shell
@@ -185,23 +112,6 @@ brew install cocoapods
 cd ios && pod install
 ```
 
-The SDK requires the `react-native-keychain` and `react-native-inappbrowser-reborn` packages. Sometimes, they may not be automatically linked correctly, resulting in errors when running your app, such as `"Cannot read properties of undefined (reading 'isAvailable')"`. In such cases, you will need to manually link them:
-
-1. **Option: With CocoaPods (Highly recommended)**
-
-   Please add the following lines to your **Podfile**, and then run `pod update`:
-
-   ```swift
-   pod 'RNKeychain', :path => '../node_modules/react-native-keychain'
-   pod 'RNInAppBrowser', :path => '../node_modules/react-native-inappbrowser-reborn'
-   ```
-
-2. **Option: Manually link the packages with Xcode**
-   - Go to the **Build Phases** tab and choose **Link Binary With Libraries.**
-   - Select **+**
-   - Add **Other** > **Add Files** > **node_modules/react-native-keychain/RNKeychain.xcodeproj** (similar with **RNInAppBrowser**)
-   - Add **libRNKeychain.a** (similar with **RNInAppBrowser**)
-   - Clean and rebuild.
 
 If you encounter any errors during the SDK installation process, you can refer to the General Tips section at the end of this topic.
 
@@ -249,7 +159,7 @@ KINDE_POST_LOGOUT_REDIRECT_URL=myapp://myhost.kinde.com/kinde_callback
 KINDE_CLIENT_ID=myclient@live
 ```
 
-## Configuration deep link
+## Configure deep linking
 
 ### **Android**
 
@@ -266,51 +176,52 @@ Open `AndroidManifest.xml` and update your scheme by adding a new block in activ
 
 ### **iOS**
 
-You need to link `RCTLinking` to your project using the steps below.
+1. Update your ``AppDelegate.h`` file to include the following:
 
-1. If you also want to listen to incoming app links during your app's execution, add the following lines to your `AppDelegate.m`.
+    ```diff lang="objc" title="AppDelegate.h"
+    + #import <React/RCTLinkingManager.h>
+    + #import "RNAppAuthAuthorizationFlowManager.h"
+    
+    - @interface AppDelegate : RCTAppDelegate
+    + @interface AppDelegate : RCTAppDelegate <RNAppAuthAuthorizationFlowManager>
+    
+    + @property(nonatomic, weak) id<RNAppAuthAuthorizationFlowManagerDelegate> authorizationFlowManagerDelegate;
+    ```
 
-   ```swift
-   // iOS 9.x or newer
-   #import <React/RCTLinkingManager.h>
-   - (BOOL)application:(UIApplication *)application
-      openURL:(NSURL *)url
-      options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options
-   {
-     return [RCTLinkingManager application:application openURL:url options:options];
-   }
-   ```
+2. Update your ``AppDelegate.m`` file to include the following:
 
-2. If you're targeting iOS 8.x or older, use the following code instead.
+    Custom scheme support:
 
-   ```swift
-   // iOS 8.x or older
-   #import <React/RCTLinkingManager.h>
-   - (BOOL)application:(UIApplication *)application openURL:(NSURL *)url
-     sourceApplication:(NSString *)sourceApplication annotation:(id)annotation
-   {
-     return [RCTLinkingManager application:application openURL:url
-                         sourceApplication:sourceApplication annotation:annotation];
-   }
-   ```
+    ```diff lang="objc" title="AppDelegate.m"
+    + - (BOOL) application: (UIApplication *)application
+    +              openURL: (NSURL *)url
+    +              options: (NSDictionary<UIApplicationOpenURLOptionsKey, id> *) options
+    + {
+    +   if ([self.authorizationFlowManagerDelegate resumeExternalUserAgentFlowWithURL:url]) {
+    +     return YES;
+    +   }
+    +   return [RCTLinkingManager application:application openURL:url options:options];
+    + }
+    ```
 
-3. Make sure you have a configuration URL scheme in `Info.plist`, so the app can be opened by deep link.
+    Universal link support:
 
-   ```swift
-   <key>CFBundleURLTypes</key>
-   <array>
-     <dict>
-       <key>CFBundleTypeRole</key>
-       <string>Editor</string>
-       <key>CFBundleURLName</key>
-       <string>myapp</string> // you can change it
-       <key>CFBundleURLSchemes</key>
-       <array>
-         <string>myapp</string> // you can change it
-       </array>
-     </dict>
-   </arra
-   ```
+    ```diff lang="objc" title="AppDelegate.m"
+    + - (BOOL) application: (UIApplication *) application
+    + continueUserActivity: (nonnull NSUserActivity *)userActivity
+    +   restorationHandler: (nonnull void (^)(NSArray<id<UIUserActivityRestoring>> * _Nullable))restorationHandler
+    + {
+    +   if ([userActivity.activityType isEqualToString:NSUserActivityTypeBrowsingWeb]) {
+    +     if (self.authorizationFlowManagerDelegate) {
+    +       BOOL resumableAuth = [self.authorizationFlowManagerDelegate resumeExternalUserAgentFlowWithURL:userActivity.webpageURL];
+    +       if (resumableAuth) {
+    +         return YES;
+    +       }
+    +     }
+    +   }
+    +   return [RCTLinkingManager application:application continueUserActivity:userActivity restorationHandler:restorationHandler];
+    + }
+    ```
 
 ## Integrate with your app
 
