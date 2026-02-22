@@ -176,52 +176,136 @@ Open `AndroidManifest.xml` and update your scheme by adding a new block in activ
 
 ### **iOS**
 
-1. Update your ``AppDelegate.h`` file to include the following:
 
-    ```diff lang="objc" title="AppDelegate.h"
-    + #import <React/RCTLinkingManager.h>
-    + #import "RNAppAuthAuthorizationFlowManager.h"
-    
-    - @interface AppDelegate : RCTAppDelegate
-    + @interface AppDelegate : RCTAppDelegate <RNAppAuthAuthorizationFlowManager>
-    
-    + @property(nonatomic, weak) id<RNAppAuthAuthorizationFlowManagerDelegate> authorizationFlowManagerDelegate;
+Follow the instructions for the language your `AppDelegate` is written in.
+
+
+<Tabs>
+  <TabItem label="Swift">
+
+1. Create a new file, `AppDelegate+RNAppAuth.h`, in the **same folder as your `AppDelegate.swift`** and add the following code:
+
+    ```objc title="AppDelegate+RNAppAuth.h"
+    #import "RNAppAuthAuthorizationFlowManager.h"
     ```
 
-2. Update your ``AppDelegate.m`` file to include the following:
+2. Set the Objective-C Bridging Header path in your Xcode Build Settings to `$(SRCROOT)/$(TARGET_NAME)/AppDelegate+RNAppAuth.h`.
 
-    Custom scheme support:
+   <details>
+   <summary>Open for steps</summary>
+   
+   - Open the project in Xcode.
+   - Select the project in the navigator, then the app target.
+   - Open the **Build Settings** tab.
+   - Search for **bridging**.
+   - Set **Objective-C Bridging Header** to $(SRCROOT)/$(TARGET_NAME)/AppDelegate+RNAppAuth.h.
+   </details>
 
-    ```diff lang="objc" title="AppDelegate.m"
-    + - (BOOL) application: (UIApplication *)application
-    +              openURL: (NSURL *)url
-    +              options: (NSDictionary<UIApplicationOpenURLOptionsKey, id> *) options
-    + {
-    +   if ([self.authorizationFlowManagerDelegate resumeExternalUserAgentFlowWithURL:url]) {
-    +     return YES;
-    +   }
-    +   return [RCTLinkingManager application:application openURL:url options:options];
-    + }
+3. Update `AppDelegate.swift` file with the following code:
+
+
+
+    ```diff lang="swift" title="AppDelegate.swift"
+    @main
+    - class AppDelegate: UIResponder, UIApplicationDelegate {
+    + class AppDelegate: UIResponder, UIApplicationDelegate, RNAppAuthAuthorizationFlowManager {
+    +  
+    +   public weak var authorizationFlowManagerDelegate: RNAppAuthAuthorizationFlowManagerDelegate?
     ```
 
-    Universal link support:
+    **Custom scheme support:**
 
-    ```diff lang="objc" title="AppDelegate.m"
-    + - (BOOL) application: (UIApplication *) application
-    + continueUserActivity: (nonnull NSUserActivity *)userActivity
-    +   restorationHandler: (nonnull void (^)(NSArray<id<UIUserActivityRestoring>> * _Nullable))restorationHandler
-    + {
-    +   if ([userActivity.activityType isEqualToString:NSUserActivityTypeBrowsingWeb]) {
-    +     if (self.authorizationFlowManagerDelegate) {
-    +       BOOL resumableAuth = [self.authorizationFlowManagerDelegate resumeExternalUserAgentFlowWithURL:userActivity.webpageURL];
-    +       if (resumableAuth) {
-    +         return YES;
-    +       }
+    ```diff lang="swift" title="AppDelegate.swift"    
+    + func application(
+    +   _ app: UIApplication,
+    +   open url: URL,
+    +   options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+    + ) -> Bool {
+    +   if let authorizationFlowManagerDelegate = self.authorizationFlowManagerDelegate {
+    +     if authorizationFlowManagerDelegate.resumeExternalUserAgentFlow(with: url) {
+    +       return true
     +     }
     +   }
-    +   return [RCTLinkingManager application:application continueUserActivity:userActivity restorationHandler:restorationHandler];
+    +   return RCTLinkingManager.application(app, open: url, options: options)
     + }
     ```
+
+    **Universal link support:**
+
+    ```diff lang="swift" title="AppDelegate.swift"
+    + func application(
+    +   _ application: UIApplication,
+    +   continue userActivity: NSUserActivity,
+    +   restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
+    + ) -> Bool {
+    +   if userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+    +     let delegate = authorizationFlowManagerDelegate,
+    +     delegate.resumeExternalUserAgentFlow(with: userActivity.webpageURL)
+    +   {
+    +     return true
+    +   }
+    +   return RCTLinkingManager.application(
+    +     application,
+    +     continue: userActivity,
+    +     restorationHandler: restorationHandler
+    +   )
+    + }
+    ```
+
+  </TabItem>
+
+  <TabItem label="Objective-C">
+    1. Update your ``AppDelegate.h`` file to include the following:
+    
+        ```diff lang="objc" title="AppDelegate.h"
+        + #import <React/RCTLinkingManager.h>
+        + #import "RNAppAuthAuthorizationFlowManager.h"
+        
+        - @interface AppDelegate : RCTAppDelegate
+        + @interface AppDelegate : RCTAppDelegate <RNAppAuthAuthorizationFlowManager>
+        +
+        + @property(nonatomic, weak) id<RNAppAuthAuthorizationFlowManagerDelegate> authorizationFlowManagerDelegate;
+        ```
+    
+    2. Update your ``AppDelegate.m`` file to include the following:
+    
+        **Custom scheme support:**
+    
+        ```diff lang="objc" title="AppDelegate.m"
+        + - (BOOL) application: (UIApplication *)application
+        +              openURL: (NSURL *)url
+        +              options: (NSDictionary<UIApplicationOpenURLOptionsKey, id> *) options
+        + {
+        +   if ([self.authorizationFlowManagerDelegate resumeExternalUserAgentFlowWithURL:url]) {
+        +     return YES;
+        +   }
+        +   return [RCTLinkingManager application:application openURL:url options:options];
+        + }
+        ```
+    
+        **Universal link support:**
+    
+        ```diff lang="objc" title="AppDelegate.m"
+        + - (BOOL) application: (UIApplication *) application
+        + continueUserActivity: (nonnull NSUserActivity *)userActivity
+        +   restorationHandler: (nonnull void (^)(NSArray<id<UIUserActivityRestoring>> * _Nullable))restorationHandler
+        + {
+        +   if ([userActivity.activityType isEqualToString:NSUserActivityTypeBrowsingWeb]) {
+        +     if (self.authorizationFlowManagerDelegate) {
+        +       BOOL resumableAuth = [self.authorizationFlowManagerDelegate resumeExternalUserAgentFlowWithURL:userActivity.webpageURL];
+        +       if (resumableAuth) {
+        +         return YES;
+        +       }
+        +     }
+        +   }
+        +   return [RCTLinkingManager application:application continueUserActivity:userActivity restorationHandler:restorationHandler];
+        + }
+        ```
+      
+      
+  </TabItem>
+</Tabs>
+
 
 ## Integrate with your app
 
