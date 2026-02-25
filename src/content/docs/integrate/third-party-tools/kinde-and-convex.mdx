@@ -28,7 +28,7 @@ keywords:
   - authentication
   - database
   - webhooks
-updated: 2025-11-11
+updated: 2026-02-25
 featured: false
 deprecated: false
 ai_summary: Integrate Kinde with Convex to enable real-time user data sync and secure authentication with Kinde access tokens.
@@ -107,12 +107,12 @@ Bring real-time interactivity to your app with Convex, a powerful Backend-as-a-S
     import { useCallback, useMemo } from "react";
 
     export default function useAuthFromKinde() {
-    const { isLoading, isAuthenticated, getToken } = useKindeAuth();
+    const { isLoading, isAuthenticated, getAccessToken } = useKindeAuth();
     const fetchAccessToken = useCallback(
         async ({ forceRefreshToken }: { forceRefreshToken: boolean }) => {
         if (forceRefreshToken) {
             try {
-            const response = await getToken();
+            const response = await getAccessToken();
             // Returns the token as string
             return response as string;
             } catch (error) {
@@ -122,7 +122,7 @@ Bring real-time interactivity to your app with Convex, a powerful Backend-as-a-S
         // Add this line to ensure the function always returns a string or null
         return null;
         },
-        [getToken],
+        [getAccessToken],
     );
     return useMemo(
         () => ({ isLoading, isAuthenticated, fetchAccessToken }),
@@ -197,8 +197,152 @@ Bring real-time interactivity to your app with Convex, a powerful Backend-as-a-S
 
 ### Sync Kinde users to Convex database
 
-TODO: ?. add the user, webhook, and upsert option to add user to convex, when a user signs in to Kinde. 
+By default, Convex will have access to the currently logged in user's Kinde ID. However, if you want to store additional user data in the Convex database follow the steps below:
 
+1. Create and save the following Convex schema:
+
+    ```bash
+    touch convex/schema.ts
+    ```
+
+    ```typescript
+    // convex/schema.ts
+    import { defineSchema, defineTable } from "convex/server";
+    import { v } from "convex/values";
+
+    export default defineSchema({
+    users: defineTable({
+        kindeId: v.string(),
+        givenName: v.optional(v.string()),
+        familyName: v.optional(v.string()),
+        email: v.optional(v.string()),
+    }).index("by_kinde_id", ["kindeId"]),
+    });
+    ```
+2. Create the users file and add the contents:
+
+    ```bash
+    touch convex/users.ts
+    ```
+
+    ```typescript
+    // convex/users.ts
+    import { v } from "convex/values";
+    import {
+    internalMutation,
+    mutation,
+    query,
+    type QueryCtx,
+    } from "./_generated/server";
+
+    export const store = mutation({
+    args: {
+        givenName: v.optional(v.string()),
+        familyName: v.optional(v.string()),
+        email: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+
+        if (!identity) {
+        throw new Error("Called storeUser without authentication present");
+        }
+
+        // Prefer Kinde user object (passed from client); fall back to JWT identity claims.
+        const kindeProfile: Record<string, string> = {};
+        const givenName = args.givenName ?? identity.givenName;
+        const familyName = args.familyName ?? identity.familyName;
+        const email = args.email ?? identity.email;
+        if (givenName !== undefined) kindeProfile.givenName = givenName;
+        if (familyName !== undefined) kindeProfile.familyName = familyName;
+        if (email !== undefined) kindeProfile.email = email;
+
+        // Check if we've already stored this identity before.
+        const user = await ctx.db
+        .query("users")
+        .withIndex("by_kinde_id", (q) => q.eq("kindeId", identity.subject))
+        .unique();
+
+        if (user !== null) {
+        if (Object.keys(kindeProfile).length > 0) {
+            await ctx.db.patch(user._id, kindeProfile);
+        }
+        return user._id;
+        }
+        return await ctx.db.insert("users", {
+        kindeId: identity.subject,
+        ...kindeProfile,
+        });
+    },
+    });
+    ```
+
+3. Update your App.tsx file with the contents:
+
+    ```tsx
+    // src/App.tsx
+    import "./App.css";
+    import {
+    LoginLink,
+    LogoutLink,
+    RegisterLink,
+    } from "@kinde-oss/kinde-auth-react/components";
+    import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+    import {
+    Authenticated,
+    Unauthenticated,
+    useConvexAuth,
+    useMutation,
+    } from "convex/react";
+    import { useEffect, useRef } from "react";
+    import { api } from "../convex/_generated/api";
+
+    function App() {
+    const { user } = useKindeAuth();
+    const { isLoading, isAuthenticated } = useConvexAuth();
+    const storeUser = useMutation(api.users.store);
+    const hasUpserted = useRef(false);
+
+    useEffect(() => {
+        if (!isAuthenticated || !user || hasUpserted.current) return;
+        hasUpserted.current = true;
+        storeUser({
+        givenName: user.givenName,
+        familyName: user.familyName,
+        email: user.email,
+        }).catch(console.error);
+    }, [isAuthenticated, user, storeUser]);
+
+    if (isLoading) {
+        return <div>Loading...</div>;
+    }
+
+    return (
+        <>
+        <Authenticated>
+            <div>
+            Hello {user?.givenName} {user?.familyName}
+            <br />
+            Logged in | <LogoutLink>Sign out</LogoutLink>
+            </div>
+        </Authenticated>
+        <Unauthenticated>
+            <div>
+            <LoginLink>Sign in</LoginLink>
+            <RegisterLink>Sign up</RegisterLink>
+            </div>
+        </Unauthenticated>
+        </>
+    );
+    }
+
+    export default App;
+
+    ```
+
+    The code will store the user data in the Convex database under the `users` table when the user signs in. You can now query the user data in the Convex database using the `useQuery` hook.
+
+    ![convex users database](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d59004b6-fe09-4529-a441-83cfebae8d00/socialsharingimage)
 
 ## Tutorial: Create a Todo App with Convex
 
