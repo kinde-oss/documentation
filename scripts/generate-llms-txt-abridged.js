@@ -156,8 +156,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     }
   }
   
-  // Write to file
-  fs.writeFileSync('public/llms-abridged.txt', abridgedContent);
-  console.log('Abridged documentation created: public/llms-abridged.txt');
+  // Write to build output (dist/) so the file is included in the deployed site.
+  const outDir = 'dist';
+  const outPath = path.join(outDir, 'llms-abridged.txt');
+  fs.writeFileSync(outPath, abridgedContent);
+  console.log('Abridged documentation created: ' + outPath);
   console.log(`Processed ${results.length} files`);
 }
