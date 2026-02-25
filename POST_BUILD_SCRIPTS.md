@@ -23,7 +23,7 @@ These scripts are integrated into the build process via the `postbuild` npm scri
 - Updates the CSP `script-src` directive in `customHttp.yml` with these hashes
 - Ensures security compliance while allowing necessary inline scripts
 
-**Output**: Updates `customHttp.yml` with new script hashes
+**Output**: Updates `customHttp.yml` in the repo root and writes a copy to `dist/customHttp.yml` so the updated headers are included in the deployed artifact (e.g. AWS Amplify).
 
 ### 2. LLM Generation Scripts
 
