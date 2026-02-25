@@ -195,7 +195,7 @@ Bring real-time interactivity to your app with Convex, a powerful Backend-as-a-S
     ```
 
 
-### Sync Kinde users to Convex database
+## Sync Kinde users to Convex database
 
 By default, Convex will have access to the currently logged in user's Kinde ID. However, if you want to store additional user data in the Convex database follow the steps below:
 
@@ -345,6 +345,181 @@ By default, Convex will have access to the currently logged in user's Kinde ID. 
     ![convex users database](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d59004b6-fe09-4529-a441-83cfebae8d00/socialsharingimage)
 
     You can now query the user data in the Convex database using the `useQuery` hook.
+
+## Advanced user sync with Kinde webhooks
+
+If you update your Kinde users from your admin dashboard, a different application, or API, then Convex won't know about the changes. To ensure your Convex database is always up to date, you can use Kinde webhooks to sync your users. We can implement this using the Convex backend and Kinde webhooks.
+
+### Convex backend setup 
+
+1. In your Convex project, install the Kinde webhook library to validate the webhook requests:
+
+    ```bash
+    npm install @kinde/webhooks
+    ```
+
+2. Update the `users.ts` file to add the following functions:
+
+    ```typescript
+    // convex/users.ts
+    // ... other imports ...
+    import { internalMutation, mutation } from "./_generated/server";
+
+    // ... existing code ...
+
+    /** Called from Kinde webhook on user.updated – look up by kindeId and patch schema fields. */
+    export const updateUser = internalMutation({
+    args: {
+        data: v.any(),
+    },
+    handler: async (ctx, { data }) => {
+        if (!data || typeof data.id !== "string") {
+        throw new Error("updateUser: missing or invalid data.id (kinde user id)");
+        }
+        const user = await ctx.db
+        .query("users")
+        .withIndex("by_kinde_id", (q) => q.eq("kindeId", data.id))
+        .unique();
+        if (!user) return;
+        const patch: Record<string, string> = {};
+        if (typeof data.first_name === "string") patch.givenName = data.first_name;
+        if (typeof data.last_name === "string") patch.familyName = data.last_name;
+        if (typeof data.email === "string") patch.email = data.email;
+        if (Object.keys(patch).length > 0) {
+        await ctx.db.patch(user._id, patch);
+        }
+    },
+    });
+
+    /** Called from Kinde webhook on user.deleted – delete local user by kindeId. */
+    export const deleteUser = internalMutation({
+    args: {
+        kindeId: v.string(),
+    },
+    handler: async (ctx, { kindeId }) => {
+        const user = await ctx.db
+        .query("users")
+        .withIndex("by_kinde_id", (q) => q.eq("kindeId", kindeId))
+        .unique();
+        if (!user) return;
+        await ctx.db.delete(user._id);
+    },
+    });
+
+    ```
+
+3. Create a new webhook file and add the following contents:
+
+    ```bash
+    touch convex/webhook.ts
+    ```
+
+    ```typescript
+    // convex/webhook.ts
+    import { internal } from "./_generated/api";
+    import { httpAction } from "./_generated/server";
+    import { decodeWebhook } from "@kinde/webhooks";
+
+    // Defining the webhook handler
+    export const handleKindeWebhook = httpAction(async (ctx, request) => {
+    try {
+        const jwt = await request.text();
+
+        const decoded = await decodeWebhook(jwt, "https://tamalkinde.kinde.com");
+
+        if (!decoded) return new Response("Not a valid token", { status: 400 });
+
+        const { data, type } = decoded;
+
+        switch (type) {
+        case "user.updated": {
+            if (!data?.user) {
+            return new Response("Missing user in webhook payload", {
+                status: 400,
+            });
+            }
+            await ctx.runMutation(internal.users.updateUser, {
+            data: data.user,
+            });
+            break;
+        }
+
+        case "user.deleted": {
+            if (!data?.user?.id) {
+            return new Response("Missing user id in webhook payload", {
+                status: 400,
+            });
+            }
+            await ctx.runMutation(internal.users.deleteUser, {
+            kindeId: data.user.id,
+            });
+            break;
+        }
+
+        default: {
+            console.log("ignored Kinde webhook event", type);
+            break;
+        }
+        }
+
+        return new Response(null, { status: 200 });
+    } catch (error) {
+        console.error("Kinde webhook error:", error);
+        return new Response("Internal server error", { status: 500 });
+    }
+    });
+
+    ```
+
+4. Create a new http file and add the contents to handle the route:
+
+    ```bash
+    touch convex/http.ts
+    ```
+
+    ```typescript
+    // convex/http.ts
+    import { httpRouter } from "convex/server"
+    import { handleKindeWebhook } from "./webhook"
+
+    const http = httpRouter()
+
+    // Configuring the webhook route
+    http.route({
+    path: "/kinde-users-webhook",
+    method: "POST",
+    handler: handleKindeWebhook,
+    })
+
+    export default http
+    ```
+
+    This will create a new backend route under the `/kinde-users-webhook` path that will be listening for an incoming `POST` request from Kinde.
+
+Your Convex project creates a custom endpoint under the `/kinde-users-webhook` route. If you open the `/convex/http.ts` file, you can see a new route definition for your Convex backend. 
+
+This endpoint will be listening for an incoming `POST` request from Kinde.
+
+1. Go to your **Convex dashboard > Project > Settings > URL & Deploy Key.**
+2. Select **Show development credentials** and copy the **HTTP Actions URL.**
+    
+    ![convex show development credentials page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d69caa08-07a1-443b-fd42-414208807e00/public)
+    
+### Kinde webhook setup
+
+1. In your Kinde dashboard, go to **Settings > Webhooks** 
+2. Select **Add webhook**
+3. Enter the webhook **Name** and description
+4. Add the **Endpoint URL.** (copied from earlier step)
+    
+    ![kinde add webhook endpoint](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0e197529-2e6f-4f68-4f3e-3147a71e2000/public)
+    
+5. Scroll down and select **Add event**
+6. Check the **user.updated**, and **user.deleted** events and select **Save**
+    
+    ![kinde add events in webhook](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/dd6ab394-a797-4a43-5152-61c995991d00/public)
+    
+7. Select **Save** on the webhook creation page to finish creating the webhook.
 
 ## Tutorial: Create a real-time application with Kinde and Convex
 
@@ -651,80 +826,6 @@ In this tutorial, we will create a real-time message board application with Kind
     Go to http://localhost:5173 and sign in or create a new account.
     
     You should see the message board with the ability to send messages.
-
-## Advanced user sync with Kinde webhooks
-
-If you update your Kinde users from your admin dashboard, a different application, or API, then Convex won't know about the changes. To ensure your Convex database is always up to date, you can use Kinde webhooks to sync your users. We can implement this using the Convex backend and Kinde webhooks.
-
-### Convex backend setup 
-
-1. In your Convex project, install the Kinde webhook library to validate the webhook requests:
-
-    ```bash
-    npm install @kinde-oss/kinde-webhook
-    ```
-
-2. Create a new webhook file and add the following contents:
-
-    ```bash
-    touch convex/webhook.ts
-    ```
-
-    ```typescript
-    // convex/webhook.ts
-    
-    to be updated
-    ```
-
-3. Create a new http file and add the contents to handle the route:
-
-    ```bash
-    touch convex/http.ts
-    ```
-
-    ```typescript
-    // convex/http.ts
-    import { httpRouter } from "convex/server"
-    import { handleKindeWebhook } from "./webhook"
-
-    const http = httpRouter()
-
-    // Configuring the webhook route
-    http.route({
-    path: "/kinde-users-webhook",
-    method: "POST",
-    handler: handleKindeWebhook,
-    })
-
-    export default http
-    ```
-
-    This will create a new backend route under the `/kinde-users-webhook` path that will be listening for an incoming `POST` request from Kinde.
-
-Your Convex project creates a custom endpoint under the `/kinde-users-webhook` route. If you open the `/convex/http.ts` file, you can see a new route definition for your Convex backend. 
-
-This endpoint will be listening for an incoming `POST` request from Kinde.
-
-1. Go to your **Convex dashboard > Project > Settings > URL & Deploy Key.**
-2. Select **Show development credentials** and copy the **HTTP Actions URL.**
-    
-    ![convex show development credentials page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d69caa08-07a1-443b-fd42-414208807e00/public)
-    
-### Kinde webhook setup
-
-1. In your Kinde dashboard, go to **Settings > Webhooks** 
-2. Select **Add webhook**
-3. Enter the webhook **Name** and description
-4. Add the **Endpoint URL.** (copied from earlier step)
-    
-    ![kinde add webhook endpoint](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0e197529-2e6f-4f68-4f3e-3147a71e2000/public)
-    
-5. Scroll down and select **Add event**
-6. Check the **user.updated**, and **user.deleted** events and select **Save**
-    
-    ![kinde add events in webhook](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/dd6ab394-a797-4a43-5152-61c995991d00/public)
-    
-7. Select **Save** on the webhook creation page to finish creating the webhook.
 
 ### You have done it 🎉
 
