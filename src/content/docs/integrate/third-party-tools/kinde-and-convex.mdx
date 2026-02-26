@@ -38,17 +38,17 @@ Bring real-time interactivity to your app with Convex, a powerful Backend-as-a-S
 
 ## Quickstart
 
-1. Setup a new React project by running the following command:
+1. Set up a new React project by running the following command:
 
     ```bash
     npm create vite@latest my-app -- --template react-ts
     ```
 
-2. Setup a [Kinde React application](/developer-tools/sdks/frontend/react-sdk/) and obtain the **Client ID** and your **Kinde domain**
+2. Set up a [Kinde React application](/developer-tools/sdks/frontend/react-sdk/) and obtain the **Client ID** and **Kinde domain**
 
 3. Register a new API for Convex in Kinde
    - In Kinde, go to **Settings > APIs > Add API**
-   - Type a name for the API (e.g., Convex), and code `convex`
+   - Type a name for the API (e.g., Convex) and set the audience to `convex`
    - Go to your Convex application > **APIs** > select the **three dots** next to your Convex API and select **Authorize application**
 
 4. Install the Convex dependencies:
@@ -78,19 +78,19 @@ Bring real-time interactivity to your app with Convex, a powerful Backend-as-a-S
     const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
     createRoot(document.getElementById("root")!).render(
-    <StrictMode>
+      <StrictMode>
         <KindeProvider
-        clientId="your_kinde_client_id"
-        domain="https://your_kinde_business.kinde.com"
-        logoutUri={window.location.origin}
-        redirectUri={window.location.origin}
-        audience="convex"
+          clientId="your_kinde_client_id"
+          domain="https://your_kinde_business.kinde.com"
+          logoutUri={window.location.origin}
+          redirectUri={window.location.origin}
+          audience="convex"
         >
-            <ConvexProviderWithAuth client={convex} useAuth={useAuthFromKinde}>
-                <App />
-            </ConvexProviderWithAuth>
+          <ConvexProviderWithAuth client={convex} useAuth={useAuthFromKinde}>
+            <App />
+          </ConvexProviderWithAuth>
         </KindeProvider>
-    </StrictMode>,
+      </StrictMode>,
     );
     ```
 
@@ -107,27 +107,22 @@ Bring real-time interactivity to your app with Convex, a powerful Backend-as-a-S
     import { useCallback, useMemo } from "react";
 
     export default function useAuthFromKinde() {
-    const { isLoading, isAuthenticated, getAccessToken } = useKindeAuth();
-    const fetchAccessToken = useCallback(
+      const { isLoading, isAuthenticated, getAccessToken } = useKindeAuth();
+      const fetchAccessToken = useCallback(
         async ({ forceRefreshToken }: { forceRefreshToken: boolean }) => {
-        if (forceRefreshToken) {
-            try {
+          try {
             const response = await getAccessToken();
-            // Returns the token as string
             return response as string;
-            } catch (error) {
+          } catch (error) {
             return null;
-            }
-        }
-        // Add this line to ensure the function always returns a string or null
-        return null;
+          }
         },
         [getAccessToken],
-    );
-    return useMemo(
+      );
+      return useMemo(
         () => ({ isLoading, isAuthenticated, fetchAccessToken }),
         [isLoading, isAuthenticated, fetchAccessToken],
-    );
+      );
     }
     ```
 6. Connect Convex backend auth by adding a `auth.config.ts` file:
@@ -143,12 +138,12 @@ Bring real-time interactivity to your app with Convex, a powerful Backend-as-a-S
     // domain must match the ID token's "iss"; applicationID must match the ID token's "aud".
     // Decode your ID token at jwt.io to confirm (use getIdToken() and paste the string).
     export default {
-    providers: [
+      providers: [
         {
-        domain: "https://your_kinde_business.kinde.com",
-        applicationID: "convex",
+          domain: "https://your_kinde_business.kinde.com",
+          applicationID: "convex",
         },
-    ],
+      ],
     } satisfies AuthConfig;
     ```
 7. Add Convex auth utilities to your component: 
@@ -157,47 +152,49 @@ Bring real-time interactivity to your app with Convex, a powerful Backend-as-a-S
     // src/App.tsx
     import "./App.css";
     import {
-    LoginLink,
-    LogoutLink,
-    RegisterLink,
+      LoginLink,
+      LogoutLink,
+      RegisterLink,
     } from "@kinde-oss/kinde-auth-react/components";
     import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
     import { Authenticated, Unauthenticated, useConvexAuth } from "convex/react";
 
     function App() {
-        const { user } = useKindeAuth();
-        const { isLoading } = useConvexAuth();
+      const { user } = useKindeAuth();
+      const { isLoading } = useConvexAuth();
 
-        if (isLoading) {
-          return <div>Loading...</div>;
-        }
+      if (isLoading) {
+        return <div>Loading...</div>;
+      }
 
-        return (
-            <>
-            <Authenticated>
-              <div>
-                Hello {user?.givenName} {user?.familyName}
-                <br />
-                Logged in | <LogoutLink>Sign out</LogoutLink>
-              </div>
-            </Authenticated>
-            <Unauthenticated>
-              <div>
-                <LoginLink>Sign in</LoginLink>
-                <RegisterLink>Sign up</RegisterLink>
-              </div>
-            </Unauthenticated>
-            </>
-        );
+      return (
+        <>
+          <Authenticated>
+            <div>
+              Hello {user?.givenName} {user?.familyName}
+              <br />
+              Logged in | <LogoutLink>Sign out</LogoutLink>
+            </div>
+          </Authenticated>
+          <Unauthenticated>
+            <div>
+              <LoginLink>Sign in</LoginLink>
+              <RegisterLink>Sign up</RegisterLink>
+            </div>
+          </Unauthenticated>
+        </>
+      );
     }
 
     export default App;
     ```
 
+    Learn more about adding custom OIDC providers to Convex in the [Convex documentation](https://docs.convex.dev/auth/advanced/custom-auth).
+
 
 ## Sync Kinde users to Convex database
 
-By default, Convex will have access to the currently logged in user's Kinde ID. However, if you want to store additional user data in the Convex database follow the steps below:
+Convex already gets the signed-in user’s Kinde ID from the token `subject` claim, and you can read profile details (e.g., `givenName`, `familyName`, `email`) from the `useKindeAuth` hook’s `user` object. To use that data in queries, mutations, and across your app, store it in Convex. The steps below add a `users` table and a mutation that syncs the current user on sign-in.
 
 1. Create and save the following Convex schema:
 
@@ -211,15 +208,15 @@ By default, Convex will have access to the currently logged in user's Kinde ID. 
     import { v } from "convex/values";
 
     export default defineSchema({
-    users: defineTable({
+      users: defineTable({
         kindeId: v.string(),
         givenName: v.optional(v.string()),
         familyName: v.optional(v.string()),
         email: v.optional(v.string()),
-    }).index("by_kinde_id", ["kindeId"]),
+      }).index("by_kinde_id", ["kindeId"]),
     });
     ```
-2. Create the users file and add the contents:
+2. Create the `users` file and add the contents:
 
     ```bash
     touch convex/users.ts
@@ -228,24 +225,19 @@ By default, Convex will have access to the currently logged in user's Kinde ID. 
     ```typescript
     // convex/users.ts
     import { v } from "convex/values";
-    import {
-    internalMutation,
-    mutation,
-    query,
-    type QueryCtx,
-    } from "./_generated/server";
+    import { internalMutation, mutation, query } from "./_generated/server";
 
     export const store = mutation({
-    args: {
+      args: {
         givenName: v.optional(v.string()),
         familyName: v.optional(v.string()),
         email: v.optional(v.string()),
-    },
-    handler: async (ctx, args) => {
+      },
+      handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
 
         if (!identity) {
-        throw new Error("Called storeUser without authentication present");
+          throw new Error("Called storeUser without authentication present");
         }
 
         // Prefer Kinde user object (passed from client); fall back to JWT identity claims.
@@ -259,81 +251,81 @@ By default, Convex will have access to the currently logged in user's Kinde ID. 
 
         // Check if we've already stored this identity before.
         const user = await ctx.db
-        .query("users")
-        .withIndex("by_kinde_id", (q) => q.eq("kindeId", identity.subject))
-        .unique();
+          .query("users")
+          .withIndex("by_kinde_id", (q) => q.eq("kindeId", identity.subject))
+          .unique();
 
         if (user !== null) {
-        if (Object.keys(kindeProfile).length > 0) {
+          if (Object.keys(kindeProfile).length > 0) {
             await ctx.db.patch(user._id, kindeProfile);
-        }
-        return user._id;
+          }
+          return user._id;
         }
         return await ctx.db.insert("users", {
-        kindeId: identity.subject,
-        ...kindeProfile,
+          kindeId: identity.subject,
+          ...kindeProfile,
         });
-    },
+      },
     });
     ```
 
-3. Update your App.tsx file with the contents:
+3. Update your `App.tsx` file with the contents:
 
     ```tsx
     // src/App.tsx
     import "./App.css";
     import {
-    LoginLink,
-    LogoutLink,
-    RegisterLink,
+      LoginLink,
+      LogoutLink,
+      RegisterLink,
     } from "@kinde-oss/kinde-auth-react/components";
     import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
     import {
-    Authenticated,
-    Unauthenticated,
-    useConvexAuth,
-    useMutation,
+      Authenticated,
+      Unauthenticated,
+      useConvexAuth,
+      useMutation,
     } from "convex/react";
     import { useEffect, useRef } from "react";
     import { api } from "../convex/_generated/api";
 
     function App() {
-    const { user } = useKindeAuth();
-    const { isLoading, isAuthenticated } = useConvexAuth();
-    const storeUser = useMutation(api.users.store);
-    const hasUpserted = useRef(false);
+      const { user } = useKindeAuth();
+      const { isLoading, isAuthenticated } = useConvexAuth();
+      const storeUser = useMutation(api.users.store);
+      const hasUpserted = useRef(false);
 
-    useEffect(() => {
+      useEffect(() => {
         if (!isAuthenticated || !user || hasUpserted.current) return;
         hasUpserted.current = true;
         storeUser({
-        givenName: user.givenName,
-        familyName: user.familyName,
-        email: user.email,
+          givenName: user.givenName,
+          familyName: user.familyName,
+          email: user.email,
         }).catch(console.error);
-    }, [isAuthenticated, user, storeUser]);
+      }, [isAuthenticated, user, storeUser]);
 
-    if (isLoading) {
+      if (isLoading) {
         return <div>Loading...</div>;
-    }
+      }
 
-    return (
+      return (
         <>
-        <Authenticated>
+          <Authenticated>
             <div>
-            Hello {user?.givenName} {user?.familyName}
-            <br />
-            Logged in | <LogoutLink>Sign out</LogoutLink>
+              Hello {user?.givenName} {user?.familyName}
+              <br />
+              Logged in | <LogoutLink>Sign out</LogoutLink>
             </div>
-        </Authenticated>
-        <Unauthenticated>
+          </Authenticated>
+          <Unauthenticated>
             <div>
-            <LoginLink>Sign in</LoginLink>
-            <RegisterLink>Sign up</RegisterLink>
+              <LoginLink>Sign in</LoginLink>
+              <RegisterLink>Sign up</RegisterLink>
             </div>
-        </Unauthenticated>
+          </Unauthenticated>
         </>
-    );
+      );
     }
 
     export default App;
@@ -346,69 +338,72 @@ By default, Convex will have access to the currently logged in user's Kinde ID. 
 
     You can now query the user data in the Convex database using the `useQuery` hook.
 
+    Learn more about using the `useQuery` hook in the [Convex React quickstart](https://docs.convex.dev/quickstart/react).
+
 ## Advanced user sync with Kinde webhooks
 
-If you update your Kinde users from your admin dashboard, a different application, or API, then Convex won't know about the changes. To ensure your Convex database is always up to date, you can use Kinde webhooks to sync your users. We can implement this using the Convex backend and Kinde webhooks.
+Right now, user data is written to Convex only when someone signs in. Changes made in Kinde elsewhere—for example in the Kinde dashboard, another app, or via the API—never reach Convex, so your database can go out of date. Use Kinde webhooks so that when a user is updated or deleted in Kinde, Convex is updated too. This section walks you through adding a webhook endpoint in your Convex backend and connecting it to Kinde.
 
-### Convex backend setup 
+<Aside type="upgrade">
+The Kinde free plan includes one webhook, which is enough for this integration—you’ll use a single endpoint for user updates and deletions. If you need more webhooks later (e.g., for other apps or events), upgrade to a paid plan. [View plans](https://kinde.com/pricing/).
+</Aside>
 
-1. In your Convex project, install the Kinde webhook library to validate the webhook requests:
+### Step 1: Configure Convex backend
+
+1. In your Convex project, install the Kinde webhook library to validate the incoming webhook requests:
 
     ```bash
     npm install @kinde/webhooks
     ```
 
-2. Update the `users.ts` file to add the following functions:
+2. Update the `users.ts` file: ensure `internalMutation` is in your import from the Convex server (it already is from the earlier step), then add the following two functions after your existing `store` mutation:
 
     ```typescript
     // convex/users.ts
-    // ... other imports ...
-    import { internalMutation, mutation } from "./_generated/server";
-
-    // ... existing code ...
+    // Keep your existing imports (v, internalMutation, mutation, query) and store mutation above, then add:
 
     /** Called from Kinde webhook on user.updated – look up by kindeId and patch schema fields. */
     export const updateUser = internalMutation({
-    args: {
+      args: {
         data: v.any(),
-    },
-    handler: async (ctx, { data }) => {
+      },
+      handler: async (ctx, { data }) => {
         if (!data || typeof data.id !== "string") {
-        throw new Error("updateUser: missing or invalid data.id (kinde user id)");
+          throw new Error("updateUser: missing or invalid data.id (kinde user id)");
         }
         const user = await ctx.db
-        .query("users")
-        .withIndex("by_kinde_id", (q) => q.eq("kindeId", data.id))
-        .unique();
+          .query("users")
+          .withIndex("by_kinde_id", (q) => q.eq("kindeId", data.id))
+          .unique();
         if (!user) return;
         const patch: Record<string, string> = {};
         if (typeof data.first_name === "string") patch.givenName = data.first_name;
         if (typeof data.last_name === "string") patch.familyName = data.last_name;
         if (typeof data.email === "string") patch.email = data.email;
         if (Object.keys(patch).length > 0) {
-        await ctx.db.patch(user._id, patch);
+          await ctx.db.patch(user._id, patch);
         }
-    },
+      },
     });
 
     /** Called from Kinde webhook on user.deleted – delete local user by kindeId. */
     export const deleteUser = internalMutation({
-    args: {
+      args: {
         kindeId: v.string(),
-    },
-    handler: async (ctx, { kindeId }) => {
+      },
+      handler: async (ctx, { kindeId }) => {
         const user = await ctx.db
-        .query("users")
-        .withIndex("by_kinde_id", (q) => q.eq("kindeId", kindeId))
-        .unique();
+          .query("users")
+          .withIndex("by_kinde_id", (q) => q.eq("kindeId", kindeId))
+          .unique();
         if (!user) return;
         await ctx.db.delete(user._id);
-    },
+      },
     });
 
     ```
 
-3. Create a new webhook file and add the following contents:
+3. Create a new `webhook.ts` file and add the following contents:
 
     ```bash
     touch convex/webhook.ts
@@ -422,56 +417,56 @@ If you update your Kinde users from your admin dashboard, a different applicatio
 
     // Defining the webhook handler
     export const handleKindeWebhook = httpAction(async (ctx, request) => {
-    try {
+      try {
         const jwt = await request.text();
 
-        const decoded = await decodeWebhook(jwt, "https://tamalkinde.kinde.com");
+        const decoded = await decodeWebhook(jwt, process.env.KINDE_DOMAIN); // https://<your_kinde_business>.kinde.com
 
         if (!decoded) return new Response("Not a valid token", { status: 400 });
 
         const { data, type } = decoded;
 
         switch (type) {
-        case "user.updated": {
+          case "user.updated": {
             if (!data?.user) {
-            return new Response("Missing user in webhook payload", {
+              return new Response("Missing user in webhook payload", {
                 status: 400,
-            });
+              });
             }
             await ctx.runMutation(internal.users.updateUser, {
-            data: data.user,
+              data: data.user,
             });
             break;
-        }
+          }
 
-        case "user.deleted": {
+          case "user.deleted": {
             if (!data?.user?.id) {
-            return new Response("Missing user id in webhook payload", {
+              return new Response("Missing user id in webhook payload", {
                 status: 400,
-            });
+              });
             }
             await ctx.runMutation(internal.users.deleteUser, {
-            kindeId: data.user.id,
+              kindeId: data.user.id,
             });
             break;
-        }
+          }
 
-        default: {
+          default: {
             console.log("ignored Kinde webhook event", type);
             break;
-        }
+          }
         }
 
         return new Response(null, { status: 200 });
-    } catch (error) {
+      } catch (error) {
         console.error("Kinde webhook error:", error);
         return new Response("Internal server error", { status: 500 });
-    }
+      }
     });
 
     ```
 
-4. Create a new http file and add the contents to handle the route:
+4. Create a new `http.ts` file and add the contents to handle the route:
 
     ```bash
     touch convex/http.ts
@@ -486,57 +481,49 @@ If you update your Kinde users from your admin dashboard, a different applicatio
 
     // Configuring the webhook route
     http.route({
-    path: "/kinde-users-webhook",
-    method: "POST",
-    handler: handleKindeWebhook,
+      path: "/kinde-users-webhook",
+      method: "POST",
+      handler: handleKindeWebhook,
     })
 
     export default http
     ```
 
-    This will create a new backend route under the `/kinde-users-webhook` path that will be listening for an incoming `POST` request from Kinde.
+    This will create a new backend route for your app under the `/kinde-users-webhook` path that will be listening for an incoming `POST` request from Kinde.
 
-Your Convex project creates a custom endpoint under the `/kinde-users-webhook` route. If you open the `/convex/http.ts` file, you can see a new route definition for your Convex backend. 
-
-This endpoint will be listening for an incoming `POST` request from Kinde.
-
-1. Go to your **Convex dashboard > Project > Settings > URL & Deploy Key.**
-2. Select **Show development credentials** and copy the **HTTP Actions URL.**
+5. Go to your **Convex dashboard > Project > Settings > General > HTTP Actions URL** and copy the URL.
+6. Combine the HTTP Actions URL with the `/kinde-users-webhook` path to get the full endpoint URL (e.g., `https://<http_actions_url>/kinde-users-webhook`). Copy this URL for the next step.
+7. Go to your Convex project > **Settings** > **Environment Variables** and add the following environment variable:
+    - `KINDE_DOMAIN`: The domain of your Kinde instance, you can find it in your Kinde application's **Details** page under **App keys** (e.g., `https://<your_kinde_business>.kinde.com`)
     
-    ![convex show development credentials page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d69caa08-07a1-443b-fd42-414208807e00/public)
-    
-### Kinde webhook setup
+### Step 2: Set up a Kinde webhook
 
 1. In your Kinde dashboard, go to **Settings > Webhooks** 
 2. Select **Add webhook**
 3. Enter the webhook **Name** and description
-4. Add the **Endpoint URL.** (copied from earlier step)
-    
-    ![kinde add webhook endpoint](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0e197529-2e6f-4f68-4f3e-3147a71e2000/public)
-    
+4. Add the **Endpoint URL.** (copied from earlier step) 
 5. Scroll down and select **Add event**
-6. Check the **user.updated**, and **user.deleted** events and select **Save**
-    
-    ![kinde add events in webhook](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/dd6ab394-a797-4a43-5152-61c995991d00/public)
-    
-7. Select **Save** on the webhook creation page to finish creating the webhook.
+6. Check the `user.updated`, and `user.deleted` events and select **Save** 
+7. Select **Save** on the webhook creation page to finish creating the webhook
+8. Go to **Users** and update a user's details or delete a user
+9. Go to the **Convex dashboard** > **Data** > **Users** and verify that the user details are updated or the user is deleted in the database
 
-## Tutorial: Create a real-time application with Kinde and Convex
+## Tutorial: Create a real-time message board application with Kinde and Convex
 
-In this tutorial, we will create a real-time message board application with Kinde and Convex. Logged in users will be able to send messages to your application, and with Convex real-time sync, all users will see the messages in real-time.
+This tutorial builds a simple message board: signed-in users post messages, and Convex’s real-time sync shows new messages to everyone as they’re sent—no refresh needed. You’ll add a `messages` table, send/list mutations and queries, and a small React UI that uses the synced user data from the previous sections.
 
 1. Add the following messages schema to your Convex schema:
 
     ```typescript
     // convex/schema.ts
     export default defineSchema({
-    // ... existing schema ...
+      // ... existing schema ...
 
-        messages: defineTable({
-            userId: v.string(),
-            authorName: v.string(),
-            message: v.string(),
-        }).index("by_user_id", ["userId"]),
+      messages: defineTable({
+        userId: v.string(),
+        authorName: v.optional(v.string()),
+        message: v.string(),
+      }).index("by_user_id", ["userId"]),
     });
     ```
 
@@ -552,37 +539,37 @@ In this tutorial, we will create a real-time message board application with Kind
     import { mutation, query } from "./_generated/server";
 
     export const list = query({
-    args: {},
-    handler: async (ctx) => {
+      args: {},
+      handler: async (ctx) => {
         return await ctx.db
-        .query("messages")
-        .order("desc")
-        .take(100);
-    },
+          .query("messages")
+          .order("desc")
+          .take(100);
+      },
     });
 
     export const sendMessage = mutation({
-    args: {
+      args: {
         message: v.string(),
-    },
-    handler: async (ctx, args) => {
+      },
+      handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
         if (!identity) {
-        throw new Error("Must be authenticated to send a message");
+          throw new Error("Must be authenticated to send a message");
         }
         const user = await ctx.db
-        .query("users")
-        .withIndex("by_kinde_id", (q) => q.eq("kindeId", identity.subject))
-        .unique();
+          .query("users")
+          .withIndex("by_kinde_id", (q) => q.eq("kindeId", identity.subject))
+          .unique();
         if (!user) {
-        throw new Error("User not found");
+          throw new Error("User not found");
         }
         await ctx.db.insert("messages", {
-        userId: user.kindeId,
-        authorName: user.givenName ?? "Someone",
-        message: args.message,
+          userId: user.kindeId,
+          authorName: user.givenName ?? "Someone",
+          message: args.message,
         });
-    },
+      },
     });
     ```
 
@@ -603,209 +590,209 @@ In this tutorial, we will create a real-time message board application with Kind
     import { api } from "../convex/_generated/api";
 
     export default function MessageBoard() {
-    const messages = useQuery(api.messages.list);
-    const sendMessage = useMutation(api.messages.sendMessage);
-    const [message, setMessage] = useState("");
+      const messages = useQuery(api.messages.list);
+      const sendMessage = useMutation(api.messages.sendMessage);
+      const [message, setMessage] = useState("");
 
-    async function handleSubmit(e: React.FormEvent) {
+      async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         const trimmed = message.trim();
         if (!trimmed) return;
         await sendMessage({ message: trimmed });
         setMessage("");
-    }
+      }
 
-    return (
+      return (
         <section className="message-board">
-        <h2 className="message-board-title">Message Board</h2>
-        <ul className="message-list">
+          <h2 className="message-board-title">Message Board</h2>
+          <ul className="message-list">
             {messages === undefined ? (
-            <li className="message-item">Loading messages…</li>
+              <li className="message-item">Loading messages…</li>
             ) : messages.length === 0 ? (
-            <li className="message-item">No messages yet. Send one below.</li>
+              <li className="message-item">No messages yet. Send one below.</li>
             ) : (
-            messages.map((m) => (
+              messages.map((m) => (
                 <li key={m._id} className="message-item">
-                <span className="message-author">{m.authorName ?? "Someone"}:</span>
-                {m.message}
+                  <span className="message-author">{m.authorName ?? "Someone"}:</span>
+                  {m.message}
                 </li>
-            ))
+              ))
             )}
-        </ul>
-        <form onSubmit={handleSubmit} className="message-form">
+          </ul>
+          <form onSubmit={handleSubmit} className="message-form">
             <input
-            type="text"
-            className="message-input"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type a message..."
-            aria-label="Message"
+              type="text"
+              className="message-input"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Type a message..."
+              aria-label="Message"
             />
             <button type="submit" className="btn btn-primary" disabled={!message.trim()}>
-            Send
+              Send
             </button>
-        </form>
+          </form>
         </section>
-    );
+      );
     }
     ```
 
 4. Add the optional styles to your CSS file:
 
     ```css
-    // src/App.css
+    /* src/App.css */
     :root {
-    --kinde-primary: #111111;
-    --kinde-primary-hover: #333333;
-    --kinde-base: #1f2937;
-    --kinde-base-muted: #6b7280;
-    --kinde-bg: #ffffff;
-    --kinde-bg-subtle: #f9fafb;
-    --kinde-border: #e5e7eb;
-    --kinde-radius: 8px;
-    --kinde-font: system-ui, -apple-system, sans-serif;
+      --kinde-primary: #111111;
+      --kinde-primary-hover: #333333;
+      --kinde-base: #1f2937;
+      --kinde-base-muted: #6b7280;
+      --kinde-bg: #ffffff;
+      --kinde-bg-subtle: #f9fafb;
+      --kinde-border: #e5e7eb;
+      --kinde-radius: 8px;
+      --kinde-font: system-ui, -apple-system, sans-serif;
     }
 
     /* Layout */
     #root {
-    max-width: 640px;
-    margin: 0 auto;
-    padding: 2rem;
-    font-family: var(--kinde-font);
-    color: var(--kinde-base);
-    background: var(--kinde-bg);
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem;
+      font-family: var(--kinde-font);
+      color: var(--kinde-base);
+      background: var(--kinde-bg);
     }
 
     .app {
-    min-height: 100vh;
+      min-height: 100vh;
     }
 
     .app-header {
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--kinde-border);
-    font-size: 0.9375rem;
-    color: var(--kinde-base-muted);
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--kinde-border);
+      font-size: 0.9375rem;
+      color: var(--kinde-base-muted);
     }
 
     .app-header strong {
-    color: var(--kinde-base);
+      color: var(--kinde-base);
     }
 
     .auth-links a {
-    color: var(--kinde-primary);
-    text-decoration: none;
-    font-weight: 500;
+      color: var(--kinde-primary);
+      text-decoration: none;
+      font-weight: 500;
     }
 
     .auth-links a:hover {
-    color: var(--kinde-primary-hover);
-    text-decoration: underline;
+      color: var(--kinde-primary-hover);
+      text-decoration: underline;
     }
 
     .auth-links a + a {
-    margin-left: 1rem;
+      margin-left: 1rem;
     }
 
     .loading {
-    color: var(--kinde-base-muted);
-    padding: 2rem;
-    text-align: center;
+      color: var(--kinde-base-muted);
+      padding: 2rem;
+      text-align: center;
     }
 
     /* Message board */
     .message-board {
-    background: var(--kinde-bg-subtle);
-    border: 1px solid var(--kinde-border);
-    border-radius: var(--kinde-radius);
-    padding: 1.25rem;
+      background: var(--kinde-bg-subtle);
+      border: 1px solid var(--kinde-border);
+      border-radius: var(--kinde-radius);
+      padding: 1.25rem;
     }
 
     .message-board-title {
-    margin: 0 0 1rem;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--kinde-base);
+      margin: 0 0 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--kinde-base);
     }
 
     .message-list {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 1rem;
-    max-height: 40vh;
-    overflow-y: auto;
+      list-style: none;
+      padding: 0;
+      margin: 0 0 1rem;
+      max-height: 40vh;
+      overflow-y: auto;
     }
 
     .message-item {
-    padding: 0.5rem 0.75rem;
-    margin-bottom: 0.25rem;
-    background: var(--kinde-bg);
-    border-radius: 6px;
-    font-size: 0.875rem;
-    border: 1px solid var(--kinde-border);
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 0.25rem;
+      background: var(--kinde-bg);
+      border-radius: 6px;
+      font-size: 0.875rem;
+      border: 1px solid var(--kinde-border);
     }
 
     .message-author {
-    color: var(--kinde-primary);
-    font-weight: 600;
-    margin-right: 0.35rem;
+      color: var(--kinde-primary);
+      font-weight: 600;
+      margin-right: 0.35rem;
     }
 
     .message-form {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
     }
 
     .message-input {
-    flex: 1;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
-    font-family: inherit;
-    border: 1px solid var(--kinde-border);
-    border-radius: 6px;
-    background: var(--kinde-bg);
-    color: var(--kinde-base);
+      flex: 1;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      border: 1px solid var(--kinde-border);
+      border-radius: 6px;
+      background: var(--kinde-bg);
+      color: var(--kinde-base);
     }
 
     .message-input::placeholder {
-    color: var(--kinde-base-muted);
+      color: var(--kinde-base-muted);
     }
 
     .message-input:focus {
-    outline: none;
-    border-color: var(--kinde-primary);
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+      outline: none;
+      border-color: var(--kinde-primary);
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
     }
 
     /* Buttons – Kinde primary style */
     .btn {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    font-family: inherit;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.15s;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      font-family: inherit;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.15s;
     }
 
     .btn-primary {
-    background: var(--kinde-primary);
-    color: white;
+      background: var(--kinde-primary);
+      color: white;
     }
 
     .btn-primary:hover:not(:disabled) {
-    background: var(--kinde-primary-hover);
+      background: var(--kinde-primary-hover);
     }
 
     .btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+      opacity: 0.5;
+      cursor: not-allowed;
     }
     ```
 
-5. Update your `App.tsx` file to include the `MessageBoard` component between the `<Authenticated>` tags:
+5. Update your `App.tsx` file to include the `MessageBoard` component: add `import MessageBoard from "./MessageBoard";` at the top, then render `<MessageBoard />` inside the `<Authenticated>` block (for example, after the greeting div that shows the user's name and sign-out link).
 
     ```tsx
     // src/App.tsx
@@ -827,10 +814,4 @@ In this tutorial, we will create a real-time message board application with Kind
     
     You should see the message board with the ability to send messages.
 
-### You have done it 🎉
-
-With webhooks in place, your Kinde user data is now automatically synced to your Convex database. This gives your application fast, secure access to user information while avoiding common performance issues like n+1 queries. It also ensures your UI stays responsive to real-time data updates.
-
-Webhooks offer a flexible way to extend Kinde’s authentication and user management into your backend workflows, so you can work with the tools you already use while keeping everything connected.
-
-Follow best practices, test your integration carefully, keep your dependencies up to date, and monitor for any security advisories to ensure everything runs smoothly.
+    ![real time application with convex](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c01de5d4-c76a-4b47-8e76-78ab2bb96e00/socialsharingimage)
