@@ -867,7 +867,7 @@ Once you implement one of the above, you don’t need to do anything else.
 
 ## Persisting application state
 
-The options argument passed into the `login` and `register` methods accepts an `state` key where you can pass in the current application state prior to redirecting to Kinde. This is then returned to you in the second argument of the `onSuccess` callback as seen above.
+The options argument passed into the `login` and `register` methods accepts a `state` key where you can pass in the current application state prior to redirecting to Kinde. This is then returned to you in the second argument of the `onSuccess` callback as seen above.
 
 A common use case is to allow redirects to the page the user was trying to access prior to authentication. This could be achieved as follows:
 
@@ -905,7 +905,8 @@ By default the JWTs provided by Kinde are stored in memory. This protects you fr
 
 The trade-off with this approach, however, is that if a page is refreshed or a new tab is opened, then the token is wiped from memory, and the sign-in button would need to be clicked to re-authenticate. There are two ways to prevent this behavior:
 
-1. Use the Kinde custom domain feature. We can then set a secure, httpOnly cookie against your domain containing only the refresh token which is not vulnerable to CSRF attacks.
+1. Use the Kinde custom domain feature. We can then set a secure, `httpOnly` cookie against your domain containing only the refresh token. This reduces token exposure to JavaScript; CSRF protection still relies on controls such as SameSite and server-side request validation.
+
 2. There is an escape hatch which can be used for local development: `useInsecureForRefreshToken`. This SHOULD NOT be used in production. We recommend you use a custom domain. This will store only the refresh token in local storage and is used to silently re-authenticate.
 
 ```jsx
@@ -1249,9 +1250,9 @@ Output:
 ```text
 {
   success: true,
-  accessToken: "eyJhbGciOiJIUzI1NiIsInR5c...",
-  idToken: "eyJhbGciOiJIUzI1NiIsInR5c...",
-  refreshToken: "eyJhbGciOiJIUzI1NiIsInR5c..."
+  accessToken: "<access_token>",
+  idToken: "<id_token>",
+  refreshToken: "<refresh_token>"
 }
 ```
 
