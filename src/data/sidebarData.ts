@@ -206,6 +206,33 @@ const sidebarData = [
     ]
   },
   {
+    label: "Testing",
+    description:
+      "Test your application's authentication flows, passwordless flows, and backend APIs",
+    icon: "build",
+    cardLink: "/testing/",
+    collapsed: false,
+    items: [
+      {label: "Overview", link: "/testing/"},
+      {label: "Setup test user and environment", link: "/testing/setup-test-user-environment/"},
+      {label: "Testing authentication flows", link: "/testing/testing-authentication-flows/"},
+      {label: "Testing passwordless flows", link: "/testing/testing-passwordless-flows/"},
+      {label: "Testing authenticated features", link: "/testing/testing-authenticated-features/"},
+      {label: "Testing backend APIs", link: "/testing/testing-backend-apis/"},
+      {label: "Test backend APIs with Jest", link: "/testing/test-backend-apis-jest/"},
+      {
+        label: "Cypress",
+        autogenerate: {directory: "testing/cypress"},
+        collapsed: true
+      },
+      {
+        label: "Playwright",
+        autogenerate: {directory: "testing/playwright"},
+        collapsed: true
+      }
+    ]
+  },
+  {
     label: "Billing",
     description: "Monetize your product, build plans, and accept payments",
     icon: "billing",

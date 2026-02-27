@@ -1,0 +1,241 @@
+---
+page_id: 2a64dc3f-ffe7-448e-904d-726e7e26ba7b
+title: Test backend APIs
+description: "Guide to testing backend APIs with Playwright using Kinde refresh tokens for maintaining long-running authenticated sessions in automated tests."
+sidebar:
+  order: 5
+next: false
+tableOfContents:
+  maxHeadingLevel: 3
+topics:
+  - developer-tools
+  - testing
+  - playwright
+  - e2e-testing
+  - api-testing
+sdk: []
+languages:
+  - JavaScript
+  - TypeScript
+audience: developers
+complexity: intermediate
+keywords:
+  - playwright
+  - testing
+  - backend APIs
+  - API testing
+  - refresh tokens
+updated: 2026-01-22
+featured: false
+deprecated: false
+---
+
+In this guide, we'll show you how to test backend APIs with Playwright. We will use Kinde refresh tokens for maintaining authenticated sessions in automated tests, including token rotation. Learn more about [testing backend APIs with Kinde](/testing/testing-backend-apis/).
+
+### What you need
+
+- Completed the [Playwright setup](/testing/playwright/)
+- A [test user](/testing/setup-test-user-environment/) and a running Kinde application.
+
+## Configure Kinde refresh tokens
+
+1. Update your `.env` file with the `refresh token`. You can obtain the refresh token by following [this step](/testing/testing-backend-apis/#obtain-initial-access-token).
+
+    ```env
+    # ...your other environment variables...
+    KINDE_REFRESH_TOKEN=your-kinde-refresh-token
+    ```
+
+    <Aside type="warning">
+    
+    **Important**: Make sure to add `.env` to your `.gitignore` file to prevent committing tokens to source control.
+    
+    </Aside>
+
+2. Create an API setup file:
+
+    ```bash
+    mkdir tests/api
+    touch tests/api/api.setup.ts
+    ```
+
+3. Add the following to the file to refresh tokens before tests run:
+
+    ```typescript
+    // tests/api/api.setup.ts
+    import { test as setup, expect } from '@playwright/test'
+    import { writeFileSync, mkdirSync } from 'fs'
+    import { join, dirname } from 'path'
+
+    setup('refresh API tokens', async ({ request }) => {
+      const response = await request.post(
+        `${process.env.KINDE_ISSUER_URL}/oauth2/token`,
+        {
+          form: {
+            client_id: process.env.KINDE_CLIENT_ID!,
+            grant_type: 'refresh_token',
+            refresh_token: process.env.KINDE_REFRESH_TOKEN!,
+          },
+        }
+      )
+
+      expect(response.ok()).toBeTruthy()
+      const tokens = await response.json()
+
+      // Store access token in a file
+      const tokenPath = join(__dirname, '../../playwright/.auth/api-token.json')
+      const tokenDir = dirname(tokenPath)
+
+      // Ensure directory exists
+      mkdirSync(tokenDir, { recursive: true })
+
+      writeFileSync(
+        tokenPath,
+        JSON.stringify(
+          {
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+            expires_at: Date.now() + tokens.expires_in * 1000,
+          },
+          null,
+          2
+        )
+      )
+
+      // Important: Update your secrets manager with the new refresh token
+      // for subsequent test runs
+      // const newRefreshToken = tokens.refresh_token 
+    })
+    ```
+
+4. Update the `playwright.config.ts` projects configuration to add the following:
+
+    ```typescript
+    // playwright.config.ts
+    //... previous code ...
+    projects: [
+      // API setup project - refreshes tokens
+      {
+        name: 'setup',
+        testMatch: /api\/.*\.setup\.ts/,
+      },
+
+      // API tests - use refreshed tokens
+      {
+        name: 'api-tests',
+        testMatch: /api\/.*\.spec\.ts/,
+        dependencies: ['setup'],
+      },
+    ]
+    ```
+
+## Create and run sample tests
+
+If you are starting from scratch, you can run sample tests using the [Kinde starter test application](/testing/setup-test-user-environment/#kinde-starter-test-application).
+
+1. Create a test file:
+
+    ```bash
+    touch tests/api/kinde-api.spec.ts
+    ```
+
+2. Open `kinde-api.spec.ts` and add the following example tests:
+
+    ```ts
+    // tests/api/kinde-api.spec.ts
+    import { test, expect } from '@playwright/test'
+    import { readFileSync } from 'fs'
+    import { join } from 'path'
+
+    test.describe('Kinde API Tests', () => {
+      let accessToken: string
+
+      test.beforeAll(() => {
+        // Load access token from file created by api.setup.ts
+        const tokenPath = join(__dirname, '../../playwright/.auth/api-token.json')
+        const tokenData = JSON.parse(readFileSync(tokenPath, 'utf-8'))
+        accessToken = tokenData.access_token
+      })
+
+      test('can fetch user profile', async ({ request }) => {
+        const response = await request.get('/api/profile', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        })
+
+        expect(response.ok()).toBeTruthy()
+        const data = await response.json()
+        expect(data.email).toBe(process.env.TEST_USER_EMAIL)
+      })
+
+      test('cannot fetch user profile with invalid token', async ({ request }) => {
+        const response = await request.get('/api/profile', {
+          headers: {
+            Authorization: `Bearer invalid-token`,
+          },
+        })
+
+        expect(response.status()).toBe(401)
+      })
+
+      test('can update user settings', async ({ request }) => {
+        const response = await request.patch('/api/settings', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          data: {
+            theme: 'dark',
+          },
+        })
+
+        expect(response.ok()).toBeTruthy()
+      })
+    })
+    ```
+
+3. Run the tests using the following command:
+
+    ```bash
+    npx playwright test --ui
+    ```
+
+    You should see the tests pass.
+
+    ![Playwright API tests passed](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/13e8f818-dfef-4285-9c89-678678e18a00/socialsharingimage)
+
+You have successfully run the tests and validated that the API is working as expected. Use this approach to test your API endpoints and ensure they are working as expected.
+
+## CI/CD integration
+
+For CI/CD environments, use environment variables instead of `.env`:
+
+```yaml
+# .github/workflows/e2e-tests.yml
+name: API Tests
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+      - name: Run Playwright API tests
+        run: npx playwright test --project=api-tests
+        env:
+          KINDE_ISSUER_URL: ${{ secrets.KINDE_ISSUER_URL }}
+          KINDE_CLIENT_ID: ${{ secrets.KINDE_CLIENT_ID }}
+          TEST_APP_URL: ${{ secrets.TEST_APP_URL }}
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          KINDE_REFRESH_TOKEN: ${{ secrets.KINDE_REFRESH_TOKEN }}
+```

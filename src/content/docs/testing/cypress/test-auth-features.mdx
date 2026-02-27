@@ -1,0 +1,202 @@
+---
+page_id: 19775ed3-565e-46e3-aaa0-321f826c79e2
+title: Test authenticated features
+description: "Comprehensive guide to testing authenticated features using Cypress, including reusing authentication state and CI/CD integration."
+sidebar:
+  order: 4
+tableOfContents:
+  maxHeadingLevel: 3
+topics:
+  - developer-tools
+  - testing
+  - cypress
+  - e2e-testing
+  - authenticated-testing
+sdk: []
+languages:
+  - JavaScript
+  - TypeScript
+audience: developers
+complexity: intermediate
+keywords:
+  - cypress
+  - testing
+  - authenticated features
+  - session state
+updated: 2026-01-22
+featured: false
+deprecated: false
+---
+
+Learn how to efficiently test authenticated features in applications using Kinde authentication with Cypress. This guide covers reusing authentication state to test protected routes and features after authentication. Learn more about [testing authenticated features with Kinde](/testing/testing-authenticated-features/).
+
+Cypress supports saving and reusing browser authentication state using `cy.session()`. This is the most efficient approach for testing authenticated features. By saving the authentication state once and reusing it across tests, you can significantly speed up your test suite while maintaining test isolation.
+
+### What you need
+
+- Completed the [Cypress setup](/testing/cypress/)
+- A [test user](/testing/setup-test-user-environment/) and a running Kinde application.
+
+## Setup Cypress session
+
+1. Add the following to the `commands.js` file:
+
+    ```javascript
+    // cypress/support/commands.js
+    Cypress.Commands.add('login', () => {
+      cy.session('user', () => {
+        cy.visit(Cypress.env('TEST_APP_URL'))
+        cy.get('[data-testid="sign-in-button"]').click()
+
+        // Wait for Kinde login page
+        cy.url().should('include', 'kinde.com')
+
+        cy.origin(Cypress.env('KINDE_ISSUER_URL'), () => {
+          // Enter credentials
+          cy.get('input[name="p_email"]').type(Cypress.env('TEST_USER_EMAIL'))
+          cy.get('button[type="submit"]').click()
+
+          cy.get('input[name="p_password"]').type(Cypress.env('TEST_USER_PASSWORD'))
+          cy.get('button[type="submit"]').click({ multiple: true })
+        })
+
+        // Wait for redirect back to app
+        const appUrl = new URL(Cypress.env('TEST_APP_URL'))
+        cy.url().should('include', appUrl.hostname)
+        cy.get('[data-testid="user-profile"]').should('be.visible')
+      })
+    })
+    ```
+
+## Create and run sample tests
+
+If you are starting from scratch, you can run sample tests using the [Kinde starter test application](/testing/setup-test-user-environment/#kinde-starter-test-application).
+
+1. Create a new `dashboard.cy.js` file:
+    ```bash
+    touch cypress/e2e/dashboard.cy.js
+    ```
+2. Add the following sample tests to the file:
+
+    ```javascript
+    // cypress/e2e/dashboard.cy.js
+    describe('Authenticated Features', () => {
+      beforeEach(() => {
+        // Restore session before each test
+        cy.login()
+      })
+
+      // This test runs with pre-authenticated state
+      it('user can view dashboard', () => {
+        cy.visit('/dashboard')
+        // No login required - already authenticated
+        cy.get('[data-testid="start-hero-intro"]').should('contain.text', 'Woohoo!')
+      })
+
+      it('user can update profile', () => {
+        cy.visit('/profile')
+
+        cy.get('[data-testid="display-name-input"]').type('Test User')
+        cy.get('[data-testid="display-name-submit"]').click()
+
+        cy.get('.toast-success').should('be.visible')
+      })
+    })
+    ```
+
+3. Use the following command:
+
+    ```bash
+    npx cypress open
+    ```
+4. Select the test spec to run.
+
+    You should now see the Cypress tests passing in the browser.
+
+    ![cypress test passing](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/cfceee43-a242-4e42-e839-56d001eabb00/socialsharingimage)
+
+## Complete project structure
+
+```
+your-project/
+├── cypress.config.js
+├── cypress.env.json          # Environment variables (gitignored)
+├── cypress/
+│   ├── e2e/
+│   │   └── dashboard.cy.js     # Tests using saved auth
+│   └── support/
+│       └── commands.js        # Custom commands
+└── package.json
+```
+
+## CI/CD integration (GitHub Actions)
+
+```yaml
+# .github/workflows/e2e-tests.yml
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Cypress
+        run: npm install cypress --save-dev
+
+      - name: Run Cypress tests
+        run: npx cypress run
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          TEST_APP_URL: ${{ secrets.TEST_APP_URL }}
+          KINDE_ISSUER_URL: ${{ secrets.KINDE_ISSUER_URL }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+          retention-days: 30
+```
+
+## Troubleshooting
+
+### Tests fail with "Navigation timeout"
+
+Kinde redirects can take time. Increase timeout:
+
+```javascript
+cy.url({ timeout: 30000 }).should('include', 'your-app.com')
+```
+
+### Session not persisting
+
+Ensure `cy.session()` is called in `beforeEach` or at the start of each test. Check Cypress configuration for session storage settings. Verify that `cypress/support/e2e.js` is properly imported in your `cypress.config.js`.
+
+### Kinde form selectors changed
+
+Kinde may update the UI. Use more resilient selectors:
+
+```javascript
+// Instead of specific class names
+cy.origin(Cypress.env('KINDE_ISSUER_URL'), () => {
+  cy.get('input[type="email"]').type(email)
+  cy.get('input[type="password"]').type(password)
+})
+```
+

@@ -1,0 +1,180 @@
+---
+page_id: 4882de7b-07f3-4cc8-ac01-b096e17dcc35
+title: Testing backend APIs
+description: "Overview and setup instructions for testing backend APIs with Kinde refresh tokens."
+sidebar:
+  order: 6
+relatedArticles:
+  - c1b1ea81-35f9-467e-8079-042d6a786e55
+  - f38ed786-7234-44d1-a564-f7269ce536c5
+  - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+topics:
+  - developer-tools
+  - testing
+  - api-testing
+  - refresh-tokens
+sdk: []
+languages:
+  - JavaScript
+  - curl
+audience: developers
+complexity: intermediate
+keywords:
+  - backend testing
+  - API testing
+  - refresh tokens
+  - token rotation
+  - automated testing
+  - test automation
+  - jest
+updated: 2026-01-17
+featured: false
+deprecated: false
+ai_summary: Overview and setup instructions for testing backend APIs with Kinde refresh tokens
+---
+
+With Kinde, you can test backend APIs using refresh tokens for maintaining authenticated sessions in automated tests, including token rotation.
+
+### What you need
+
+- A [test user and a running Kinde application](/testing/setup-test-user-environment/).
+
+## How it works
+
+For automated backend tests, you can establish a long-running auth session using refresh tokens. This allows your test infrastructure to maintain authentication without manual sign-ins.
+
+1. Perform a one-time browser-based sign-in with a test user
+2. Extract the refresh token from that session
+3. Store the refresh token securely (e.g., GitHub Secrets, AWS Secrets Manager)
+4. Rotate tokens programmatically at the start of each test run
+
+The access token obtained this way is identical to what your production users receive.
+
+## Register your API in Kinde
+
+You can add your API to Kinde. This will scope your token to be used only for your testing setup. This is optional, but it is a good practice to do so. Learn more about [registering and managing APIs in Kinde](/developer-tools/your-apis/register-manage-apis/).
+
+1. In Kinde, go to **Settings > APIs**.
+2. Select **Add API**.
+3. Enter an **API name** and **Audience** (e.g., `https://api.mysite.com`). The audience (aud) is a unique identifier for this API. Often, a short code or the URL of the API is used.
+4. Select **Save**. The details window for the API opens. You’ll notice that an ID has been created, but it is not editable, and neither is the audience. However, you can copy these details.
+5. To authorize this API for your apps, select **Applications** in the left menu.
+6. Select the three dots menu next to the relevant application (your test application), then choose **Authorize application**.
+7. To include the audience claim in your token, add the audience value in your SDK.
+
+    For example, in your Next.js test application, you can add the audience value in your `.env` file:
+        ```env
+        # .env
+        KINDE_AUDIENCE=<your-api-audience>
+        ```
+
+## Obtain initial access token
+
+1. Run your test application locally
+2. Sign in with your test user in a browser
+3. Right-click on the page and select **Inspect** to open the browser developer tools
+4. Navigate to the **Application** tab and select **Cookies** > `http://localhost:3000`
+5. Select the `refresh_token` cookie and copy its value. You will need this refresh token value when configuring your test setup.
+
+    ![Screenshot of browser developer tools showing the refresh_token cookies](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/01c24cf2-4334-46f4-8414-7aa4d5eda100/socialsharingimage)
+
+## Set up backend API validation
+
+You can validate the test API request with the Kinde JWT validator and JWT decoder packages.
+
+1. Install the required dependencies:
+
+    ```bash
+    npm install @kinde/jwt-validator @kinde/jwt-decoder
+    ```
+
+Here is sample code showing how to validate your JWT token:
+
+```javascript
+import { validateToken } from "@kinde/jwt-validator";
+import { jwtDecoder } from "@kinde/jwt-decoder";
+
+// ... get the token from the request headers
+
+try {
+    // Validate the token
+    const result = await validateToken({
+      token,
+      domain, // KINDE_ISSUER_URL
+    });
+
+    if (!result.valid) {
+      console.log("Token validation failed:", result.message);
+      return null;
+    }
+
+    // Decode after validation
+    const decoded = jwtDecoder(token);
+    return decoded;
+
+  } catch (error) {
+    // The validator throws for JWKS or validation errors
+    console.error("Token is invalid:", error);
+    return null;
+  }
+```
+
+If you are protecting your API with Kinde, you should also check for the `audience` claim to ensure the token is valid for your API. This way, only authorized apps can access your API. Here is sample code:
+
+```javascript
+// ... validate token using previous code ...
+const expectedAudience = process.env.KINDE_AUDIENCE; // or hardcoded value
+
+if (expectedAudience) {
+  const audience = decoded.aud;
+  // Handle both string and array audience values
+  const audiences = Array.isArray(audience) ? audience : [audience];
+
+  if (!audiences.includes(expectedAudience)) {
+    console.log(
+      "Token audience validation failed. Expected:",
+      expectedAudience,
+      "Got:",
+      audience
+    );
+    return null;
+  }
+  return decoded;
+}
+```
+
+## Important considerations
+
+### Token rotation
+
+After exchange, the previous refresh token remains valid for approximately 30 seconds (grace period), then becomes invalid. Always use the most recently issued refresh token.
+
+### Secure storage
+
+Never commit tokens to source control. Make sure to add `.env` to your `.gitignore` file. For CI/CD environments, use secret managers like GitHub Secrets, AWS Secrets Manager, or similar to inject environment variables securely.
+
+### Token refresh frequency
+
+Refresh tokens at the start of each test run to ensure fresh access tokens.
+
+## What's not supported
+
+The following limitations apply to backend API testing with refresh tokens:
+
+- **Social provider tokens**: Refresh tokens obtained through social sign-in may have different expiration behaviors
+- **Organization-scoped tokens**: If testing organization-specific APIs, ensure your test user belongs to the correct organization
+- **M2M tokens**: Machine-to-machine applications use different token mechanisms (see [M2M documentation](/machine-to-machine-applications/about-m2m/))
+
+## Best practices
+
+- **Rotate credentials regularly**: Even test credentials should follow security best practices
+- **Handle token expiry gracefully**: Build retry logic into your tests for token refresh failures
+- **Monitor test reliability**: Track flaky tests related to authentication timing issues
+
+## Next steps
+
+To see complete backend API testing examples, see the following guides:
+
+- [Cypress](/testing/cypress/test-backend-apis/)
+- [Playwright](/testing/playwright/test-backend-apis/)
+- [Jest](/testing/test-backend-apis-jest/)

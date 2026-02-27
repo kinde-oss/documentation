@@ -1,0 +1,124 @@
+---
+page_id: 919c0745-3dfb-4911-b743-f8a67a0287bf
+title: Test authentication flows
+description: "Guide to testing authentication flows with Cypress."
+sidebar:
+  order: 2
+tableOfContents:
+  maxHeadingLevel: 3
+topics:
+  - developer-tools
+  - testing
+  - cypress
+  - e2e-testing
+  - authentication
+sdk: []
+languages:
+  - JavaScript
+  - TypeScript
+audience: developers
+complexity: intermediate
+keywords:
+  - cypress
+  - testing
+  - authentication flows
+  - sign-up
+  - sign-in
+  - sign-out
+updated: 2026-01-22
+featured: false
+deprecated: false
+---
+
+Learn how to test authentication flows (sign-up, sign-in, sign-out) with Cypress for applications using Kinde authentication. Learn more about [testing authentication flows with Kinde](/testing/testing-authentication-flows/).
+
+### What you need
+
+- Completed the [Cypress setup](/testing/cypress/)
+- A [test user](/testing/setup-test-user-environment/) and a running Kinde application.
+
+## Test sign-in flow
+
+1. Create a new test file:
+    ```bash
+    touch cypress/e2e/sign-in.cy.js
+    ```
+
+2. Add the following to the `sign-in.cy.js` file:
+
+    ```javascript
+    // cypress/e2e/sign-in.cy.js
+    describe('Sign in Flows', () => {
+      it('user can sign in with email and password', () => {
+        cy.visit(Cypress.env('TEST_APP_URL'));
+        cy.get('[data-testid="sign-in-button"]').click();
+
+        // Wait for Kinde login page
+        cy.url().should('include', 'kinde.com');
+
+        cy.origin(Cypress.env('KINDE_ISSUER_URL'), () => {
+          // Enter credentials
+          cy.get('input[name="p_email"]').type(Cypress.env('TEST_USER_EMAIL'));
+          cy.get('button[type="submit"]').click();
+
+          cy.get('input[name="p_password"]').type(Cypress.env('TEST_USER_PASSWORD'));
+          cy.get('button[type="submit"]').click({ multiple: true });
+        });
+
+        // Wait for redirect back to app
+        const appUrl = new URL(Cypress.env('TEST_APP_URL'));
+        cy.url().should('include', appUrl.hostname);
+        cy.get('[data-testid="user-profile"]').should('be.visible');
+      });
+    });
+    ```
+
+## Test sign-out flow
+
+1. Create a new test file:
+    ```bash
+    touch cypress/e2e/sign-out.cy.js
+    ```
+
+2. Add the following to the `sign-out.cy.js` file:
+
+    ```javascript
+    // cypress/e2e/sign-out.cy.js
+    describe('Sign-out flows', () => {
+      it('user can sign in and then sign out', () => {
+        // First authenticate
+        cy.visit(Cypress.env('TEST_APP_URL'));
+        cy.get('[data-testid="sign-in-button"]').click();
+        cy.origin(Cypress.env('KINDE_ISSUER_URL'), () => {
+          cy.get('input[name="p_email"]').type(Cypress.env('TEST_USER_EMAIL'));
+          cy.get('button[type="submit"]').click();
+          cy.get('input[name="p_password"]').type(Cypress.env('TEST_USER_PASSWORD'));
+          cy.get('button[type="submit"]').click({ multiple: true });
+        });
+        const appUrl = new URL(Cypress.env('TEST_APP_URL'));
+        cy.url().should('include', appUrl.hostname);
+
+        // Now sign out
+        cy.get('[data-testid="sign-out-button"]').click();
+
+        // Should show signed-out state
+        cy.get('[data-testid="sign-in-button"]').should('be.visible');
+      });
+    });
+    ```
+
+
+## Run the tests
+
+1. Use the following command:
+
+    ```bash
+    npx cypress open
+    ```
+2. Select the test spec to run.
+
+    You should now see the Cypress tests passing in the browser.
+
+## Testing sign-up flows
+
+Kinde requires OTP email verification when signing up for a new user. See the [Testing passwordless flows](/testing/cypress/test-passwordless-flows/) guide for the detailed sign-up flow examples.
