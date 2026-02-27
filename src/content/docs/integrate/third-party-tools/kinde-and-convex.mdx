@@ -107,17 +107,22 @@ Bring real-time interactivity to your app with Convex, a powerful Backend-as-a-S
     import { useCallback, useMemo } from "react";
 
     export default function useAuthFromKinde() {
-      const { isLoading, isAuthenticated, getAccessToken } = useKindeAuth();
+      const { isLoading, isAuthenticated, getIdToken } = useKindeAuth();
       const fetchAccessToken = useCallback(
-        async ({ forceRefreshToken }: { forceRefreshToken: boolean }) => {
+        async ({
+          forceRefreshToken,
+        }: {
+          forceRefreshToken: boolean;
+        }) => {
+          void forceRefreshToken; // Convex passes this; Kinde's getIdToken() has no refresh option
           try {
-            const response = await getAccessToken();
+            const response = await getIdToken();
             return response as string;
-          } catch (error) {
+          } catch {
             return null;
           }
         },
-        [getAccessToken],
+        [getIdToken],
       );
       return useMemo(
         () => ({ isLoading, isAuthenticated, fetchAccessToken }),
@@ -141,7 +146,7 @@ Bring real-time interactivity to your app with Convex, a powerful Backend-as-a-S
       providers: [
         {
           domain: "https://your_kinde_business.kinde.com",
-          applicationID: "convex",
+          applicationID: "your_kinde_client_id",
         },
       ],
     } satisfies AuthConfig;
@@ -194,7 +199,7 @@ Bring real-time interactivity to your app with Convex, a powerful Backend-as-a-S
 
 ## Sync Kinde users to Convex database
 
-Convex already gets the signed-in user’s Kinde ID from the token `subject` claim, and you can read profile details (e.g., `givenName`, `familyName`, `email`) from the `useKindeAuth` hook’s `user` object. To use that data in queries, mutations, and across your app, store it in Convex. The steps below add a `users` table and a mutation that syncs the current user on sign-in.
+When using Kinde’s ID token with Convex, the signed-in user’s claims are available in the token payload. Convex receives the Kinde ID in the `subject` claim, along with profile details such as `name`, `givenName`, `familyName`, `pictureUrl`, `email`, `emailVerified`, `updatedAt`, and `org_codes` (when using organizations). To use that data when the user is not logged in, store it in Convex. The steps below add a `users` table and a mutation that syncs the current user on sign-in.
 
 1. Create and save the following Convex schema:
 
