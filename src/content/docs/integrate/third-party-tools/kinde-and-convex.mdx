@@ -51,10 +51,10 @@ Bring real-time interactivity to your app with Convex, a powerful Backend-as-a-S
    - Type a name for the API (e.g., Convex) and set the audience to `convex`
    - Go to your Convex application > **APIs** > select the **three dots** next to your Convex API and select **Authorize application**
 
-4. Install the Convex dependencies:
+4. Install the Convex and Kinde React SDK dependencies:
 
     ```bash
-    npm install convex
+    npm install convex @kinde-oss/kinde-auth-react
     ```
 
     Use the following command to sign-in to Convex and initialize a new project. Keep this terminal running for the development server.
@@ -296,13 +296,26 @@ Convex already gets the signed-in user’s Kinde ID from the token `subject` cla
       const hasUpserted = useRef(false);
 
       useEffect(() => {
-        if (!isAuthenticated || !user || hasUpserted.current) return;
-        hasUpserted.current = true;
-        storeUser({
-          givenName: user.givenName,
-          familyName: user.familyName,
-          email: user.email,
-        }).catch(console.error);
+      // Only reset when clearly logged out (both sources agree). Avoids resetting when
+      // Convex and Kinde resolve at different times and prevents upsert loops.
+      if (!isAuthenticated && !user) {
+        hasUpserted.current = false;
+      }
+      if (!isAuthenticated || !user) {
+        return;
+      }
+      if (hasUpserted.current) return;
+      storeUser({
+        givenName: user.givenName,
+        familyName: user.familyName,
+        email: user.email,
+      })
+        .then(() => {
+          hasUpserted.current = true;
+        })
+        .catch((error) => {
+          console.error("Failed to store user:", error);
+        });
       }, [isAuthenticated, user, storeUser]);
 
       if (isLoading) {
