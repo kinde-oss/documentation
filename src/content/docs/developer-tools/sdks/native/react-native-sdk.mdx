@@ -76,9 +76,9 @@ You can also check out our starter kits on GitHub:
 
 ## Before you begin
 
-- If you haven’t already got a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). Registering gives you a Kinde domain, which you need to get started, e.g. `yourapp.kinde.com`.
+- If you haven't already got a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). Registering gives you a Kinde domain, which you need to get started, e.g. `yourapp.kinde.com`.
 - You will also need Node, the React Native command line interface, a JDK, Android Studio (for Android) and Xcode (for iOS).
-- Follow [the installation instructions for your chosen OS](https://reactnative.dev/docs/environment-setup) to install dependencies.
+- Follow [the installation instructions for your chosen OS](https://reactnative.dev/docs/environment-setup) to install dependencies.
 
 <Aside type="warning" title="Important">
 
@@ -104,7 +104,7 @@ The SDK requires the `react-native-keychain` and `react-native-inappbrowser-rebo
    project(':react-native-inappbrowser-reborn').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-inappbrowser-reborn/android')
    ```
 
-2. Edit `android/app/build.gradle`
+2. Edit `android/app/build.gradle`
 
    ```java
    apply plugin: 'com.android.application'
@@ -123,7 +123,7 @@ The SDK requires the `react-native-keychain` and `react-native-inappbrowser-rebo
    }
    ```
 
-3. Edit `MainApplication.java`
+3. Edit `MainApplication.java`
 
    ```java
    import com.oblador.keychain.KeychainPackage;
@@ -177,6 +177,27 @@ class MainApplication : Application(), ReactApplication {
 
 ### **iOS**
 
+Before installing CocoaPods, ensure you have Ruby and Bundler set up correctly on your system.
+
+### Shell setup
+
+```shell
+# Install or update Bundler
+gem install bundler
+
+# Create a new Gemfile if it doesn't exist
+bundle init
+
+# Add CocoaPods to your Gemfile
+bundle add cocoapods
+
+# Install dependencies using Bundler
+bundle install
+
+# Install pods for your project
+cd ios && bundle exec pod install
+```
+
 To update iOS native dependencies, you can use **CocoaPods**. We recommend installing **CocoaPods** using [Homebrew](https://brew.sh/).
 
 ```shell
@@ -189,7 +210,7 @@ The SDK requires the `react-native-keychain` and `react-native-inappbrowser-rebo
 
 1. **Option: With CocoaPods (Highly recommended)**
 
-   Please add the following lines to your **Podfile**, and then run `pod update`:
+   Please add the following lines to your **Podfile**, and then run `pod update`:
 
    ```swift
    pod 'RNKeychain', :path => '../node_modules/react-native-keychain'
@@ -197,26 +218,26 @@ The SDK requires the `react-native-keychain` and `react-native-inappbrowser-rebo
    ```
 
 2. **Option: Manually link the packages with Xcode**
-   - Go to the **Build Phases** tab and choose **Link Binary With Libraries.**
-   - Select **+**
-   - Add **Other** > **Add Files** > **node_modules/react-native-keychain/RNKeychain.xcodeproj** (similar with **RNInAppBrowser**)
-   - Add **libRNKeychain.a** (similar with **RNInAppBrowser**)
+   - Go to the **Build Phases** tab and choose **Link Binary With Libraries.**
+   - Select **+**
+   - Add **Other** > **Add Files** > **node_modules/react-native-keychain/RNKeychain.xcodeproj** (similar with **RNInAppBrowser**)
+   - Add **libRNKeychain.a** (similar with **RNInAppBrowser**)
    - Clean and rebuild.
 
 If you encounter any errors during the SDK installation process, you can refer to the General Tips section at the end of this topic.
 
 ## K**inde configuration**
 
-1. In Kinde, go to **Settings > Applications.**
-2. Select **View details** on the **Front-end app**.
-3. Scroll down to the **Callback URLs** section.
+1. In Kinde, go to **Settings > Applications.**
+2. Select **View details** on the **Front-end app**.
+3. Scroll down to the **Callback URLs** section.
 4. Add in the callback URLs for your React Native app, which should look something like this:
-   - Allowed callback URLs - `myapp://myhost.kinde.com/kinde_callback`
-   - Allowed logout redirect URLs - `myapp://myhost.kinde.com/kinde_callback`
+   - Allowed callback URLs - `myapp://myhost.kinde.com/kinde_callback`
+   - Allowed logout redirect URLs - `myapp://myhost.kinde.com/kinde_callback`
 
 Make sure you press the Save button at the bottom of the page!
 
-Note: The `myapp://myhost.kinde.com/kinde_callback` is used as an example of local URL Scheme, change to the local local URL Scheme that you use.
+Note: The `myapp://myhost.kinde.com/kinde_callback` is used as an example of local URL Scheme, change to the local local URL Scheme that you use.
 
 ## Environments
 
@@ -228,10 +249,10 @@ If you would like to use our Environments feature as part of your development pr
 
 Put these variables in your .env file. You can find these variables on the same page as where you set the callback URLs.
 
-- `KINDE_ISSUER_URL` - your Kinde domain
-- `KINDE_POST_CALLBACK_URL` - After the user authenticates we will callback to this address. Make sure this URL is under your allowed callback URLs
-- `KINDE_POST_LOGOUT_REDIRECT_URL` - where you want users to be redirected to after logging out. Make sure this URL is under your allowed logout redirect URLs
-- `KINDE_CLIENT_ID` - you can find this on the App Keys page
+- `KINDE_ISSUER_URL` - your Kinde domain
+- `KINDE_POST_CALLBACK_URL` - After the user authenticates we will callback to this address. Make sure this URL is under your allowed callback URLs
+- `KINDE_POST_LOGOUT_REDIRECT_URL` - where you want users to be redirected to after logging out. Make sure this URL is under your allowed logout redirect URLs
+- `KINDE_CLIENT_ID` - you can find this on the App Keys page
 
 ```typescript
 KINDE_ISSUER_URL=https://your_kinde_domain.kinde.com
@@ -324,6 +345,40 @@ import { KindeSDK } from '@kinde-oss/react-native-sdk-0-7x';
 const client = new KindeSDK(YOUR_KINDE_ISSUER, YOUR_KINDE_REDIRECT_URI, YOUR_KINDE_CLIENT_ID, YOUR_KINDE_LOGOUT_REDIRECT_URI);
 ```
 
+## **KindeProvider (React Native 0.7x only)**
+
+The KindeProvider is a powerful component introduced in React Native SDK 0.7x that simplifies session management and SDK initialization. It handles the complexity of user session lifecycles on mobile devices, including token validation and refresh logic.
+
+To use the KindeProvider, import it from the SDK:
+
+```typescript
+import { useKindeProvider } from '@kinde-oss/react-native-sdk-0-7x';
+```
+
+The `useKindeProvider` hook initializes the SDK if it hasn't been initialized and returns a cached instance if it has. It also provides session state information and a reference to the SDK client.
+
+Here's how to use it:
+
+```typescript
+const { isAuthenticated, verifyToken, authSdk } = useKindeProvider({
+  issuerUrl: 'https://myhost.kinde.com',
+  redirectUri: 'myapp://myhost.kinde.com/kinde_callback',
+  clientId: 'secret',
+  logoutRedirectUri: 'myapp://myhost.kinde.com/kinde_callback',
+});
+```
+
+The hook returns:
+- `isAuthenticated`: A boolean indicating the current authentication state
+- `verifyToken`: A function to verify the token's validity
+- `authSdk`: A reference to the initialized KindeSDK instance
+
+This approach simplifies session management by:
+- Automatically handling SDK initialization
+- Caching the SDK instance appropriately
+- Managing token validation and refresh logic
+- Providing easy access to authentication state
+
 ## Sign in and registration
 
 Kinde provides methods for easily implementing a login / register flow. You can add buttons as follows.
@@ -341,7 +396,7 @@ Kinde provides methods for easily implementing a login / register flow. You can 
 
 Then define new functions that match for each button.
 
-**Note**: Before proceeding, make sure you’ve defined the **KindeSDK** as a **client** variable.
+**Note**: Before proceeding, make sure you've defined the **KindeSDK** as a **client** variable.
 
 ```typescript
 ...
@@ -456,7 +511,7 @@ Go to the Users page in Kinde to see your newly registered user.
 
 Once a user has been verified, your product/application will return the JWT token with an array of permissions for that user. You will need to configure your product/application to read permissions and unlock the respective functions.
 
-[Set permissions](/manage-users/roles-and-permissions/user-permissions/) in your Kinde account. Here’s an example set of permissions.
+[Set permissions](/manage-users/roles-and-permissions/user-permissions/) in your Kinde account. Here's an example set of permissions.
 
 ```typescript
 const permissions = [
@@ -491,7 +546,7 @@ if ((await client.getPermission("create:todos")).isGranted) {
 
 ## Audience
 
-An audience is the intended recipient of an access token - for example the API for your application. The audience argument can be passed to the Kinde client to request an audience be added to the token.
+An audience is the intended recipient of an access token - for example the API for your application. The audience argument can be passed to the Kinde client to request an audience be added to the token.
 
 The audience of a token is the intended recipient of the token.
 
@@ -508,7 +563,7 @@ const client = new KindeSDK(
 );
 ```
 
-For details on how to connect, see [Register an API](/developer-tools/your-apis/register-manage-apis/).
+For details on how to connect, see [Register an API](/developer-tools/your-apis/register-manage-apis/).
 
 ## Overriding scope
 
@@ -568,7 +623,7 @@ client.createOrg({org_name: "Your Organization"});
 
 ### Sign in and sign up to organizations
 
-Kinde has a unique code for every organization. You’ll have to pass this code through when you register a new user.
+Kinde has a unique code for every organization. You'll have to pass this code through when you register a new user.
 
 Example function below:
 
@@ -624,7 +679,7 @@ For more information about how organizations work in Kinde, see [Kinde organizat
 
 ## **Feature Flags**
 
-We have provided a helper to return any features flag from the access token:
+We have provided a helper to return any features flag from the access token:
 
 ```typescript
 client.getFlag('theme')
@@ -651,7 +706,7 @@ client.getFlag('theme', 'default-theme', 'b')
 // Error: Flag 'theme' is type string - requested type boolean
 ```
 
-We also require wrapper functions by type which should leverage `getFlag` above.
+We also require wrapper functions by type which should leverage `getFlag` above.
 
 ### **Get boolean flags**
 
@@ -737,7 +792,7 @@ kindeClient.getIntegerFlag("is_dark_mode", false);
 
 ## Token Storage
 
-Once the user has successfully authenticated, you'll have a JWT and a refresh token and that has been stored securely. E.g. using the `getAccessToken` method of the `Storage` class to get an access token.
+Once the user has successfully authenticated, you'll have a JWT and a refresh token and that has been stored securely. E.g. using the `getAccessToken` method of the `Storage` class to get an access token.
 
 ```typescript
 ...
@@ -748,9 +803,9 @@ const accessToken = await Storage.getAccessToken();
 console.log('access_token', accessToken);
 ```
 
-We're using the [react-native-keychain](https://www.npmjs.com/package/react-native-keychain) for `React Native`
+We're using the [react-native-keychain](https://www.npmjs.com/package/react-native-keychain) for `React Native`
 
-The storage handler can be found at: [Storage class](https://github.com/kinde-oss/kinde-react-native-sdk-0-7x/blob/main/dist/SDK/Storage/index.d.ts)
+The storage handler can be found at: [Storage class](https://github.com/kinde-oss/kinde-react-native-sdk-0-7x/blob/main/dist/SDK/Storage/index.d.ts)
 
 ## **How to test**
 
@@ -760,13 +815,13 @@ Run the test suite using the following command at the root of your React Native.
 npm run test
 ```
 
-Note: Ensure you have already run `npm install`.
+Note: Ensure you have already run `npm install`.
 
 ## SDK API Reference
 
 ### `issuer`
 
-Either your Kinde URL or your custom domain. e.g `https://yourapp.kinde.com`.
+Either your Kinde URL or your custom domain. e.g `https://yourapp.kinde.com`.
 
 Type: `string`
 
@@ -816,7 +871,7 @@ Required: No
 
 Default: `{}`
 
-### `additionalParameters` `- audience`
+### `additionalParameters` `- audience`
 
 The audience claim for the JWT.
 
@@ -926,7 +981,7 @@ await kinde.logout();
 await kinde.logout(true);
 ```
 
-Sample output: `true` or `false`
+Sample output: `true` or `false`
 
 ### `getToken`
 
@@ -976,9 +1031,9 @@ Arguments:
 Usage:
 
 ```typescript
-await kinde.createOrg(); 
-// or 
-await kinde.createOrg({org_name: 'your organization name'}); _**//**_
+await kinde.createOrg(); 
+// or 
+await kinde.createOrg({org_name: 'your organization name'}); _**//**_
 ```
 
 Allow `org_name` to be provided if you want a specific organization name when you create.
@@ -1124,11 +1179,11 @@ Usage:
 await kinde.isAuthenticate;
 ```
 
-Sample output: `true` or `false`
+Sample output: `true` or `false`
 
 ### **`getFlag`**
 
-Get a flag from the feature_flags claim of the `access_token`.
+Get a flag from the feature_flags claim of the `access_token`.
 
 Arguments:
 
@@ -1164,7 +1219,7 @@ Sample output:
 
 ### **`getBooleanFlag`**
 
-Get a boolean flag from the `feature_flags` claim of the access token
+Get a boolean flag from the `feature_flags` claim of the access token
 
 Arguments:
 
@@ -1179,11 +1234,11 @@ Usage:
 kinde.getBooleanFlag("is_dark_mode");
 ```
 
-Sample output: `true`
+Sample output: `true`
 
 ### **`getStringFlag`**
 
-Get a string flag from the `feature_flags` claim of the access token
+Get a string flag from the `feature_flags` claim of the access token
 
 Arguments:
 
@@ -1198,11 +1253,11 @@ Usage:
 kinde.getStringFlag("theme");
 ```
 
-Sample output: `black`
+Sample output: `black`
 
 ### **`getIntegerFlag`**
 
-Get a integer flag from the `feature_flags` claim of the access token
+Get a integer flag from the `feature_flags` claim of the access token
 
 Arguments:
 
@@ -1217,21 +1272,21 @@ Usage:
 kinde.getIntegerFlag("team_count");
 ```
 
-Sample output: `2`
+Sample output: `2`
 
 ## General tips
 
 ### **Building issues**
 
-**`'value'`** **is unavailable: introduced in iOS 12.0**
+**`'value'`** **is unavailable: introduced in iOS 12.0**
 
-If you got the error **'value' is unavailable: introduced in iOS 12.0** when trying to build the app, you can follow the below steps to fix that:
+If you got the error **'value' is unavailable: introduced in iOS 12.0** when trying to build the app, you can follow the below steps to fix that:
 
-1. In your Xcode project navigator, select **Pods.**
-2. Under Targets, select **React-Codegen**.
+1. In your Xcode project navigator, select **Pods.**
+2. Under Targets, select **React-Codegen**.
 3. Select the **Build Settings** tab.
-4. Under **Deployment**, set **iOS Deployment Target** to **12.4.**
-5. Clean project and rebuild: **Product > Clean Build Folder, Product > Build.**
+4. Under **Deployment**, set **iOS Deployment Target** to **12.4.**
+5. Clean project and rebuild: **Product > Clean Build Folder, Product > Build.**
 
 <img
   src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/e441dff0-bc34-40a6-5854-2f390e805300/public"
@@ -1243,9 +1298,9 @@ If you got the error **'value' is unavailable: introduced in iOS 12.0** when t
   decoding="async"
 />
 
-6. Dependency `'androidx.browser:browser:1.6.0-beta01'` requires libraries and applications that depend on it to compile against version 34 or later of the Android APIs
+6. Dependency `'androidx.browser:browser:1.6.0-beta01'` requires libraries and applications that depend on it to compile against version 34 or later of the Android APIs
 
-   The solution is add `androidXBrowser = "1.4.0"` in your project.
+   The solution is add `androidXBrowser = "1.4.0"` in your project.
 
    ```java
    // android/build.gradle
@@ -1262,7 +1317,7 @@ If you got the error **'value' is unavailable: introduced in iOS 12.0** when t
 
 7. Duplicate class **kotlin.collections.jdk8.CollectionsJDK8Kt** found in modules **jetified-kotlin-stdlib-1.8.10** (org.jetbrains.kotlin:kotlin-stdlib:1.8.10) and **jetified-kotlin-stdlib-jdk8-1.7.22** (org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.22)
 
-   The solution is add `org.jetbrains.kotlin:kotlin-bom:1.8.0` dependency in your project.
+   The solution is add `org.jetbrains.kotlin:kotlin-bom:1.8.0` dependency in your project.
 
    ```java
    // android/app/build.grade
