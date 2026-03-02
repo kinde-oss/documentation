@@ -23,7 +23,7 @@ These scripts are integrated into the build process via the `postbuild` npm scri
 - Updates the CSP `script-src` directive in `customHttp.yml` with these hashes
 - Ensures security compliance while allowing necessary inline scripts
 
-**Output**: Updates `customHttp.yml` with new script hashes
+**Output**: Updates `customHttp.yml` in the repo root and writes a copy to `dist/customHttp.yml` so the updated headers are included in the deployed artifact (e.g. AWS Amplify).
 
 ### 2. LLM Generation Scripts
 
@@ -37,12 +37,14 @@ These scripts are integrated into the build process via the `postbuild` npm scri
 
 ## LLM Generated Files
 
-### Main Files (in `public/`)
-- `llms.txt` - Index file with links to all LLM documentation
-- `llms-abridged.txt` - Abridged documentation (frontmatter only)
-- `llms-full.txt` - Complete documentation with full content
+The LLM scripts write directly to the **build output** (`dist/`), not to `public/`. Astro copies `public/` into `dist/` during the build; post-build scripts run after that, so writing to `dist/` ensures the generated files are what gets deployed.
 
-### Section Files (in `public/_llms-txt/`)
+### Main Files (in `dist/` after build)
+- `llms.txt` - Index file with links to all LLM documentation (static file from `public/`)
+- `llms-abridged.txt` - Abridged documentation (frontmatter only), generated
+- `llms-full.txt` - Complete documentation with full content, generated
+
+### Section Files (in `dist/_llms-txt/` after build)
 - `authenticate.txt` - Authentication documentation
 - `billing.txt` - Billing and subscription management
 - `build.txt` - Building applications on Kinde
@@ -88,20 +90,20 @@ The build process follows this sequence:
 Generates the abridged documentation file containing only frontmatter data:
 - Extracts `title`, `description`, `keywords`, and `topics` from all MDX files
 - Creates a compact format suitable for quick reference
-- Output: `public/llms-abridged.txt`
+- Output: `dist/llms-abridged.txt`
 
 ### `scripts/generate-llms-txt-full.js`
 Generates the complete documentation file with full content:
 - Extracts frontmatter and complete content from all MDX files
 - Formats page titles with folder paths (e.g., "Authenticate - About auth")
 - Minifies content by removing line breaks
-- Output: `public/llms-full.txt`
+- Output: `dist/llms-full.txt`
 
 ### `scripts/generate-llms-txt-sections.js`
 Generates individual files for each top-level documentation section:
 - Creates separate files for each section (authenticate, billing, etc.)
 - Uses the same format as the full documentation
-- Output: `public/_llms-txt/[section].txt`
+- Output: `dist/_llms-txt/[section].txt`
 
 ## Manual Script Execution
 
@@ -229,9 +231,9 @@ Successful build should show:
 > node ./scripts/update-csp.js && node ./scripts/generate-llms-txt-abridged.js && node ./scripts/generate-llms-txt-full.js && node ./scripts/generate-llms-txt-sections.js
 
 YAML configuration has been updated.
-Abridged documentation created: public/llms-abridged.txt
+Abridged documentation created: dist/llms-abridged.txt
 Processed 392 files
-Complete documentation created: public/llms-full.txt
+Complete documentation created: dist/llms-full.txt
 Processed 392 files
 Generating section documentation files...
 Found 16 sections: authenticate, billing, build, contribute, design, developer-tools, get-started, integrate, machine-to-machine-applications, manage-users, manage-your-account, manage-your-apis, properties, releases, trust-center, workflows

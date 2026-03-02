@@ -179,8 +179,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     }
   }
   
-  // Write to file
-  fs.writeFileSync('public/llms-full.txt', completeContent);
-  console.log('Complete documentation created: public/llms-full.txt');
+  // Write to build output (dist/) so the file is included in the deployed site.
+  // Writing to public/ would be too late—Astro copies public/ during build, before postbuild runs.
+  const outDir = 'dist';
+  const outPath = path.join(outDir, 'llms-full.txt');
+  fs.writeFileSync(outPath, completeContent);
+  console.log('Complete documentation created: ' + outPath);
   console.log(`Processed ${results.length} files`);
 }

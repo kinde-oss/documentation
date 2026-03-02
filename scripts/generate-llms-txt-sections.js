@@ -209,12 +209,10 @@ function generateSectionFile(sectionName) {
     }
   }
 
-  // Ensure the _llms-txt directory exists
-  const outputDir = 'public/_llms-txt';
+  // Write to build output (dist/) so files are included in the deployed site.
+  const outputDir = path.join('dist', '_llms-txt');
   fs.mkdirSync(outputDir, { recursive: true });
-  
-  // Write to file in the _llms-txt directory
-  const outputPath = `${outputDir}/${sectionName}.txt`;
+  const outputPath = path.join(outputDir, `${sectionName}.txt`);
   fs.writeFileSync(outputPath, sectionContent);
   console.log(`Section documentation created: ${outputPath}`);
   console.log(`Processed ${results.length} files for ${sectionName}`);
@@ -241,5 +239,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     generateSectionFile(section);
   }
   
-  console.log('\nAll section documentation files have been generated in public/_llms-txt/');
+  console.log('\nAll section documentation files have been generated in dist/_llms-txt/');
 }

@@ -29,105 +29,106 @@ keywords:
   - local development
   - ngrok
   - localtunnel
-updated: 2024-01-15
+updated: 2026-02-03
 featured: false
 deprecated: false
 ai_summary: Step-by-step guide to implementing Kinde webhooks in Next.js including JWT verification, API route setup, and local development testing.
 ---
 
-While webhooks will work with any Next.js setup, this guide uses [Next.js 14 with app router](/developer-tools/sdks/backend/nextjs-sdk/) and the `app` directory. You may need to alter some code samples if you have a different setup, but the core instructions remain the same.
+In this guide, we will set up a webhook in Kinde and configure it with a Next.js application.
 
-## Set up local development
+### What you need
 
-In order to use webhooks, you need a publicly available URL. To test locally you need to use a proxy to expose your local instance on the internet. Here are a couple of free tools to help you to do this.
+- A [Kinde](https://www.kinde.com/register) account with an available webhook slot (Sign up for free)
+- A running Next.js application such as the [Next.js starter kit](/developer-tools/sdks/backend/nextjs-sdk/)
+- A proxy service for local endpoint testing such as [localtunnel](https://theboroer.github.io/localtunnel-www/) or [Ngrok](https://ngrok.com/)
 
-- [localtunnel](https://theboroer.github.io/localtunnel-www/) - fast and easy, we recommend using the `—subdomain` attribute to fix the issued subdomain.
-- [Ngrok](https://ngrok.com/) - for intermediate users, requires some dev experience to get set up.
+## Step 1: Create the Kinde webhook route
 
-Each of these services expose a local port though a public URL that can be set as your web socket. Follow their instructions to run your local Next.js application and you will receive a URL that you need later in this guide.
+1. Install the Kinde webhook decoder package with the following command in your terminal:
+    ```bash
+    npm install @kinde/webhooks
+    ```
 
-## Create the Kinde webhook route
+2. Create the webhook route endpoint `app/api/webhook/route.ts` and add the following code: 
 
-Kinde sends webhooks as JWT’s to make them both easy and secure. In this example we will leverage 2 libraries to parse the JWT and verify the signature.
+    ```bash
+    mkdir -p app/api/webhook
+    touch app/api/webhook/route.ts
+    ```
 
-1. Create the file `app/api/kinde-webhook/route.ts`. The `route.ts` file is a specific file convention in Next.js that marks the route as an API route, rather than a page.
+    <Aside>
+    If you are using the `src` directory structure, create the file in `src/app/api/webhook/route.ts` instead.
+    </Aside>
 
-   ```jsx
-   // app/api/kinde-webhook/route.ts
+    ```typescript
+    // app/api/webhook/route.ts
+    import { NextResponse } from "next/server";
+    import { decodeWebhook } from "@kinde/webhooks";
 
-   import { NextResponse } from "next/server";
+    export async function POST(req: Request) {
+      try {
+      // Get the token from the request
+        const token = await req.text();
 
-   export async function POST(req: Request) {
-     return NextResponse.json({ status: 200, statusText: "success" });
-   }
-   ```
+        // Decode the token
+        const decodedToken = await decodeWebhook(
+          token,
+          process.env.KINDE_ISSUER_URL
+        );
 
-   Whenever an event occurs in Kinde, a POST request is sent via this route to the specified endpoint, so that your project can react to the event. For example, refreshing a token or updating data in your database.
+        if (!decodedToken) {
+          return NextResponse.json({ message: "Invalid token" }, { status: 400 });
+        }
+
+        const { 
+        data, 
+        type, 
+        event_id, 
+        event_timestamp, 
+        timestamp,
+        source 
+        } = decodedToken;
+
+        // Run further validation if needed based on:
+        // - event_id
+        // - event_timestamp
+        // - timestamp
+        // - source
+
+      // Handle the event based on the type
+        switch (type) {
+          case "user.updated":
+            // handle user updated event
+          // e.g. update database with data.user.email
+          console.log(data);
+          return NextResponse.json({ status: 200, statusText: "success" });
+            break;
+          case "user.created":
+            // handle user created event
+          // e.g. add user to database with data.user.email
+          console.log(data);
+            return NextResponse.json({ status: 200, statusText: "success" });
+            break;
+          default:
+            // other events that we don't handle
+            return NextResponse.json({ status: 200, statusText: "success" });
+            break; 
+        }
+
+      } catch (err) {
+        if (err instanceof Error) {
+          console.error(err.message);
+          return NextResponse.json({ message: err.message }, { status: 400 });
+        }
+      }
+      return NextResponse.json({ status: 200, statusText: "success" });
+    }
+    ```
+
+   Whenever an event occurs in Kinde, a POST request is sent to this route endpoint, so that your project can react to the event. For example, refreshing a token or updating data in your database.
 
    Note that the endpoint needs to be publicly available, with no route protection.
-
-2. Install the dependencies.
-
-   <PackageManagers pkg="jwks-rsa jsonwebtoken" />
-
-3. Update your file as follows:
-
-   ```jsx
-   // app/api/kinde-webhook/route.ts
-
-   import { NextResponse } from "next/server";
-   import jwksClient from "jwks-rsa";
-   import jwt from "jsonwebtoken";
-
-   // The Kinde issuer URL should already be in your `.env` file
-   // from when you initially set up Kinde. This will fetch your
-   // public JSON web keys file
-   const client = jwksClient({
-     jwksUri: `${process.env.KINDE_ISSUER_URL}/.well-known/jwks.json`,
-   });
-
-   export async function POST(req: Request) {
-     try {
-   		// Get the token from the request
-       const token = await req.text();
-
-       // Decode the token
-       const { header } = jwt.decode(token, { complete: true });
-       const { kid } = header;
-
-   		// Verify the token
-       const key = await client.getSigningKey(kid);
-       const signingKey = key.getPublicKey();
-       const event = await jwt.verify(token, signingKey);
-
-   		// Handle various events
-       switch (event?.type) {
-         case "user.updated":
-           // handle user updated event
-   				// e.g update database with event.data
-   				console.log(event.data);
-           break;
-         case "user.created":
-           // handle user created event
-   				// e.g add user to database with event.data
-   				console.log(event.data);
-           break;
-         default:
-           // other events that we don't handle
-           break;
-       }
-
-     } catch (err) {
-       if (err instanceof Error) {
-         console.error(err.message);
-         return NextResponse.json({ message: err.message }, { status: 400 });
-       }
-     }
-     return NextResponse.json({ status: 200, statusText: "success" });
-   }
-   ```
-
-   As per the sample above, the JWKs file is fetched from Kinde, the token is decoded, and the signature is compared against your keys file. This is how you know you can trust the request has come from Kinde.
 
    <Aside title="Handling different event types">
 
@@ -135,28 +136,86 @@ Kinde sends webhooks as JWT’s to make them both easy and secure. In this examp
 
    </Aside>
 
-4. Start your server so it’s ready and listening out for the next step. With most Next.js applications, run `npm run dev` in the terminal.
+3. Deploy your application to the public internet and get a public URL. Your webhook endpoint becomes: `https://your-website.com/api/webhook`
 
-## Set up the webhook in Kinde
+    See our deployment guides on [Netlify](/developer-tools/guides/deploy-on-netlify) and [Vercel](/developer-tools/guides/deploy-on-vercel/) for more information. 
 
-1. In the Kinde, go to **Settings > Environment > Webhooks**.
-2. Select **Add webhook**.
-3. Give the webhook a name and description.
-4. Enter the Next.js endpoint we set up earlier in your project. For example `<your_app_url>/api/kinde-webhook`. If you are using an external tool to test the endpoint locally, enter the endpoint URL specified in the tool.
+    If you are testing locally, you can follow the local proxy service setup step below.
 
-   <Aside type="warning" title="Make sure URLs match">
+## Step 2: (Alternative path) Set up local proxy service
 
-   Testing will fail if the endpoint URL in Kinde does not match the site URL where you are testing the webhook.
+For this example, we will use localtunnel to create a public proxy URL.
 
-   </Aside>
+1. Start your development server with the following command: 
 
-5. Select **Add events.**
-6. In the dialog that opens, select the events you want. For example, user events, organization events, etc.
-7. Select **Save**.
-8. In the webhook window, select **Save**.
+    ```bash
+    npm run dev
+    ```
 
-## Test the webhook
+2. Open a new terminal window and install the localtunnel package with the following command:
 
-1. Either create a new user or update an existing one in Kinde.
-2. Switch back to where your server is running and you should see the data in your server console.
-3. Done! Have a tasty beverage.
+    ```bash
+    npm install -g localtunnel
+    ```
+    This will install the localtunnel package globally on your computer.
+
+3. Start the localtunnel server with the following command:
+
+    ```bash
+    lt --port 3000
+    ```
+    
+    Replace `3000` with the port number of your development server. This will start the localtunnel server and you will receive a public URL.
+
+    ```text 
+    your URL is: https://<random_subdomain>.loca.lt
+    ```
+
+    Keep this service running during the testing process.
+
+    For more setup instructions, see the [localtunnel documentation](https://theboroer.github.io/localtunnel-www/).
+
+## Step 3: Create the webhook in Kinde
+
+1. In Kinde, go to **Settings > Webhooks**
+2. Select **Add webhook**
+3. Give the webhook a name and description
+4. Enter the Next.js public endpoint we set up earlier in your project. For example, `https://your-website.com/api/webhook` 
+
+    If you are using an external proxy service to test the endpoint locally, enter the endpoint URL you created in the previous step (e.g., `https://<random_subdomain>.loca.lt/api/webhook`)
+
+5. Select **Add event**. A pop-up dialog opens
+6. In the dialog that opens, select the events you want to subscribe to. (e.g., `user.created`, `user.updated`, etc.) Select **Save**
+7. Select **Save** to create the webhook
+
+## Step 4: Test the webhook
+
+1. Go to your Kinde dashboard > **Users**
+2. Create a new user or update an existing one to trigger the webhook
+3. Switch back to the terminal where your server is running and you should see the data in your server console
+
+    ```bash
+    POST /api/webhook 200 in 000ms
+    {
+      user: {
+        email: null,
+        first_name: 'test',
+        id: 'kp_1234567890',
+        is_password_reset_requested: false,
+        is_suspended: false,
+        last_name: 'test',
+        organizations: [ [Object] ],
+        phone: null,
+        username: null
+      }
+    }
+    ```
+
+You have successfully set up a webhook in Kinde and tested it.
+
+## Next steps 
+
+Add Kinde users to your database using the following tutorials:
+
+- [Kinde and Prisma](/integrate/third-party-tools/kinde-nextjs-prisma/)
+- [Kinde and Drizzle](/integrate/third-party-tools/kinde-nextjs-drizzle/)
