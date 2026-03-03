@@ -15,7 +15,7 @@ metadata:
   audience: [developer, integration-engineer]
   complexity: advanced
   keywords: [custom OAuth2, OIDC, OAuth provider, client ID, client secret, callback URL, custom connection, identity provider]
-  updated: 2025-09-30
+  updated: 2026-03-03
 featured: false
 deprecated: false
 ---
@@ -28,12 +28,11 @@ Custom OAuth 2.0 and Open ID connections allow you to integrate with any compati
 
 Before connecting your custom OAuth2 provider, ensure it supports the OAuth2 authorization code flow and can provide user profile information including email address. The provider must also support HTTPS for all endpoints.
 
-<Aside>
+<Aside title="Disclaimer">
 
-Disclaimer: the following steps are a guide to what needs to happen on the custom OAuth 2.0 identity provider side. You may need to adapt some steps to suit the way different providers are configured.
+The following steps are a guide to what needs to happen on the custom OAuth 2.0 identity provider side. You may need to adapt some steps to suit the way different providers are configured.
 
 </Aside>
-
 ## Step 1: Get the custom connection credentials
 
 1. Navigate to your provider's developer console or admin panel.
@@ -71,16 +70,22 @@ Disclaimer: the following steps are a guide to what needs to happen on the custo
    - Client ID
    - Client Secret
 
-8. Enter any additional configuration options required by your provider, e.g. key attributes and upstream parameters.
+8. Choose the **Client authentication method**. This controls how client credentials are sent to the provider's token endpoint during the OAuth2 authorization code exchange. The options are:
+   - **Client secret in body** (default) — The client ID and client secret are sent as parameters in the POST request body. This is the most common method and works with most OAuth2 providers.
+   - **Client secret in header** — The client ID and client secret are sent as a Base64-encoded `Authorization: Basic` HTTP header. Some providers (e.g., Vipps MobilePay) require this method.
 
-9. In the **Callback URL** section:
+   The default is **Client secret in body**. Check your identity provider's documentation to determine which method is required. If authentication fails with one method, switching to the other may resolve the issue.
+
+9. Enter any additional configuration options required by your provider (e.g., key attributes and upstream parameters).
+
+10. In the **Callback URL** section:
    1. If you use Kinde's domain as your default, copy the Kinde domain URL.
    2. If you use custom domains, select the **Use custom domain instead** switch.
    3. If you have only one custom domain, copy the Custom domain URL. If you have custom domains for multiple organizations, select each one from the list and copy the callbacks for each. You need to enter all custom domain callbacks in your app.
-10. Scroll down to the **Provider icons** section where you can upload a custom icon for this connection. This icon will appear on the sign up and sign in screens of your app.
-11. Select which applications to switch this on for. If you are in a prod environment, this makes the connection live.
-12. Select **Save**.
-13. Use the copied Callback URL to finish setting up the provider configuration, see below.
+11. Scroll down to the **Provider icons** section where you can upload a custom icon for this connection. This icon will appear on the sign up and sign in screens of your app.
+12. Select which applications to switch this on for. If you are in a prod environment, this makes the connection live.
+13. Select **Save**.
+14. Use the copied Callback URL to finish setting up the provider configuration, see below.
 
 ## Step 3: Add the callback URL to your custom connection
 
@@ -104,5 +109,6 @@ If you encounter issues with your custom OAuth2 connection, here's some things t
 2. **Check scopes**: Confirm that your provider supports the required scopes
 3. **Validate callback URLs**: Ensure all callback URLs are properly configured in the IdP application
 4. **Review user info response**: Verify that the user info endpoint returns data in the expected format
+5. **Check client authentication method**: If you receive `401 Unauthorized` or `invalid_client` errors during sign-in, try switching the Client authentication method between "Client secret in body" and "Client secret in header" — some providers only accept one of these methods
 
 For additional support, contact Kinde support or refer to your OAuth2 provider's documentation.
