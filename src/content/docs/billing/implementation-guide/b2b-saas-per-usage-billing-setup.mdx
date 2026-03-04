@@ -31,10 +31,9 @@ By the end of this guide, you will have:
 
 ### What you need
 
-- A Kinde account
-- A Stripe account
+- A Kinde account with admin access (Sign up for free)
+- A Stripe account (Sign up for free)
 - An application connected to Kinde
-- Access to the Kinde dashboard
 
 
 
@@ -56,9 +55,11 @@ After connecting Stripe:
 
 
 
-## Step 2: Create an organization billing plan
+## Step 2: Create a billing plan in Kinde
 
-Create a billing plan that is scoped to **Organizations**.
+Create and configure an organization-scoped billing plan with metered pricing.
+
+### Create an organization billing plan
 
 1. Go to **Dashboard > Billing**
 2. Select **Add a plan**
@@ -70,9 +71,7 @@ Create a billing plan that is scoped to **Organizations**.
 
 This plan represents the subscription that organizations will purchase.
 
-
-
-## Step 3: Add a metered feature for user seats
+### Add a metered feature for user seats
 
 Add a **metered feature** to represent per-user (seat-based) pricing.
 
@@ -95,9 +94,7 @@ Configure the feature:
 
 Select **Save**.
 
-
-
-## Step 4: Add an optional base subscription charge
+### Add an optional base subscription charge
 
 If your pricing model requires a fixed base fee in addition to per-user pricing:
 
@@ -111,9 +108,7 @@ If your pricing model requires a fixed base fee in addition to per-user pricing:
 
 This allows you to combine a flat subscription fee with per-user billing.
 
-
-
-## Step 5: Publish the billing plan
+### Publish the billing plan
 
 Billing plans must be published before they can be used.
 
@@ -128,7 +123,11 @@ After publishing, the plan:
 
 
 
-## Step 6: Create a pricing table
+## Step 3: Configure Kinde billing plan
+
+Set up pricing tables, billing roles, and organization creation settings.
+
+### Create a pricing table
 
 Pricing tables allow users to select a plan during signup.
 
@@ -138,9 +137,7 @@ Pricing tables allow users to select a plan during signup.
 
 Save the **pricing table key**, as it is required during signup.
 
-
-
-## Step 7: Create a Billing Admin role
+### Create a Billing Admin role
 
 Organization billing should be managed by administrators.
 
@@ -155,9 +152,7 @@ Organization billing should be managed by administrators.
 
 Users with this role can manage subscriptions, plans, and payment methods for their organization.
 
-
-
-## Step 8: Enable organization creation during signup
+### Enable organization creation during signup
 
 Allow users to create organizations when signing up.
 
@@ -166,11 +161,15 @@ Allow users to create organizations when signing up.
 
 
 
-## Step 9: Handle the first user (organization creator)
+## Step 4: Enable org creation in your application
+
+Implement organization creation during signup and configure user join flows.
+
+### Handle the first user (organization creator)
 
 The first user creates the organization and selects a plan.
 
-### Trigger organization creation from your application
+#### Trigger organization creation from your application
 
 ```jsx
 <RegisterLink
@@ -182,7 +181,7 @@ The first user creates the organization and selects a plan.
 </RegisterLink>
 ```
 
-### Use a direct authorization URL
+#### Use a direct authorization URL
 
 ```bash
 https://<your_subdomain>.kinde.com/oauth2/auth
@@ -194,7 +193,7 @@ https://<your_subdomain>.kinde.com/oauth2/auth
   &pricing_table_key=YOUR_PRICING_TABLE_KEY
 ```
 
-### Organization Signup behavior
+#### Organization Signup behavior
 
 1. The user registers
 2. A new organization is created
@@ -203,9 +202,7 @@ https://<your_subdomain>.kinde.com/oauth2/auth
 5. Payment details are collected
 6. The organization is created with an active subscription
 
-
-
-## Step 10: Add users to an existing organization
+### Add users to an existing organization
 
 Additional users can join an existing organization using multiple supported approaches.
 
@@ -214,14 +211,14 @@ Before enabling any join flow:
 - Ensure the required authentication methods are enabled
 - Go to **Org > Policies** and enable **Allow org members to be auto-added**
 
-### Option 1: Manually add users (dashboard)
+#### Option 1: Manually add users (dashboard)
 
 Administrators can add users directly from the dashboard.
 
 - No custom code required
 - Intended for internal or low-volume usage
 
-### Option 2: Allow self sign-up using an organization code (recommended)
+#### Option 2: Allow self sign-up using an organization code (recommended)
 
 Users join by signing up or logging in with an organization code.
 
@@ -244,7 +241,7 @@ Behavior:
 
 This is the recommended default for most B2B SaaS applications.
 
-### Option 3: Auto-add users from allowed domains
+#### Option 3: Auto-add users from allowed domains
 
 Users are automatically added based on their email domain.
 
@@ -258,7 +255,7 @@ A user signing up with `jane@acme.com` is automatically added to the Acme organi
 
 
 
-## Step 11: Track seat usage for billing
+## Track seat usage for billing
 
 Kinde does not automatically calculate seat counts for metered billing. Your application must submit usage updates.
 
