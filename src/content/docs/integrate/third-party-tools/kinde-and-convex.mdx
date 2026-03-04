@@ -36,29 +36,36 @@ ai_summary: Integrate Kinde with Convex to enable real-time user data sync and s
 
 [Convex](https://www.convex.dev/) gives you a backend with realtime data, file storage, search, and scheduling out of the box. Add Kinde for sign-in, user management, and access control, and you get a full stack without wiring everything yourself. This guide walks through connecting Kinde to a Convex app so users are authenticated and your backend stays secure.
 
-## Quickstart
+### Create a new project
 
-1. Set up a new React project by running the following command:
+1. If you are starting from scratch, set up a new React project by running the following command:
 
     ```bash
     npm create vite@latest my-app -- --template react-ts
     ```
+2. Go to your Kinde dashboard and create a new front-end web application. 
+    - Set the Callback and Logout URLs
+    - Obtain the **Client ID** and **Kinde domain**
+    
+    Learn more about setting up a [Kinde React application](/developer-tools/sdks/frontend/react-sdk/)
 
-2. Set up a [Kinde React application](/developer-tools/sdks/frontend/react-sdk/) and obtain the **Client ID** and **Kinde domain**
 
-3. Install the Convex and Kinde React SDK dependencies:
+### Install dependencies
+
+1. Install the Convex and Kinde React SDK dependencies:
 
     ```bash
     npm install convex @kinde-oss/kinde-auth-react
     ```
 
-    Use the following command to sign-in to Convex and initialize a new project. Keep this terminal running for the development server.
+2. Use the following command to sign-in to Convex and initialize a new project. Keep this terminal running for the development server.
 
     ```bash
     npx convex dev
     ```
+### Add Kinde and Convex providers
 
-4. Update your `main.tsx` file to include the Kinde and Convex providers:
+1. Update your `main.tsx` file to include the Kinde and Convex providers:
 
     ```tsx
     // src/main.tsx
@@ -88,7 +95,7 @@ ai_summary: Integrate Kinde with Convex to enable real-time user data sync and s
     );
     ```
 
-    Create a new hook directory and add the following code to the hook:
+2. Create a new hook directory and add the following code to the hook:
 
     ```bash
     mkdir -p src/hooks
@@ -129,7 +136,7 @@ ai_summary: Integrate Kinde with Convex to enable real-time user data sync and s
       The function name `fetchAccessToken` is required by Convex even though it is sending the ID token. Naming the function anything else will result in an error in the browser console.
     </Aside>
     
-5. Connect Convex backend auth by adding a `auth.config.ts` file:
+3. Connect Convex backend auth by adding a `auth.config.ts` file:
 
     ```bash
     touch convex/auth.config.ts
@@ -150,7 +157,12 @@ ai_summary: Integrate Kinde with Convex to enable real-time user data sync and s
       ],
     } satisfies AuthConfig;
     ```
-6. Add Convex auth utilities to your component: 
+    
+    Learn more about adding custom OIDC providers to Convex in the [Convex documentation](https://docs.convex.dev/auth/advanced/custom-auth).
+
+### Add Convex auth utilities to your component
+
+You can now start using the Convex auth utilities such as `Authenticated` and `Unauthenticated` components to conditionally render content based on the user's authentication status:
 
     ```tsx
     // src/App.tsx
@@ -192,9 +204,6 @@ ai_summary: Integrate Kinde with Convex to enable real-time user data sync and s
 
     export default App;
     ```
-
-    Learn more about adding custom OIDC providers to Convex in the [Convex documentation](https://docs.convex.dev/auth/advanced/custom-auth).
-
 
 ## Sync Kinde users to Convex database
 
