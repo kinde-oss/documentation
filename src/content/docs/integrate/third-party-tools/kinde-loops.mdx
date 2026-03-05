@@ -1,0 +1,321 @@
+---
+page_id: 5e97601f-3b77-4034-ae12-31737020b254
+title: Connect Loops to Kinde (via Zapier)
+description: Step-by-step guide to connecting Kinde webhooks with Loops via Zapier for email automation and marketing campaigns using webhooks and event hooks
+sidebar:
+  order: 14
+relatedArticles:
+  - 55350C9F-88FA-4996-B648-A4B5C11C8FFF
+  - 5d958ce9-27ee-420a-9e20-09a2ed7fb179
+  - 84581694-59d6-4a02-ab8b-c7a2889713d5
+next: false
+topics:
+  - integrate
+  - third-party-tools
+sdk: []
+languages: []
+audience:
+  - developers
+  - business owners
+complexity: beginner
+keywords:
+  - loops
+  - email marketing
+  - automation
+  - integration
+  - webhooks
+  - zapier
+  - email campaigns
+updated: 2026-02-04
+featured: false
+deprecated: false
+ai_summary: Step-by-step guide to connecting Kinde webhooks with Loops via Zapier for email automation and marketing campaigns using webhooks and event hooks.
+---
+
+This guide will walk you through connecting Kinde webhooks to Loops via Zapier, allowing you to automatically sync your Kinde users to Loops for email marketing and automation. When events like user creation or authentication happen in Kinde, they can trigger automated actions to add or update contacts in Loops.
+
+### What you need
+
+- A [Kinde](https://www.kinde.com/register) account with an available webhook slot (Sign up for free)
+- A [Loops](https://loops.so/) account (Sign up for free)
+- A [Zapier](https://zapier.com/) account (Professional plan or higher required for webhook triggers)
+
+## Step 1: Generate a Loops API key 
+
+1. Sign in to your Loops account and go to **Settings > API**
+2. Select **Generate key**
+3. Select the newly generated key to copy it. You will need this in the next step.
+4. If you want to add the contacts to specific mailing lists in Loops, go to **Settings > Lists > Mailing lists** and select **Create a list**
+5. Enter a name and description for the list, and copy the list ID. You will need this when creating the Zap in Zapier
+
+## Step 2: Create a Zap in Zapier
+
+1. Log in to your Zapier account and select **Create** > **Zaps**
+2. In the **Trigger** step, search for **Webhooks** and select it.
+3. In the **Event** dropdown, select **Catch Raw Hook**, then select **Continue**
+   
+   <Aside>
+   
+   **Catch Raw Hook** is required for Kinde webhooks because Kinde sends webhook data as a JWT token string. The raw hook will capture the complete webhook payload including the JWT token.
+   
+   </Aside>
+
+4. In the **Test** tab, Zapier will generate a unique webhook URL for your Zap. The URL will look like: `https://hooks.zapier.com/hooks/catch/1234567/abcdefg/` 
+
+    Copy this URL - you'll need it in the next step.
+
+    Keep this Zap open - you'll return to it after configuring the webhook in Kinde.
+
+## Step 3: Create a webhook in Kinde
+
+1. In your Kinde dashboard, go to **Settings > Webhooks**
+2. Select **Add webhook**
+3. Give your webhook a descriptive name (e.g., "Kinde Zapier Loops")
+4. Enter a description explaining what this webhook is for (e.g., "Sync users to Loops when created")
+5. In the **Endpoint URL** field, paste the Zapier webhook URL you copied in Step 2
+6. Select **Add event** to select which events you want to trigger this webhook
+   
+   For this example, select `user.created` to trigger the webhook when a new user is created
+   
+   Common events you might use:
+   - `user.created` - When a new user signs up for the first time
+   - `user.updated` - When user information is updated
+   - `user.authenticated` - When a new or existing user logs in
+   
+   For a complete list of available events, see [Add and manage webhooks](/integrate/webhooks/add-manage-webhooks#webhook-triggers)
+
+7. Select **Save** to create the webhook
+
+## Step 4: Test the webhook trigger
+
+1. In your Kinde dashboard, create a test user to trigger the webhook:
+   - Go to **Users** and select **Add user**
+   - Enter test user details (e.g., name: "Test User", email: "test@example.com")
+   - Select **Save**
+2. Return to Zapier and select **Test trigger** in the trigger step
+3. You should see the webhook data appear. The data will be a raw JWT token string in the body
+4. Select **Continue with selected record** to proceed to the next step
+5. Zapier will open a new popup. Search for **Code** and select it
+
+## Step 5: Decode the JWT using Zapier Code action
+
+Since Kinde sends webhook data as a JWT token, you'll need to decode it to access the user information. Zapier's Code action allows you to run JavaScript to decode the JWT.
+
+1. Select **Code by Zapier** and from the Action event dropdown, select **Run JavaScript** as the action. Select **Continue**
+2. In the **Input Data** field, add a field called `jwt` and map it to the **Raw Body** from the webhook trigger
+3. In the **Code** field, paste the following JavaScript to decode the JWT, replacing the existing code:
+
+    ```javascript
+    // Function to decode a JWT token
+    function decodeJWT(token) {
+      if (!token) {
+        throw new Error('JWT token is missing');
+      }
+      
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        throw new Error('Invalid JWT token');
+      }
+      
+      const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4);
+      const decoded = JSON.parse(Buffer.from(padded, 'base64').toString('utf-8'));
+      return decoded;
+    }
+
+    // Get the JWT from input data
+    const jwt = inputData?.jwt;
+
+    // Decode the JWT with error handling
+    let decoded = null;
+    try {
+      decoded = decodeJWT(jwt);
+    } catch (error) {
+      return {
+        error: error.message || 'Failed to decode JWT'
+      };
+    }
+
+    // Extract user data from the decoded payload
+    const userData = decoded?.data?.user || {};
+
+    // Return the decoded data
+    return {
+      firstName: userData.first_name || '',
+      lastName: userData.last_name || '',
+      email: userData.email || '',
+      fullName: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
+      userId: userData.id || '',
+      orgCode: userData?.organizations?.[0]?.code || '',
+      rawData: decoded
+    };
+    ```
+
+4. Select **Continue**, then **Test step** to verify the JWT is decoded correctly.
+5. You should see the decoded user data including first name, last name, and email
+6. Select **Continue**
+
+    <Aside>
+
+    The JWT payload structure from Kinde includes a `data` object containing the user information. The Code action extracts fields like `first_name`, `last_name`, and `email` from this data object. See the [webhook payload example](/integrate/webhooks/about-webhooks) for more details.
+
+    </Aside>
+
+## Step 6: Add Loops action
+
+Now that you have decoded the JWT, you can use the extracted data to add contacts to Loops. This will sync your Kinde users to Loops for email marketing and automation.
+
+1. In Zapier, edit your Zap and select the plus icon **+** to add another step after the Code action
+2. Search for **Loops** and select it
+3. From the Action event dropdown, select **Add Contact** as the action
+4. Connect your Loops account:
+   - Click **Sign in to Loops**
+   - Enter your Loops API key you copied from Step 1
+   - Select **Continue**
+5. Map the fields from your decoded JWT to Loops:
+   - **Email**: Map to the `Email` field from the Code step output (required)
+   - **First Name**: Map to the `First Name` field from the Code step output
+   - **Last Name**: Map to the `Last Name` field from the Code step output
+   - **Source**: Set to `kinde` or `zapier` (optional)
+   - **Subscribed**: Set to `true` (default) to ensure users receive emails
+
+    <Aside title="Marketing consent">
+      Setting `subscribed` to `true` automatically opts users into marketing emails. Under GDPR and CAN-SPAM regulations, explicit consent is typically required before sending marketing communications.
+
+      **Best practices:**
+      - Add clear consent language at signup (e.g., "I agree to receive marketing emails") and only set `subscribed` to `true` if the user explicitly consents
+      - Alternatively, default `subscribed` to `false` and implement a double opt-in flow where users confirm their email address before receiving marketing emails
+      - Log and store the user's consent timestamp and source (e.g., "signup_form", "profile_settings") for auditability and compliance purposes
+
+      If the user doesn't consent, set `subscribed` to `false`.
+    </Aside>
+
+6. Select **Continue**
+7. Select **Test step** to verify the contact is created in Loops
+8. Check your Loops dashboard to confirm the contact was added with the correct information
+9. Select **Publish** to activate your Zap
+
+    <Aside>
+
+    **Tip**: If you want to update existing contacts instead of creating duplicates, use the **Update Contact** action instead. Loops will update the contact if the email already exists, or create a new one if it doesn't.
+
+    </Aside>
+
+## Step 7: Test the complete integration
+
+1. In your Kinde dashboard, go to **Users** and select **Add user**
+2. Create a new user with a name and email address
+3. Select **Save** to create the user
+4. The webhook will automatically trigger, sending the user data to Zapier
+5. Zapier will decode the JWT, extract the user information, and add the contact to Loops
+6. Check your Loops dashboard to verify the contact was added with the correct name and email
+7. You can also check Zapier's **Task History** to see if your Zap ran successfully
+
+## Import Kinde users to Loops
+
+You can import all your Kinde users to Loops using Kinde's export user feature. Follow these steps: 
+
+1. In your Kinde dashboard, go to **Settings > Business > Details**
+2. Scroll down to the **Export data** section and select **Export**
+3. In the pop-up window, select **All data (except passwords)**, then select **Next**
+4. Enter the one-time verification code sent to your email and select **Next**
+5. You will be able to download the `kinde_export.zip` file
+6. Unzip the file and you will see the `users.ndjson` file with all your Kinde users data
+7. Create a new `.csv` file with the following columns: `First Name`, `Last Name`, `Email`, `User Group`. 
+
+    Copy the user data from the `users.ndjson` file to this `.csv` file
+
+    You can use the following Python script to convert `users.ndjson` to `.csv` file: 
+
+    ```python
+    #!/usr/bin/env python3
+    # convert_users_to_csv.py
+    """
+    Convert users.ndjson to CSV with columns: 
+    First Name, Last Name, Email, User Group
+    """
+
+    import json
+    import csv
+    import os
+
+    def extract_user_groups(user_data):
+        """Extract user groups from organizations field."""
+        if 'organizations' in user_data and user_data['organizations']:
+            # Extract organization codes and join them with comma
+            org_codes = [org.get('code', '') for org in user_data['organizations'] if isinstance(org, dict)]
+            return ', '.join(org_codes)
+        return ''
+
+    def convert_ndjson_to_csv(input_file, output_file):
+        """Convert NDJSON file to CSV."""
+        rows = []
+        
+        # Read and parse NDJSON file
+        with open(input_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                try:
+                    user_data = json.loads(line)
+                    
+                    # Extract fields with fallback to empty string
+                    first_name = user_data.get('first_name', '')
+                    last_name = user_data.get('last_name', '')
+                    email = user_data.get('email', '')
+                    user_group = extract_user_groups(user_data)
+                    
+                    rows.append({
+                        'First Name': first_name,
+                        'Last Name': last_name,
+                        'Email': email,
+                        'User Group': user_group
+                    })
+                except json.JSONDecodeError as e:
+                    print(f"Warning: Skipping invalid JSON line: {e}")
+                    continue
+        
+        # Write to CSV
+        if rows:
+            fieldnames = ['First Name', 'Last Name', 'Email', 'User Group']
+            with open(output_file, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(rows)
+            
+            print(f"Successfully converted {len(rows)} users to {output_file}")
+        else:
+            print("No data found to convert")
+
+    if __name__ == '__main__':
+        # Get the directory of this script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        input_file = os.path.join(script_dir, 'users.ndjson')
+        output_file = os.path.join(script_dir, 'users_output.csv')
+        
+        convert_ndjson_to_csv(input_file, output_file)
+    ```
+    Run the script using the following command (You will need Python 3.x installed):
+
+    ```bash
+    python3 convert_users_to_csv.py
+    ```
+
+8. Go to Loops > **Audience**, and select **Import**. A pop-up opens 
+9. Select **CSV** and select **Upload CSV**
+10. On the new screen, upload your `.csv` file you created earlier and select **Next**
+11. Map the CSV columns and select **Import contacts**
+12. You will see the imported users in Loops **Audience** page
+
+### Conclusion 
+
+Now that you've successfully connected Kinde webhooks to Loops via Zapier, you can automate your email marketing and keep your user base synchronized. This integration enables you to:
+
+- Automatically sync new users to Loops for email marketing
+- Create personalized email campaigns based on Kinde user data
+- Build automated email workflows triggered by Kinde events
+- Segment your audience using data from Kinde
+
+For more information about Loops features and capabilities, visit the [Loops documentation](https://loops.so/docs).

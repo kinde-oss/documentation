@@ -7,6 +7,8 @@ sidebar:
 relatedArticles:
   - 84581694-59d6-4a02-ab8b-c7a2889713d5
   - 95bf5e04-3415-4dc8-9ff6-953171df3f8b
+tableOfContents:
+  maxHeadingLevel: 3
 app_context:
   - m: settings
     s: webhooks
@@ -31,7 +33,7 @@ keywords:
   - local testing
   - ngrok
   - localtunnel
-updated: 2024-01-15
+updated: 2026-02-03
 featured: false
 deprecated: false
 ai_summary: Guide to adding and managing webhooks in Kinde including security setup, trigger configuration, API management, and local testing with proxy tools.
@@ -43,7 +45,7 @@ If you are experiencing issues with webhooks, it could be because the webhook re
 
 </Aside>
 
-Webhooks are outbound calls that are sent from Kinde when a specified events occurs. Calls are sent using HTTPS REST calls to a verified external URL you specify.
+Webhooks are outbound calls that are sent from Kinde when a specified event occurs. Calls are sent using HTTPS REST calls to a verified external URL you specify.
 
 Use Kinde’s webhooks to create triggers and push event data to your other systems and applications.
 
@@ -57,13 +59,13 @@ Webhook limits apply if you are on the Kinde free plan. [See all plans](https://
 
 Webhook request payloads are signed and sent as a JSON Web Token (JWT) from Kinde.
 
-You’re probably using a library to validate your JWTs and they will require the url for your public JSON Web Key (also known as a `jwks` file).
+If you’re using a library to validate your JWTs, it will require the URL for your public JSON Web Key (also known as a `JWKS` file). The JWKS file can be found at `https://<your_subdomain>.kinde.com/.well-known/jwks`
 
-The jwks file can be found at `https://<your_subdomain>.kinde.com/.well-known/jwks`
+If you are using a JavaScript backend, you can use the [Kinde webhooks decoder](https://www.npmjs.com/package/@kinde/webhooks) to decode and verify the JWT, outlined in the [webhooks decoder](/integrate/webhooks/about-webhooks#webhooks-decoder) section.
 
 ## Add a webhook
 
-1. Go to **Settings > Environment > Webhooks**.
+1. Go to **Settings > Webhooks**.
 2. Select **Add webhook**.
 3. Give the webhook a name and enter a description so it’s clear what it’s for.
 4. Enter the external URL.
@@ -71,15 +73,15 @@ The jwks file can be found at `https://<your_subdomain>.kinde.com/.well-known/jw
 
 ## Edit a webhook
 
-1. Go to **Settings > Environment > Webhooks**.
+1. Go to **Settings > Webhooks**.
 2. Select the webhook name to open the details window.
 3. Update events and triggers.
 4. Select **Save**.
 
 ## Delete a webhook
 
-1. Go to **Settings > Environment > Webhooks**.
-2. Select the three dots menu next to the webhook you want to delete.
+1. Go to **Settings > Webhooks**.
+2. Select the three-dot menu next to the webhook you want to delete.
 3. Select **Delete webhook**. A confirmation message appears.
 4. Confirm you want to delete the webhook.
 
@@ -151,7 +153,13 @@ In order to use webhooks, you need a publicly available URL. To test locally you
 
 Here are a couple of free tools to help you to do this.
 
-- [localtunnel](https://theboroer.github.io/localtunnel-www/) - fast and easy, we recommend using the `—subdomain` attribute to fix the issued subdomain.
+- [localtunnel](https://theboroer.github.io/localtunnel-www/) - fast and easy, we recommend using the `--subdomain` attribute to fix the issued subdomain.
 - [Ngrok](https://ngrok.com/) - for intermediate users, requires some dev experience to get set up.
 
-Each of these services exposes a local port though a public URL that can be set as your web socket.
+Each of these services exposes a local port through a public URL that can be set as your webhook endpoint.
+
+You can also use the [webhook.site](https://webhook.site/) to check the webhook request payload and headers.
+
+## Next steps
+
+- [Set up webhooks using Next.js](/integrate/webhooks/webhooks-nextjs)
