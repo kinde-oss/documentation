@@ -189,17 +189,37 @@ Follow the instructions for the language your `AppDelegate` is written in.
     #import "RNAppAuthAuthorizationFlowManager.h"
     ```
 
-2. Set the Objective-C Bridging Header path in your Xcode Build Settings to `$(SRCROOT)/$(TARGET_NAME)/AppDelegate+RNAppAuth.h`.
+2. Configure the `Objective-C Bridging Header`.
 
-   <details>
-   <summary>Open for steps</summary>
+    How you do this depends on whether your project already has an `Objective-C Bridging Header` set. 
    
-   - Open the project in Xcode.
-   - Select the project in the navigator, then the app target.
-   - Open the **Build Settings** tab.
-   - Search for **bridging**.
-   - Set **Objective-C Bridging Header** to $(SRCROOT)/$(TARGET_NAME)/AppDelegate+RNAppAuth.h.
-   </details>
+    Check your Xcode `Build Settings` for `Objective-C Bridging Header` to see if a path is already set.
+
+    <details>
+      <summary>Open for steps</summary>
+          
+      - Open the project in Xcode.
+      - Select the project in the navigator, then the app target.
+      - Open the `Build Settings` tab.
+      - Search for `Bridging Header`.
+      - Check the value next to the setting name. 
+        - If it is empty, you do not have an existing header. 
+        - If there is a file path, you already have one configured.
+    </details>
+
+    <Tabs>
+      <TabItem label="No existing header">
+        Set `Objective-C Bridging Header` to the path of the newly created file: `$(SRCROOT)/$(TARGET_NAME)/AppDelegate+RNAppAuth.h`.
+      </TabItem>
+      <TabItem label="Has existing header">
+        Open the `Objective-C Bridging Header` file your project is already using (e.g., `YourApp-Bridging-Header.h`) and add the following import statement to it:
+
+        ```diff lang="objc" title="YourApp-Bridging-Header.h"
+        + #import "AppDelegate+RNAppAuth.h"
+        ```
+      </TabItem>
+    </Tabs>
+    <br />
 
 3. Update `AppDelegate.swift` file with the following code:
 
