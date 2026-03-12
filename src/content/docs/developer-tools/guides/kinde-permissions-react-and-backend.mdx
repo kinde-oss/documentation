@@ -314,6 +314,12 @@ export async function POST(req: Request) {
     // Decode claims after successful validation
     const decodedToken = jwtDecoder(token);
     const { sub, aud, permissions = [] } = decodedToken;
+    const expectedAudience = process.env.KINDE_API_AUDIENCE;
+    const audiences = Array.isArray(aud) ? aud : [aud].filter(Boolean);
+
+    if (!expectedAudience || !audiences.includes(expectedAudience)) {
+      return NextResponse.json({ error: "Invalid audience" }, { status: 401 });
+    }
 
     if (!permissions.includes("create:todos")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -365,17 +371,4 @@ createRoot(document.getElementById("root")!).render(
     </KindeProvider>
   </StrictMode>
 );
-```
-
-Check the audience claim `aud` in your backend code to verify the token is intended for your API.
-
-```typescript
-// backend.ts
-const { sub, aud, permissions = [] } = decodedToken;
-
-if(aud.includes("your_intended_audience")) {
-  // token is intended for your API
-} else {
-  // token is not intended for your API
-}
 ```
