@@ -293,7 +293,7 @@ import { NextResponse } from "next/server";
 import { validateToken } from "@kinde/jwt-validator";
 import { jwtDecoder } from "@kinde/jwt-decoder";
 
-export async function GET(req: Request) {
+export async function POST(req: Request) {
   const authHeader = req.headers.get("authorization");
   const token = authHeader?.replace("Bearer ", "");
 
@@ -365,4 +365,17 @@ createRoot(document.getElementById("root")!).render(
     </KindeProvider>
   </StrictMode>
 );
+```
+
+Check the audience claim `aud` in your backend code to verify the token is intended for your API.
+
+```typescript
+// backend.ts
+const { sub, aud, permissions = [] } = decodedToken;
+
+if(aud.includes("your_intended_audience")) {
+  // token is intended for your API
+} else {
+  // token is not intended for your API
+}
 ```
