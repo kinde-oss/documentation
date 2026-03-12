@@ -6,6 +6,8 @@ sidebar:
 relatedArticles:
   - 8b9376c4-308c-4eaa-a990-606fb8bbf770
   - 90134c89-16e4-4981-b988-b0cb4f1722c5
+tableOfContents:
+  maxHeadingLevel: 3
 description: Configure WhatsApp in Kinde to send OTP and MFA codes via WhatsApp, with fallback to SMS. Uses your Meta/WhatsApp Business account.
 metadata:
   topics: [authenticate]
@@ -21,75 +23,47 @@ deprecated: false
 
 You can send one-time passcodes (OTP) and multi-factor authentication (MFA) codes via **WhatsApp** in addition to SMS. When WhatsApp is set up and enabled, Kinde prefers WhatsApp for delivering codes and falls back to SMS if WhatsApp delivery fails.
 
-<Aside>
+### What you need
 
-**Prerequisites:** You must have a **verified WhatsApp Business account**. Messaging is billed by Meta; Kinde does not charge for WhatsApp delivery. You use your own Meta account and credentials.
-
-</Aside>
-
-## Navigate to WhatsApp settings
-
-All messaging options (Email, SMS, and WhatsApp) are under a single section in Kinde:
-
-1. In Kinde, go to **Settings > Environment > Messaging**.
-2. Open the **WhatsApp** page.
-
-## Obtain WhatsApp credentials from Meta
-
-You need two values from Meta’s WhatsApp Manager:
-
-- **WhatsApp API token** (sometimes called “access token”)
-- **WhatsApp Business Account ID**
-
-To get these:
-
-1. Sign in to your [Meta Business Suite](https://business.facebook.com/) (or Meta Business Manager).
-2. Go to **WhatsApp Manager** (or **WhatsApp** in the left menu).
-3. Create or select your WhatsApp Business Account and complete any verification Meta requires.
-4. In WhatsApp Manager, find your **Business Account ID** and create or copy an **API token** for the WhatsApp Business API.
-
-Meta’s exact menu names can vary. If you don’t see these options, check [Meta’s WhatsApp Business API documentation](https://developers.facebook.com/docs/whatsapp/cloud-api/get-started) for the current steps.
+- A verified **WhatsApp Business account** in Meta
+- **WhatsApp API token** (access token) and **WhatsApp Business Account ID**
+- A configured [SMS provider in Kinde](/authenticate/authentication-methods/phone-authentication/#configure-phone-sms-auth-in-kinde) if you want fallback delivery
 
 ## Configure WhatsApp in Kinde
 
-1. In Kinde, go to **Settings > Environment > Messaging > WhatsApp**.
-2. Enable **Enable WhatsApp** to show the configuration options.
-3. Enter your **WhatsApp token** (API token from Meta).
-4. Enter your **WhatsApp Business Account ID**.
+1. In Kinde, go to **Settings > Environment > Messaging > WhatsApp**
+2. Turn on **Enable WhatsApp**
+3. Enter your **WhatsApp token** (from Meta)
+4. Enter your **WhatsApp Business Account ID**
 5. (Optional) Enter a **Template name** if you want to use a specific WhatsApp message template. If left blank, Kinde uses a default template.
-6. Select **Sync WhatsApp** to sync with the WhatsApp service. After syncing, the **WhatsApp phone number** dropdown appears.
-7. In **WhatsApp phone number**, select the phone number you want to use for sending codes.
-8. Select **Save**.
+6. Select **Sync WhatsApp**
+7. After sync completes, the **WhatsApp phone number** dropdown appears.
+8. In **WhatsApp phone number**, select the phone number you want to use for sending codes.
+9. Select **Save**
 
-Once saved, OTP and MFA codes will be sent via WhatsApp when possible, with fallback to SMS if WhatsApp fails.
+After saving, Kinde sends OTP and MFA codes through WhatsApp when available, and falls back to SMS if delivery fails.
 
-## Language and WhatsApp messages
+### Can I change the language of the WhatsApp messages?
 
-- The language used for WhatsApp messages is determined by **Settings > Environment > Languages**. Choose the languages your users need.
-- If a selected language is **not supported by WhatsApp**, Kinde uses **en-US** for that case.
-- After you **change the language** settings, run **Sync WhatsApp** again so the updated languages apply to your WhatsApp templates.
+Yes, you can change the language by going to **Kinde > Settings > Environment > Languages**. After changing languages, run **Sync WhatsApp** again so template languages are updated. If a configured language is not supported by WhatsApp, Kinde falls back to **en-US**.
 
-## Pricing and billing
 
-- **Kinde does not charge** for sending messages via WhatsApp.
-- **Meta charges** for WhatsApp Business messaging according to [Meta’s pricing](https://developers.facebook.com/docs/whatsapp/pricing). You pay Meta using your own Meta/WhatsApp Business account.
+### How much does Kinde charge for WhatsApp message delivery?
+
+Kinde does not charge for WhatsApp message delivery. Meta charges for WhatsApp Business messaging based on [Meta pricing](https://developers.facebook.com/docs/whatsapp/pricing).
 
 ## Troubleshooting
 
 ### Templates fail to create or sync
 
-If template creation or syncing fails in Kinde, the cause is often on the **Meta/WhatsApp side**. Check the following:
+Template issues are usually caused by Meta account setup or credential mismatches:
 
-1. **Verify your WhatsApp Business account** – Ensure the business is verified in Meta and that you can create and use templates in [WhatsApp Manager](https://business.facebook.com/) (or the equivalent Meta tool). If you can create a template manually there, your business setup is usually correct.
-2. **Token and Business Account ID** – Confirm the WhatsApp API token and Business Account ID in Kinde match the values in your Meta account and that the token has the right permissions.
-3. **Sync again** – After fixing credentials or templates in Meta, run **Sync WhatsApp** again in Kinde.
+- Confirm your WhatsApp Business account is verified in Meta and templates can be created in [WhatsApp Manager](https://business.facebook.com/).
+- Confirm the token and Business Account ID in Kinde match Meta and that the token has correct permissions.
+- After fixing issues in Meta, run **Sync WhatsApp** again in Kinde.
 
 ### Messages not received by users
 
-- Confirm the user’s phone number is in a format supported by WhatsApp (e.g. E.164 with country code).
-- Ensure WhatsApp is enabled for the user’s region and that they have WhatsApp installed and active.
-- If WhatsApp delivery fails, Kinde will fall back to SMS when SMS is configured; check that [SMS is set up](/authenticate/authentication-methods/phone-authentication/) under **Settings > Environment > Messaging > SMS** if you rely on fallback.
-
-### After changing languages
-
-Whenever you change **Settings > Environment > Languages**, run **Sync WhatsApp** again so your WhatsApp message templates use the updated languages (or en-US where a language isn’t supported by WhatsApp).
+- Confirm the phone number is in a WhatsApp-supported format (for example, E.164 with country code).
+- Confirm WhatsApp is available in the user's region and the user has an active WhatsApp account.
+- If you rely on fallback delivery, verify [SMS is configured](/authenticate/authentication-methods/phone-authentication/) in **Settings > Environment > Messaging > SMS**.
