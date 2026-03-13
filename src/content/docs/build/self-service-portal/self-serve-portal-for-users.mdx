@@ -4,6 +4,8 @@ title: Enable self-service portal for users
 description: Guide for enabling and configuring self-service portals for users including profile management, billing access, and multiple methods for generating portal links with SDK and API examples.
 sidebar:
   order: 9
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - beebe908-27f8-4be6-b74c-05fc8ff5dfb5
   - a2668524-5842-4c68-ab50-30b7e8c3e842
@@ -25,7 +27,7 @@ keywords:
   - billing portal
   - portal link
   - account API
-updated: 2024-01-15
+updated: 2026-03-13
 featured: false
 deprecated: false
 ai_summary: Guide for enabling and configuring self-service portals for users including profile management, billing access, and multiple methods for generating portal links with SDK and API examples.
@@ -38,11 +40,32 @@ A self-serve portal means your customers can make basic account changes without 
 ## Configure the user self-serve portal
 
 1. Go to **Settings > Environment > Self-serve portal**.
-   ![Settings for self-serve portal set up in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/81169031-611b-402a-20f7-47c84f53b600/public)
-2. Enter the **Return URL** that you want users to land on when they exit the portal, e.g. your app dashboard. This can also be used as a fallback URL if you decide to use the SDK method of dynamically generting the URL (see below).
-3. In the **User profile** section, select the functions you want the user to be able to manage. If you select **Billing**, they can manage their plan as well as payment methods.
-   ![Self-serve portal settings for users](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f821e9c5-497d-41f0-b373-2755320d1c00/public)
-4. Select **Save**.
+2. Enter the **Return URL** that you want users to land on when they exit the portal, e.g. your app dashboard. This can also be used as a fallback URL if you decide to use the SDK method of dynamically generating the URL (see below).
+
+    ![Settings for self-serve portal set up in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/81169031-611b-402a-20f7-47c84f53b600/public)
+
+## User self-management
+
+   ![Self-serve portal settings for users](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/877380ff-7b4a-4be0-a369-8c6a59a0d200/socialsharingimage)
+
+### User profile
+
+Allows users to update their profile information, including first name, and last name.
+    
+If you do not want users to change these fields, disable **User profile**.
+
+When users sign in with a social provider (for example, Google), the social profile can take priority and overwrite name values the next time they sign in.
+
+Also, name changes might not appear in your app immediately if an old access token is still being used. Users need to refresh the access token or sign out and sign in again.
+
+
+### Billing
+
+Allows users to manage their billing subscription, change or cancel their plan, and update payment details (if you have billing set up).
+
+### API Keys
+
+Allows users to create and manage their API keys.
 
 ## Generate the self-serve portal link
 
@@ -53,7 +76,7 @@ Access to the portal is granted via a one-time link. There are two main ways to 
 
 Both methods are able to generate the portal link on the fly. For example, when a user clicks an "Account" button in your app.
 
-### Generate a self-serve portal link with a Kinde SDK
+### Generate using a Kinde SDK
 
 If you're using the Kinde React SDK, you can use the `<PortalLink />` component, which both generates the link and redirects the user:
 
@@ -63,7 +86,7 @@ import {PortalLink} from "@kinde-oss/kinde-auth-react/components";
 <PortalLink>Account</PortalLink>;
 ```
 
-### Generate a self-serve portal link without a Kinde SDK
+### Generate without an SDK
 
 If you're not using a Kinde SDK, you can manually call the Account API:
 
@@ -82,7 +105,7 @@ Optional parameters:
 - `return_url` – where to redirect the user after exiting the portal.
 - `sub_nav` – specify the portal section to open (e.g., `organization_billing`, `profile`).
 
-### Manage the self-serve portal link using the Kinde Management API
+### Using the Kinde Management API
 
 This option is useful for server-side applications or if you're using Kinde billing features without Kinde Authentication.
 
