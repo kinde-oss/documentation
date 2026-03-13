@@ -19,7 +19,7 @@ metadata:
   audience: [developer, product-manager]
   complexity: intermediate
   keywords: [multi-application sessions, SSO cookies, refresh tokens, offline scopes, multi-domain auth]
-  updated: 2025-01-16
+  updated: 2026-03-03
 featured: false
 deprecated: false
 ---
@@ -36,10 +36,6 @@ If you include an `offline` scope in your request, you can maintain long-running
 
 Kinde supports short-lived refresh and refresh token rotation for increased security of browser-based and mobile apps. In this case, on page reload, the SDK will resume the session via the refresh token exchange.
 
-[About refresh tokens](/build/tokens/refresh-tokens/)
-
-See also [multi-domain authentication](/authenticate/about-auth/about-authentication/#multi-domain-authentication).
-
 ## Set up overview
 
 1. Create two or more Kinde apps.
@@ -52,14 +48,15 @@ See also [multi-domain authentication](/authenticate/about-auth/about-authentica
 
 Say you are signed into your **Admin app** and want to switch to the **Employee app**. Here’s how it might look.
 
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6a56c72a-21ea-4bc7-6b6d-f79efd1bda00/public"
-  alt=""
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
+![Example of a multi-application session](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6a56c72a-21ea-4bc7-6b6d-f79efd1bda00/socialsharingimage)
+
 
 As long as an authenticated session exists, users should be able to move seamlessly between applications.
+
+## Client-specific refresh token cookies
+
+By default, applications on the same custom domain share a single `refresh_token` cookie. Signing in to one application can overwrite the refresh token set by another, which may break the other app's session.
+
+Kinde supports **client-specific refresh token cookies** to avoid this. When enabled for an application, the refresh token is stored in a uniquely named cookie (for example, `refresh_token_abc123`), so each app maintains its own refresh token independently. Enable this per application under **Settings > Applications > [your app] > Tokens > Refresh token cookies**. A custom domain must be configured. See [Refresh tokens](/build/tokens/refresh-tokens/) for more detail.
+
+See also [multi-domain authentication](/authenticate/about-auth/about-authentication/#multi-domain-authentication).

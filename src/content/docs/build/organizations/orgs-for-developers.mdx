@@ -8,6 +8,8 @@ relatedArticles:
   - a7b0d16d-262c-4873-a3d3-a426a6f4e42a
   - 38e9186d-cca5-44a6-86ab-dde9f21167ff
   - f3e20936-d4da-4abc-8430-7620cae7fa6b
+tableOfContents:
+  maxHeadingLevel: 3
 app_context:
   - m: organizations
     s: list
@@ -30,7 +32,7 @@ keywords:
   - user assignment
   - organization management
   - org_code
-updated: 2024-01-15
+updated: 2026-03-03
 featured: false
 deprecated: false
 ai_summary: Comprehensive developer guide for working with Kinde organizations including creation, user assignment, self-signup flows, and organization management with code examples.
@@ -312,3 +314,27 @@ feature_flags: {
   }
 }
 ```
+
+## Organization suspension
+
+Organizations can be suspended to temporarily block all user access. Suspension is managed via the Management API.
+
+### Suspending an organization via API
+
+Send `PATCH /api/v1/organization/{org_code}` with `{ "is_suspended": true }` to suspend an organization. When suspended:
+
+- The OAuth2 authorization flow returns an `organization_suspended` error and redirects users to an auth error page
+- All refresh tokens and access tokens scoped to the organization are automatically invalidated
+- Active end-user sessions for that organization are ended
+
+### Checking suspension status
+
+The GET organization API endpoint returns `is_suspended` (boolean) and `suspended_on` (ISO 8601 timestamp) fields that you can use to check suspension status.
+
+### Default organization
+
+The default organization cannot be suspended. Attempting to suspend it via the API returns a `DEFAULT_ORGANIZATION_CANNOT_BE_SUSPENDED` error.
+
+### Unsuspending an organization
+
+To restore access, set `is_suspended` to `false` via `PATCH /api/v1/organization/{org_code}`. Users will be able to log in again. Previously revoked tokens are not restored — users will need to re-authenticate.
