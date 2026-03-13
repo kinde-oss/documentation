@@ -20,7 +20,7 @@ ai-summary: >
   A collection of the top questions and answers about how to set up and configure Kinde authentication for your user's needs.
 ---
 
-Here’s some short answers to the most common authentication questions. Click on any question to expand the answer.
+Here are concise answers to common authentication questions. Select a question to expand the answer.
 
 <Aside title="Ask the docs">
 
@@ -40,36 +40,36 @@ You don't need to figure it all out upfront. Start simple with email authenticat
 </details>
 
 <details>
-<summary><strong>What's the difference between Kinde's password and passwordless authentication, and which should I implement?</strong></summary>
+<summary><strong>What is the difference between Kinde password and passwordless authentication, and which should I implement?</strong></summary>
 
 With passwords, your users create and remember their own passwords (we enforce 8+ characters and block common ones). With passwordless, we send them a one-time code via email or SMS instead. Passwordless is genuinely more secure - no passwords to store, steal, or forget, and codes expire after 2 hours. Just know you can't mix both methods for the same app - it's one or the other. 
 
-If you're building something mobile-first or want to reduce support tickets about forgotten passwords, passwordless is your friend.
+If you are building a mobile-first application or want to reduce support tickets for forgotten passwords, passwordless authentication is often a strong option.
 [Password authentication guide](/authenticate/authentication-methods/password-authentication/) | [Passwordless authentication guide](/authenticate/authentication-methods/passwordless-authentication/)
 </details>
 
 <details>
-<summary><strong>How does Kinde's automatic account linking work?</strong></summary>
+<summary><strong>How does Kinde automatic account linking work?</strong></summary>
 
-Kinde automatically connect accounts when someone uses the same verified email across different sign-in methods. So if someone first signs up with Google, then later tries to create an account with Slack using the same email, we'll link them together automatically. No duplicate accounts, no confusion. They can sign in with either method to access the same account. 
+Kinde automatically links accounts when a user signs in with the same verified email address across different sign-in methods. For example, if a user first signs up with Google and later signs in with Slack using the same verified email, Kinde links those identities to a single account. This prevents duplicate accounts and allows sign-in with either method.
 
 Once your users verify their email with any method, all their sign-in options with that email will work seamlessly together.
 [Learn about identity and verification](/authenticate/about-auth/identity-and-verification/)
 </details>
 
 <details>
-<summary><strong>Can I set different Kinde authentication requirements for different parts of my application?</strong></summary>
+<summary><strong>Can I set different Kinde authentication requirements by application or organization?</strong></summary>
 
-Absolutely! This is one of those features that sounds complicated but actually makes total sense. Set up your baseline authentication methods at the environment level, then customize per application or organization as needed. Maybe your main web app uses social sign-in to keep things simple, while your mobile app needs phone authentication, or you want business customers to use MFA while keeping consumer sign-up super easy. 
+Yes. Configure baseline authentication methods at the environment level, then customize settings by application or organization as needed. For example, your web application might use social sign-in, your mobile app might require phone authentication, and your enterprise customers might require MFA.
 
-It's all about matching the auth experience to what makes sense for each user group.
+This lets you align authentication requirements with each user group.
 [Configure authentication options](/authenticate/authentication-methods/set-up-user-authentication/)
 </details>
 
 <details>
 <summary><strong>How do I handle Kinde authentication across multiple domains and subdomains?</strong></summary>
 
-We've got this covered with multi-domain authentication. Think about how Google lets you stay signed in whether you're on Gmail, Calendar, or Drive - same idea. Users can hop between `website.yourapp.com`, `app.yourapp.com`, `docs.yourapp.com` and stay authenticated. The trick is using `prompt=none` in your auth URL, which invisibly checks for an existing session. If they're already signed in elsewhere, it's seamless. If not, they'll get prompted to sign in again.
+Use multi-domain authentication to maintain sign-in sessions across domains and subdomains, such as `website.yourapp.com`, `app.yourapp.com`, and `docs.yourapp.com`. Use `prompt=none` in your authorization request to silently check for an existing session. If a valid session exists, users continue without interruption; otherwise, they are prompted to sign in.
 [About Kinde authentication](/authenticate/about-auth/about-authentication/)
 </details>
 
@@ -102,9 +102,9 @@ No. Kinde does not support the Resource Owner Password Credentials (password) OA
 </details>
 
 <details>
-<summary><strong>What happens when my users can't receive their Kinde auth verification codes?</strong></summary>
+<summary><strong>How do I troubleshoot users not receiving Kinde verification codes?</strong></summary>
 
-Tell them to check their spam folder first. This fixes it most of the time because email providers can be overly protective. For SMS codes, make sure they've got decent cell reception. If they're taking too long (codes expire after 2 hours), they'll need to request a fresh one. And if you're using SMS auth, double-check that your Twilio setup is working properly - that's usually where things go sideways.
+Ask users to check their spam folder first, as email filtering is a common cause. For SMS codes, confirm network reception and phone number formatting. Verification codes expire after 2 hours, so users may need to request a new code. If you use SMS authentication, verify that your Twilio configuration is correct.
 [Passwordless authentication troubleshooting](/authenticate/authentication-methods/passwordless-authentication/)
 </details>
 
@@ -113,24 +113,24 @@ Tell them to check their spam folder first. This fixes it most of the time becau
 <details>
 <summary><strong>How do I set up Kinde social authentication without compromising security for my production app?</strong></summary>
 
-Before you go live, you absolutely must swap out Kinde's default social credentials with your own. We let you use ours for testing, but keeping them in production is asking for trouble - security risks, performance issues, and you'll be stuck if you ever want to switch providers. 
+Before production, replace Kinde default social credentials with your own provider credentials. Default credentials are intended for testing only. Using your own credentials improves security, reliability, and operational control.
 
-Create your own apps with Google, GitHub, Apple, whatever you're using, grab your Client ID and Client Secret, and put them into Kinde's social connection settings. Don't forget to add your custom domain callbacks if you're using those. [Add and manage social connections](/authenticate/social-sign-in/add-social-sign-in/)
+Create your own applications with each social provider (for example Google, GitHub, and Apple), then add the provider `Client ID` and `Client Secret` in Kinde social connection settings. If you use custom domains, include the correct callback URLs for those domains. [Add and manage social connections](/authenticate/social-sign-in/add-social-sign-in/)
 </details>
 
 <details>
-<summary><strong>Some social providers don't provide email addresses. How does Kinde maintain these user identities?</strong></summary>
+<summary><strong>How does Kinde maintain user identities when social providers do not return email addresses?</strong></summary>
 
-Some social providers (looking at you, X/Twitter and Apple) don't always hand over email addresses, but we need them for security things like password resets. When this happens, we'll ask your users for an email address just once during their first sign-up. After that one-time thing, they can sign in with their social account without any hassle. It's a small bump in the road that keeps everyone secure.
+Some social providers, such as X/Twitter and Apple, may not always return an email address. Because email is required for account security and recovery flows, Kinde prompts the user for an email address during first sign-up when needed. After that step, users can continue signing in with the social provider as expected.
 [X social sign-in](/authenticate/social-sign-in/twitter/) | [Apple social sign-in](/authenticate/social-sign-in/apple/)
 </details>
 
 <details>
 <summary><strong>How can I use Kinde to create a seamless social authentication experience for my users?</strong></summary>
 
-If you're going all-in on social auth (no email/password fallbacks), you can create a pretty slick experience. Users click your sign-in button and boom - straight to Google's or Apple's account picker. Set up custom authentication pages and use the `connectionId` parameter to skip our initial screens entirely.
+If you are using social authentication without email/password fallback, you can streamline sign-in by routing users directly to a specific provider. Configure custom authentication pages and use the `connectionId` parameter to skip initial provider selection screens.
 
-The only catch? We'll still handle verification and MFA screens because, well, security matters and we're good at it.
+Verification and MFA screens remain managed by Kinde for security.
 [Custom authentication pages](/authenticate/custom-configurations/custom-authentication-pages/)
 </details>
 
@@ -144,23 +144,23 @@ Generally, no - leave this off for better security. "Trusted provider" means we'
 ## Enterprise authentication & SAML
 
 <details>
-<summary><strong>How do I set up Kinde SAML authentication for enterprise customers?</strong></summary>
+<summary><strong>How do I set up Kinde SAML authentication for an enterprise customer?</strong></summary>
 
-SAML setup is where things get a bit technical, but stick with us. Kinde acts as the service provider while your enterprise customer brings their own identity provider (Google Workspace, Microsoft Entra ID, Cloudflare, whatever they're using). You'll create an enterprise connection in Kinde, make up a unique Entity ID (just a random string like "870sa9fbasfasdas23aghkhc12zasfnasd"), and get their IdP metadata URL. They'll need to add your ACS URL to their setup. 
+SAML setup requires coordination between Kinde and the customer identity provider (IdP). Kinde acts as the service provider, while your customer provides IdP details (for example Google Workspace, Microsoft Entra ID, or Cloudflare). Create an enterprise connection in Kinde, define a unique Entity ID, and provide your ACS URL to the customer so they can complete IdP configuration.
 
-Pro tip: generate certificate and private key pairs for extra security, and always test in a sandbox environment first.
+Use certificate and private key pairs where required, and validate the flow in a sandbox environment before production rollout.
 [Custom SAML setup](/authenticate/enterprise-connections/custom-saml/)
 </details>
 
 <details>
 <summary><strong>What do I use home realm domains for in Kinde enterprise connections?</strong></summary>
 
-Home realm domains are basically a shortcut that makes enterprise sign-in smoother. When you set `bigcorp.com` as a home realm domain, anyone with a "@bigcorp.com" email gets automatically routed to their company's sign-in flow - no extra clicks needed. Just remember that each domain can only be used once across all your connections, so no sharing. And the SSO button disappears by default when you use this (though you can bring it back if needed).
+Home realm domains route users to the correct enterprise sign-in flow based on email domain. For example, when `bigcorp.com` is configured, users with `@bigcorp.com` emails are automatically directed to their company connection. Each domain can be assigned to only one connection. The SSO button is hidden by default when home realm discovery is active, but can be re-enabled if needed.
 [Microsoft Entra ID setup](/authenticate/enterprise-connections/azure/)
 </details>
 
 <details>
-<summary><strong>What's the best way to migrate enterprise users to Kinde?</strong></summary>
+<summary><strong>How should I migrate enterprise users to Kinde?</strong></summary>
 
 Get your enterprise connections set up in Kinde first - SAML, Entra ID, whatever they're using. Then when you import their user data (via CSV or JSON), we'll automatically match everyone to the right connection based on their email addresses. This means their sign-in experience stays exactly the same - they won't even notice you've switched to Kinde behind the scenes. Import their roles and permissions too if you've got them.
 
@@ -168,9 +168,9 @@ Get your enterprise connections set up in Kinde first - SAML, Entra ID, whatever
 </details>
 
 <details>
-<summary><strong>How do I handle enterprise users who are already signed into their identity provider with Kinde?</strong></summary>
+<summary><strong>How do I handle enterprise users already signed in to their identity provider?</strong></summary>
 
-When enterprise users sign out of your app, they're only signing out of Kinde, not their company's identity provider (like Entra ID). This is totally normal for federated auth - it's how most enterprise setups work. If your customer really needs full sign-out from both systems, you'll need to build additional logout flows, but honestly, most companies prefer it this way.
+When enterprise users sign out of your application, they are signed out of Kinde but may remain signed in to their identity provider (for example Entra ID). This is expected behavior in federated authentication. If full sign-out is required across both systems, implement additional logout flows.
 [Entra ID SAML connection](/authenticate/enterprise-connections/entra-id-saml/)
 </details>
 
@@ -179,7 +179,7 @@ When enterprise users sign out of your app, they're only signing out of Kinde, n
 <details>
 <summary><strong>How do I use Kinde to implement MFA for different types of customers?</strong></summary>
 
-MFA is one of those things where one size definitely doesn't fit all. You can set it up for everyone (environment level) or get granular with specific customer segments (organization level). Finance and government customers? They'll probably want mandatory MFA. Consumer-facing app? Maybe make it optional so you don't scare people away. 
+MFA requirements can be configured at different levels. You can enforce MFA globally at the environment level or apply it selectively at the organization level. For example, regulated industries may require mandatory MFA, while consumer-focused applications may choose optional MFA based on risk and UX requirements.
 
 Kinde supports email codes, SMS codes, and authenticator apps as second factors. Just don't use the same method twice - as in don't make email the primary and secondary auth method. That could be confusing. [Enable multi-factor authentication](/authenticate/multi-factor-auth/enable-multi-factor-authentication/)
 </details>
@@ -187,14 +187,14 @@ Kinde supports email codes, SMS codes, and authenticator apps as second factors.
 <details>
 <summary><strong>Can I exempt certain users or connections from MFA requirements in Kinde?</strong></summary>
 
-Yep, you've got options here. You can exempt specific roles (maybe only admins need MFA) or exempt enterprise connections where MFA is already handled by their company's identity provider. Nobody wants double MFA - that's just annoying. Set these exemptions at the organization level, and if someone has a mix of exempt and non-exempt roles, MFA kicks in by default (better safe than sorry).
+Yes. You can exempt specific roles or exempt enterprise connections where MFA is already enforced by the external identity provider. Configure exemptions at the organization level. If a user has both exempt and non-exempt roles, MFA is enforced by default.
 [Set MFA per organization](/authenticate/multi-factor-auth/mfa-per-org/)
 </details>
 
 <details>
 <summary><strong>How do I help users who are having trouble with MFA?</strong></summary>
 
-Make the instructions super clear for each method you support. For authenticator apps, walk them through the QR code scanning and emphasize saving those backup codes (they will lose them otherwise). For SMS, double-check they're entering phone numbers correctly with country codes. For email codes, check spam folder. Always give users a way to contact you when they get locked out - it happens to the best of us. 
+Provide clear instructions for each MFA method you support. For authenticator apps, document QR setup and remind users to store backup codes securely. For SMS, verify phone number formatting with country codes. For email codes, check spam filtering. Provide a support path for account recovery when users are locked out.
 
 You can also [reset MFA for a user](/manage-users/access-control/reset-multi-factor-authentication-for-a-user/).
 [Multi-factor authentication guide](/authenticate/multi-factor-auth/enable-multi-factor-authentication/)
@@ -203,50 +203,50 @@ You can also [reset MFA for a user](/manage-users/access-control/reset-multi-fac
 ## Username authentication
 
 <details>
-<summary><strong>Do people still use username authentication? Does Kinde allow this?</strong></summary>
+<summary><strong>Does Kinde support username authentication?</strong></summary>
 
-Absolutely Kinde supports this. Username auth is perfect when you want to give users more personality in their sign-in experience or when your app has that community vibe (think gaming platforms or developer tools). They'll still need to verify their email once for security (we're not animals), but after that they can sign in with their chosen username. Works with both password and passwordless methods, so you've got flexibility there.
+Yes. Kinde supports username authentication. It is useful for products where usernames are an important part of the user experience, such as community platforms and developer tools. Users still need to verify their email once for security, and can then sign in with their chosen username. This works with both password and passwordless methods.
 [Username authentication guide](/authenticate/authentication-methods/username-authentication/)
 </details>
 
 <details>
 <summary><strong>How does Kinde handle username uniqueness and case sensitivity?</strong></summary>
 
-We treat usernames as case-insensitive because life's too short for "BuilderBob" vs "builderbob" authentication headaches. Users can still make their aesthetic choices like "RosyRose" or "DevDan" for display, but behind the scenes we're not picky about capitalization. This prevents fraud attempts and those frustrating "username not found" moments when someone forgets their exact capitalization.
+Usernames are treated as case-insensitive to avoid issues such as "BuilderBob" versus "builderbob" during sign-in. Users can still choose their preferred display capitalization, but matching is done without case sensitivity in the authentication process. This helps reduce sign-in friction and lowers the risk of impersonation attempts.
 [Username authentication details](/authenticate/authentication-methods/username-authentication/)
 </details>
 
 <details>
 <summary><strong>What happens if a user changes their password when using both email and username authentication in Kinde?</strong></summary>
 
-Both methods share the same password! If someone can sign in with both their email and username, changing the password for one affects both. It keeps things simple for users (one password to remember) and prevents the confusion of having different passwords for the same account. We think this makes way more sense than forcing people to juggle multiple credentials.
+Both methods share the same password. If a user can sign in with both email and username, changing the password for one updates the credential for both. This keeps account access consistent and avoids confusion from maintaining separate passwords for the same account.
 [Username authentication configuration](/authenticate/authentication-methods/username-authentication/)
 </details>
 
 ## Device Authorization Flow
 
 <details>
-<summary><strong>When should I use Kinde's device authorization flow instead of regular authentication?</strong></summary>
+<summary><strong>When should I use Kinde Device Authorization Flow instead of standard authentication?</strong></summary>
 
-Device authorization flow is perfect for situations where typing is a nightmare - think smart TVs, gaming consoles, IoT devices, or anything without a proper keyboard. Instead of watching users struggle with TV remote controls to spell out "MyComplexPassword123!", the device shows them a simple code to enter on their phone or laptop where typing doesn't suck. 
+Use Device Authorization Flow for devices with limited input capability, such as smart TVs, game consoles, CLI tools, and IoT devices. The device presents a code, and the user completes authentication on a secondary device (for example a phone or laptop) with a full browser experience.
 
-It's basically Netflix's approach: the TV shows a code, you enter it on your phone, boom - you're authenticated. Much better user experience, and way more secure. 
+This approach reduces input friction and improves security by keeping credential entry on a trusted device.
 [Device Authorization Flow](/authenticate/device-authorization-flow/overview/).
 </details>
 
 <details>
-<summary><strong>How does Kinde's device authorization flow work, and what should I tell my users?</strong></summary>
+<summary><strong>How does Kinde Device Authorization Flow work, and how should I explain it to users?</strong></summary>
 
-Here's the flow: your device (let's say a smart TV app) requests a device code from Kinde, then shows users a simple code and a URL like "Go to `yourapp.com/device` and enter code: ABC123". Users grab their phone, visit that URL, sign in normally (with all their usual auth methods available), enter the code, and authorize the device. 
+The flow is: your device requests a device code from Kinde, displays a short code and verification URL, and asks the user to continue on another device. The user opens the URL, signs in with standard methods, enters the code, and authorizes the requesting device.
 
-Meanwhile, your TV app is polling our servers asking "Are they done yet? Are they done yet?" until we give it the green light with tokens. The whole thing happens in parallel - no hanging around waiting.
+Meanwhile, the original device polls the token endpoint until authorization is complete and tokens are returned.
 [Device Authorization Flow](/authenticate/device-authorization-flow/overview/)
 </details>
 
 <details>
 <summary><strong>What are the security benefits of Kinde's device authorization flow?</strong></summary>
 
-It keeps credentials off devices you don't control, which is huge for security. Users never enter their actual passwords on the TV, CLI, or IoT device - they authenticate on their trusted phone or laptop instead. Plus, they get access to all their usual security features like MFA, social sign-in, and password managers. The codes expire quickly, we rate-limit the polling to prevent abuse, and users always see a proper consent screen before authorizing access. It's basically taking the most secure part of OAuth (browser-based auth) and making it work for devices that can't do browsers. 
+Device Authorization Flow keeps credentials off devices that are difficult to secure. Users do not enter passwords on the TV, CLI, or IoT device; authentication occurs on a trusted browser-enabled device instead. It also preserves standard security controls such as MFA and consent prompts. Device codes are short-lived, and polling can be rate-limited to reduce abuse risk.
 [About authentication methods](/authenticate/about-auth/authentication-methods/)
 </details>
 
@@ -258,9 +258,9 @@ The main errors you'll see are `authorization_pending` (user hasn't finished yet
 </details>
 
 <details>
-<summary><strong>What's the best UX for presenting Kinde device codes to users?</strong></summary>
+<summary><strong>What is the recommended UX for presenting Kinde device codes?</strong></summary>
 
-Keep it simple and obvious. Show the code clearly (big, readable font), include the full URL they need to visit, and consider showing both a QR code and the manual entry option. Don't overwhelm them with too much text - just "Go to `yourapp.com/device` on your phone and enter: ABC123" works perfectly. If you can, show some kind of progress indicator so they know the app is waiting for them to complete the process. And please, test this with actual humans - what seems obvious to developers often isn't to regular users.
+Keep the experience simple and explicit. Display the code prominently, include the full verification URL, and provide both QR and manual entry options where possible. Use concise instructions, and include a progress state so users know the device is waiting for completion. Validate the flow with usability testing before release.
 </details>
 
 ## Custom configurations & user experience
@@ -268,28 +268,28 @@ Keep it simple and obvious. Show the code clearly (big, readable font), include 
 <details>
 <summary><strong>What do I need to set up Kinde phone authentication for my users?</strong></summary>
 
-You'll need a paid Twilio business account - this isn't something we can handle for free because SMS costs money. Before you dive in, check if you need 10DLC registration (10 Digit Long Code) for your region - it's required in some places for business messaging. Read up on Twilio's A2P (Application to Person) messaging guidelines too. Once you've got that sorted, plug your Twilio details into Kinde, pick between using their messaging service (better for global apps) or a specific phone number, and set your default country.
+You need a paid Twilio business account because SMS delivery has carrier costs. Before setup, confirm whether 10DLC registration is required in your region and review Twilio A2P messaging requirements. Then add your Twilio configuration in Kinde, choose between a Twilio Messaging Service or a specific phone number, and set your default country.
 [Set up phone authentication](/authenticate/authentication-methods/phone-authentication/)
 </details>
 
 <details>
 <summary><strong>Can I customize the SMS message that Kinde users receive?</strong></summary>
 
-Nope, and here's why - we use a standard format that meets security best practices and works across different languages. The message looks like: "123456 is your one-time code to sign in to [xxxx@login.xxx.au](mailto:xxxx@login.xxx.au) #123456". That weird duplication at the end? It's for security. We know it might not match your brand perfectly, but it keeps everyone safe and compliant.
+No. Kinde uses a standardized SMS template designed to meet security and localization requirements. The message format is: "123456 is your one-time code to sign in to [xxxx@login.xxx.au](mailto:xxxx@login.xxx.au) #123456". The repeated code suffix is part of the security format.
 [Phone authentication details](/authenticate/authentication-methods/phone-authentication/)
 </details>
 
 <details>
 <summary><strong>How can I create a more seamless Kinde sign-up experience for invited users?</strong></summary>
 
-Use the `login_hint` parameter to pre-fill email fields when you know who's trying to sign in - it's like having their name already on the guest list. You can also create a unified experience where users don't have to choose between "sign up" or "sign in" (because honestly, who remembers if they've been here before?). Skip asking for first and last names if you want to keep things really minimal. Every little bit of friction you remove makes a difference.
+Use the `login_hint` parameter to pre-fill identity fields when the user email is known. You can also configure a unified sign-up/sign-in flow to reduce decision friction. If profile data is not required at entry, avoid collecting first and last name fields to keep onboarding minimal.
 [Pre-populate user identity](/authenticate/custom-configurations/prepopulate-identity-sign-in/) | [Manage authentication experience](/authenticate/custom-configurations/authentication-experience/)
 </details>
 
 <details>
-<summary><strong>What's the best way to handle profile pictures and user data with Kinde?</strong></summary>
+<summary><strong>How should I handle profile pictures and user data with Kinde?</strong></summary>
 
-We automatically grab profile pictures from email providers like Google and use Gravatar as backup when pictures are missing. If you'd rather handle profile pics your own way or just hate blank avatars, you can switch off the Gravatar fallback. Fair warning: Apple is pretty stingy with user data - they don't pass through avatars or much profile info, so don't expect much there.
+Kinde can source profile pictures from identity providers such as Google and use Gravatar as a fallback when no image is available. You can disable the Gravatar fallback if you prefer to manage avatars in your own application. Some providers, such as Apple, may return limited profile data and no avatar.
 [Authentication experience customization](/authenticate/custom-configurations/authentication-experience/)
 </details>
 
@@ -305,37 +305,37 @@ Upstream parameters let you send extra data during authentication - either the s
 <details>
 <summary><strong>Why does Kinde authentication state get lost when users refresh the page in single-page apps?</strong></summary>
 
-We store tokens in memory for security - it protects against both CSRF and XSS attacks, which is definitely worth the trade-off. But yeah, it means page refreshes wipe the tokens. The best fix? Use our Custom Domains feature, which lets us set secure httpOnly cookies on your domain. 
+Kinde stores tokens in memory by default to reduce CSRF and XSS exposure. A browser refresh clears in-memory tokens. For production persistence, use Custom Domains to enable secure httpOnly cookies on your domain.
 
-For local development, there's an escape hatch called `is_dangerously_use_local_storage`, but seriously, don't use that in production - the name isn't kidding about the danger part.
+For local development only, `is_dangerously_use_local_storage` is available. Do not use this option in production.
 [JavaScript SDK guide](m/developer-tools/sdks/frontend/javascript-sdk/) | [React SDK guide](/developer-tools/sdks/frontend/react-sdk/)
 </details>
 
 <details>
 <summary><strong>How do I implement Kinde authentication in a React application without losing user state?</strong></summary>
 
-Wrap your app in the KindeProvider - it's your new best friend for managing auth state. Use hooks like `useKindeAuth()` to check if someone's signed in, and always check the `isLoading` state before making decisions (nobody likes flickering UI). For production, definitely set up custom domains so you can use secure cookies. Handle your post-auth redirects properly, and your users will never know how complex this stuff really is under the hood.
+Wrap your React app with `KindeProvider` to manage authentication state. Use hooks such as `useKindeAuth()` for sign-in checks, and guard rendering decisions with `isLoading` to avoid UI flicker. For production, use custom domains and secure cookies, and ensure redirect handlers are configured correctly.
 [React SDK implementation](/developer-tools/sdks/frontend/react-sdk/)
 </details>
 
 <details>
-<summary><strong>What's the best approach for handling Kinde authentication callbacks in different frameworks?</strong></summary>
+<summary><strong>How should I handle Kinde authentication callbacks across frameworks?</strong></summary>
 
-Each framework has its own quirks. Next.js App Router wants `app/api/auth/[kindeAuth]/route.js`, Pages Router prefers `pages/api/auth/[...kindeAuth].js`, and vanilla JavaScript means you're handling the OAuth dance yourself. Always make sure your callback URLs match what you've configured in Kinde (case-sensitive, protocol-specific). Use our SDK callback handlers instead of rolling your own - we've already dealt with all the edge cases.
+Each framework has specific callback conventions. For example, Next.js App Router uses `app/api/auth/[kindeAuth]/route.js`, while Pages Router uses `pages/api/auth/[...kindeAuth].js`. Ensure callback URLs exactly match Kinde configuration, including protocol and case sensitivity. Prefer SDK callback handlers to reduce implementation errors.
 [Next.js App Router SDK](/developer-tools/sdks/backend/nextjs-sdk/) | [Using Kinde without SDK](/developer-tools/about/using-kinde-without-an-sdk/)
 </details>
 
 <details>
 <summary><strong>How can I protect API endpoints and validate Kinde tokens properly?</strong></summary>
 
-Use our backend SDKs or validate JWT tokens manually - either works, but the SDKs handle the fiddly bits for you. The `getToken()` method gives you bearer tokens for API calls. On your backend, always check the token's audience claim matches your API and verify it hasn't expired. And please, never put client secrets in frontend code - that's like leaving your house key under the doormat.
+Use backend SDKs or manually validate JWT tokens. SDKs reduce implementation overhead for common validation steps. The `getToken()` method returns bearer tokens for API calls. On the backend, validate audience and expiration claims, and never expose client secrets in frontend code.
 [TypeScript SDK guide](/developer-tools/sdks/backend/typescript-sdk/)
 </details>
 
 ## Troubleshooting & common issues
 
 <details>
-<summary><strong>How do I use Kinde to help my users who forgot their passwords?</strong></summary>
+<summary><strong>How do I help users who forgot their passwords in Kinde?</strong></summary>
 
 Users can hit "forgot password" on the sign-in screen and we'll send them a one-time code via email to reset it. As an admin, you can also trigger password resets through the Kinde dashboard or API (as long as they have a verified email). There's also the option to set a temporary password for them, but you'll need to send it through your own channels - we won't email passwords directly because that's not secure.
 [Password reset procedures](/authenticate/authentication-methods/password-authentication/)
@@ -356,7 +356,7 @@ Start with the basics - could the email have been caught in their spam or been c
 </details>
 
 <details>
-<summary><strong>If I want to change which providers can be used for auth in Kinde, how do I support my customers?</strong></summary>
+<summary><strong>How do I support users when changing authentication providers in Kinde?</strong></summary>
 
 If users were relying on a social or enterprise connection that got removed or changed, they're stuck until you fix it. Before deleting any connection, make sure nobody's using it for auth. If you need to switch providers, set up the new one first, then help users transition by linking their accounts or setting up alternative auth methods. Always have a backup plan.
 [Manage social connections](/authenticate/social-sign-in/add-social-sign-in/)
@@ -365,28 +365,28 @@ If users were relying on a social or enterprise connection that got removed or c
 <details>
 <summary><strong>Why are my Kinde authentication redirects failing?</strong></summary>
 
-Nine times out of ten, it's a URL mismatch. Your callback URLs in Kinde need to match exactly what's in your app code and any social provider configs - we're talking case-sensitive, protocol-specific matching here. If you're using custom domains, double-check that your DNS records are set up correctly and SSL certificates are active. Also remember that custom domain tokens and Kinde subdomain tokens don't play nice together - pick one and stick with it.
+A common cause is URL mismatch. Callback URLs in Kinde must exactly match your application and social provider configuration, including protocol and case sensitivity. If you use custom domains, verify DNS records and active SSL certificates. Use either custom-domain tokens or Kinde-subdomain tokens consistently.
 [Custom domain setup](/build/domains/pointing-your-domain/)
 </details>
 
 <details>
 <summary><strong>How do I debug Kinde OAuth 2.0 authentication errors?</strong></summary>
 
-The error names are pretty self-explanatory once you know what to look for. `invalid_client` usually means wrong client ID or secret, `invalid_grant` means your authorization code expired (they only last a short time), and `invalid_scope` means you're asking for something we don't support. Check your credentials first, make sure you're exchanging codes quickly, and verify your requested scopes are valid. Give users helpful error messages instead of raw OAuth codes - nobody wants to see "invalid_grant" when they're just trying to sign in.
+Common OAuth errors include `invalid_client` (incorrect client credentials), `invalid_grant` (expired or invalid authorization code), and `invalid_scope` (unsupported scope). Verify credentials, exchange authorization codes promptly, and confirm scope values are valid. Return user-friendly messages instead of raw OAuth error codes.
 [OAuth 2.0 validation and errors](/build/tokens/token-validation-errors/)
 </details>
 
 <details>
 <summary><strong>What should I check in Kinde when users report authentication isn't working on mobile?</strong></summary>
 
-Mobile auth has its own special challenges. For React Native, make sure your deep linking is configured properly with the right URL schemes for both iOS and Android. Check that your redirect URLs use the correct custom scheme format like `myapp://your_kinde_domain.kinde.com/kinde_callback`. And here's a fun fact: Google doesn't support auth in webview, so make sure you're using proper browser-based flows. If your users are not receiving verification codes and you have Twilio set up, you can check the Twilio logs to help you troubleshoot.  
+For mobile authentication, confirm deep-link configuration and URL schemes for both iOS and Android. Verify redirect URLs follow the expected custom scheme format, such as `myapp://your_kinde_domain.kinde.com/kinde_callback`. Use browser-based flows, because some providers (including Google) do not support webview-based authentication. If users are not receiving verification codes and Twilio is configured, review Twilio delivery logs.
 [React Native SDK](/developer-tools/sdks/native/react-native-sdk/) and [Set up phone auth with Twilio](/authenticate/authentication-methods/phone-authentication/)
 </details>
 
 <details>
 <summary><strong>How do I handle Kinde authentication state persistence across different environments?</strong></summary>
 
-For production, custom domains are your friend - they enable secure cookie storage that survives page refreshes. For local development, you can use the local storage escape hatch (just remember to remove it before going live). On your backend, implement proper session management using encrypted cookies or shared cache systems if you're running multiple servers. The right approach depends on your architecture, but security should always come first.
+For production, use custom domains to enable secure cookie storage that persists across refreshes. For local development only, you can use local storage with caution. On the backend, implement robust session management with encrypted cookies or shared cache if running multiple instances. Choose architecture-specific patterns while prioritizing security.
 [TypeScript SDK session management](/developer-tools/sdks/backend/typescript-sdk/)
 </details>
 
@@ -395,21 +395,21 @@ For production, custom domains are your friend - they enable secure cookie stora
 <details>
 <summary><strong>What security considerations should I communicate to my customers about Kinde authentication choices?</strong></summary>
 
-Be honest about the security trade-offs without scaring people away. Passwordless is genuinely more secure than passwords, MFA adds real protection (not just security theater), and social sign-in can be both convenient and secure when done right. If you're offering password auth, nudge users toward password managers - most people's password habits are... not great. And here's something most auth providers won't tell you: we store passwords as encrypted hashes that literally cannot be deciphered, so even we can't see what users set.
+Communicate authentication trade-offs clearly. Passwordless authentication can reduce credential risk compared with passwords, MFA adds meaningful account protection, and social sign-in can be secure when configured correctly. If password authentication is enabled, recommend password managers. Kinde stores passwords as one-way hashes and cannot retrieve plain-text passwords.
 [Password authentication security](/authenticate/authentication-methods/password-authentication/)
 </details>
 
 <details>
 <summary><strong>How do I ensure my Kinde authentication setup scales with business growth?</strong></summary>
 
-Start simple and add complexity as you need it - don't over-engineer from day one. Begin with email auth, then layer in social sign-in, MFA, and enterprise connections as your customer base grows. Use organizations to handle multi-tenant setups where each customer needs their own user management. Set up your foundation at the environment level, then customize per organization when customers have specific needs. And seriously, implement custom domains early if you can - it makes everything smoother later.
+Start with a simple baseline and add capabilities as requirements grow. Many teams begin with email authentication, then add social sign-in, MFA, and enterprise connections over time. Use organizations for multi-tenant user management. Configure common defaults at the environment level and apply organization-specific customization where needed. Implement custom domains early to simplify long-term session management.
 [Kinde for different business models](/build/set-up-options/kinde-business-model/)
 </details>
 
 <details>
-<summary><strong>What's the recommended approach for handling user migration from other auth providers to Kinde?</strong></summary>
+<summary><strong>What is the recommended approach for migrating users from other auth providers to Kinde?</strong></summary>
 
-Set up your auth methods in Kinde first, then export and import user data via CSV or JSON. If you import passwords too, your users won't notice anything changed - which is exactly what you want. If you're switching auth methods (like going passwordless), give users a heads up about what's changing. Test everything in a sandbox environment first, and keep an eye out for edge cases like users who change their passwords during the migration window.
+Configure target authentication methods in Kinde first, then export and import users via CSV or JSON. If password hashes are migrated successfully, users can often continue without disruption. If authentication methods are changing (for example, to passwordless), communicate the change in advance. Validate migration steps in a sandbox environment and plan for edge cases such as password changes during the cutover window.
 [Switch to Kinde migration guide](/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/)
 </details>
 
@@ -418,14 +418,14 @@ Set up your auth methods in Kinde first, then export and import user data via CS
 <details>
 <summary><strong>How do I implement Kinde custom authentication pages while maintaining security?</strong></summary>
 
-You can build your own sign-up and sign-in pages to match your brand perfectly, but we'll still handle the security-critical stuff like verification and MFA. Use connection IDs and login hints in your auth URLs to route users directly to specific authentication methods. Think of it as having your cake and eating it too - custom experience with bulletproof security. Just remember that some screens (password entry, code verification) stay with us because that's where the security magic happens.
+You can build custom sign-up and sign-in pages while Kinde continues to handle security-critical steps such as verification and MFA. Use connection IDs and login hints in authorization URLs to route users to specific authentication methods. Some screens, including password and code verification, remain hosted by Kinde for security reasons.
 [Custom authentication pages](/authenticate/custom-configurations/custom-authentication-pages/)
 </details>
 
 <details>
-<summary><strong>What's the best way to handle cross-subdomain authentication in Kinde, for complex applications?</strong></summary>
+<summary><strong>How should I handle cross-subdomain authentication in Kinde for complex applications?</strong></summary>
 
-Custom domains and proper cookie configuration are your best friends here. Set cookies to the root domain instead of subdomains so they're accessible across your entire ecosystem. For PHP apps, we've got helper functions to make this easy. Test everything thoroughly across all your subdomains - nothing's more embarrassing than users getting stuck switching between `app.yoursite.com` and `dashboard.yoursite.com`.
+Use custom domains and correct cookie scoping for cross-subdomain authentication. Set cookies at the root domain so they are available across subdomains. For PHP applications, use SDK helper functions where available. Test sign-in and session continuity across all target subdomains.
 [PHP SDK domain configuration](/developer-tools/sdks/backend/php-sdk/)
 </details>
 
