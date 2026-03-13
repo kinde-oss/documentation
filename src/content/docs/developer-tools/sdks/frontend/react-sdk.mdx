@@ -95,7 +95,7 @@ If you would like to use different Environments as part of your development proc
 
 ## Sign in and sign up
 
-Kinde provides a `useKindeAuth` hook with the methods `login` and `register` method to start the flow and also `LoginLink` and `RegisterLink` components
+Kinde provides a `useKindeAuth` hook with the `login` and `register` methods to start the flow, as well as `LoginLink` and `RegisterLink` components.
 
 Use the button examples below to redirect your users to Kinde, where they authenticate before being redirected back to your site.
 
@@ -117,9 +117,10 @@ const { login, register } = useKindeAuth();
 
 ### Callback Events
 
-To handle the result of auth there are three callback events. 
+There are three callback events for handling authentication results and related SDK events.
 
-- `onSuccess` - On Successful authentication, this includes the user authenticated along with the passed state and context to the Kinde hook
+- `onSuccess` - On successful authentication, this includes the user authenticated along with the passed state and context to the Kinde hook
+- `onEvent` - Called when the SDK emits an auth-related event, such as a token refresh. It includes the event type, the related state, and the current context.
 - `onError` - When an error occurs during authentication, this includes the error along with the passed state and context to the Kinde hook
 
 ```jsx
@@ -127,6 +128,7 @@ To handle the result of auth there are three callback events.
     callbacks={
       {
         onSuccess: (user, state, context) => console.log("onSuccess", user, state, context),
+        onEvent: (event, state, context) => console.log("onEvent", event, state, context),
         onError: (error, state, context) => console.log("onError", error, state, context),
       }
     }
@@ -137,18 +139,18 @@ To handle the result of auth there are three callback events.
 
 ### Passing additional params to the auth url
 
-Both the `login` and `register` methods accept all the extra authentication params that can be passed to Kinde as part of the auth flow.  All the params are also accepted as attributes to the `LoginLink` and `RegisterLink` components.
+Both the `login` and `register` methods accept all the extra authentication params that can be passed to Kinde as part of the auth flow. All the params are also accepted as attributes to the `LoginLink` and `RegisterLink` components.
 
 Some things you may wish to pass are:
 
-- `loginHint` this allows you to ask Kinde to prepopulate a users email address on the sign-up and sign-in screens.
-- `lang` if you offer multi-language support Kinde will automatically figure out the best language for your user based on their browser. However, if you want to force a language and override the users preference, you can do so by passing this attribute.
+- `loginHint` this allows you to ask Kinde to prepopulate a user's email address on the sign-up and sign-in screens.
+- `lang` if you offer multi-language support Kinde will automatically figure out the best language for your user based on their browser. However, if you want to force a language and override the user's preference, you can do so by passing this attribute.
 
 ```javascript
-    login({
-      loginHint: "jenny@example.com",
-      lang: "ru"
-    })
+login({
+  loginHint: "jenny@example.com",
+  lang: "ru"
+})
 ```
 
 ### Signing out
@@ -200,7 +202,7 @@ const UserProfile = () => {
       <div>
 	<h2>{user.firstName}</h2>
 	<p>{user.preferredEmail}</p>
-      </div> 
+      </div>
     :
       <p>Please sign in or register!</p>
   });
@@ -224,13 +226,13 @@ There are two ways to check if a user has a specific permission:
 
 #### Using the `has` function
 
-The `has` function is a helper function that checks if a user has specific roles, permissions, feature flags, or billing entitlements. It returns a boolean value indicating whether the user meets all the specified criteria.
+The `has` function is a helper function that checks if a user has specific roles, permissions, feature flags, or billing entitlements. It returns a Promise that resolves to a boolean indicating whether the user meets all the specified criteria.
 
 ```typescript
 import { has } from '@kinde-oss/kinde-auth-react/utils';
 
 // Basic usage - check multiple criteria at once
-const userHasAccess = has({
+const userHasAccess = await has({
   roles: ['admin'],
   permissions: ['create:todos'],
   featureFlags: ['theme'],
@@ -244,7 +246,39 @@ const userHasAccess = has({
 - `featureFlags` (optional): Array of feature flag names the user must have
 - `billingEntitlements` (optional): Array of billing entitlement names the user must have
 
-**Return value:** `boolean` - `true` if user meets all criteria, `false` otherwise
+**Return value:** `Promise<boolean>` - resolves to `true` if the user meets all criteria, otherwise `false`
+
+##### Example usage
+
+```jsx
+import { useEffect, useState } from 'react';
+import { has } from '@kinde-oss/kinde-auth-react/utils';
+
+const AdminPanel = () => {
+  const [canAccess, setCanAccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAccess = async () => {
+      try {
+        const result = await has({
+          roles: ['admin'],
+          permissions: ['create:todos']
+        });
+        setCanAccess(result);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAccess();
+  }, []);
+
+  if (isLoading) return <p>Loading...</p>;
+
+  return canAccess ? <div>Admin content</div> : <div>Access denied</div>;
+};
+```
 
 ### API vs Token-based checks
 
@@ -252,14 +286,14 @@ By default, the `has` function performs checks using the user's tokens. You can 
 
 ```typescript
 // Force all checks to use API calls instead of tokens
-has({
+await has({
   roles: ['admin'],
   permissions: ['create:todos'],
   forceApi: true
 })
 
 // Force only specific checks to use API calls
-has({
+await has({
   roles: ['admin'],
   permissions: ['create:todos'],
   forceApi: { permissions: true } // Only permissions use API, roles use tokens
@@ -272,7 +306,7 @@ You can add custom conditions to any check by expanding the object structure:
 
 ```typescript
 // Add custom conditions to role checks
-has({
+await has({
   roles: [{ 
     role: 'admin', 
     condition: (user) => user.isAdmin && user.isActive 
@@ -280,7 +314,7 @@ has({
 })
 
 // Add custom conditions to permission checks
-has({
+await has({
   permissions: [{ 
     permission: 'create:todos', 
     condition: (user) => user.organizationId === 'org123' 
@@ -294,17 +328,17 @@ For feature flags, you can check both the flag's existence and its specific valu
 
 ```typescript
 // Check if feature flag exists
-has({
+await has({
   featureFlags: ['theme']
 })
 
 // Check if feature flag has a specific value
-has({
+await has({
   featureFlags: [{ flag: 'theme', value: 'dark' }]
 })
 
 // Check multiple feature flags with values
-has({
+await has({
   featureFlags: [
     { flag: 'theme', value: 'dark' },
     { flag: 'beta_features', value: true }
@@ -317,15 +351,15 @@ has({
 ```typescript
 import { has } from '@kinde-oss/kinde-auth-react/utils';
 
-const checkUserAccess = () => {
-  const canAccessAdminPanel = has({
+const checkUserAccess = async () => {
+  const canAccessAdminPanel = await has({
     roles: ['admin', 'super_admin'],
     permissions: ['read:users', 'write:users'],
     featureFlags: ['admin_panel'],
     billingEntitlements: ['enterprise_plan']
   });
 
-  const canUseDarkTheme = has({
+  const canUseDarkTheme = await has({
     featureFlags: [{ flag: 'theme', value: 'dark' }],
     permissions: ['customize:theme']
   });
@@ -336,7 +370,7 @@ const checkUserAccess = () => {
 
 ### TypeScript type safety
 
-You can enhance type safety by declaring your specific roles, permissions, feature flags and billing entitlements. This provides autocomplete and compile-time checking for your access control.
+You can enhance type safety by declaring your specific roles, permissions, feature flags, and billing entitlements. This provides autocomplete and compile-time checking for your access control.
 
 Create a type declaration file (e.g., `kinde-types.d.ts`) in your project:
 
@@ -516,7 +550,7 @@ function App() {
 
 ## Call your API
 
-The `getAccessToken` method lets you to securely call your API and pass the bearer token to validate that your user is authenticated.
+The `getAccessToken` method lets you securely call your API and pass the bearer token to validate that your user is authenticated.
 
 ```jsx
 const { getAccessToken } = useKindeAuth();
@@ -537,7 +571,7 @@ const fetchData = async () => {
 };
 ```
 
-We have a range of backend SDKs available to assist you in securing your back end application using this token, alternatively you can use any JWT validator and decoder to assit you here.
+We have a range of backend SDKs available to assist you in securing your back end application using this token, alternatively you can use any JWT validator and decoder to assist you here.
 
 ## Audience
 
@@ -565,7 +599,7 @@ For details on how to connect, see [Register an API](/developer-tools/your-apis/
 
 ### Create an organization
 
-To create a new organization with the user registration, you can use the `createOrg` function to start the registration process:
+To create a new organization during registration, pass `isCreateOrg` to the login or register method, or to the relevant component.
 
 ```jsx
 <LoginLink isCreateOrg={true}>Sign in</LoginLink>
@@ -690,7 +724,7 @@ await getFlag<number>('theme'); // numeric value
 //   "is_default": false // whether the fallback value had to be used
 */}
 
-getFlag('create_competition', {defaultValue: false});
+await getFlag('create_competition', {defaultValue: false});
 /*{
       "code": "create_competition",
       "value": false,
@@ -744,11 +778,11 @@ We have provided a helper to grab any claim from your ID or access tokens. The h
 ```jsx
 const { getClaim } = useKindeAuth();
 
-getClaim("aud");
+await getClaim("aud");
 // {name: "aud", "value": ["api.yourapp.com"]}
 
-getClaim("given_name", "idToken");
-// {name: "given_name", "value": "David"}
+await getClaim("givenName", "idToken");
+// {name: "givenName", value: "David"}
 ```
 
 ## **Persisting authentication state on page refresh or new tab**
@@ -864,7 +898,7 @@ getClaim("given_name", "id_token");
 ```
 becomes
 ```javascript
-await getClaim("given_name", "idtoken");
+await getClaim("givenName", "idToken");
 ```
 
 
@@ -945,13 +979,13 @@ claim: string, tokenKey?: "accessToken" | "idToken"
 Usage:
 
 ```jsx
-getClaim("givenName", "idToken");
+await getClaim("givenName", "idToken");
 ```
 
 Sample:
 
 ```jsx
-"David";
+{name: "givenName", value: "David"};
 ```
 
 ### `getOrganization`
@@ -961,7 +995,7 @@ Get details for the organization your user is signed into.
 Usage:
 
 ```jsx
-getOrganization();
+await getOrganization();
 ```
 
 Sample:
@@ -985,7 +1019,7 @@ key: string;
 Usage:
 
 ```jsx
-getPermission("read:todos");
+await getPermission("read:todos");
 ```
 
 Sample:
@@ -1004,7 +1038,7 @@ Returns all permissions for the current user for the organization they are signe
 Usage:
 
 ```jsx
-getPermissions();
+await getPermissions();
 ```
 
 Sample:
@@ -1015,25 +1049,9 @@ Sample:
 	permissions: [
 		"create:todos",
 		"update:todos",
-		"read:todos
+		"read:todos"
 	]
 }
-```
-
-### `getToken`
-
-Returns the raw Access token from memory.
-
-Usage:
-
-```jsx
-getToken();
-```
-
-Sample:
-
-```jsx
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c;
 ```
 
 ### `getUserProfile`
@@ -1043,7 +1061,7 @@ Returns the profile for the current user.
 Usage:
 
 ```jsx
-getUserProfile();
+await getUserProfile();
 ```
 
 Sample:
@@ -1064,7 +1082,7 @@ Gets an array of all organizations the user has access to.
 Usage:
 
 ```jsx
-getUserOrganizations();
+await getUserOrganizations();
 ```
 
 Sample:
@@ -1158,13 +1176,13 @@ claim: string, tokenKey?: "accessToken" | "idToken"
 Usage:
 
 ```jsx
-getClaim("given_name", "idToken");
+getClaim("givenName", "idToken");
 ```
 
 Sample:
 
 ```jsx
-"David";
+{name: "givenName", value: "David"}
 ```
 
 If you need any assistance with getting Kinde connected reach out to us at [support@kinde.com](mailto:support@kinde.com).
