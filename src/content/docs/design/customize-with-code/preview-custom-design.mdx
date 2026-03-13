@@ -40,10 +40,36 @@ Unlike changes you make in the Kinde UI that impact page layouts and content, yo
 
 Instead, you can test designs using your real auth flow, using preview credentials.
 
+## Connect your repository and enable preview
+
+Before you can preview your custom code, you need to connect your code repository to Kinde and enable the preview feature:
+
+1. In your Kinde dashboard, go to **Settings > Git Repo > Connect Repo** and follow the prompts to connect your repository.
+2. Once the repository is connected, toggle **Enable preview mode** to the "on" position.
+
 ## Preview custom code
 
-1. In your application code, pass the additional auth url parameter `pages_mode=preview`. When the auth flow is initiated a password screen will appear which is required to view the preview.
-2. Enter your preview password. Go to **Design > Custom code > Preview**.
-3. Copy the **Password** and use it in the authentication request.
+To securely preview your changes, the authentication request must contain a valid Preview Session ID (`psid`). Because of this requirement, you should not manually construct or append parameters to the URL. Instead, you must use a Kinde SDK or library to generate the URL for you.
 
-The preview will show the latest code deployment version.
+1. In your application code, pass the appropriate preview mode parameter to your SDK's login function or component to initiate the preview flow.
+
+    **Example using the Kinde React SDK:**
+
+    ```jsx
+    <LoginLink 
+      className="btn btn-ghost sign-in-btn"
+      pagesMode="preview"
+    >
+      Login
+    </LoginLink>
+    
+    ```
+
+2. The SDK will automatically generate a secure URL with a valid session ID. The resulting URL format will look like this:
+`{kinde_subdomain}/auth/cx/_:nav&m:pages_preview_authorization&psid:{preview_session_ID}`
+3. When you initiate the auth flow via your application, you will be redirected to a password screen.
+4. To access the preview, go to **Design > Custom code > Preview** in your Kinde dashboard.
+5. Copy the **Password** provided there and enter it into the authentication screen.
+
+The preview will now show your latest custom code deployment.
+
