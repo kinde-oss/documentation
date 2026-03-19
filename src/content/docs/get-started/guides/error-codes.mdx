@@ -103,6 +103,30 @@ Troubleshooting
 - Only a localhost suffix can be used with http
 - Error with workflow
 
+## Error code 1706
+
+Description
+- [Post-authentication workflow](/workflows/example-workflows/workflow-user-post-auth/) failed to complete and the policy is set to `stop`
+
+  **Example:**
+
+    ```typescript
+    // postUserAuthWorkflow.ts
+    export const workflowSettings = {
+      bindings: {"kinde.env": {}, "kinde.fetch": {}, url: {}},
+      failurePolicy: {action: "stop"},
+      id: "hubspotSync",
+      name: "HubSpot sync",
+      trigger: "user:post_authentication"
+    };
+    ```
+
+Troubleshooting
+- Review the post-authentication workflow configuration for missing data references, inactive integrations, or misconfigured conditions
+- Disable non-essential workflow steps one at a time and retry login to isolate the failing step
+- If you need to unblock users while investigating, change the policy setting from `stop` to `warn` or `allow`
+- If the workflow was recently modified, restore the previous version using the version history in the workflow settings
+
 ## Error code 1829
 
 Description
@@ -117,6 +141,15 @@ Troubleshooting
 Description
 - Error decoding SAML response
 - Response contains invalid characters for Base64 response
+
+## Error code 2201
+
+Description
+- [Post-authentication workflow](/workflows/example-workflows/workflow-user-post-auth/) ran successfully but triggered a deny access action
+
+Troubleshooting
+- The workflow is intentionally blocking the user based on a matched condition — this is not a workflow error
+- Review the post-authentication workflow conditions to identify which rule is triggering the denial and update it if needed
 
 ## Error code 3005
 
