@@ -1,30 +1,56 @@
-// This file has all the data for `Starlight’s` sidebar, but it contains some extra data
+// This file has all the data for `Starlight's` sidebar, but it contains some extra data
 // we use to enrich and re-use somewhere else, like `icon` and `description`, used in the `Topics` component
 
 const sidebarData = [
   {
     label: "Get started",
-    description: "Essential information for using and connecting to Kinde",
+    description: "Learn about Kinde, connect your app, and deploy",
     icon: "sparkle",
     collapsed: true,
     cardLink: "/get-started/guides/first-things-first/",
     items: [
-      {label: "Guides", autogenerate: {directory: "get-started/guides"}, collapsed: false},
       {
         label: "Learn about Kinde",
         autogenerate: {directory: "get-started/learn-about-kinde"},
         collapsed: false
       },
       {
+        label: "Guides",
+        collapsed: false,
+        items: [
+          {label: "Where to start with Kinde", link: "/get-started/guides/first-things-first/"},
+          {
+            label: "Start with a Kinde starter kit",
+            link: "/get-started/guides/start-with-starter-kit/"
+          },
+          {label: "Connect existing code base to Kinde", link: "/get-started/guides/byo-code/"},
+          {label: "Common set up tasks", link: "/get-started/guides/set-up-tasks/"}
+        ]
+      },
+      {label: "Connect", autogenerate: {directory: "get-started/connect"}, collapsed: false},
+      {
         label: "Switch to Kinde",
         autogenerate: {directory: "get-started/switch-to-kinde"},
         collapsed: false
       },
-      {label: "Connect", autogenerate: {directory: "get-started/connect"}, collapsed: false},
       {
-        label: "APIs and SDKs",
-        autogenerate: {directory: "get-started/apis-and-sdks"},
-        collapsed: false
+        label: "Deployment",
+        collapsed: false,
+        items: [
+          {label: "Deploy a Kinde app on Vercel", link: "/developer-tools/guides/deploy-on-vercel/"},
+          {
+            label: "Deploy a Kinde app on Netlify",
+            link: "/developer-tools/guides/deploy-on-netlify/"
+          },
+          {
+            label: "Deploy a Kinde app on Cloudflare Workers",
+            link: "/developer-tools/guides/deploy-on-cloudflare-workers/"
+          },
+          {
+            label: "Prepare your production environment to go live",
+            link: "/build/environments/production-to-live/"
+          }
+        ]
       },
       {
         label: "Team and account",
@@ -34,43 +60,13 @@ const sidebarData = [
     ]
   },
   {
-    label: "Build on Kinde",
-    description: "Set up all the important features under the hood",
-    icon: "build",
-    collapsed: true,
-    cardLink: "/build/set-up-options/kinde-business-model/",
-    items: [
-      {
-        label: "Set up options",
-        autogenerate: {directory: "build/set-up-options"},
-        collapsed: false
-      },
-      {
-        label: "Self-service portal",
-        autogenerate: {directory: "build/self-service-portal"},
-        collapsed: false
-      },
-      {label: "Environments", autogenerate: {directory: "build/environments"}, collapsed: false},
-      {label: "Applications", autogenerate: {directory: "build/applications"}, collapsed: false},
-      {label: "Organizations", autogenerate: {directory: "build/organizations"}, collapsed: false},
-      {label: "Tokens", autogenerate: {directory: "build/tokens"}, collapsed: false},
-      {label: "Env variables", autogenerate: {directory: "build/env-variables"}, collapsed: false},
-      {label: "Domain management", autogenerate: {directory: "build/domains"}, collapsed: false}
-    ]
-  },
-  {
-    label: "SDKs and APIs",
+    label: "SDKs and frameworks",
     description: "Jump right in with our API-first developer tools",
     icon: "dev-tools",
     collapsed: true,
     cardLink: "/developer-tools/about/our-sdks/",
     items: [
       {label: "Overview", autogenerate: {directory: "developer-tools/about"}, collapsed: false},
-      {
-        label: "Special guides",
-        autogenerate: {directory: "developer-tools/guides"},
-        collapsed: false
-      },
       {
         label: "Front end SDKs",
         autogenerate: {directory: "developer-tools/sdks/frontend"},
@@ -87,6 +83,36 @@ const sidebarData = [
         collapsed: false
       },
       {
+        label: "Guides",
+        collapsed: false,
+        items: [
+          {
+            label: "Integrate Kinde with ASP.NET using Open ID Connect",
+            link: "/developer-tools/guides/dotnet-open-id-connect/"
+          },
+          {
+            label: "Use Kinde auth in an Electron app",
+            link: "/developer-tools/guides/kinde-and-electron/"
+          },
+          {
+            label: "Protect FastAPI routes with Kinde",
+            link: "/developer-tools/guides/protect-fastapi-routes-with-kinde/"
+          },
+          {
+            label: "Use Kinde permissions in React and any backend",
+            link: "/developer-tools/guides/kinde-permissions-react-and-backend/"
+          },
+          {
+            label: "Manage Kinde configurations via API",
+            link: "/developer-tools/guides/manage-kinde-configuration/"
+          },
+          {
+            label: "Troubleshoot code sync errors",
+            link: "/developer-tools/guides/code-sync-errors/"
+          }
+        ]
+      },
+      {
         label: "Kinde Management API",
         autogenerate: {directory: "developer-tools/kinde-api"},
         collapsed: false
@@ -99,55 +125,7 @@ const sidebarData = [
     ]
   },
   {
-    label: "Manage your APIs",
-    description: "Manage your API connections and API keys",
-    icon: "api",
-    collapsed: true,
-    cardLink: "/manage-your-apis/about-api-keys/",
-    items: [
-      {
-        label: "Register and manage your APIs",
-        autogenerate: {directory: "developer-tools/your-apis"},
-        collapsed: false
-      },
-      {
-        label: "About API keys",
-        autogenerate: {directory: "manage-your-apis/about-api-keys/"},
-        collapsed: false
-      },
-      {
-        label: "Add and manage API keys",
-        autogenerate: {directory: "manage-your-apis/add-manage-api-keys/"},
-        collapsed: false
-      },
-      {
-        label: "Test and troubleshoot",
-        autogenerate: {directory: "manage-your-apis/troubleshoot-api-keys/"},
-        collapsed: false
-      }
-    ]
-  },
-  {
-    label: "MCP Server",
-    description: "Integrate Kinde with AI assistants using the Model Context Protocol",
-    icon: "dev-tools",
-    collapsed: true,
-    cardLink: "/mcp-server/about-mcp-server",
-    items: [
-      {
-        label: "About MCP Server",
-        autogenerate: {directory: "mcp-server/about-mcp-server"},
-        collapsed: false
-      },
-      {
-        label: "Get started",
-        autogenerate: {directory: "mcp-server/get-started"},
-        collapsed: false
-      }
-    ]
-  },
-  {
-    label: "Auth and access",
+    label: "Authentication",
     description: "Configure user sign up, sign in, and security verification",
     icon: "authentication",
     collapsed: true,
@@ -159,23 +137,13 @@ const sidebarData = [
         collapsed: false
       },
       {
-        label: "Authentication guides",
-        autogenerate: {directory: "authenticate/auth-guides"},
-        collapsed: false
-      },
-      {
         label: "Authentication methods",
         autogenerate: {directory: "authenticate/authentication-methods"},
         collapsed: false
       },
       {
-        label: "Manage authentication",
-        autogenerate: {directory: "authenticate/manage-authentication"},
-        collapsed: false
-      },
-      {
-        label: "Custom configurations",
-        autogenerate: {directory: "authenticate/custom-configurations"},
+        label: "Social connections",
+        autogenerate: {directory: "authenticate/social-sign-in"},
         collapsed: false
       },
       {
@@ -185,7 +153,7 @@ const sidebarData = [
       },
       {
         label: "Self-serve SSO",
-        autogenerate: {directory: "authenticate/self-serve-sso/"},
+        autogenerate: {directory: "authenticate/self-serve-sso"},
         collapsed: false
       },
       {
@@ -194,9 +162,107 @@ const sidebarData = [
         collapsed: false
       },
       {
-        label: "Social connections",
-        autogenerate: {directory: "authenticate/social-sign-in"},
+        label: "Sessions",
+        collapsed: false,
+        items: [
+          {
+            label: "Authenticated sessions across multiple applications",
+            link: "/authenticate/manage-authentication/user-auth-applications/"
+          },
+          {
+            label: "Session management",
+            link: "/authenticate/manage-authentication/session-management/"
+          },
+          {
+            label: "Session management per organization",
+            link: "/authenticate/manage-authentication/session-management-per-organization/"
+          }
+        ]
+      },
+      {
+        label: "Manage authentication",
+        collapsed: false,
+        items: [
+          {
+            label: "Change authentication for an application",
+            link: "/authenticate/manage-authentication/manage-authentication-applications/"
+          },
+          {
+            label: "Set custom authentication per organization",
+            link: "/authenticate/manage-authentication/organization-auth-experience/"
+          },
+          {
+            label: "Build a switch to navigate between organizations",
+            link: "/authenticate/manage-authentication/navigate-between-organizations/"
+          },
+          {
+            label: "Sign users in to last organization",
+            link: "/authenticate/manage-authentication/sign-in-to-last-org/"
+          },
+          {
+            label: "Keep your product in sync with Kinde",
+            link: "/authenticate/manage-authentication/sync-with-kinde/"
+          }
+        ]
+      },
+      {
+        label: "Custom configurations",
+        autogenerate: {directory: "authenticate/custom-configurations"},
         collapsed: false
+      },
+      {
+        label: "Authentication guides",
+        autogenerate: {directory: "authenticate/auth-guides"},
+        collapsed: false
+      },
+      {
+        label: "Security",
+        collapsed: false,
+        items: [
+          {
+            label: "Configure attack protection",
+            link: "/build/set-up-options/attack-protection/"
+          },
+          {label: "Set global access policies", link: "/build/set-up-options/access-policies/"}
+        ]
+      },
+      {
+        label: "Machine to machine",
+        collapsed: true,
+        items: [
+          {
+            label: "Overview",
+            autogenerate: {directory: "machine-to-machine-applications/about-m2m"},
+            collapsed: false
+          },
+          {
+            label: "Application setup",
+            autogenerate: {directory: "machine-to-machine-applications/m2m-application-setup"},
+            collapsed: false
+          },
+          {
+            label: "Organization-scoped M2M apps",
+            autogenerate: {
+              directory: "machine-to-machine-applications/organization-scoped-m2m-apps"
+            },
+            collapsed: false
+          },
+          {
+            label: "Token customization",
+            autogenerate: {directory: "machine-to-machine-applications/m2m-token-customization"},
+            collapsed: false
+          },
+          {
+            label: "Automation",
+            autogenerate: {directory: "machine-to-machine-applications/m2m-workflow-automation"},
+            collapsed: false
+          },
+          {
+            label: "Troubleshooting",
+            autogenerate: {directory: "machine-to-machine-applications/troubleshooting-m2m"},
+            collapsed: false
+          }
+        ]
       },
       {
         label: "Device authorization flow",
@@ -206,29 +272,96 @@ const sidebarData = [
     ]
   },
   {
-    label: "Testing",
-    description:
-      "Test your application's authentication flows, passwordless flows, and backend APIs",
-    icon: "build",
-    cardLink: "/testing/",
-    collapsed: false,
+    label: "Users and organizations",
+    description: "Manage users, organizations, roles, permissions, and custom data",
+    icon: "profile",
+    collapsed: true,
+    cardLink: "/manage-users/about/",
     items: [
-      {label: "Overview", link: "/testing/"},
-      {label: "Setup test user and environment", link: "/testing/setup-test-user-environment/"},
-      {label: "Testing authentication flows", link: "/testing/testing-authentication-flows/"},
-      {label: "Testing passwordless flows", link: "/testing/testing-passwordless-flows/"},
-      {label: "Testing authenticated features", link: "/testing/testing-authenticated-features/"},
-      {label: "Testing backend APIs", link: "/testing/testing-backend-apis/"},
-      {label: "Test backend APIs with Jest", link: "/testing/test-backend-apis-jest/"},
+      {label: "Overview", autogenerate: {directory: "manage-users/about"}, collapsed: false},
       {
-        label: "Cypress",
-        autogenerate: {directory: "testing/cypress"},
-        collapsed: true
+        label: "Add and edit users",
+        autogenerate: {directory: "manage-users/add-and-edit"},
+        collapsed: false
       },
       {
-        label: "Playwright",
-        autogenerate: {directory: "testing/playwright"},
-        collapsed: true
+        label: "Roles and permissions",
+        autogenerate: {directory: "manage-users/roles-and-permissions"},
+        collapsed: false
+      },
+      {
+        label: "User account actions",
+        autogenerate: {directory: "manage-users/access-control"},
+        collapsed: false
+      },
+      {
+        label: "Organizations",
+        autogenerate: {directory: "build/organizations"},
+        collapsed: false
+      },
+      {
+        label: "Properties",
+        collapsed: false,
+        items: [
+          {
+            label: "Custom claims and data with properties",
+            link: "/properties/about-properties/"
+          },
+          {
+            label: "Add custom data for orgs",
+            link: "/properties/about-properties/organization-properties/"
+          },
+          {
+            label: "View and edit application properties",
+            link: "/properties/about-properties/application-properties/"
+          },
+          {
+            label: "Add and manage custom data with properties",
+            link: "/properties/work-with-properties/manage-properties/"
+          },
+          {
+            label: "Customize tokens using properties",
+            link: "/properties/work-with-properties/properties-in-tokens/"
+          },
+          {
+            label: "Add and manage property categories",
+            link: "/properties/work-with-properties/property-groups/"
+          },
+          {
+            label: "Edit custom data for users via properties",
+            link: "/properties/work-with-properties/view-user-properties/"
+          },
+          {
+            label: "Add marketing tags using properties",
+            link: "/properties/work-with-properties/marketing-tags-properties/"
+          }
+        ]
+      },
+      {
+        label: "User activity",
+        autogenerate: {directory: "manage-users/view-activity"},
+        collapsed: false
+      }
+    ]
+  },
+  {
+    label: "Design",
+    description: "Integrate your brand, and update content for pages and screens",
+    icon: "brand",
+    collapsed: true,
+    cardLink: "/design/brand/global-brand-defaults/",
+    items: [
+      {label: "Brand", autogenerate: {directory: "design/brand"}, collapsed: false},
+      {label: "Page layout", autogenerate: {directory: "design/pages"}, collapsed: false},
+      {
+        label: "Content customization",
+        autogenerate: {directory: "design/content-customization"},
+        collapsed: false
+      },
+      {
+        label: "Customize with code",
+        autogenerate: {directory: "design/customize-with-code"},
+        collapsed: false
       }
     ]
   },
@@ -250,9 +383,22 @@ const sidebarData = [
         collapsed: false
       },
       {
-        label: "Manage plans",
-        autogenerate: {directory: "billing/manage-plans"},
-        collapsed: false
+        label: "Plans and pricing",
+        collapsed: false,
+        items: [
+          {label: "About plans", link: "/billing/manage-plans/about-plans/"},
+          {label: "Create plans", link: "/billing/manage-plans/create-plans/"},
+          {
+            label: "Plan upgrade and downgrade policies",
+            link: "/billing/manage-plans/upgrade-downgrade-plans/"
+          },
+          {label: "Cancel a subscription", link: "/billing/manage-plans/cancel-plans/"},
+          {
+            label: "Add and manage plan groups",
+            link: "/billing/manage-plans/add-manage-plan-groups/"
+          },
+          {label: "Pricing models", link: "/billing/pricing/pricing-models/"}
+        ]
       },
       {
         label: "Payment management",
@@ -265,34 +411,8 @@ const sidebarData = [
         collapsed: false
       },
       {
-        label: "Pricing",
-        autogenerate: {directory: "billing/pricing"},
-        collapsed: false
-      },
-      {
-        label: "Billing user experience",
+        label: "Billing UX",
         autogenerate: {directory: "billing/billing-user-experience"},
-        collapsed: false
-      }
-    ]
-  },
-  {
-    label: "Design",
-    description: "Integrate your brand, and update content for pages and screens",
-    icon: "brand",
-    collapsed: true,
-    cardLink: "/design/brand/apply-branding-for-an-organization/",
-    items: [
-      {label: "Brand", autogenerate: {directory: "design/brand"}, collapsed: false},
-      {label: "Page layout", autogenerate: {directory: "design/pages"}, collapsed: false},
-      {
-        label: "Content",
-        autogenerate: {directory: "design/content-customization"},
-        collapsed: false
-      },
-      {
-        label: "Customize with code",
-        autogenerate: {directory: "design/customize-with-code"},
         collapsed: false
       }
     ]
@@ -315,7 +435,7 @@ const sidebarData = [
         collapsed: false
       },
       {
-        label: "Workflow tutorials",
+        label: "Tutorials",
         autogenerate: {directory: "workflows/workflow-tutorials"},
         collapsed: false
       },
@@ -344,126 +464,8 @@ const sidebarData = [
     ]
   },
   {
-    label: "Properties",
-    description: "Store and use custom data about users and organizations",
-    collapsed: true,
-    icon: "properties",
-    cardLink: "/properties/about-properties/",
-    items: [
-      {
-        label: "About properties",
-        autogenerate: {directory: "properties/about-properties"},
-        collapsed: false
-      },
-      {
-        label: "Work with properties",
-        autogenerate: {directory: "properties/work-with-properties"},
-        collapsed: false
-      }
-    ]
-  },
-  {
-    label: "Machine-to-Machine (M2M)",
-    description: "Build machine-to-machine applications",
-    collapsed: true,
-    icon: "workflow",
-    cardLink: "/machine-to-machine-applications/about-m2m/",
-    items: [
-      {
-        label: "Overview",
-        autogenerate: {directory: "machine-to-machine-applications/about-m2m"},
-        collapsed: false
-      },
-      {
-        label: "M2M application setup",
-        autogenerate: {directory: "machine-to-machine-applications/m2m-application-setup"},
-        collapsed: false
-      },
-      {
-        label: "Organization-scoped M2M apps",
-        autogenerate: {directory: "machine-to-machine-applications/organization-scoped-m2m-apps"},
-        collapsed: false
-      },
-      {
-        label: "M2M token customization",
-        autogenerate: {directory: "machine-to-machine-applications/m2m-token-customization"},
-        collapsed: false
-      },
-      {
-        label: "Automation",
-        autogenerate: {directory: "machine-to-machine-applications/m2m-workflow-automation"},
-        collapsed: false
-      },
-      {
-        label: "Troubleshooting",
-        autogenerate: {directory: "machine-to-machine-applications/troubleshooting-m2m"},
-        collapsed: false
-      }
-    ]
-  },
-  {
-    label: "Manage users",
-    description: "Manage user profiles, including roles and permissions",
-    icon: "profile",
-    collapsed: true,
-    cardLink: "/manage-users/about/",
-    items: [
-      {label: "Overview", autogenerate: {directory: "manage-users/about"}, collapsed: false},
-      {
-        label: "Add and edit",
-        autogenerate: {directory: "manage-users/add-and-edit"},
-        collapsed: false
-      },
-      {
-        label: "Access control",
-        autogenerate: {directory: "manage-users/access-control"},
-        collapsed: false
-      },
-      {
-        label: "Roles and permissions",
-        autogenerate: {directory: "manage-users/roles-and-permissions"},
-        collapsed: false
-      },
-      {
-        label: "View activity",
-        autogenerate: {directory: "manage-users/view-activity"},
-        collapsed: false
-      }
-    ]
-  },
-  {
-    label: "Features and releases",
-    description: "Take control of feature development and app releases",
-    icon: "releases",
-    collapsed: true,
-    cardLink: "/releases/about/about-feature-flags/",
-    items: [
-      {
-        label: "About",
-        autogenerate: {directory: "releases/about"},
-        collapsed: false
-      },
-      {
-        label: "Guides",
-        autogenerate: {directory: "releases/guides"},
-        collapsed: false
-      },
-      {
-        label: "Feature flags",
-        autogenerate: {directory: "releases/feature-flags"},
-        collapsed: false
-      }
-
-      // {
-      //   label: "Plan and release",
-      //   autogenerate: {directory: "releases/plan-and-release"},
-      //   collapsed: false
-      // }
-    ]
-  },
-  {
     label: "Integrations",
-    description: "Create and manage external system connections to Kinde",
+    description: "Connect external systems, webhooks, and third-party tools to Kinde",
     icon: "webhooks",
     collapsed: true,
     cardLink: "/integrate/connected-apps/add-connected-apps/",
@@ -478,57 +480,228 @@ const sidebarData = [
         label: "Third-party tools",
         autogenerate: {directory: "integrate/third-party-tools"},
         collapsed: false
+      },
+      {
+        label: "MCP Server",
+        collapsed: false,
+        items: [
+          {
+            label: "About the Kinde MCP Server",
+            link: "/mcp-server/about-mcp-server/"
+          },
+          {
+            label: "Available Operations and Scopes",
+            link: "/mcp-server/about-mcp-server/operations-and-scopes/"
+          },
+          {
+            label: "Set up the Kinde MCP server with AI assistants",
+            link: "/mcp-server/get-started/setup-mcp-server/"
+          }
+        ]
       }
     ]
   },
   {
-    label: "Manage your account",
-    description: "Update account details, data, team, and business information",
+    label: "Platform and APIs",
+    description: "Configure environments, tokens, APIs, and platform settings",
+    icon: "build",
+    collapsed: true,
+    cardLink: "/build/set-up-options/kinde-business-model/",
+    items: [
+      {
+        label: "Set up options",
+        collapsed: false,
+        items: [
+          {
+            label: "Kinde for different business models",
+            link: "/build/set-up-options/kinde-business-model/"
+          },
+          {label: "Run multiple businesses", link: "/build/set-up-options/run-multiple-businesses/"},
+          {
+            label: "Set up and manage user access requests",
+            link: "/build/set-up-options/manage-access-requests/"
+          },
+          {label: "Manage your code in Kinde", link: "/build/set-up-options/sync-git-code/"}
+        ]
+      },
+      {
+        label: "Environments",
+        collapsed: false,
+        items: [
+          {label: "About environments", link: "/build/environments/environments/"}
+        ]
+      },
+      {label: "Applications", autogenerate: {directory: "build/applications"}, collapsed: false},
+      {
+        label: "Domain management",
+        autogenerate: {directory: "build/domains"},
+        collapsed: false
+      },
+      {
+        label: "Environment variables",
+        autogenerate: {directory: "build/env-variables"},
+        collapsed: false
+      },
+      {
+        label: "Self-service portal",
+        autogenerate: {directory: "build/self-service-portal"},
+        collapsed: false
+      },
+      {
+        label: "Feature flags",
+        collapsed: false,
+        items: [
+          {label: "About feature flags", link: "/releases/about/about-feature-flags/"},
+          {label: "Add a feature flag in Kinde", link: "/releases/feature-flags/add-feature-flag/"},
+          {label: "Manage feature flags", link: "/releases/feature-flags/manage-feature-flags/"},
+          {
+            label: "Override feature flag values",
+            link: "/releases/feature-flags/edit-feature-flag/"
+          },
+          {
+            label: "Manage feature flags through the Kinde API",
+            link: "/releases/feature-flags/manage-feature-flags-api/"
+          },
+          {
+            label: "Guide to app store reviews",
+            link: "/releases/guides/guide-to-app-store-approvals/"
+          }
+        ]
+      },
+      {label: "Tokens", autogenerate: {directory: "build/tokens"}, collapsed: false},
+      {
+        label: "Register and protect your APIs",
+        autogenerate: {directory: "developer-tools/your-apis"},
+        collapsed: false
+      },
+      {
+        label: "About API keys",
+        autogenerate: {directory: "manage-your-apis/about-api-keys"},
+        collapsed: false
+      },
+      {
+        label: "Add and manage API keys",
+        autogenerate: {directory: "manage-your-apis/add-manage-api-keys"},
+        collapsed: false
+      },
+      {
+        label: "Troubleshoot API keys",
+        autogenerate: {directory: "manage-your-apis/troubleshoot-api-keys"},
+        collapsed: false
+      }
+    ]
+  },
+  {
+    label: "Resources",
+    description: "Testing, troubleshooting, account management, and compliance",
     icon: "settings",
     collapsed: true,
-    cardLink: "/manage-your-account/profile-and-plan/view-kinde-plan/",
+    cardLink: "/testing/",
     items: [
       {
-        label: "Profile and plan",
-        autogenerate: {directory: "manage-your-account/profile-and-plan"},
-        collapsed: false
+        label: "Troubleshooting",
+        collapsed: false,
+        items: [
+          {label: "Common errors and codes", link: "/get-started/guides/error-codes/"},
+          {
+            label: "Top questions about Kinde authentication",
+            link: "/authenticate/about-auth/kinde-authentication-faq/"
+          },
+          {
+            label: "Top questions about authentication",
+            link: "/authenticate/about-auth/authentication-faq/"
+          },
+          {
+            label: "Top questions about M2M applications",
+            link: "/machine-to-machine-applications/about-m2m/m2m-faqs/"
+          },
+          {label: "Billing FAQ", link: "/billing/about-billing/billing-faq/"},
+          {
+            label: "Top questions about Kinde billing",
+            link: "/billing/about-billing/kinde-billing-faqs/"
+          }
+        ]
       },
       {
-        label: "Your data",
-        autogenerate: {directory: "manage-your-account/your-data"},
-        collapsed: false
+        label: "Testing",
+        collapsed: false,
+        items: [
+          {label: "Overview", link: "/testing/"},
+          {
+            label: "Setup test user and environment",
+            link: "/testing/setup-test-user-environment/"
+          },
+          {
+            label: "Testing authentication flows",
+            link: "/testing/testing-authentication-flows/"
+          },
+          {label: "Testing passwordless flows", link: "/testing/testing-passwordless-flows/"},
+          {
+            label: "Testing authenticated features",
+            link: "/testing/testing-authenticated-features/"
+          },
+          {label: "Testing backend APIs", link: "/testing/testing-backend-apis/"},
+          {label: "Test backend APIs with Jest", link: "/testing/test-backend-apis-jest/"},
+          {
+            label: "Cypress",
+            autogenerate: {directory: "testing/cypress"},
+            collapsed: true
+          },
+          {
+            label: "Playwright",
+            autogenerate: {directory: "testing/playwright"},
+            collapsed: true
+          }
+        ]
       },
-      // {
-      //   label: "Team",
-      //   autogenerate: {directory: "manage-your-account/team"},
-      //   collapsed: false
-      // },
       {
-        label: "Business information",
-        autogenerate: {directory: "manage-your-account/business-information"},
-        collapsed: false
-      }
-    ]
-  },
-  {
-    label: "Trust center",
-    description: "Find out how we safeguard your security and data",
-    icon: "trust",
-    collapsed: true,
-    cardLink: "/trust-center/privacy-and-compliance/compliance/",
-    items: [
-      {
-        label: "Privacy and compliance",
-        autogenerate: {directory: "trust-center/privacy-and-compliance"},
-        collapsed: false
+        label: "Account management",
+        collapsed: true,
+        items: [
+          {
+            label: "Profile and plan",
+            autogenerate: {directory: "manage-your-account/profile-and-plan"},
+            collapsed: false
+          },
+          {
+            label: "Your data",
+            autogenerate: {directory: "manage-your-account/your-data"},
+            collapsed: false
+          },
+          {
+            label: "Business information",
+            autogenerate: {directory: "manage-your-account/business-information"},
+            collapsed: false
+          }
+        ]
       },
-      {label: "Agreements", autogenerate: {directory: "trust-center/agreements"}, collapsed: false},
-      {label: "Security", autogenerate: {directory: "trust-center/security"}, collapsed: false},
       {
-        label: "Kinde performance",
-        autogenerate: {directory: "trust-center/kinde-performance"},
-        collapsed: false
-      }
+        label: "Trust and compliance",
+        collapsed: true,
+        items: [
+          {
+            label: "Privacy and compliance",
+            autogenerate: {directory: "trust-center/privacy-and-compliance"},
+            collapsed: false
+          },
+          {
+            label: "Agreements",
+            autogenerate: {directory: "trust-center/agreements"},
+            collapsed: false
+          },
+          {
+            label: "Security",
+            autogenerate: {directory: "trust-center/security"},
+            collapsed: false
+          },
+          {
+            label: "Kinde performance",
+            autogenerate: {directory: "trust-center/kinde-performance"},
+            collapsed: false
+          }
+        ]
+      },
+      {label: "Contributing", link: "/contribute/"}
     ]
   }
 ];
