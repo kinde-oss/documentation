@@ -775,7 +775,7 @@ const sidebarData = [
     label: "Design",
     description: "Integrate your brand, and update content for pages and screens",
     icon: "brand",
-    collapsed: false,
+    collapsed: true,
     cardLink: "/design/brand/global-brand-defaults/",
     items: [
       {
