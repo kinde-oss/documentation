@@ -583,12 +583,7 @@ const sidebarData = [
         collapsed: true,
         items: [
           {label: "View audit log", link: "/manage-users/view-activity/view-audit-log/"},
-          {label: "Audit log", link: "/manage-users/view-activity/view-user-activity/"},
-          {
-            label: "Track user sign-in with Google Analytics",
-            link: "/manage-users/view-activity/track-user-sign-in-with-google-analytics/"
-          },
-          {label: "Track user sign-in with Hotjar", link: "/manage-users/view-activity/hotjar/"}
+          {label: "Audit log", link: "/manage-users/view-activity/view-user-activity/"}
         ]
       }
     ]
@@ -1515,7 +1510,18 @@ const sidebarData = [
             ]
           },
           {
-            label: "Other",
+            label: "Analytics",
+            collapsed: true,
+            items: [
+              {
+                label: "Google Analytics",
+                link: "/manage-users/view-activity/track-user-sign-in-with-google-analytics/"
+              },
+              {label: "Hotjar", link: "/manage-users/view-activity/hotjar/"}
+            ]
+          },
+          {
+            label: "Tutorials",
             collapsed: true,
             items: [
               {
