@@ -13,25 +13,31 @@ const sidebarData = [
     cardLink: "/get-started/guides/first-things-first/",
     items: [
       {
-        label: "Guides",
-        collapsed: false,
-        items: [
-          {label: "Where to start with Kinde", link: "/get-started/guides/first-things-first/"},
-          {
-            label: "Start with a Kinde starter kit",
-            link: "/get-started/guides/start-with-starter-kit/"
-          },
-          {label: "Connect existing code base to Kinde", link: "/get-started/guides/byo-code/"},
-          {label: "Common set up tasks", link: "/get-started/guides/set-up-tasks/"}
-        ]
+        label: "First things first",
+        link: "/get-started/guides/first-things-first/"
       },
       {
+        label: "Start with a Kinde starter kit",
+        link: "/get-started/guides/start-with-starter-kit/"
+      },
+      {label: "Connect existing code base to Kinde", link: "/get-started/guides/byo-code/"},
+      {
+        label: "Complete your business details",
+        link: "/manage-your-account/business-information/update-your-details/"
+      },
+      {
+        label: "Create a waitlist",
+        link: "/build/set-up-options/manage-access-requests/"
+      },
+      {label: "Common set up tasks", link: "/get-started/guides/set-up-tasks/"},
+      {
         label: "Connect",
-        collapsed: true,
+        collapsed: false,
         items: [
+          {label: "Custom domain", link: "/build/domains/pointing-your-domain/"},
+          {label: "Custom email", link: "/get-started/connect/customize-email-sender/"},
           {label: "Get application keys", link: "/get-started/connect/getting-app-keys/"},
-          {label: "Set callback and redirect URLs", link: "/get-started/connect/callback-urls/"},
-          {label: "Customize email sender", link: "/get-started/connect/customize-email-sender/"}
+          {label: "Set callback and redirect URLs", link: "/get-started/connect/callback-urls/"}
         ]
       },
       {
@@ -87,23 +93,14 @@ const sidebarData = [
     collapsed: true,
     cardLink: "/developer-tools/about/our-sdks/",
     items: [
-      {
-        label: "Overview",
-        collapsed: false,
-        items: [
-          {label: "Kinde SDKs", link: "/developer-tools/about/our-sdks/"},
-          {
-            label: "Using Kinde without an SDK",
-            link: "/developer-tools/about/using-kinde-without-an-sdk/"
-          }
-        ]
-      },
+      {label: "Kinde SDKs", link: "/developer-tools/about/our-sdks/"},
       {
         label: "Frontend",
         collapsed: false,
         items: [
           {label: "JavaScript", link: "/developer-tools/sdks/frontend/javascript-sdk/"},
-          {label: "React", link: "/developer-tools/sdks/frontend/react-sdk/"}
+          {label: "React", link: "/developer-tools/sdks/frontend/react-sdk/"},
+          {label: "Angular (community SDK)", link: "https://github.com/luukhaijes/kinde-angular"}
         ]
       },
       {
@@ -144,19 +141,11 @@ const sidebarData = [
       },
       {
         label: "Guides",
-        collapsed: true,
+        collapsed: false,
         items: [
           {
-            label: "Integrate Kinde with ASP.NET using Open ID Connect",
-            link: "/developer-tools/guides/dotnet-open-id-connect/"
-          },
-          {
-            label: "Use Kinde auth in an Electron app",
-            link: "/developer-tools/guides/kinde-and-electron/"
-          },
-          {
-            label: "Protect FastAPI routes with Kinde",
-            link: "/developer-tools/guides/protect-fastapi-routes-with-kinde/"
+            label: "Use Kinde without an SDK",
+            link: "/developer-tools/about/using-kinde-without-an-sdk/"
           },
           {
             label: "Use Kinde permissions in React and any backend",
@@ -167,8 +156,16 @@ const sidebarData = [
             link: "/developer-tools/guides/manage-kinde-configuration/"
           },
           {
-            label: "Troubleshoot code sync errors",
-            link: "/developer-tools/guides/code-sync-errors/"
+            label: "FastAPI",
+            link: "/developer-tools/guides/protect-fastapi-routes-with-kinde/"
+          },
+          {
+            label: "Electron app",
+            link: "/developer-tools/guides/kinde-and-electron/"
+          },
+          {
+            label: "ASP.NET (Open ID Connect)",
+            link: "/developer-tools/guides/dotnet-open-id-connect/"
           }
         ]
       }
@@ -1125,7 +1122,7 @@ const sidebarData = [
         ]
       },
       {
-        label: "Environment variables",
+        label: "Env variables",
         collapsed: true,
         items: [
           {
@@ -1139,15 +1136,9 @@ const sidebarData = [
         ]
       },
       {
-        label: "Set up options",
+        label: "Git repo",
         collapsed: true,
-        items: [
-          {
-            label: "Set up and manage user access requests",
-            link: "/build/set-up-options/manage-access-requests/"
-          },
-          {label: "Manage your code in Kinde", link: "/build/set-up-options/sync-git-code/"}
-        ]
+        items: [{label: "Manage your code in Kinde", link: "/build/set-up-options/sync-git-code/"}]
       },
       {
         label: "Feature flags",
@@ -1413,7 +1404,16 @@ const sidebarData = [
       {
         label: "Troubleshooting",
         collapsed: true,
-        items: [{label: "Common errors and codes", link: "/get-started/guides/error-codes/"}]
+        items: [
+          {
+            label: "Common errors and codes",
+            link: "/get-started/guides/error-codes/"
+          },
+          {
+            label: "Git Repo code sync errors",
+            link: "/developer-tools/guides/code-sync-errors/"
+          }
+        ]
       }
     ]
   },
