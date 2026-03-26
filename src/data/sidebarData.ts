@@ -758,21 +758,18 @@ const sidebarData = [
     cardLink: "/design/brand/global-brand-defaults/",
     items: [
       {
-        label: "Brand",
-        collapsed: true,
-        items: [
-          {label: "Set global brand defaults", link: "/design/brand/global-brand-defaults/"},
-          {
-            label: "Apply unique branding for an organization",
-            link: "/design/brand/apply-branding-for-an-organization/"
-          },
-          {
-            label: "Remove Kinde branding from sign in pages",
-            link: "/design/brand/remove-kinde-branding/"
-          },
-          {label: "Add homepage URL to the sign-in page", link: "/design/brand/link-to-homepage/"}
-        ]
+        label: "Set global brand defaults",
+        link: "/design/brand/global-brand-defaults/"
       },
+      {
+        label: "Apply unique branding for an organization",
+        link: "/design/brand/apply-branding-for-an-organization/"
+      },
+      {
+        label: "Remove Kinde branding from sign in pages",
+        link: "/design/brand/remove-kinde-branding/"
+      },
+      {label: "Add homepage URL to the sign-in page", link: "/design/brand/link-to-homepage/"},
       {label: "Page layout", autogenerate: {directory: "design/pages"}, collapsed: true},
       {
         label: "Content",
