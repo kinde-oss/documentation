@@ -1334,28 +1334,21 @@ const sidebarData = [
         label: "Testing",
         collapsed: true,
         items: [
+          {label: "End-to-end testing overview", link: "/testing/"},
           {
-            label: "General",
-            collapsed: false,
-            items: [
-              {label: "End-to-end testing overview", link: "/testing/"},
-              {
-                label: "Setup test user and environment",
-                link: "/testing/setup-test-user-environment/"
-              },
-              {
-                label: "Testing authentication flows",
-                link: "/testing/testing-authentication-flows/"
-              },
-              {label: "Testing passwordless flows", link: "/testing/testing-passwordless-flows/"},
-              {
-                label: "Testing authenticated features",
-                link: "/testing/testing-authenticated-features/"
-              },
-              {label: "Testing backend APIs", link: "/testing/testing-backend-apis/"},
-              {label: "Test backend APIs with Jest", link: "/testing/test-backend-apis-jest/"}
-            ]
+            label: "Setup test user and environment",
+            link: "/testing/setup-test-user-environment/"
           },
+          {
+            label: "Testing authentication flows",
+            link: "/testing/testing-authentication-flows/"
+          },
+          {label: "Testing passwordless flows", link: "/testing/testing-passwordless-flows/"},
+          {
+            label: "Testing authenticated features",
+            link: "/testing/testing-authenticated-features/"
+          },
+          {label: "Testing backend APIs", link: "/testing/testing-backend-apis/"},
           {
             label: "Cypress",
             collapsed: true,
@@ -1383,7 +1376,8 @@ const sidebarData = [
               },
               {label: "Test backend APIs", link: "/testing/playwright/test-backend-apis/"}
             ]
-          }
+          },
+          {label: "Test backend APIs with Jest", link: "/testing/test-backend-apis-jest/"}
         ]
       },
       {
