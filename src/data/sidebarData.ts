@@ -280,7 +280,7 @@ const sidebarData = [
         items: [
           {
             label: "Connect",
-            collapsed: true,
+            collapsed: false,
             items: [
               {
                 label: "Manage enterprise connections",
@@ -436,6 +436,55 @@ const sidebarData = [
   },
 
   // ─────────────────────────────────────────────
+  // 5. SESSION MANAGEMENT
+  // ─────────────────────────────────────────────
+  {
+    label: "Session management",
+    description: "Manage sessions, tokens, and authentication state",
+    icon: "authentication",
+    collapsed: true,
+    cardLink: "/authenticate/manage-authentication/session-management/",
+    items: [
+      {
+        label: "Sessions",
+        collapsed: false,
+        items: [
+          {
+            label: "Session management",
+            link: "/authenticate/manage-authentication/session-management/"
+          },
+          {
+            label: "Authenticated sessions across multiple applications",
+            link: "/authenticate/manage-authentication/user-auth-applications/"
+          },
+          {
+            label: "Session management per organization",
+            link: "/authenticate/manage-authentication/session-management-per-organization/"
+          }
+        ]
+      },
+      {
+        label: "Tokens",
+        collapsed: false,
+        items: [
+          {label: "Configure token and session expiry", link: "/build/tokens/configure-tokens/"},
+          {label: "Access tokens", link: "/build/tokens/about-access-tokens/"},
+          {label: "ID tokens", link: "/build/tokens/about-id-tokens/"},
+          {label: "Refresh tokens", link: "/build/tokens/refresh-tokens/"},
+          {label: "Token customization", link: "/build/tokens/token-customization/"},
+          {
+            label: "OAuth 2.0 access token validation and error codes",
+            link: "/build/tokens/token-validation-errors/"
+          },
+          {label: "Using OAuth scopes", link: "/build/tokens/oath-scopes/"},
+          {label: "Verifying JSON Web Tokens", link: "/build/tokens/verifying-json-web-tokens/"},
+          {label: "Decoding JSON Web Tokens", link: "/build/tokens/decode-jwts/"}
+        ]
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────
   // 4. USER MANAGEMENT
   // ─────────────────────────────────────────────
   {
@@ -446,9 +495,8 @@ const sidebarData = [
     cardLink: "/manage-users/about/",
     items: [
       {
-        label: "Overview",
-        collapsed: true,
-        items: [{label: "About user management", link: "/manage-users/about/"}]
+        label: "About user management",
+        link: "/manage-users/about/"
       },
       {
         label: "Add and edit",
@@ -558,11 +606,11 @@ const sidebarData = [
         ]
       },
       {
-        label: "Self-service portal",
+        label: "Self-serve portal",
         collapsed: true,
         items: [
           {
-            label: "Customer self-service portal",
+            label: "Customer self-serve portal",
             link: "/build/self-service-portal/about-self-service-portal/"
           },
           {
@@ -570,7 +618,7 @@ const sidebarData = [
             link: "/build/self-service-portal/self-serve-portal-for-orgs/"
           },
           {
-            label: "Enable self-service portal for users",
+            label: "Enable self-serve portal for users",
             link: "/build/self-service-portal/self-serve-portal-for-users/"
           }
         ]
@@ -587,7 +635,7 @@ const sidebarData = [
   },
 
   // ─────────────────────────────────────────────
-  // 5. ORGANIZATION MANAGEMENT
+  // 6. ORGANIZATION MANAGEMENT
   // ─────────────────────────────────────────────
   {
     label: "Organization management",
@@ -597,22 +645,16 @@ const sidebarData = [
     cardLink: "/build/organizations/multi-tenancy-using-organizations/",
     items: [
       {
-        label: "Overview",
-        collapsed: false,
-        items: [
-          {
-            label: "About organizations",
-            link: "/build/organizations/multi-tenancy-using-organizations/"
-          },
-          {
-            label: "Kinde organizations for developers",
-            link: "/build/organizations/orgs-for-developers/"
-          }
-        ]
+        label: "About organizations",
+        link: "/build/organizations/multi-tenancy-using-organizations/"
+      },
+      {
+        label: "Kinde organizations for developers",
+        link: "/build/organizations/orgs-for-developers/"
       },
       {
         label: "Set up",
-        collapsed: true,
+        collapsed: false,
         items: [
           {
             label: "Add and manage organizations",
@@ -667,7 +709,7 @@ const sidebarData = [
         ]
       },
       {
-        label: "Customization",
+        label: "Customize",
         collapsed: true,
         items: [
           {
@@ -681,13 +723,7 @@ const sidebarData = [
           {
             label: "Apply unique branding for an organization",
             link: "/design/brand/apply-branding-for-an-organization/"
-          }
-        ]
-      },
-      {
-        label: "Properties",
-        collapsed: true,
-        items: [
+          },
           {
             label: "Add custom data for orgs",
             link: "/properties/about-properties/organization-properties/"
@@ -706,55 +742,6 @@ const sidebarData = [
             label: "Organization-level API keys",
             link: "/manage-your-apis/about-api-keys/organization-api-keys/"
           }
-        ]
-      }
-    ]
-  },
-
-  // ─────────────────────────────────────────────
-  // 6. SESSION MANAGEMENT
-  // ─────────────────────────────────────────────
-  {
-    label: "Session management",
-    description: "Manage sessions, tokens, and authentication state",
-    icon: "authentication",
-    collapsed: true,
-    cardLink: "/authenticate/manage-authentication/session-management/",
-    items: [
-      {
-        label: "Sessions",
-        collapsed: false,
-        items: [
-          {
-            label: "Session management",
-            link: "/authenticate/manage-authentication/session-management/"
-          },
-          {
-            label: "Authenticated sessions across multiple applications",
-            link: "/authenticate/manage-authentication/user-auth-applications/"
-          },
-          {
-            label: "Session management per organization",
-            link: "/authenticate/manage-authentication/session-management-per-organization/"
-          }
-        ]
-      },
-      {
-        label: "Tokens",
-        collapsed: false,
-        items: [
-          {label: "Configure token and session expiry", link: "/build/tokens/configure-tokens/"},
-          {label: "Access tokens", link: "/build/tokens/about-access-tokens/"},
-          {label: "ID tokens", link: "/build/tokens/about-id-tokens/"},
-          {label: "Refresh tokens", link: "/build/tokens/refresh-tokens/"},
-          {label: "Token customization", link: "/build/tokens/token-customization/"},
-          {
-            label: "OAuth 2.0 access token validation and error codes",
-            link: "/build/tokens/token-validation-errors/"
-          },
-          {label: "Using OAuth scopes", link: "/build/tokens/oath-scopes/"},
-          {label: "Verifying JSON Web Tokens", link: "/build/tokens/verifying-json-web-tokens/"},
-          {label: "Decoding JSON Web Tokens", link: "/build/tokens/decode-jwts/"}
         ]
       }
     ]
@@ -946,17 +933,18 @@ const sidebarData = [
     collapsed: true,
     cardLink: "/build/set-up-options/attack-protection/",
     items: [
-      {label: "Configure attack protection", link: "/build/set-up-options/attack-protection/"},
-      {label: "Set global access policies", link: "/build/set-up-options/access-policies/"},
+      {label: "Security at Kinde", link: "/trust-center/security/security-at-kinde/"},
       {
         label: "Kinde product security information",
         link: "/get-started/learn-about-kinde/kinde-product-security/"
       },
-      {label: "Security at Kinde", link: "/trust-center/security/security-at-kinde/"},
-      {label: "Security wall of fame", link: "/trust-center/security/security-wall-of-fame/"},
       {
-        label: "Vulnerability disclosure policy",
-        link: "/trust-center/security/vulnerability-disclosure-policy/"
+        label: "Configure attack protection",
+        link: "/build/set-up-options/attack-protection/"
+      },
+      {
+        label: "Set global access policies",
+        link: "/build/set-up-options/access-policies/"
       }
     ]
   },
@@ -1709,10 +1697,14 @@ const sidebarData = [
         ]
       },
       {
-        label: "Contributing",
-        collapsed: true,
-        items: [{label: "Contribution guide", link: "/contribute/"}]
-      }
+        label: "Vulnerability disclosure policy",
+        link: "/trust-center/security/vulnerability-disclosure-policy/"
+      },
+      {
+        label: "Security wall of fame",
+        link: "/trust-center/security/security-wall-of-fame/"
+      },
+      {label: "Docs contribution guide", link: "/contribute/"}
     ]
   }
 ];
