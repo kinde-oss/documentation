@@ -15,7 +15,7 @@ metadata:
   audience: [developer, enterprise-admin, security-engineer]
   complexity: intermediate
   keywords: [home realm discovery, HRD, IdP discovery, email domain routing, enterprise auth, SSO button]
-  updated: 2025-01-16
+  updated: 2026-03-26
 featured: false
 deprecated: false
 ---
@@ -28,7 +28,7 @@ HRD is usually applied where your identity provider (IdP) is a third party, such
 
 By default, Kinde provides a universal login page where users of any enterprise connection can sign in. They are then silently routed and verified via the relevant IdP.
 
-## How it works
+## How Home Realm Discovery works at Kinde?
 
 When you set up a [Microsoft Entra ID](/authenticate/enterprise-connections/azure/) or [custom SAML](/authenticate/enterprise-connections/custom-saml/) connection, you’ll configure the home realm (or domains) to be recognized during authentication. All home realm domains must be unique across all connections in the environment.
 
@@ -45,6 +45,14 @@ In the back end, the end-user is linked to the correct identity provider via the
 
 So when Jude Watson arrives at the sign in window and enters `judewatson@enterpriseA.com`, they are routed to the IdP for SAML connection A, and authenticated.
 
-## Showing or hiding the sign in buttons
+## How to show or hide the sign in buttons?
 
 Even if you have set up HRD, you can choose to show an SSO sign in button so the user has to click to proceed. Learn more [here](/authenticate/enterprise-connections/about-enterprise-connections/#show-or-hide-the-sso-sign-in-button-on-the-auth-page).
+
+## Does HRD affect organization selection and default org settings?
+
+Yes. When home realm discovery is active, enterprise users are routed directly to their identity provider based on their email domain — before any organization selection takes place. This has a few important implications:
+
+- **The organization selector is bypassed** — HRD takes precedence over any org selection screen. The user is authenticated into the organization associated with their enterprise connection without being prompted to choose.
+- **The last-used organization setting is bypassed** — The "remember last org" behavior does not apply to users authenticating via HRD. Their session is always tied to the organization configured for their enterprise connection.
+- **Setting a default organization for SAML users is not supported** — Because HRD routes users before org selection occurs, passing `org_code` to override the destination organization is not supported for enterprise connections using home realm discovery. The user will always land in the organization linked to the matching enterprise connection.
