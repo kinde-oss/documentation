@@ -31,7 +31,7 @@ keywords:
   - session management
   - token security
   - auto-update
-updated: 2026-03-19
+updated: 2026-03-26
 featured: false
 deprecated: false
 ai_summary: Comprehensive guide to refresh tokens including how they work, implementation with offline scope, token rotation, security best practices, and SDK integration.
@@ -45,7 +45,7 @@ Access tokens are issued when a user makes an authentication request or a call i
 
 Access tokens usually have an intentionally short lifetime. However, rather than having a user need to re-authenticate frequently, a refresh token can be used to request a new access token. Refresh tokens operate without user intervention, extending session access without the same security risk as requesting a new access token.
 
-Refresh tokens can be used a finite amount of times before re-authentication is required.
+There is no cap on the number of times a refresh token can be used — it remains valid until it expires or is rotated out.
 
 ## How to get a refresh token
 
@@ -102,7 +102,7 @@ Kinde always rotates refresh tokens. When you use an existing refresh token to r
 
 ## Auto-update of refresh tokens
 
-Kinde allows a small overlap period when both a previous and new refresh token is valid. This is to account for retries and bad network connections. You can [set the lifetime of a refresh token](/build/tokens/configure-tokens/) in Kinde. It needs to be longer than the life of an access token.
+Kinde allows a small overlap period after rotation where both the previous and new refresh token are valid. This is to account for retries and bad network connections (for example, parallel requests that both send the old token before the rotation response arrives). You can [set the lifetime of a refresh token](/build/tokens/configure-tokens/) in Kinde. It needs to be longer than the life of an access token.
 
 ## Client-specific refresh token cookies
 
@@ -123,6 +123,14 @@ You should store the refresh token you get with your initial `/token` request. O
 ## Use the SDK `getToken` function to silently refresh tokens
 
 If you’re using a front-end SDK like [JavaScript](/developer-tools/sdks/frontend/javascript-sdk/) or [React](/developer-tools/sdks/frontend/react-sdk/), the `getToken` function stores an in-memory cache of the access token, which it returns by default. If the token is about to expire it will use a refresh token to get a new access token from Kinde silently in the background so additional network requests to Kinde are only made when absolutely necessary.
+
+## How long does a refresh token last?
+
+Refresh tokens have a default lifetime of **15 days (1,296,000 seconds)**. You can change this in **Settings > Environment > Applications > [your app] > Tokens**. The refresh token lifetime must always be set longer than the access token lifetime.
+
+There is no cap on the number of times a refresh token can be used within its lifetime — it remains valid until it expires or is rotated out.
+
+For a comparison of all token default lifetimes, see [Configure token and session expiry](/build/tokens/configure-tokens/).
 
 ## Token security recommendations
 
