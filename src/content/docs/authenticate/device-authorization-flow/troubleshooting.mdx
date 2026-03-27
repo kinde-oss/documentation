@@ -1,6 +1,16 @@
 ---
 page_id: 545c511c-ce01-4251-be2a-d04407820d6f
 title: Troubleshooting device authorization
+description: This guide helps you diagnose and resolve common issues with device authorization flow. Learn how to handle errors, debug problems, and implement proper error recovery.
+updated: 2026-03-26
+keywords:
+  - troubleshooting
+  - device authorization
+  - error codes
+  - error handling
+  - error recovery
+  - error messages
+  - error logging
 sidebar:
   order: 6
 relatedArticles:
@@ -159,6 +169,23 @@ function pollForToken(deviceCode) {
   });
 }
 ```
+
+## Scope and token exchange limitations
+
+### Scopes must be set on the device authorization endpoint
+
+Scopes for the device authorization flow must be passed to the `/oauth2/v2/device_authorization` endpoint when the device code is requested — not to the `/oauth2/token` endpoint during polling. Passing scopes to the token endpoint is not supported and will be ignored or cause an error.
+
+```bash
+# Correct: scopes on the device authorization endpoint
+curl -X POST https://<your-subdomain>.kinde.com/oauth2/v2/device_authorization \
+  --data-urlencode "client_id=<YOUR_CLIENT_ID>" \
+  --data-urlencode "scope=openid profile email offline"
+```
+
+### Exchanging an existing access token via the token endpoint is not supported
+
+In Kinde's device authorization flow, exchanging an existing access token for a new access token or ID token via the token endpoint is not supported. Once you have an access token from the device flow, use it directly with your API. If you need a new token, restart the device authorization flow to obtain a fresh device code and complete the authorization process again.
 
 ## Network issues during device authorization
 

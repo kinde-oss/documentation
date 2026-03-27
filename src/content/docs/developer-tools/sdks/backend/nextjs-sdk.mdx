@@ -37,7 +37,7 @@ keywords:
   - authentication
   - route protection
   - environment variables
-updated: 2026-01-24
+updated: 2026-03-26
 featured: false
 deprecated: false
 ai_summary: Complete guide for Next.js App Router SDK including installation, configuration, middleware setup, route protection, and authentication integration for Next.js 13+ applications.
@@ -48,7 +48,7 @@ Complete guide for Next.js App Router SDK.
 New to Kinde? Kinde is the all-in-one developer platform for authentication, access management and billing - secure and monetize your SaaS from day one. [Get started for free](https://app.kinde.com/register)
 
 <Aside title="Next.js version 13 or later">
-This SDK is for Next.js version 13+ and uses Server Side Components and App Router.
+This SDK is for Next.js version 13+ and uses Server Side Components and App Router. See [Version compatibility](#version-compatibility)
 
 - If you’re using version 1 see [Next.js App Router V1](/developer-tools/sdks/backend/nextjs-sdkv1/)
 
@@ -60,7 +60,6 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
 
 - A [Kinde](https://app.kinde.com/) account (Sign up for free)
 - [Node.js](https://nodejs.org) version 20 or higher
-
 
 ## Set up a Kinde application 
 
@@ -2121,15 +2120,88 @@ The reason why you are redirected to the wrong domain because is likely because 
 
 You should set the `KINDE_POST_LOGIN_REDIRECT_URL` dynamically based on the domain you initiating the auth flow from.
 
+## Clearing Kinde session cookies manually
+
+There are situations — such as debugging a stuck session, forcing a clean logout without a redirect, or testing authentication flows — where you may need to clear Kinde's session cookies directly from your Next.js application.
+
+### Step 1: Identify the cookies
+
+Kinde stores session data in httpOnly cookies. Open your browser's DevTools (**Application > Cookies**) after signing in and look for cookies that match these patterns on your domain:
+
+- `ac-state-key` — state parameter cookie set at the start of the auth flow
+- `id_token` — ID token cookie (if set)
+- `access_token` — access token cookie (if set)
+- `refresh_token_<prefix>` — refresh token cookie (prefix is the first 6 characters of your Kinde client ID, e.g. `refresh_token_abc123`)
+
+The exact set of cookies present depends on your SDK version and configuration.
+
+### Step 2: Clear the cookies via an API route
+
+Create a server-side API route to delete the cookies. This must be done server-side because the cookies are `httpOnly` and cannot be deleted from client-side JavaScript.
+
+```typescript
+// app/api/auth/clear-session/route.ts
+import { cookies } from "next/headers"
+import { NextResponse } from "next/server"
+
+export async function POST() {
+  const cookieStore = await cookies()
+  const allCookies = cookieStore.getAll()
+
+  // Delete all cookies that belong to Kinde
+  const kindeCookiePatterns = ["ac-state-key", "id_token", "access_token", "refresh_token_"]
+
+  for (const cookie of allCookies) {
+    if (kindeCookiePatterns.some((pattern) => cookie.name.startsWith(pattern))) {
+      cookieStore.delete(cookie.name)
+    }
+  }
+
+  return NextResponse.redirect(new URL("/", process.env.KINDE_SITE_URL ?? "http://localhost:3000"))
+}
+```
+
+### Step 3: Call the route
+
+Navigate the user to `/api/auth/clear-session` to clear the session, or call it programmatically:
+
+```tsx
+// Trigger from a button or link in your UI
+<form action="/api/auth/clear-session" method="post">
+  <button type="submit">Clear session</button>
+</form>
+```
+
+<Aside type="warning">
+
+Clearing cookies manually ends the local session but does not sign the user out of Kinde's authorization server. To fully sign a user out — including ending the Kinde session — use the standard [logout flow](/developer-tools/sdks/backend/nextjs-sdk/#logout) instead. Use cookie clearing only as a debugging tool or last resort.
+
+</Aside>
+
 ## Debug mode
 
 In debug mode you will see more logs in your console that may help with debugging.
 
 ```jsx
 // .env
-
-KINDE_DEBUG_MODE = true;
+KINDE_DEBUG_MODE=true
 ```
+
+## Version compatibility
+
+### Which Next.js versions does the Kinde SDK support?
+
+The `@kinde-oss/kinde-auth-nextjs` SDK supports Next.js 12 through 16. Each major Next.js version requires a minimum SDK version — make sure you're on a compatible release before upgrading Next.js.
+
+| Next.js version | Minimum SDK version |
+| --------------- | ------------------- |
+| 12.3.x          | 2.x                 |
+| 13.5.x          | 2.x                 |
+| 14.2.x          | 2.x                 |
+| 15.2.x          | 2.x                 |
+| 16.x            | 2.11.0              |
+
+For the latest compatibility information, check the [@kinde-oss/kinde-auth-nextjs npm page](https://www.npmjs.com/package/@kinde-oss/kinde-auth-nextjs) or [release notes](https://github.com/kinde-oss/kinde-auth-nextjs/releases).
 
 ## Migrate from V1
 
