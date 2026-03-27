@@ -29,7 +29,7 @@ keywords:
   - admin permissions
   - user management
   - self sign up
-updated: 2026-03-03
+updated: 2026-03-26
 featured: false
 deprecated: false
 ai_summary: Guide to deleting or suspending users in Kinde including suspension, restoration, and permanent deletion options for access control.
@@ -68,3 +68,19 @@ For details on suspending an organization, see [Add and manage organizations](/b
    1. Select the first option to remove the user’s access and ability to sign in to all organizations, but leave their profile in Kinde.
    2. Select the second option to completely remove the user record from Kinde, including access and all subscriber lists.
 5. Select **Delete user**. When the user tries to sign in, they will be prompted to sign up (if self-sign-up is allowed in your business).
+
+## Can I block users by email, username, or phone number?
+
+Kinde does not have a built-in blocklist for specific email addresses, usernames, or phone numbers. Suspending or deleting a user removes their existing account, but does not prevent someone from signing up again with the same identifier if self-sign-up is enabled.
+
+To block access for accounts created with a specific identifier (after sign-up), use one of these workarounds:
+
+- **Workflows** — Use a [post-authentication workflow](/workflows/example-workflows/workflow-user-post-auth/) to check the authenticating user's email, username, or phone number against a blocklist stored in an environment variable or external data source. If matched, the workflow can deny access using the `deny` action.
+- **Webhooks** — Subscribe to the `user.created` event via [webhooks](/integrate/webhooks/about-webhooks/). When a new user signs up with a blocked identifier, call the [Management API](/kinde-apis/management#tag/users/patch/api/v1/user) to suspend or delete them as soon as the event is processed.
+- **Management API** — React to sign-up events and use the [`PATCH /api/v1/user`](/kinde-apis/management#tag/users/patch/api/v1/user) endpoint to suspend users whose identifiers match your blocklist.
+
+<Aside type="warning">
+
+None of these workarounds prevent the initial sign-up event from completing — they block access after the fact. If preventing sign-up at the point of registration is a hard requirement, contact [Kinde support](https://kinde.com/support/) to discuss options.
+
+</Aside>
