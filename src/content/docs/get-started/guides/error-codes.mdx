@@ -23,7 +23,7 @@ keywords:
   - oauth errors
   - verification codes
   - token errors
-updated: 2024-01-15
+updated: 2026-03-26
 featured: false
 deprecated: false
 ai_summary: Comprehensive troubleshooting guide for common Kinde error codes including authentication, SAML, OAuth, and verification issues.
@@ -45,13 +45,22 @@ This error message typically appears when there's an issue with your authenticat
 
 The `State not found` error typically occurs when there's a mismatch between your environment variables and the domain you're using during authentication. There may be a trailing space or incorrect syntax.
 
+## JWKS endpoint returning 403
+
+A 403 Forbidden response from the JWKS endpoint (`/.well-known/jwks`) means the request was rejected before the public keys could be returned. Common causes include:
+
+- **Wrong domain or subdomain** - Ensure you are fetching the JWKS endpoint from your correct Kinde domain (e.g. `https://your-business.kinde.com/.well-known/jwks`). A typo or incorrect region subdomain will result in a 403.
+- **Unexpected credentials in the request** - The JWKS endpoint is public and does not require authentication. Sending unexpected or invalid credentials (e.g. an expired client secret or an Authorization header) can cause the request to be rejected. Remove any authorization headers from JWKS fetch requests.
+- **CORS misconfiguration** - Browser-based applications that fetch JWKS directly may hit CORS restrictions. Perform the JWKS fetch server-side where possible, or verify that your origin is permitted in your Kinde application settings.
+- **IP allowlist or firewall rules** - If your environment or network applies IP restrictions, check that outbound requests to your Kinde domain are not being blocked before they reach the endpoint.
+
 ## Verification code not received (email)
 
 Verification codes are sent almost immediately when triggered. If a code is not received, it might be because:
 
-- Junk/spam folders​ - Email providers and devices may treat OTPs from unknown providers like Kinde as spam. Check your own spam folder, or ask your IT team if emails from Kinde are quarantined by firewalls or other IT defence systems.
-- Gmail delays​ - Google Workspace addresses can experience ~4 minute delays due to pre-delivery scanning
-- Microsoft Defender filters​ - Aggressive anti-spam filters sometimes quarantine verification emails for Outlook/Hotmail users
+- **Junk/spam folders**​ - Email providers and devices may treat OTPs from unknown providers like Kinde as spam. Check your own spam folder, or ask your IT team if emails from Kinde are quarantined by firewalls or other IT defence systems.
+- **Gmail delays**​ - Google Workspace addresses can experience ~4-minute-delays due to pre-delivery scanning
+- **Microsoft Defender filters**​ - Aggressive anti-spam filters sometimes quarantine verification emails for Outlook/Hotmail users
 
 If none of the above help troubleshoot the issue, contact Kinde support.
 
@@ -66,6 +75,16 @@ Verification codes are sent almost immediately when triggered. If a code is not 
 - Phone numbers in certain countries do sometimes experience issues. Contact us if you think this might be the case. 
 
 We recommend using [Twilio](/authenticate/authentication-methods/phone-authentication/), a third-party SMS provider instead of Kinde's default service. This makes troubleshooting issues and accessing logs much easier.
+
+## Email verification error code 123f11e6453744da8069f1a6d65247ba
+
+Description
+- This code can appear in the verification link inside a Kinde email verification email
+
+Troubleshooting
+- Verification links are time-limited. If the link has expired, request a new verification email and use it promptly
+- Make sure the link is opened in the same browser and session in which the verification was requested
+- If the error persists after requesting a fresh link, contact Kinde support with the full error code and the email address being verified
 
 ## Error code 578
 
@@ -252,3 +271,5 @@ Description
 
 Troubleshooting
 - Check the refresh token is valid
+
+
