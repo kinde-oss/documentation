@@ -4,6 +4,8 @@ title: JavaScript SDK
 description: "Complete guide for JavaScript SDK including PKCE authentication, login/register flows, organization management, and API integration for single-page applications."
 sidebar:
   order: 3
+tableOfContents:
+  maxHeadingLevel: 3
 head:
   - tag: meta
     attrs:
@@ -31,89 +33,144 @@ keywords:
   - organizations
   - access tokens
   - JWT
-updated: 2024-01-15
+updated: 2026-03-31
 featured: false
 deprecated: false
 ai_summary: Complete guide for JavaScript SDK including PKCE authentication, login/register flows, organization management, and API integration for single-page applications.
 ---
 
-If you haven’t already got a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). This will give you a Kinde domain, which you need to get started, e.g. `yourapp.kinde.com`
+Kinde JavaScript SDK for single page JavaScript apps.
 
-You can also view the [JavaScript starter kit](https://github.com/kinde-starter-kits/javascript-starter-kit) in GitHub.
+### What you need
 
-## **Set up Kinde**
+- A [Kinde](https://app.kinde.com/register) account (Sign up for free)
+- An existing JavaScript single page app. Try the [JavaScript starter kit](https://github.com/kinde-starter-kits/javascript-starter-kit)
 
-### **Set your callback and logout URLs**
+## Set up a Kinde application
 
-Kinde will redirect your user to authenticate. They’ll be redirected back to your JavaScript app after signing in or signing up.
+1. Sign in to your Kinde dashboard and select **Add application**
+2. Enter a name for the application (e.g., "My Single Page App")
+3. Select **Front-end and mobile** as the application type, then select **Save**
+4. On the **Quick start** page, select **JavaScript** from the list of Front-end SDKs, then select **Save**
+5. Go to the **Details** page and copy the **Domain**, and **Client ID**. We will need it to configure our project
 
-To authenticate your app, you need to specify which URL Kinde should redirect your user. These need to match the ones listed in your application details in Kinde.
+    <Aside title="No client secret">
+    JavaScript single page apps do not have a client secret for security reasons.
+    </Aside>
 
-The `http://localhost:3000` is an example of a commonly used local development URL. It should be replaced with the URL where your app is running.
+### Using non-production environments
 
-1. In Kinde, go to **Settings > Applications > [your app] > View details**.
-2. Set the **Allowed callback URLs** (also known as redirect URIs) to the URL of your app. This is where the Kinde client app is served. For local development this could be `http://localhost:3000`. This is required for your users to sign in to your app successfully.
-3. Set the URLs they’ll be redirected to after signing out, by adding **Allowed logout redirect URLs** to your JavaScript applications logout page. For local development this could be `http://localhost:3000`.
-4. Select **Save**.
+Kinde allows you to have one production environment and multiple non-production environments. If you would like to use different environments as part of your development process, learn more about [environments here](/build/environments/environments/).
 
-### **Environments**
+## Option 1: Use the Starter kit
 
-As part of your development process, we highly recommend you create a development environment within your Kinde account. In this case, you’d use the Environment subdomain in the code block above.
+1. On the **Quick start** page, select **Set** for both callback URL and logout URL. This will set `http://localhost:3000` as your default URLs. If you want to use a different URL, you can change it in the **Details** page.
 
-## **Set up your app**
+2. Download the [JavaScript starter kit](https://github.com/kinde-starter-kits/javascript-starter-kit)
 
-### Installation
+3. Go to the root of your project and install the dependencies:
 
-<PackageManagers pkg="@kinde-oss/kinde-auth-pkce-js" />
+    ```bash
+    cd javascript-starter-kit
+    npm install
+    ```
 
-### **Integrate with your app**
+4. Create an environment variable file:
 
-You’ll need to create a new instance of the Kinde Auth client object.
+    ```bash
+    cp .env.example .env
+    ```
 
-We recommend using the async/await method. It must be the first thing that happens before you initialize your app.
+5. Copy the **Domain**, and **Client ID** to the following values of the `.env` file and save changes.
 
-```jsx
-import createKindeClient from "@kinde-oss/kinde-auth-pkce-js";
+    ```env
+    # .env
+    VITE_KINDE_CLIENT_ID=<your_kinde_client_id>
+    VITE_KINDE_DOMAIN=https://<your_kinde_subdomain>.kinde.com
+    ```
 
-(async () => {
-	const kinde = await createKindeClient({
-		client_id: <your_kinde_client_id>,
-		domain: "https://<your_kinde_subdomain>.kinde.com",
-		redirect_uri: window.location.origin
-	});
-}
+6. Start the development server:
 
-```
+    ```bash
+    npm run dev
+    ```
 
-1. In Kinde, go to **Settings > Applications > [your app] > View details**.
-2. Replace the **client_id** and **domain** placeholders in the code block above with the the values from the **App keys** section.
+7. Open the browser and navigate to http://localhost:3000 to see the application.
 
-Note: The `redirect_uri` value you enter here needs to be the same as the redirect URI you entered in the Kinde application (see above).
+8. Sign up for a new user.
 
-## Log in / register
+9. Go to your **Kinde dashboard > Users** to find your newly created user.
 
-Kinde provides login / register methods that are easy to implement. Here’s an example of adding buttons to your HTML:
+## Option 2: Install for an existing project
 
-```html
-<div id="logged_out_view">
-  <button id="login" type="button">Sign in</button>
-  <button id="register" type="button">Register</button>
-</div>
-```
+1. On the **Quick start** page, select **Existing codebase** and edit your project URL (defaults to `http://localhost:3000`)
 
-You can bind events to buttons.
+2. Select **Set** for both callback URL and logout URL.
 
-```jsx
-document.getElementById("login").addEventListener("click", async () => {
-  await kinde.login();
-});
+3. Open your project in your terminal and install the Kinde dependency with the following command:
 
-document.getElementById("register").addEventListener("click", async () => {
-  await kinde.register();
-});
-```
+    <PackageManagers pkg="@kinde-oss/kinde-auth-pkce-js" />
+
+4. Initialize the Kinde Auth client. It must be the first thing that happens before you initialize your app. We recommend using the `async/await` pattern instead of the `.then()` chaining.
+
+    Replace the `your_kinde_client_id` and `https://<your_kinde_subdomain>.kinde.com` with the values you found from the application **Details** page above.
+
+    ```javascript
+    import createKindeClient from "@kinde-oss/kinde-auth-pkce-js";
+
+    (async () => {
+      const kinde = await createKindeClient({
+        client_id: <your_kinde_client_id>,
+        domain: "https://<your_kinde_subdomain>.kinde.com",
+        redirect_uri: window.location.origin
+      });
+    }
+
+    ```
+
+## Authentication
+
+### Sign-in and sign-up
+
+Kinde client provides login and register methods you can implement to your SPA.
+
+Add button elements:
+
+    ```html
+    <div id="logged_out_view">
+      <button id="login" type="button">Sign in</button>
+      <button id="register" type="button">Register</button>
+    </div>
+    ```
+
+You can then bind events to buttons:
+
+    ```javascript
+    document.getElementById("login").addEventListener("click", async () => {
+      await kinde.login();
+    });
+
+    document.getElementById("register").addEventListener("click", async () => {
+      await kinde.register();
+    });
+    ```
 
 Clicking either of these buttons redirects your user to Kinde, where they authenticate before being redirected back to your site.
+
+### Log out
+
+This is implemented in much the same way as signing in or registering. The Kinde single page application client already comes with a sign out method.
+
+    ```html
+    <div id="logged_in_view">
+      <button id="logout" type="button">Sign out</button>
+    </div>
+    ```
+    ```javascript
+    document.getElementById("logout").addEventListener("click", async () => {
+      await kinde.logout();
+    });
+    ```
 
 ### **Test sign up**
 
@@ -134,15 +191,7 @@ on_redirect_callback: (user, appState) => {
 };
 ```
 
-## Log out
 
-This is implemented in much the same way as signing in or registering. The Kinde single page application client already comes with a sign out method.
-
-```jsx
-document.getElementById("logout").addEventListener("click", async () => {
-  await kinde.logout();
-});
-```
 
 ## **Call your API**
 
