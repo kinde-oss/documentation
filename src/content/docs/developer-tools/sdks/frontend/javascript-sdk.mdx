@@ -157,6 +157,21 @@ You can then bind events to buttons:
 
 Clicking either of these buttons redirects your user to Kinde, where they authenticate before being redirected back to your site.
 
+### Callback events
+
+Once your user is redirected back to your site from Kinde, you can set a callback to take place. The callback automatically passes in the user object and any application state you set prior to the redirect.
+
+    ```javascript
+    on_redirect_callback: (user, appState) => {
+      console.log({user, appState});
+      if (user) {
+        // render logged in view
+      } else {
+        // render logged out view
+      }
+    };
+    ```
+
 ### Log out
 
 This is implemented in much the same way as signing in or registering. The Kinde single page application client already comes with a sign out method.
@@ -172,28 +187,33 @@ This is implemented in much the same way as signing in or registering. The Kinde
     });
     ```
 
-### **Test sign up**
+## View user profile
 
-Register your first user by signing up yourself. You’ll see your newly registered user on the **Users** page of the relevant organization in Kinde.
+Use the `getUser()` helper function to request the user information from Kinde.
 
-## **Handle redirect**
+    ```javascript
+    const user = kinde.getUser();
+    ```
 
-Once your user is redirected back to your site from Kinde, you can set a callback to take place. The callback automatically passes in the user object and any application state you set prior to the redirect.
+The user object:
 
-```jsx
-on_redirect_callback: (user, appState) => {
-  console.log({user, appState});
-  if (user) {
-    // render logged in view
-  } else {
-    // render logged out view
-  }
-};
-```
+    ```json
+    {
+      id: "kp_0123456789abcdef0123456789abcdef",
+      given_name: "Billy",
+      family_name: "Hoyle",
+      email: "billy@example.com",
+      picture: "https://link_to_avatar_url.kinde.com"
+    }
+    ```
 
+Additionally, you can use the `getUserProfile()` async function to request the latest user information from the server.
 
+    ```javascript
+    const user = await kinde.getUserProfile();
+    ```
 
-## **Call your API**
+## Call your API
 
 The `getToken` method lets you to securely call your API and pass the bearer token to validate that your user is authenticated.
 
@@ -216,7 +236,7 @@ The `getToken` method lets you to securely call your API and pass the bearer t
 
 We recommend using our middleware on your back end to verify users and protect endpoints. Our current implementation is Node/Express, but we’re working on more.
 
-## **Organizations**
+## Organizations
 
 For general information about using organizations, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
 
@@ -283,24 +303,7 @@ kinde.getUserOrganizations();
 // {orgCodes: ["org_1234", "org_abcd"]}
 ```
 
-## **Get user information**
 
-Use the `getUser()` helper function to request the user information from Kinde.
-
-Use the `getUserProfile()` function to request the latest user information from the server.
-
-```jsx
-const user = kinde.getUser();
-const user = await kinde.getUserProfile();
-// user will be populated with a user object
-{
-	id: "kp_0123456789abcdef0123456789abcdef",
-	given_name: "Billy",
-	family_name: "Hoyle",
-	email: "billy@example.com",
-	picture: "https://link_to_avatar_url.kinde.com"
-}
-```
 
 ## **User permissions**
 
@@ -562,7 +565,7 @@ const kinde = await createKindeClient({
 });
 ```
 
-## **SDK API Reference - createKindeClient**
+## API References - createKindeClient
 
 ### `audience`
 
@@ -627,7 +630,7 @@ openid profile
 email offline
 ```
 
-## **SDK API Reference - kindeClient methods**
+## API References - kindeClient methods
 
 ### `createOrg`
 
