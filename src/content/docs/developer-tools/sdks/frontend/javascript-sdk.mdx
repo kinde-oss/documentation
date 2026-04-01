@@ -240,130 +240,133 @@ We recommend using our middleware on your back end to verify users and protect e
 
 For general information about using organizations, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
 
-**Create an organization**
+### Create an organization
 
 To create a new organization within your application, you will need to run a similar function below.
 
-```jsx
-document.getElementById("createOrganization").addEventListener("click", async () => await kinde.createOrg();});
-```
+    ```javascript
+    document.getElementById("createOrganization")
+      .addEventListener("click", async () => await kinde.createOrg();});
+    ```
 
-**Sign up / sign in users to organizations**
+### Sign up or sign in users to organizations
 
-Kinde has a unique code for every organization. You’ll have to pass this code through when you register a new user. Example function below:
+Kinde has a unique code for every organization. You’ll have to pass this code through when you register a new user. 
 
-```jsx
-kinde.register({org_code: ‘org_1234’});
-```
+Example function:
+
+    ```javascript
+    kinde.register({org_code: "org_1234"});
+    ```
 
 If you want a user to sign in to a particular organization, pass this code along with the sign in method.
 
-```jsx
-kinde.login({org_code: ‘org_1234’});
-```
+    ```javascript
+    kinde.login({org_code: "org_1234"});
+    ```
 
-Following authentication, Kinde provides a json web token (jwt) to your application. Along with the standard information we also include the `org_code` and the `permissions` for that organization (this is important as a user can belong to multiple organizations and have different permissions for each). Example of a returned token:
+Following authentication, Kinde provides a json web token (jwt) to your application. Along with the standard information we also include the `org_code` and the `permissions` for that organization (this is important as a user can belong to multiple organizations and have different permissions for each). 
 
-```json
-{
-	"aud": [],
-	"exp": 1658475930,
-	"iat": 1658472329,
-	"iss": "https://your_subdomain.kinde.com",
-	"jti": "123457890",
-	"org_code": "org_1234",
-	"permissions": [“read:todos”, “create:todos”],
-	"scp": [
-		"openid",
-		"profile",
-		"email",
-		"offline
-	],
-	"sub": "kp:123457890"
-}
-```
+Example of a returned token:
 
-The `id_token` will also contain an array of Organizations that a user belongs to - this is useful if you wanted to build out an organization switcher for example.
+    ```json
+    {
+      "aud": [],
+      "exp": 1658475930,
+      "iat": 1658472329,
+      "iss": "https://your_subdomain.kinde.com",
+      "jti": "123457890",
+      "org_code": "org_1234",
+      "permissions": ["read:todos", "create:todos"],
+      "scp": [
+        "openid",
+        "profile",
+        "email",
+        "offline
+      ],
+      "sub": "kp_123457890"
+    }
+    ```
 
-```json
-{
-...
-"org_codes": ["org_1234", "org_4567"]
-...
-}
-```
+The `id_token` will also contain an array of organizations that a user belongs to - this is useful if you want to build out an organization switcher for example.
+
+    ```json
+    {
+    ...
+    "org_codes": ["org_1234", "org_4567"]
+    ...
+    }
+    ```
 
 There are two helper functions you can use to extract information:
 
-```jsx
-kinde.getOrganization();
-// {orgCode: "org_1234"}
+    ```javascript
+    kinde.getOrganization();
+    // {orgCode: "org_1234"}
 
-kinde.getUserOrganizations();
-// {orgCodes: ["org_1234", "org_abcd"]}
-```
+    kinde.getUserOrganizations();
+    // {orgCodes: ["org_1234", "org_abcd"]}
+    ```
 
-
-
-## **User permissions**
+## User permissions
 
 When a user signs in to an organization the Access token your product/application receives contains a custom claim with an array of permissions for that user.
 
 You can set permissions in your Kinde account. Here’s an example.
 
-```json
-"permissions":[
-	"create:todos",
-	"update:todos",
-	"read:todos",
-	"delete:todos",
-	"create:tasks",
-	"update:tasks",
-	"read:tasks",
-	"delete:tasks",
-]
-```
+    ```json
+    "permissions":[
+      "create:todos",
+      "update:todos",
+      "read:todos",
+      "delete:todos",
+      "create:tasks",
+      "update:tasks",
+      "read:tasks",
+      "delete:tasks",
+    ]
+    ```
 
 We provide helper functions to more easily access permissions:
 
-```jsx
-kinde.getPermission("create:todos");
-// {orgCode: "org_1234", isGranted: true}
+    ```javascript
+    kinde.getPermission("create:todos");
+    // {orgCode: "org_1234", isGranted: true}
 
-kinde.getPermissions();
-// {orgCode: "org_1234", permissions: ["create:todos", "update:todos", "read:todos"]}
-```
+    kinde.getPermissions();
+    // {orgCode: "org_1234", permissions: ["create:todos", "update:todos", "read:todos"]}
+    ```
 
 A practical example in code might look something like:
 
-```jsx
-if (kinde.getPermission("create:todos").isGranted) {
-  // show Create Todo button in UI
-}
-```
+    ```javascript
+    if (kinde.getPermission("create:todos").isGranted) {
+      // show Create Todo button in UI
+    }
+    ```
 
-## **Feature flags**
+## Feature flags
 
 When a user signs in the Access token your product/application receives contains a custom claim called `feature_flags` which is an object detailing the feature flags for that user.
 
 You can set feature flags in your Kinde account. Here’s an example.
 
-```jsx
-feature_flags: {
-  theme: {
-      "t": "s",
-      "v": "pink"
- },
- is_dark_mode: {
-      "t": "b",
-      "v": true
-  },
- competitions_limit: {
-      "t": "i",
-      "v": 5
-  }
-}
-```
+    ```json
+    feature_flags: {
+      theme: {
+          "t": "s",
+          "v": "pink"
+      },
+    is_dark_mode: {
+          "t": "b",
+          "v": true
+      },
+    competitions_limit: {
+          "t": "i",
+          "v": 5
+      }
+    }
+    ```
 
 In order to minimize the payload in the token we have used single letter keys / values where possible. The single letters represent the following:
 
@@ -379,7 +382,7 @@ In order to minimize the payload in the token we have used single letter keys / 
 
 We provide helper functions to more easily access feature flags:
 
-```jsx
+```javascript
 /**
   * Get a flag from the feature_flags claim of the access_token.
   * @param {string} code - The name of the flag.
