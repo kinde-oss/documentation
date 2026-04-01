@@ -162,14 +162,18 @@ Clicking either of these buttons redirects your user to Kinde, where they authen
 Once your user is redirected back to your site from Kinde, you can set a callback to take place. The callback automatically passes in the user object and any application state you set prior to the redirect.
 
     ```javascript
-    on_redirect_callback: (user, appState) => {
-      console.log({user, appState});
-      if (user) {
-        // render logged in view
-      } else {
-        // render logged out view
-      }
-    };
+    const kinde = await createKindeClient({
+      client_id: <your_kinde_client_id>,
+      domain: <your_kinde_domain>,
+      redirect_uri: <redirect_uri>,
+      on_redirect_callback: (user, appState) => {
+        console.log({user, appState});
+        if (user) {
+          // render logged in view
+        } else {
+          // render logged out view
+        }
+      }})
     ```
 
 ### Log out
@@ -602,6 +606,49 @@ Type: `string`
 
 Required: No
 
+### `on_redirect_callback`
+
+A callback function that will be called when the user is redirected back to your site from Kinde.
+
+Type: `function`
+
+Required: No
+
+Usage:
+
+```javascript
+const kinde = await createKindeClient({
+  // ...other options,
+  on_redirect_callback: (user, appState) => {
+    console.log({user, appState});
+    if (user) {
+      // render logged in view
+    } else {
+      // render logged out view
+    }
+  }
+});
+```
+
+### `on_error_callback`
+
+A callback function that will be called when an error occurs.
+
+Type: `function`
+
+Required: No
+
+Usage:
+
+```javascript
+const kinde = await createKindeClient({
+  // ...other options,
+  on_error_callback: (errorProps) => {    
+    console.log(errorProps);
+  }
+});
+```
+
 ### `is_dangerously_use_local_storage`
 
 An escape hatch for storing the refresh token in local storage. Recommended for local development only, and not production.
@@ -628,7 +675,7 @@ Type: `string`
 
 Required: No
 
-```jsx
+```text
 openid profile
 email offline
 ```
