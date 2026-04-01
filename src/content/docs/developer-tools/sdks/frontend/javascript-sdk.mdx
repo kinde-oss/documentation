@@ -39,7 +39,7 @@ deprecated: false
 ai_summary: Complete guide for JavaScript SDK including PKCE authentication, login/register flows, organization management, and API integration for single-page applications.
 ---
 
-Kinde JavaScript SDK for single page JavaScript apps.
+Kinde JavaScript SDK for single-page JavaScript apps.
 
 ### What you need
 
@@ -52,7 +52,7 @@ Kinde JavaScript SDK for single page JavaScript apps.
 2. Enter a name for the application (e.g., "My Single Page App")
 3. Select **Front-end and mobile** as the application type, then select **Save**
 4. On the **Quick start** page, select **JavaScript** from the list of Front-end SDKs, then select **Save**
-5. Go to the **Details** page and copy the **Domain**, and **Client ID**. We will need it to configure our project
+5. Go to the **Details** page and copy the **Domain** and **Client ID**. You will need these values to configure your project
 
     <Aside title="No client secret">
     JavaScript single page apps do not have a client secret for security reasons.
@@ -81,7 +81,7 @@ Kinde allows you to have one production environment and multiple non-production 
     cp .env.example .env
     ```
 
-5. Copy the **Domain**, and **Client ID** to the following values of the `.env` file and save changes.
+5. Copy the **Domain** and **Client ID** into the following variables in the `.env` file and save your changes.
 
     ```env
     # .env
@@ -124,7 +124,7 @@ Kinde allows you to have one production environment and multiple non-production 
         domain: "https://<your_kinde_subdomain>.kinde.com",
         redirect_uri: window.location.origin
       });
-    }
+    })();
 
     ```
 
@@ -132,7 +132,7 @@ Kinde allows you to have one production environment and multiple non-production 
 
 ### Sign-in and sign-up
 
-Kinde client provides login and register methods you can implement to your SPA.
+The Kinde client provides `login` and `register` methods you can use in your SPA.
 
 Add button elements:
 
@@ -173,12 +173,13 @@ Once your user is redirected back to your site from Kinde, you can set a callbac
         } else {
           // render logged out view
         }
-      }})
+      },
+    });
     ```
 
 ### Log out
 
-This is implemented in much the same way as signing in or registering. The Kinde single page application client already comes with a sign out method.
+This is implemented in much the same way as signing in or registering. The Kinde single-page application client already includes a sign-out method.
 
     ```html
     <div id="logged_in_view">
@@ -219,7 +220,7 @@ Additionally, you can use the `getUserProfile()` async function to request the l
 
 ## Call your API
 
-The `getToken` method lets you to securely call your API and pass the bearer token to validate that your user is authenticated.
+The `getToken` method lets you securely call your API and pass the bearer token so your backend can validate that the user is authenticated.
 
 ```jsx
 (async () => {
@@ -249,8 +250,9 @@ For general information about using organizations, see [Kinde organizations for 
 To create a new organization within your application, you will need to run a similar function below.
 
     ```javascript
-    document.getElementById("createOrganization")
-      .addEventListener("click", async () => await kinde.createOrg();});
+    document.getElementById("createOrganization").addEventListener("click", async () => {
+      await kinde.createOrg();
+    });
     ```
 
 ### Sign up or sign in users to organizations
@@ -263,13 +265,13 @@ Example function:
     kinde.register({org_code: "org_1234"});
     ```
 
-If you want a user to sign in to a particular organization, pass this code along with the sign in method.
+If you want a user to sign in to a particular organization, pass this code with the `login` method.
 
     ```javascript
     kinde.login({org_code: "org_1234"});
     ```
 
-Following authentication, Kinde provides a json web token (jwt) to your application. Along with the standard information we also include the `org_code` and the `permissions` for that organization (this is important as a user can belong to multiple organizations and have different permissions for each). 
+Following authentication, Kinde provides a JSON Web Token (JWT) to your application. Along with the standard information we also include the `org_code` and the `permissions` for that organization (this is important as a user can belong to multiple organizations and have different permissions for each). 
 
 Example of a returned token:
 
@@ -286,7 +288,7 @@ Example of a returned token:
         "openid",
         "profile",
         "email",
-        "offline
+        "offline"
       ],
       "sub": "kp_123457890"
     }
@@ -314,7 +316,7 @@ There are two helper functions you can use to extract information:
 
 ## User permissions
 
-When a user signs in to an organization the Access token your product/application receives contains a custom claim with an array of permissions for that user.
+When a user signs in to an organization, the access token your product receives contains a custom claim with an array of permissions for that user.
 
 You can set permissions in your Kinde account. Here’s an example.
 
@@ -351,23 +353,25 @@ A practical example in code might look something like:
 
 ## Feature flags
 
-When a user signs in the Access token your product/application receives contains a custom claim called `feature_flags` which is an object detailing the feature flags for that user.
+When a user signs in, the access token your product receives contains a custom claim called `feature_flags`, which is an object describing the feature flags for that user.
 
 You can set feature flags in your Kinde account. Here’s an example.
 
     ```json
-    feature_flags: {
-      theme: {
+    {
+      "feature_flags": {
+        "theme": {
           "t": "s",
           "v": "pink"
-      },
-    is_dark_mode: {
+        },
+        "is_dark_mode": {
           "t": "b",
           "v": true
-      },
-    competitions_limit: {
+        },
+        "competitions_limit": {
           "t": "i",
           "v": 5
+        }
       }
     }
     ```
@@ -398,23 +402,27 @@ kinde.getFlag(code, defaultValue, flagType);
 
 /* Example usage */
 
-kinde.getFlag('theme');
-/*{
-//   "code": "theme",
-//   "type": "string",
-//   "value": "pink",
-//   "is_default": false // whether the fallback value had to be used
-*/}
+kinde.getFlag("theme");
+/*
+{
+  "code": "theme",
+  "type": "string",
+  "value": "pink",
+  "is_default": false
+}
+*/
 
-kinde.getFlag('create_competition', {defaultValue: false});
-/*{
-      "code": "create_competition",
-      "value": false,
-      "is_default": true // because fallback value had to be used
-}*/
+kinde.getFlag("create_competition", { defaultValue: false });
+/*
+{
+  "code": "create_competition",
+  "value": false,
+  "is_default": true
+}
+*/
 ```
 
-We also require wrapper functions by type which should leverage `getFlag` above.
+We also provide type-specific wrapper functions that build on `getFlag` above.
 
 Booleans:
 
@@ -446,35 +454,35 @@ Strings and integers work in the same way as booleans above:
  * @param {string} code - The name of the flag.
  * @param {string} [defaultValue] - A fallback value if the flag isn't found.
  * @return {string}
- */ getStringFlag(code, defaultValue);
+ */
+kinde.getStringFlag(code, defaultValue);
 
 /**
  * Get an integer flag from the feature_flags claim of the access_token.
  * @param {string} code - The name of the flag.
  * @param {int} [defaultValue] - A fallback value if the flag isn't found.
  * @return {int}
- */ getIntegerFlag(code, defaultValue);
+ */
+kinde.getIntegerFlag(code, defaultValue);
 ```
 
-## **Audience**
+## Audience
 
-An `audience` is the intended recipient of an access token - for example the API for your application. The audience argument can be passed to the Kinde client to request an audience be added to the provided token.
-
-The audience of a token is the intended recipient of the token.
+An `audience` is the intended recipient of an access token—for example, the API for your application. Pass the `audience` option to the Kinde client to request that value be included on the issued token.
 
 ```jsx
 const kinde = await createKindeClient({
-  audience: "<your_api>"
-  ...
+  audience: "<your_api>",
+  // ...other options
 });
 ```
 
-To request multiple audiences, pass them separated by white space. See example.
+To request multiple audiences, pass them separated by spaces. For example:
 
 ```jsx
 const kinde = await createKindeClient({
-  audience: "<your_api1> <your_api2"
-	...
+  audience: "<your_api1> <your_api2>",
+  // ...other options
 });
 ```
 
@@ -489,7 +497,7 @@ By default the JavaScript SDK requests the following scopes:
 - `offline`
 - `openid`
 
-You can override this by passing `scope` into the `createKindeClient`
+You can override this by passing `scope` to `createKindeClient`.
 
 ```jsx
 const kinde = await createKindeClient({
@@ -514,7 +522,7 @@ kinde.getClaim("given_name", "id_token");
 
 ## **Persisting authentication state on page refresh or new tab**
 
-You will find that when you refresh the browser using a front-end based SDK that the authentication state is lost. This is because there is no secure way to persist this in the front-end.
+You will find that when you refresh the browser while using a front-end SDK, the authentication state is lost. This is because there is no secure way to persist this in the front-end.
 
 There are two ways to work around this.
 
@@ -532,10 +540,10 @@ A common use case is to allow redirects to the page the user was trying to acces
 Login handler:
 
 ```jsx
-login({
+kinde.login({
   app_state: {
-    redirectTo: window.location
-  }
+    redirectTo: window.location.pathname,
+  },
 });
 ```
 
@@ -548,17 +556,17 @@ const kinde = await createKindeClient({
   redirect_uri: "http://localhost:3000",
   on_redirect_callback: (user, appState) => {
     if (appState?.redirectTo) {
-      window.location = appState?.redirectTo;
+      window.location.assign(appState.redirectTo);
     }
-  }
+  },
 });
 ```
 
-## **Token storage in the authentication state**
+## Token storage in the authentication state
 
 By default the JWTs provided by Kinde are stored in memory. This protects you from both [CSRF](https://owasp.org/www-community/attacks/csrf) attacks (possible if stored as a client side cookie) and [XSS](https://owasp.org/www-community/attacks/xss/) attacks (possible if persisted in local storage).
 
-The trade off with this approach however is that if a page is refreshed or a new tab is opened then the token is wiped from memory, and the sign in button would need to be clicked to re-authenticate. There are two ways to prevent this behaviour:
+The trade-off with this approach, however, is that if a page is refreshed or a new tab is opened, the token is wiped from memory and the sign-in button must be clicked to re-authenticate. There are two ways to prevent this behavior:
 
 1. Use the Kinde custom domain feature. We can then set a secure, httpOnly cookie against your domain containing only the refresh token which is not vulnerable to CSRF attacks.
 2. There is an escape hatch which can be used for local development: `is_dangerously_use_local_storage`. This absolutely should not be used in production and we highly recommend you use a custom domain. This will store only the refresh token in local storage and is used to silently re-authenticate.
@@ -662,7 +670,7 @@ Usage:
 ```javascript
 const kinde = await createKindeClient({
   // ...other options,
-  on_error_callback: (errorProps) => {    
+  on_error_callback: (errorProps) => {
     console.log(errorProps);
   }
 });
@@ -710,7 +718,7 @@ true
 
 ### `login`
 
-Constructs redirect URL and sends user to Kinde sign in.
+Constructs the redirect URL and sends the user to Kinde to sign in.
 
 Arguments:
 
@@ -740,7 +748,7 @@ await kinde.login({
 
 ### `register`
 
-Constructs redirect url and sends user to Kinde to sign up.
+Constructs the redirect URL and sends the user to Kinde to sign up.
 
 Arguments:
 
@@ -764,7 +772,7 @@ await kinde.logout();
 
 ### `createOrg`
 
-Constructs redirect url and sends user to Kinde to sign up and create a new org for your business.
+Constructs the redirect URL and sends the user to Kinde to sign up and create a new organization for your business.
 
 Arguments:
 
@@ -866,7 +874,7 @@ Sample output:
   given_name: "Billy",
   family_name: "Hoyle",
   email: "billy@example.com",
-  picture: "https://link_to_avatar_url.kinde.com",
+  picture: "https://link_to_avatar_url.kinde.com"
 }
 ```
 
@@ -946,8 +954,8 @@ Sample output:
 
 ```jsx
 {
-	orgCode: "org_1234",
-	permissions: ["create:todos", "update:todos", "read:todos"],
+  orgCode: "org_1234",
+  permissions: ["create:todos", "update:todos", "read:todos"],
 }
 ```
 
@@ -971,8 +979,8 @@ Sample output:
 
 ```jsx
 {
-	orgCode: "org_1234",
-	isGranted: true,
+  orgCode: "org_1234",
+  isGranted: true,
 }
 ```
 
