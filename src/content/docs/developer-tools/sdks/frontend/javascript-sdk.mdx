@@ -574,6 +574,25 @@ const kinde = await createKindeClient({
 
 ## API References - createKindeClient
 
+### `client_id`
+
+The unique ID of your application in Kinde.
+
+Type: `string` (required)
+
+
+### `domain`
+
+Either your Kinde instance URL, e.g `https://yourapp.kinde.com` or your custom domain.
+
+Type: `string` (required)
+
+### `redirect_uri`
+
+The URL that the user will be returned to after authentication. This must match an allowed callback URL for the application in Kinde.
+
+Type: `string` (required)
+
 ### `audience`
 
 The audience claim for the JWT.
@@ -582,21 +601,17 @@ Type: `string`
 
 Required: No
 
-### `client_id`
+For background, multiple audiences, and registering APIs, see [**Audience**](#audience).
 
-The unique ID of your application in Kinde.
+### `scope`
 
-Type: `string`
-
-Required: Yes
-
-### `domain`
-
-Either your Kinde instance URL, e.g `https://yourapp.kinde.com` or your custom domain.
+The scopes to be requested from Kinde.
 
 Type: `string`
 
-Required: Yes
+Required: No
+
+Default: `openid profile email offline`. For the full list, overrides, and examples, see [**Overriding scope**](#overriding-scope).
 
 ### `logout_uri`
 
@@ -606,6 +621,8 @@ Type: `string`
 
 Required: No
 
+Default: the same value as `redirect_uri` when omitted.
+
 ### `on_redirect_callback`
 
 A callback function that will be called when the user is redirected back to your site from Kinde.
@@ -613,6 +630,8 @@ A callback function that will be called when the user is redirected back to your
 Type: `function`
 
 Required: No
+
+Use with `app_state` from [`login`](#login) and [`register`](#register); see [**Persisting application state**](#persisting-application-state).
 
 Usage:
 
@@ -659,26 +678,15 @@ Required: No
 
 Default: `false`
 
-### `redirect_uri`
+See [**Token storage in the authentication state**](#token-storage-in-the-authentication-state) and [**Persisting authentication state on page refresh or new tab**](#persisting-authentication-state-on-page-refresh-or-new-tab).
 
-The URL that the user will be returned to after authentication.
+### `proxy_redirect_uri`
 
-Type: `string`
-
-Required: Yes
-
-### `scope`
-
-The scopes to be requested from Kinde.
+By default, when `code` or `error` is present in the query string, the SDK checks whether the current page URL (protocol, host, and path) matches `redirect_uri`. If your setup means that check would fail even though Kinde correctly sent the user to this page—for example some proxy or hosting arrangements—set `proxy_redirect_uri` to the **same string** as `redirect_uri` so the SDK still treats this response as the OAuth callback.
 
 Type: `string`
 
 Required: No
-
-```text
-openid profile
-email offline
-```
 
 ## API References - kindeClient methods
 
