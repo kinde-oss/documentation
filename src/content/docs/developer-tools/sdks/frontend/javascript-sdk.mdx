@@ -33,7 +33,7 @@ keywords:
   - organizations
   - access tokens
   - JWT
-updated: 2026-03-31
+updated: 2026-04-01
 featured: false
 deprecated: false
 ai_summary: Complete guide for JavaScript SDK including PKCE authentication, login/register flows, organization management, and API integration for single-page applications.
@@ -682,14 +682,92 @@ email offline
 
 ## API References - kindeClient methods
 
+### `isAuthenticated`
+
+Returns whether the user is currently authenticated.
+
+Type: `Promise<boolean>`
+
+Usage:
+
+```jsx
+await kinde.isAuthenticated();
+```
+
+Sample output:
+
+```text
+true
+```
+
+### `login`
+
+Constructs redirect URL and sends user to Kinde sign in.
+
+Arguments:
+
+Optional `options` uses `AuthOptions`:
+
+```ts
+type AuthOptions = {
+  org_code?: string;
+  app_state?: Record<string, unknown>;
+  authUrlParams?: object;
+};
+```
+
+- **`org_code`** — Sign the user in to a specific organization. Pass that organization's Kinde code.
+- **`app_state`** — Data returned to your app after redirect. Read it from the second argument of `on_redirect_callback` (see **Persisting application state**).
+- **`authUrlParams`** — Optional.
+
+Usage:
+
+```jsx
+await kinde.login();
+await kinde.login({ org_code: "org_1234" });
+await kinde.login({
+  app_state: { redirectTo: window.location.pathname },
+});
+```
+
+### `register`
+
+Constructs redirect url and sends user to Kinde to sign up.
+
+Arguments:
+
+Same optional `AuthOptions` as [`login`](#login).
+
+Usage:
+
+```jsx
+await kinde.register();
+```
+
+### `logout`
+
+Logs the user out of Kinde.
+
+Usage:
+
+```jsx
+await kinde.logout();
+```
+
 ### `createOrg`
 
 Constructs redirect url and sends user to Kinde to sign up and create a new org for your business.
 
-usage:
+Arguments:
 
 ```jsx
-kinde.createOrg();
+options?: OrgOptions
+```
+
+Usage:
+
+```jsx
+await kinde.createOrg();
 ```
 
 Sample output:
@@ -698,69 +776,115 @@ Sample output:
 redirect;
 ```
 
+
+### `getToken`
+
+Returns the raw access token from memory.
+
+Type: `Promise<string | undefined>`
+
+Usage:
+
+```javascript
+await kinde.getToken();
+```
+
+Sample output:
+
+```text
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+
+Use the [Kinde Online JWT decoder](https://www.kinde.com/tools/online-jwt-decoder/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c) to decode this token.
+
+### `getIdToken`
+
+Returns the raw ID token from memory.
+
+Type: `Promise<string | undefined>`
+
+Usage:
+
+```jsx
+await kinde.getIdToken();
+```
+
+Sample output:
+
+```text
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### `getUser`
+
+Returns the profile for the current user from the client.
+
+Type: `KindeUser`
+
+Usage:
+
+```jsx
+kinde.getUser();
+```
+
+Sample output:
+
+```jsx
+{
+  given_name: "Dave",
+  id: "abcdef",
+  family_name: "Smith",
+  email: "dave@smith.com",
+}
+```
+
+### `getUserProfile`
+
+Returns the latest user profile from the server.
+
+Type: `Promise<KindeUser | undefined>`
+
+Usage:
+
+```jsx
+await kinde.getUserProfile();
+```
+
+Sample output:
+
+```json
+{
+  id: "kp_0123456789abcdef0123456789abcdef",
+  given_name: "Billy",
+  family_name: "Hoyle",
+  email: "billy@example.com",
+  picture: "https://link_to_avatar_url.kinde.com",
+}
+```
+
 ### `getClaim`
 
-Gets a claim from an access or ID token.
+Gets a claim from an access or ID token. Defaults to the access token unless you pass a different `tokenKey`.
 
 Arguments:
 
 ```jsx
-claim: string, tokenKey?: string
+claim: string, tokenKey?: ClaimTokenKey
 ```
 
 Usage:
 
 ```jsx
+kinde.getClaim("aud");
 kinde.getClaim("given_name", "id_token");
 ```
 
 Sample output:
 
 ```jsx
-"David";
-```
-
-### `getPermission`
-
-Returns the state of a given permission.
-
-Arguments:
-
-```jsx
-key: string;
-```
-
-Usage:
-
-```jsx
-kinde.getPermission("read:todos");
-```
-
-Sample output:
-
-```jsx
 {
-	orgCode: "org_1234",
-	isGranted: true
-}
-```
-
-### `getPermissions`
-
-Returns all permissions for the current user for the organization they are signed in to.
-
-Usage:
-
-```jsx
-kinde.getPermissions();
-```
-
-Sample output:
-
-```jsx
-{
-	orgCode:"org_1234",
-	permissions:["create:todos", "update:todos", "read:todos"]
+  name: "given_name",
+  value: "David",
 }
 ```
 
@@ -778,46 +902,7 @@ Sample output:
 
 ```jsx
 {
-  orgCode: "org_1234";
-}
-```
-
-### `getToken`
-
-Returns the raw Access token from memory.
-
-Usage:
-
-```jsx
-kinde.getToken();
-```
-
-Sample output:
-
-```jsx
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
-  .eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ
-  .SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c;
-```
-
-### `getUser`
-
-Returns the profile for the current user.
-
-Usage:
-
-```jsx
-kinde.getUser();
-```
-
-Sample output:
-
-```jsx
-{
-  given_name: "Dave";
-  id: "abcdef";
-  family_name: "Smith";
-  email: "dave@smith.com";
+  orgCode: "org_1234",
 }
 ```
 
@@ -835,68 +920,155 @@ Sample output:
 
 ```jsx
 {
-  orgCodes: ["org_1234", "org_5678"];
+  orgCodes: ["org_1234", "org_5678"],
 }
 ```
 
-### `login`
+### `getPermissions`
 
-Constructs redirect URL and sends user to Kinde sign in.
-
-Arguments
-
-```jsx
-org_code?: string
-```
+Returns all permissions for the current user for the organization they are signed in to.
 
 Usage:
 
 ```jsx
-kinde.login();
-```
-
-Example output:
-
-```jsx
-redirect;
-```
-
-### `logout`
-
-Logs the user out of Kinde.
-
-Argument:
-
-```jsx
-org_code?: string
-```
-
-Usage:
-
-```jsx
-kinde.logout();
-```
-
-Example output:
-
-```jsx
-redirect;
-```
-
-### `register`
-
-Constructs redirect url and sends user to Kinde to sign up.
-
-Usage:
-
-```jsx
-kinde.
+kinde.getPermissions();
 ```
 
 Sample output:
 
 ```jsx
-redirect;
+{
+	orgCode: "org_1234",
+	permissions: ["create:todos", "update:todos", "read:todos"],
+}
+```
+
+### `getPermission`
+
+Returns the state of a given permission.
+
+Arguments:
+
+```jsx
+key: string
+```
+
+Usage:
+
+```jsx
+kinde.getPermission("read:todos");
+```
+
+Sample output:
+
+```jsx
+{
+	orgCode: "org_1234",
+	isGranted: true,
+}
+```
+
+### `getFlag`
+
+Returns a feature flag from the access token's `feature_flags` claim. When you pass `flagType`, the return type is narrowed.
+
+Arguments:
+
+```jsx
+code: string, defaultValue?: KindeFlagValueType[T], flagType?: T
+```
+
+(`T` extends `KindeFlagTypeCode`.)
+
+Usage:
+
+```jsx
+kinde.getFlag("theme");
+kinde.getFlag("competitions_limit", 5, "i");
+```
+
+Sample output:
+
+```json
+{
+  code: "theme",
+  type: "string",
+  value: "pink",
+  is_default: false,
+}
+```
+
+### `getBooleanFlag`
+
+Gets a boolean feature flag from the access token.
+
+Arguments:
+
+```jsx
+code: string, defaultValue?: boolean
+```
+
+Returns: `boolean | Error`
+
+Usage:
+
+```jsx
+kinde.getBooleanFlag("is_dark_mode");
+kinde.getBooleanFlag("new_feature", false);
+```
+
+Sample output:
+
+```text
+true
+```
+
+### `getStringFlag`
+
+Gets a string feature flag from the access token. `defaultValue` is required.
+
+Arguments:
+
+```jsx
+code: string, defaultValue: string
+```
+
+Returns: `string | Error`
+
+Usage:
+
+```jsx
+kinde.getStringFlag("theme", "default");
+```
+
+Sample output:
+
+```text
+"pink"
+```
+
+### `getIntegerFlag`
+
+Gets an integer feature flag from the access token. `defaultValue` is required.
+
+Arguments:
+
+```jsx
+code: string, defaultValue: number
+```
+
+Returns: `number | Error`
+
+Usage:
+
+```jsx
+kinde.getIntegerFlag("competitions_limit", 0);
+```
+
+Sample output:
+
+```text
+5
 ```
 
 Reach out to [support@kinde.com](mailto:support@kinde.com) if you need help getting Kinde connected.
