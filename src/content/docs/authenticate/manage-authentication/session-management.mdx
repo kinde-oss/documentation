@@ -15,12 +15,12 @@ metadata:
   audience: [developer, product-manager]
   complexity: intermediate
   keywords: [session management, SSO session, session cookies, inactivity timeout, browser session]
-  updated: 2025-01-16
+  updated: 2026-04-03
 featured: false
 deprecated: false
 ---
 
-You can manage Kinde authenticated sessions via your application settings. An authenticated session (or SSO session) is the time during which a user is authenticated via Kinde, regardless of their activity. You can define if a session persists even after a browser is closed, and how long can lapse before making a user re-authenticate.
+You can manage Kinde authenticated sessions via your application settings. An authenticated session (or SSO session) is the period during which Kinde treats the user as signed in. You can define whether a session persists after the browser is closed, and how much time can elapse before prompting a user to re-authenticate.
 
 These settings only apply to Kinde sessions and not sessions you maintain through your own application.
 If you want, you can [change session settings for an organization](/authenticate/manage-authentication/session-management-per-organization/), without affecting other organizations. 
@@ -38,3 +38,11 @@ If you want, you can [change session settings for an organization](/authenticate
 4. In the **SSO sessions** section, decide on the policy for session cookies. A persistent session leaves the cookie active when the browser is closed. A non-persistent session is terminated when the browser window closes (unless the limitations listed above apply). 
 5. In the **Session inactivity timeout** section, set how long a session can be inactive before prompting re-authentication. This setting is applied in seconds - where 3,600 seconds is one hour; 86,400 seconds is one day.
 6. When you're finished, select **Save**.
+
+## What counts as activity for SSO session inactivity?
+
+Kinde measures inactivity **on the server**. Browsing your own app—switching pages or using the UI—does not reset the timer **unless** that work leads to **authenticated calls to Kinde** for the signed-in user. **Token refresh** is a familiar example: when your app or SDK exchanges a refresh token at Kinde, that interaction can count as activity for this timeout.
+
+There is **no public list of every action** that resets inactivity. In practice, treat **authenticated, end-user-facing traffic to Kinde** as the model, rather than assuming every client-side event is visible to Kinde.
+
+**Machine-to-machine (M2M)** integrations and the **Management API** use separate credentials and contexts. They are **not** equivalent to activity on a specific person’s browser SSO session when you interpret this setting.
