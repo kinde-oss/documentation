@@ -33,7 +33,7 @@ keywords:
   - organizations
   - access tokens
   - JWT
-updated: 2026-04-01
+updated: 2026-04-03
 featured: false
 deprecated: false
 ai_summary: Complete guide for JavaScript SDK including PKCE authentication, login/register flows, organization management, and API integration for single-page applications.
@@ -225,6 +225,9 @@ The `getToken` method lets you securely call your API and pass the bearer token 
 (async () => {
   try {
     const token = await kinde.getToken();
+    if (!token) {
+      return;
+    }
     const response = await fetch(YOUR_API, {
       headers: new Headers({
         Authorization: "Bearer " + token
@@ -519,7 +522,9 @@ kinde.getClaim("given_name", "id_token");
 // {name: "given_name", "value": "David"}
 ```
 
-## **Persisting authentication state on page refresh or new tab**
+## JavaScript SDK FAQs
+
+### How to prevent authentication state from being lost on page refresh or new tab?
 
 You will find that when you refresh the browser while using a front-end SDK, the authentication state is lost. This is because there is no secure way to persist this in the front-end.
 
@@ -530,7 +535,7 @@ There are two ways to work around this.
 
 Once you implement one of the above, you don’t need to do anything else.
 
-## **Persisting application state**
+### How to persist application state after authentication?
 
 The options argument passed into the `login` and `register` methods accepts an `app_state` key where you can pass in the current application state prior to redirecting to Kinde. This is then returned to you in the second argument of the `on_redirect_callback` as seen above.
 
@@ -561,7 +566,7 @@ const kinde = await createKindeClient({
 });
 ```
 
-## Token storage in the authentication state
+### How to store the refresh token in the authentication state?
 
 By default the JWTs provided by Kinde are stored in memory. This protects you from both [CSRF](https://owasp.org/www-community/attacks/csrf) attacks (possible if stored as a client-side cookie) and [XSS](https://owasp.org/www-community/attacks/xss/) attacks (possible if persisted in local storage).
 
@@ -578,6 +583,19 @@ const kinde = await createKindeClient({
   is_dangerously_use_local_storage: true
 });
 ```
+
+### When does the JavaScript SDK refresh access tokens in the background?
+
+The PKCE client refreshes the access token in two main situations:
+
+- **Initial load:** If you use Kinde’s **httpOnly cookie** refresh flow (custom domain) or local storage for the refresh token (`is_dangerously_use_local_storage`), initialization may call the token endpoint to restore a session.
+- **When you call `getToken()` or `getIdToken()`:** If the cached access token is missing or the SDK treats it as no longer active (it uses a **short buffer before the JWT `exp`** so the token is refreshed before it actually expires), the client attempts a refresh using the refresh token.
+
+The [React SDK](/developer-tools/sdks/frontend/react-sdk/) uses `@kinde/js-utils` for additional timer- and focus-driven refresh on the provider. With this JavaScript client, calling `getToken()` before API requests is the reliable way to obtain a token that has been refreshed when needed.
+
+### Does getToken throw or return an error object when refresh fails?
+
+No. `getToken()` resolves to **`Promise<string | undefined>`**. You receive the JWT string on success and **`undefined`** if the token cannot be obtained (for example, refresh failed or there is no refresh token). It **does not throw** for those cases and **does not** return a structured error object. Always check for a missing value before using the token in an `Authorization` header.
 
 ## API References - createKindeClient
 
@@ -794,9 +812,9 @@ redirect;
 
 ### `getToken`
 
-Returns the raw access token from memory.
+Returns the access token JWT. If the cached token is missing or inactive, the client **attempts a silent refresh** via the refresh token before resolving.
 
-Type: `Promise<string | undefined>`
+Type: `Promise<string | undefined>` — JWT string on success, **`undefined`** if no token can be returned. Failures **do not throw** and **do not** yield an error object.
 
 Usage:
 
@@ -811,6 +829,8 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4
 ```
 
 Use the [Kinde Online JWT decoder](https://www.kinde.com/tools/online-jwt-decoder/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c) to decode this token.
+
+For background refresh timing and the difference from the React SDK’s `getAccessToken()`, see [When does the JavaScript SDK refresh access tokens in the background?](#when-does-the-javascript-sdk-refresh-access-tokens-in-the-background) and [Does getToken throw or return an error object when refresh fails?](#does-gettoken-throw-or-return-an-error-object-when-refresh-fails).
 
 ### `getIdToken`
 
