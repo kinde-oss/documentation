@@ -32,7 +32,7 @@ keywords:
   - register
   - logout
   - access tokens
-updated: 2026-03-16
+updated: 2026-04-03
 featured: false
 deprecated: false
 ai_summary: Complete guide for React SDK including installation, provider setup, authentication hooks, callback handling, and API integration for React 18+ applications.
@@ -653,6 +653,9 @@ const { getAccessToken } = useKindeAuth();
 const fetchData = async () => {
   try {
     const accessToken = await getAccessToken();
+    if (!accessToken) {
+      return;
+    }
     const res = await fetch(`<your-api>`, {
       headers: {
         Authorization: `Bearer ${accessToken}`
@@ -884,7 +887,9 @@ await getClaim("given_name", "idToken");
 // {name: "given_name", "value": "David"}
 ```
 
-## Persisting authentication state on page refresh or new tab
+## React SDK FAQs
+
+### How to prevent authentication state from being lost on page refresh or new tab?
 
 You will find that when you refresh the browser using a front-end based SDK that the authentication state is lost. This is because there is no secure way to persist this in the front-end.
 
@@ -897,7 +902,7 @@ Once you implement one of the above, you don’t need to do anything else.
 
 <YoutubeVideo videoId="5_8jlrepCkI"/>
 
-## Persisting application state
+### How to persist application state after authentication?
 
 The options argument passed into the `login` and `register` methods accepts a `state` key where you can pass in the current application state prior to redirecting to Kinde. This is then returned to you in the second argument of the `onSuccess` callback as seen above.
 
@@ -931,7 +936,7 @@ Redirect handler:
 >
 ```
 
-## Token storage in the authentication state
+### How to store the refresh token in the authentication state?
 
 By default the JWTs provided by Kinde are stored in memory. This protects you from both [CSRF](https://owasp.org/www-community/attacks/csrf) attacks (possible if stored as a client-side cookie) and [XSS](https://owasp.org/www-community/attacks/xss/) attacks (possible if persisted in local storage).
 
@@ -947,6 +952,24 @@ The trade-off with this approach, however, is that if a page is refreshed or a n
   ...
 >
 ```
+
+### Does getAccessToken read storage only, or does it refresh the token?
+
+It **only reads** session storage. **`getAccessToken()`** returns whatever access token JWT is currently cached—**including if it is expired**—and it **does not** call Kinde’s token endpoint. To **force** a refresh before calling your API, use **`refreshToken()`** from `useKindeAuth()`.
+
+### When does the React SDK refresh tokens silently?
+
+Silent refresh is handled by **`@kinde/js-utils`** while the user stays on your app:
+
+- **Provider initialization:** **`checkAuth`** runs on load and may refresh when the access token is expired or within about **10 seconds** of expiry.
+- **After sign-in:** A timer schedules refresh about **10 seconds before** the access token expires. This automatic refresh is **on by default** for sessions established through the SDK’s auth flows.
+- **Returning to the tab (optional):** Set **`refreshOnFocus={true}`** on **`KindeProvider`** so a refresh is attempted when the document becomes visible again.
+
+The cache that **`getAccessToken()`** reads is updated when those flows succeed. For more detail on the JavaScript (PKCE) client’s different `getToken()` behavior, see the [JavaScript SDK](/developer-tools/sdks/frontend/javascript-sdk/#when-does-the-javascript-sdk-refresh-access-tokens-in-the-background).
+
+### Does `getAccessToken` throw or return an error object when something goes wrong?
+
+No. **`getAccessToken()`** resolves to **`Promise<string | undefined>`**. You get the JWT when a value exists in storage and **`undefined`** when there is nothing to read (for example, the user is signed out). It **does not throw** and **does not** return an error object for refresh failures, because it **does not perform refresh**. Use **`refreshToken()`** when you need an explicit refresh and handle its outcome separately.
 
 ## API References - KindeProvider
 
@@ -985,6 +1008,16 @@ Required: No
 ### `useInsecureForRefreshToken`
 
 An escape hatch for storing the refresh in local storage for local development.
+
+Type: `boolean`
+
+Required: No
+
+Default: `false`
+
+### `refreshOnFocus`
+
+When **`true`**, the SDK attempts a **token refresh** when the browser tab or window becomes visible again (`visibilitychange` to visible). Use this if users leave your app open in the background and you want to reduce the chance they call your API with an expired JWT before the scheduled pre-expiry refresh runs.
 
 Type: `boolean`
 
@@ -1190,7 +1223,9 @@ Output:
 
 ### `getAccessToken`
 
-Returns the raw Access token from memory. This is the recommended method for accessing tokens.
+Returns the raw access token JWT **from session storage** (memory or configured store). This is the recommended hook method for reading the token to call your API.
+
+Type: `Promise<string | undefined>` — the cached JWT, or **`undefined`** if none is stored. This method **does not refresh** the token; the value may be **expired**. It **does not throw** and **does not** return an error object. See [Does getAccessToken read storage only, or does it refresh the token?](#does-getaccesstoken-read-storage-only-or-does-it-refresh-the-token) and [When does the React SDK refresh tokens silently?](#when-does-the-react-sdk-refresh-tokens-silently).
 
 Usage:
 
@@ -1238,7 +1273,7 @@ eyJhbGciOiJIUzI1NiIsInR5c...
 
 **Deprecated:** Use [getAccessToken](#getaccesstoken) instead.
 
-Returns the raw Access token from memory.
+Same behavior as **`getAccessToken`**: a **storage read** only, **`Promise<string | undefined>`**, no refresh, no thrown errors, no error object.
 
 Usage:
 
