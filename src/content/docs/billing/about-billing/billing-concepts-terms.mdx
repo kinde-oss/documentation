@@ -13,8 +13,8 @@ metadata:
   languages: []
   audience: [developer, product-manager, business-owner]
   complexity: beginner
-  keywords: [billing concepts, plan groups, features, pricing models, metered usage, fixed charges, billing interval, offer as annual, multi-currency]
-  updated: 2025-11-27
+  keywords: [billing concepts, plan groups, features, pricing models, metered usage, fixed charges, billing interval, offer as annual, multi-currency, trial, trial period, free trial]
+  updated: 2026-04-07
 featured: false
 deprecated: false
 ---
@@ -31,6 +31,7 @@ deprecated: false
 - **Plan groups** - Plan groups organize multiple plans under a common category, helping segment offerings by use case, customer size, or market. A group is scoped to either organizations (B2B) or individual customers (B2C). You can have multiple plan groups, but each plan must belong to a group.
 - **Plans** - Plans define the specific features, usage limits, and pricing tiers offered to customers in a SaaS product.
 - **Plan settings** - Configuration options that control subscription behavior, such as whether to require credit card details during signup. The "Ask for credit card" setting allows free plans to skip payment collection for a frictionless experience.
+- **Trial period** - An optional setting on paid plans that lets customers try the plan for a set number of days before being charged. During the trial, the customer has full access to the plan's features. Kinde creates the trial using Stripe's subscription trial. Plans with a trial enabled show a badge on the pricing table.
 - **Features** - Plan features are the specific capabilities or entitlements included in a plan. They can be chargeable (incurring additional fees) or non-chargeable (included at no extra cost). Features can be metered (usage-based) or unmetered (fixed access).
 - **Fixed charges** – Single chargeable items like the subscription base price and other standalone recurring charges. You can set billing intervals (daily, weekly, monthly, or yearly) and optionally offer one charge per plan as annual at a custom yearly price.
 - **Pricing models** - Pricing models are the different methods of charging customers, such as flat-rate, usage-based, tiered, per-seat pricing, etc. Your pricing model is determined by your product and customer needs. Consider scalability and longevity when deciding this.
@@ -45,6 +46,7 @@ deprecated: false
 - **Chargeable / Non-chargeable feature** –
   - **Chargeable feature**: Incurs an additional fee when used. Might be metered or per unit price.
   - **Non-chargeable feature**: Add non-chargeable features for any included features which aren't independently chargeable, but need to be gated in your product.
+- **Credit card prompt (trial)** – The number of days before a trial ends when the customer is prompted to add payment details. This helps ensure payment information is collected before the trial expires and the subscription converts to a paid subscription.
 - **Feature** – A specific function or capability of your SaaS product that you provision for app users. In context with a plan, these are chargeable or non-chargeable features that are provisioned to customers.
 - **Fixed charge** – A recurring fee that does not change based on usage. You can bill at daily, weekly, monthly, or yearly intervals. Use this for a plan’s base price or other flat recurring fees. Optionally, one fixed charge per plan can be offered as annual at a predefined yearly price.
 - **Metered and unmetered feature** – Metered features are provisioned in units, often with pricing per unit, e.g. MAU. An unmetered feature is like a boolean, and is a basic feature with no pricing attached.
@@ -54,5 +56,18 @@ deprecated: false
 - **Pricing model** – The structure used to determine how features in a plan are priced. E.g. fixed charge, tiered, per-user, or usage-based pricing. Kinde lets you use multiple pricing models within one plan.
 - **Subscription** – The ongoing agreement where a customer pays for access to a SaaS product via a recurring plan. This is referred to as an agreement in Stripe.
 - **Tiered pricing** – This refers to unit pricing that has different unit costs based on the volume of units purchased. E.g. $10 per unit for 1–10 units, $8 per unit for 11–50 units, $5 per unit over 51 units.
+- **Trial expires on** – The date and time when a customer's trial period ends. This value is available in billing-related access token claims as `trial_expires_on` when a trial is active.
+- **Trial period** – A configurable window of time during which a customer can use a paid plan for free. At the end of the trial, the subscription automatically converts to a paid subscription via Stripe. Trial length is set in days.
 - **Unit price** – Where a price is set per unit of usage, e.g. a seat or license. Unit prices can also be applied to metered features, e.g. x per unit. Unit prices can also be tiered, e.g. x per unit up to 10 units, then y for 10+ units.
 - **Usage-based** **price** – A billing method where charges vary based on the metered consumption of resources or services (e.g., API calls, storage).
+
+## What trial-related claims appear in access tokens?
+
+When a customer is on a plan with Kinde billing trials enabled, access tokens can include the following billing trial fields:
+
+| Claim | Type | Description |
+| --- | --- | --- |
+| `has_trial_period` | boolean | Whether the customer's current plan includes an active trial period |
+| `trial_expires_on` | string (ISO 8601 datetime) | The date and time when the trial period ends. Typically present when `has_trial_period` is `true` |
+
+For general access token structure, see [Access tokens](/build/tokens/about-access-tokens/).

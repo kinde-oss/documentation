@@ -3,6 +3,8 @@ page_id: fe9fea0c-274c-4d6b-9cc5-eccdbaad85b7
 title: Create plans
 sidebar:
   order: 2
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 88e1773a-b681-441f-b4c7-d7d339116867
   - e6dde80d-2977-419f-a05a-62ad0a7ac6de
@@ -17,13 +19,13 @@ metadata:
   languages: []
   audience: [developer, product-manager, business-owner]
   complexity: intermediate
-  keywords: [create plans, plan groups, fixed charges, billing interval, offer as annual, metered features, tiered pricing, plan features, subscription fees]
-  updated: 2025-11-27
+  keywords: [create plans, plan groups, fixed charges, billing interval, offer as annual, metered features, tiered pricing, plan features, subscription fees, trial, free trial, trial period]
+  updated: 2026-04-07
 featured: false
 deprecated: false
 ---
 
-Once you’ve got a plan strategy along with a plan feature list, prices, and details, you’re ready to create plans them in Kinde.
+Once you’ve got a plan strategy along with a plan feature list, prices, and details, you’re ready to create plans in Kinde.
 
 All plans must belong to a plan group. When you create your first plan, it will be automatically added to the default group. A plan group can only contain either user plans or organization plans. When you create your first plan, we automatically create a group based on the plan type you select. 
 
@@ -74,6 +76,44 @@ This option can only be disabled for plans that have no charges. If your plan in
 |-----------|---------------------|
 | Reduce signup friction for a free tier | Disable—let users try your product without entering payment details |
 | Capture payment info for easier upgrades | Enable—collect card details upfront for seamless plan transitions |
+| Offer a free trial that converts to paid | Enable—required when trial period is enabled; payment details are collected before the trial ends |
+
+### Configure trial period
+
+<Aside type="info">
+
+Trial periods require the **billing trials** feature to be enabled for your business. Contact Kinde support or check your feature settings if you don't see the trial options.
+
+</Aside>
+
+Trial periods let customers try a paid plan before being charged. When a trial is active, the customer's Stripe subscription is created with a trial window — no charges are made until the trial expires.
+
+<Aside type="warning">
+
+Enabling a trial period requires the **Ask for credit card** toggle to be on. You cannot enable trials on a plan where credit card collection is disabled.
+
+</Aside>
+
+Still in **Plan settings**, configure the trial:
+
+- Enable **Trial period**.
+- Set the **Trial length in days** (default: 30, minimum: 1). This is how many days the customer can use the plan for free.
+- Set **Days before trial end to prompt for credit card** (default: 3, minimum: 0). This must be less than the trial length. This controls when the customer is asked to provide payment details before the trial expires.
+
+#### How trials work at runtime
+
+- When a customer subscribes to a trial plan, they get full access to the plan features immediately — no payment is collected upfront.
+- The pricing table shows a **"Free trial for N day(s)"** badge on plans with a trial enabled.
+- A background process automatically prompts the customer to add payment details the configured number of days before the trial ends.
+- When the trial period ends, Stripe automatically converts the subscription to a paid subscription.
+
+#### Trial period configuration reference
+
+| Setting | Description | Default | Constraints |
+|---------|-------------|---------|-------------|
+| Trial period | Enable or disable the trial for this plan | Off | Requires "Ask for credit card" to be on |
+| Trial length in days | Number of days the customer can use the plan for free | 30 | Must be ≥ 1 |
+| Days before trial end to prompt for credit card | How many days before trial expiry the customer is prompted for payment details | 3 | Must be ≥ 0 and less than the trial length |
 
 4. Select **Save draft** or **Publish** to apply your changes.
 
