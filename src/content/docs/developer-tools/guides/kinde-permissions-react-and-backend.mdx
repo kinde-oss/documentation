@@ -36,7 +36,7 @@ keywords:
   - JWT validation
   - role based access control
   - Kinde permissions
-updated: 2026-03-11
+updated: 2026-03-17
 featured: false
 deprecated: false
 ai_summary: Guide to implementing Kinde permissions in a React frontend and enforcing the same permissions on backend API routes using access tokens, without calling the Management API.
@@ -103,16 +103,34 @@ The React SDK gives you three common ways to enforce permissions in the frontend
 
 ### Option A: `has()`
 
+
+<Aside>
+For production, extend this pattern with correct effect dependencies, auth/loading guards, error handling, and cleanup for in-flight async work.
+</Aside>
+
 ```tsx
 // TodoHeader.tsx
+import { useEffect, useState } from "react";
 import { has } from "@kinde-oss/kinde-auth-react/utils";
 
 export default function TodoHeader() {
-  const canCreateTodos = has({ permissions: ["create:todos"] });
-  const canManageUsers = has({
-    roles: ["admin"],
-    permissions: ["manage:users"],
-  });
+  const [canCreateTodos, setCanCreateTodos] = useState(false);
+  const [canManageUsers, setCanManageUsers] = useState(false);
+
+  useEffect(() => {
+    const checkAccess = async () => {
+      const createTodosAccess = await has({ permissions: ["create:todos"] });
+      const manageUsersAccess = await has({
+        roles: ["admin"],
+        permissions: ["manage:users"],
+      });
+
+      setCanCreateTodos(createTodosAccess);
+      setCanManageUsers(manageUsersAccess);
+    };
+
+    checkAccess();
+  }, []);
 
   return (
     <header>
@@ -126,14 +144,14 @@ export default function TodoHeader() {
 
 Import `has` from `@kinde-oss/kinde-auth-react/utils`, then call it with an object containing `permissions` (and optionally `roles`).
 
-It returns `true` only when all requested conditions pass.
+It returns a Promise that resolves to `true` only when all requested conditions pass.
 
 Examples:
 
-- `has({ permissions: ["create:todos"] })`
-- `has({ roles: ["admin"], permissions: ["manage:users"] })`
+- `await has({ permissions: ["create:todos"] })`
+- `await has({ roles: ["admin"], permissions: ["manage:users"] })`
 
-Use this for conditional UI rendering, like showing a **New todo** button only when `create:todos` exists.
+Use this for conditional UI rendering after resolving the async check, like showing a **New todo** button only when `create:todos` exists.
 
 ### Option B: `ProtectedRoute` (react-router-dom)
 

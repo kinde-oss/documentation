@@ -320,13 +320,13 @@ There are two ways to check if a user has a specific permission:
 
 ### Using the `has` function
 
-The `has` function is a helper function that checks if a user has specific roles, permissions, feature flags, or billing entitlements. It returns a boolean value indicating whether the user meets all the specified criteria.
+The `has` function is a helper function that checks if a user has specific roles, permissions, feature flags, or billing entitlements. It returns a Promise that resolves to a boolean value indicating whether the user meets all the specified criteria.
 
 ```jsx
 import { has } from '@kinde-oss/kinde-auth-react/utils';
 
 // Basic usage - check multiple criteria at once
-const userHasAccess = has({
+const userHasAccess = await has({
   roles: ['admin'],
   permissions: ['create:todos'],
   featureFlags: ['theme'],
@@ -341,7 +341,39 @@ const userHasAccess = has({
 - `featureFlags` (optional): Array of feature flag names the user must have
 - `billingEntitlements` (optional): Array of billing entitlement names the user must have
 
-**Return value:** `boolean` - `true` if user meets all criteria, `false` otherwise
+**Return value:** `Promise<boolean>` - resolves to `true` if user meets all criteria, `false` otherwise
+
+##### Example usage
+
+```jsx
+import { useEffect, useState } from 'react';
+import { has } from '@kinde-oss/kinde-auth-react/utils';
+
+const AdminPanel = () => {
+  const [canAccess, setCanAccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAccess = async () => {
+      try {
+        const result = await has({
+          roles: ['admin'],
+          permissions: ['create:todos']
+        });
+        setCanAccess(result);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAccess();
+  }, []);
+
+  if (isLoading) return <p>Loading...</p>;
+
+  return canAccess ? <div>Admin content</div> : <div>Access denied</div>;
+};
+```
 
 #### API vs Token-based checks
 
@@ -349,14 +381,14 @@ By default, the `has` function performs checks using the user's tokens. You can 
 
 ```typescript
 // Force all checks to use API calls instead of tokens
-has({
+await has({
   roles: ['admin'],
   permissions: ['create:todos'],
   forceApi: true
 })
 
 // Force only specific checks to use API calls
-has({
+await has({
   roles: ['admin'],
   permissions: ['create:todos'],
   forceApi: { permissions: true } // Only permissions use API, roles use tokens
@@ -369,7 +401,7 @@ You can add custom conditions to any check by expanding the object structure:
 
 ```typescript
 // Add custom conditions to role checks
-has({
+await has({
   roles: [{ 
     role: 'admin', 
     condition: (user) => user.isAdmin && user.isActive 
@@ -377,7 +409,7 @@ has({
 })
 
 // Add custom conditions to permission checks
-has({
+await has({
   permissions: [{ 
     permission: 'create:todos', 
     condition: (user) => user.organizationId === 'org123' 
@@ -391,17 +423,17 @@ For feature flags, you can check both the flag's existence and its specific valu
 
 ```typescript
 // Check if feature flag exists
-has({
+await has({
   featureFlags: ['theme']
 })
 
 // Check if feature flag has a specific value
-has({
+await has({
   featureFlags: [{ flag: 'theme', value: 'dark' }]
 })
 
 // Check multiple feature flags with values
-has({
+await has({
   featureFlags: [
     { flag: 'theme', value: 'dark' },
     { flag: 'beta_features', value: true }
@@ -414,15 +446,15 @@ has({
 ```typescript
 import { has } from '@kinde-oss/kinde-auth-react/utils';
 
-const checkUserAccess = () => {
-  const canAccessAdminPanel = has({
+const checkUserAccess = async () => {
+  const canAccessAdminPanel = await has({
     roles: ['admin', 'super_admin'],
     permissions: ['read:users', 'write:users'],
     featureFlags: ['admin_panel'],
     billingEntitlements: ['enterprise_plan']
   });
 
-  const canUseDarkTheme = has({
+  const canUseDarkTheme = await has({
     featureFlags: [{ flag: 'theme', value: 'dark' }],
     permissions: ['customize:theme']
   });
@@ -788,7 +820,7 @@ await getFlag<number>('theme'); // numeric value
 //   "is_default": false // whether the fallback value had to be used
 */}
 
-getFlag('create_competition', {defaultValue: false});
+await getFlag('create_competition', {defaultValue: false});
 /*{
       "code": "create_competition",
       "value": false,
