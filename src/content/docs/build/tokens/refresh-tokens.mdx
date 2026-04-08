@@ -31,7 +31,7 @@ keywords:
   - session management
   - token security
   - auto-update
-updated: 2026-03-26
+updated: 2026-04-03
 featured: false
 deprecated: false
 ai_summary: Comprehensive guide to refresh tokens including how they work, implementation with offline scope, token rotation, security best practices, and SDK integration.
@@ -122,7 +122,11 @@ You should store the refresh token you get with your initial `/token` request. O
 
 ## Use the SDK `getToken` function to silently refresh tokens
 
-If you’re using a front-end SDK like [JavaScript](/developer-tools/sdks/frontend/javascript-sdk/) or [React](/developer-tools/sdks/frontend/react-sdk/), the `getToken` function stores an in-memory cache of the access token, which it returns by default. If the token is about to expire it will use a refresh token to get a new access token from Kinde silently in the background so additional network requests to Kinde are only made when absolutely necessary.
+Front-end packages do **not** all behave the same way:
+
+- **[JavaScript (PKCE) SDK](/developer-tools/sdks/frontend/javascript-sdk/):** `getToken()` uses the cached access token when it is still considered active; otherwise it **attempts a silent refresh** via the refresh token before resolving. On failure it returns **`undefined`** (it does not throw). See [When does the JavaScript SDK refresh access tokens in the background?](/developer-tools/sdks/frontend/javascript-sdk/#when-does-the-javascript-sdk-refresh-access-tokens-in-the-background) and [Does getToken throw or return an error object when refresh fails?](/developer-tools/sdks/frontend/javascript-sdk/#does-gettoken-throw-or-return-an-error-object-when-refresh-fails).
+
+- **[React SDK](/developer-tools/sdks/frontend/react-sdk/):** Use **`getAccessToken()`** on the hook. It **only reads** the cached JWT from session storage and **does not** refresh it. Silent refresh runs on provider init, on a **pre-expiry timer** (about **10 seconds** before access token expiry by default), and optionally when **`refreshOnFocus`** is enabled; when those succeed, the next `getAccessToken()` reads the updated value. See [Does getAccessToken throw or return an error object when something goes wrong?](/developer-tools/sdks/frontend/react-sdk/#does-getaccesstoken-throw-or-return-an-error-object-when-something-goes-wrong) and [When does the React SDK refresh tokens silently?](/developer-tools/sdks/frontend/react-sdk/#when-does-the-react-sdk-refresh-tokens-silently).
 
 ## How long does a refresh token last?
 
