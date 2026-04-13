@@ -34,7 +34,7 @@ keywords:
   - openid connect
   - machine to machine
   - kinde client
-updated: 2024-01-15
+updated: 2026-04-13
 featured: false
 deprecated: false
 ai_summary: Guide to using the Kinde .NET SDK for integrating with the Management API, including installation, configuration, and API calls for user and organization management.
@@ -116,5 +116,31 @@ var response = await orgApi.UpdateOrganizationAsync(newOrg.Organization.Code, ne
 Note this requires the `create:organizations` and `update:organizations` scopes to be added to the API in the machine to machine application in Kinde.
 
 For full details of the available management API functions, see the [Kinde Management API specification](/kinde-apis/management/).
+
+## Revoke a token
+
+To revoke an access or refresh token, call the `/oauth2/revoke` endpoint with your client credentials and the token to revoke.
+
+```csharp
+using System.Net.Http.Headers;
+using System.Text;
+
+var httpClient = new HttpClient();
+var credentials = Convert.ToBase64String(
+    Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}")
+);
+
+var request = new HttpRequestMessage(HttpMethod.Post, "https://your-subdomain.kinde.com/oauth2/revoke");
+request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+request.Content = new FormUrlEncodedContent(new[]
+{
+    new KeyValuePair<string, string>("token", tokenToRevoke),
+    new KeyValuePair<string, string>("token_type_hint", "access_token") // or "refresh_token"
+});
+
+var response = await httpClient.SendAsync(request);
+```
+
+A successful revocation returns `HTTP 200`. Once revoked, the token can no longer be used to authenticate requests.
 
 If you need help getting Kinde connected, contact us at [support@kinde.com](mailto:support@kinde.com).
