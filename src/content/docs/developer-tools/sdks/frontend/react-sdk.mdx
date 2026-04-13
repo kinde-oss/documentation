@@ -32,7 +32,7 @@ keywords:
   - register
   - logout
   - access tokens
-updated: 2026-04-03
+updated: 2026-04-13
 featured: false
 deprecated: false
 ai_summary: Complete guide for React SDK including installation, provider setup, authentication hooks, callback handling, and API integration for React 18+ applications.
@@ -970,6 +970,14 @@ The cache that **`getAccessToken()`** reads is updated when those flows succeed.
 ### Does `getAccessToken` throw or return an error object when something goes wrong?
 
 No. **`getAccessToken()`** resolves to **`Promise<string | undefined>`**. You get the JWT when a value exists in storage and **`undefined`** when there is nothing to read (for example, the user is signed out). It **does not throw** and **does not** return an error object for refresh failures, because it **does not perform refresh**. Use **`refreshToken()`** when you need an explicit refresh and handle its outcome separately.
+
+### Why am I getting `invalid_grant` errors after the SDK silently refreshes my token?
+
+This typically happens when using a custom domain with `httpOnly` cookies. When the SDK refreshes the access token in memory (about 10 seconds before expiry), the rotated `refresh_token` must be written back to the `httpOnly` cookie via a `Set-Cookie` response header. If the SDK's refresh request does not include `credentials: "include"`, the browser will not process that header and the cookie retains the old (now invalidated) refresh token. On the next page load, the cookie is read first and the mismatch causes `invalid_grant`.
+
+To confirm, check your network tab for the token refresh request — it should be a `POST` to `/oauth2/token` and the response should include `Set-Cookie`. If `credentials` is missing from the request, this is a known SDK issue. As a workaround, ensure your app uses `refreshToken()` explicitly and that your server-side configuration sends the correct `SameSite` and `Path` attributes.
+
+See [Refresh token cookie path scope](/build/tokens/refresh-tokens/#client-specific-refresh-token-cookies) and [token validation errors](/build/tokens/token-validation-errors/) for related context.
 
 ## API References - KindeProvider
 
