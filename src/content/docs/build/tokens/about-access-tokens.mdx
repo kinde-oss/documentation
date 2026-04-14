@@ -29,13 +29,53 @@ keywords:
   - permissions
   - organization claims
   - billing trial
-updated: 2026-04-07
+updated: 2026-04-13
 featured: false
 deprecated: false
 ai_summary: Comprehensive guide to Kinde access tokens including standard JWT claims, Kinde-specific claims like organization codes and feature flags, and token behavior during refresh operations.
 ---
 
 Access tokens are a secure way of authenticating users and passing information about a user to a system.
+
+## Example access token
+
+```jsonc
+{
+  "aud": [
+    "myapp:prod-api"
+  ],
+  "azp": "dee7f3c57b3c47e8b96edde2c7ecab7d",
+  "exp": 1693371599,
+  "feature_flags": {
+    "analytics": {
+      "t": "b",
+      "v": true
+    },
+    "theme": {
+      "t": "s",
+      "v": "pink"
+    }
+  },
+  "iat": 1693285199,
+  "iss": "https://<your_subdomain>.kinde.com",
+  "jti": "fbb6bc62-x64e-4256-8ea4-8fb9a645b123",
+  "org_code": "org_xxxxxxxxx",
+  "permissions": [
+    "create:competitions",
+    "delete:competitions",
+    "view:stats",
+    "invite:users",
+    "view:profile"
+  ],
+  "scp": [
+    "openid",
+    "profile",
+    "email",
+    "offline"
+  ],
+  "sub": "kp:_xxxxxxxxx" // your user id
+}
+```
 
 ## Access token standard claims
 
@@ -105,45 +145,11 @@ Access tokens are a secure way of authenticating users and passing information a
 
   ```
 
-## Example access token
+## Can I remove claims to reduce token size?
 
-```json
-{
-  "aud": [
-    "myapp:prod-api
-  ],
-  "azp": "dee7f3c57b3c47e8b96edde2c7ecab7d",
-  "exp": 1693371599,
-  "feature_flags": {
-    "analytics": {
-      "t": "b",
-      "v": true
-    },
-    "theme": {
-      "t": "s",
-      "v": "pink"
-    }
-  },
-  "iat": 1693285199,
-  "iss": "https://<your_subdomain>.kinde.com",
-  "jti": "fbb6bc62-x64e-4256-8ea4-8fb9a645b123",
-  "org_code": "org_xxxxxxxxx",
-  "permissions": [
-    "create:competitions",
-    "delete:competitions",
-    "view:stats",
-    "invite:users",
-    "view:profile
-  ],
-  "scp": [
-    "openid",
-    "profile",
-    "email",
-    "offline
-  ],
-  "sub": "kp:_xxxxxxxxx" // your user id
-}
-```
+Yes. Kinde automatically populates the access token with claims like `permissions`, `feature_flags`, and `org_code`. If your app handles this data another way — or you want to keep JWTs small and free of client-readable claims — you can strip any of these from the token at generation time using the [user token generation workflow](/workflows/example-workflows/user-token-generation/#reduce-token-size).
+
+The workflow fires whenever a token is issued and gives you full control over what goes into the final token. You can also use it to retrieve data from the [Kinde Management API](/kinde-apis/management/) server-side instead of embedding it in the JWT.
 
 ## How long does an access token last?
 

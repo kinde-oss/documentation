@@ -47,8 +47,8 @@ There is **no public list of every action** that resets inactivity. In practice,
 
 **Machine-to-machine (M2M)** integrations and the **Management API** use separate credentials and contexts. They are **not** equivalent to activity on a specific person’s browser SSO session when you interpret this setting.
 
-## What is the `_kbrte` cookie?
+## Does switching organizations affect other browser tabs?
 
-`_kbrte` is a Kinde browser session cookie. It is set by Kinde’s authentication service and is used to track the authenticated session state for the current browser. It plays a role in how Kinde measures SSO session inactivity — when this cookie is present and valid, Kinde can identify the user’s session and count authenticated interactions against the inactivity timer.
+Yes. When a user switches to a different organization (by calling `login({ orgCode })` from your app), a new refresh token for that organization is issued and stored in the `refresh_token` cookie. Because this cookie is shared across all tabs on the same domain, other tabs that were authenticated to a different organization will use the new cookie on their next token refresh — and will then be operating in the context of the most recently signed-in organization.
 
-You do not need to interact with this cookie directly. It is managed by Kinde and will be cleared when the user signs out or when the session expires.
+If your application needs each browser tab to maintain an independent org context, you will need to manage org tokens at the application layer (for example, storing org-specific tokens in tab-local state rather than relying on the shared cookie).
