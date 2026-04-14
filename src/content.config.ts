@@ -17,7 +17,9 @@ export const collections = {
         sdk: z.union([z.string(), z.array(z.string())]).optional().nullable(),
         languages: z.union([z.string(), z.array(z.string())]).optional().nullable(),
         audience: z.union([z.string(), z.array(z.string())]).optional(),
-        complexity: z.string().optional()
+        complexity: z.string().optional(),
+        topics: z.array(z.string()).optional().nullable(),
+        updated: z.coerce.date().optional().nullable()
       })
     })
   }),
