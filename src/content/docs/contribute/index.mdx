@@ -29,7 +29,7 @@ keywords:
   - MDX syntax
   - code samples
   - components
-updated: 2024-01-15
+updated: 2026-04-15
 featured: false
 deprecated: false
 ai_summary: Comprehensive contribution guide for Kinde documentation including writing guidelines, MDX syntax, component usage, GitHub workflow, and community contribution standards.
@@ -350,9 +350,9 @@ The image will be rendered with some padding and will have the **click to zoom**
 
 ![An image of a penguin](@assets/images/contribute/penguin.jpg)
 
-## Components
+## Component reference
 
-We are slowly building a library of components to be used in our articles. You can see below a list of the ones ready to use — this list is constantly being updated.
+See below a list of the components ready to use. This list is constantly being updated.
 
 ## `<PackageManagers>`
 
@@ -504,11 +504,17 @@ Google Analytics is available on the Kinde Pro plan and above.
 Google Analytics is available on the Kinde Pro plan and above.
 </Aside>
 
-### `FileTree`
+## `<FileTree>`
 
-Use the `<FileTree>` component to display the structure of a directory with file icons and collapsible sub-directories.
+Use the `<FileTree>` component to display the structure of a directory with file icons and collapsible subdirectories.
 
-#### Example
+### Content
+
+The component has no props. Pass a **nested markdown list** as children: top-level items are files or folders at the project root, and each nested list under an item represents that folder’s contents. Indent with two spaces per level.
+
+### Simple tree
+
+**Syntax**
 
 ```mdx
 <FileTree>
@@ -521,7 +527,37 @@ Use the `<FileTree>` component to display the structure of a directory with file
 </FileTree>
 ```
 
-#### Result
+**Output**
+
+<FileTree>
+
+- .env.local
+- src
+  - app
+    - page.tsx
+
+</FileTree>
+
+### Nested folders
+
+**Syntax**
+
+```mdx
+<FileTree>
+
+- src
+  - app
+    - layout.tsx
+    - page.tsx
+    - dashboard
+      - page.tsx
+- next.config.ts
+- .env.local
+
+</FileTree>
+```
+
+**Output**
 
 <FileTree>
 
@@ -538,82 +574,90 @@ Use the `<FileTree>` component to display the structure of a directory with file
 
 <Divider />
 
-### `YoutubeVideo`
+## `<YoutubeVideo>`
 
-This will embed a YouTube video using [`lite-youtube`](https://github.com/justinribeiro/lite-youtube) behind the scenes.
+Embed a YouTube video using [`lite-youtube`](https://github.com/justinribeiro/lite-youtube) behind the scenes for faster loading than a full iframe embed.
 
-#### <span class="text-lg font-bold">`videoId` (required)</span>
+### Properties
 
-The YouTube video `id`.
+- **`videoId`** (string, required) - The YouTube video ID from the watch URL (the value after `v=`).
+- **`videoTitle`** (string, optional) - Accessible label for the embed. Defaults to `"Video"` when omitted.
 
-`string`
+### Basic embed
 
-#### <span class="text-lg font-bold">`videoTitle` (optional)</span>
-
-The video title.
-
-`string`
-
-default: `"Video"`
-
-#### Example
+**Syntax**
 
 ```mdx
 <YoutubeVideo videoId="ybmHcAVBnec" />
 ```
 
-#### Result
+**Output**
 
 <YoutubeVideo videoId="ybmHcAVBnec" />
 
+### With a custom title
+
+**Syntax**
+
+```mdx
+<YoutubeVideo videoId="ybmHcAVBnec" videoTitle="Kinde walkthrough" />
+```
+
+**Output**
+
+<YoutubeVideo videoId="ybmHcAVBnec" videoTitle="Kinde walkthrough" />
+
 <Divider />
 
-### `Tabs`
+## `<Tabs>` and `<TabItem>`
 
-To create a tabbed interface use the `<Tabs>` and `<TabItem>` components. Tabs are useful for grouping equivalent information where a user only needs to see one of several options.
+Use `<Tabs>` as the wrapper and one or more `<TabItem>` children to group equivalent content so the reader can switch between variants (languages, stacks, or paths) without scrolling past every option.
 
-#### <span class="text-lg font-bold">`<Tabs>: syncKey` (optional)</span>
+### Properties
 
-A key used to keep multiple tab groups synchronized across multiple pages.
+**`<Tabs>`**
 
-`string`
+- **`syncKey`** (string, optional) - When the same key is set on multiple `<Tabs>` groups, changing a tab in one group switches the others to the tab with the **same label** (state is stored in `localStorage`, so it can persist when navigating Starlight pages that use the same key).
 
-#### <span class="text-lg font-bold">`<TabItem>: label` (required)</span>
+**`<TabItem>`**
 
-A tab item must include a label attribute set to the text that will be displayed in the tab.
+- **`label`** (string, required) - The text shown on the tab control.
+- **`icon`** (string, optional) - A [Starlight icon](https://starlight.astro.build/reference/icons/) name to show beside the label.
 
-`string`
+### Basic tabs
 
-#### Example
+**Syntax**
 
-```text frame="none"
+```mdx
 <Tabs>
   <TabItem label="Stars">Sirius, Vega, Betelgeuse</TabItem>
   <TabItem label="Moons">Io, Europa, Ganymede</TabItem>
 </Tabs>
 ```
 
-#### Result
+**Output**
 
 <Tabs>
   <TabItem label="Stars">Sirius, Vega, Betelgeuse</TabItem>
   <TabItem label="Moons">Io, Europa, Ganymede</TabItem>
 </Tabs>
 
-#### Example with code
+### Tabs with code samples
 
 <Aside type="warning">
 
-Depending on your `mdx` formatter, you may need to add extra space between jsx tags and the `TabItem` content.
+Depending on your MDX formatter, you may need extra blank lines or spacing between the `<TabItem>` tags and fenced code inside them.
 
 </Aside>
 
-````text frame="none"
+**Syntax**
+
+````mdx
 <Tabs>
 
   <TabItem label="JavaScript">
 
-```text
+```js
 console.log("hello world!");
 ```
 
@@ -630,7 +674,7 @@ echo "hello world";
 </Tabs>
 ````
 
-#### Result
+**Output**
 
 <Tabs>
 
@@ -641,7 +685,7 @@ console.log("hello world!");
 ```
 
   </TabItem>
-  
+
   <TabItem label="PHP">
 
 ```php
@@ -649,5 +693,35 @@ echo "hello world";
 ```
 
   </TabItem>
-  
+
+</Tabs>
+
+### Synchronized tab groups
+
+Give two or more `<Tabs>` blocks the same **`syncKey`** so they stay on the same logical tab when the reader changes selection (tab **labels** must match across groups).
+
+**Syntax**
+
+```mdx
+<Tabs syncKey="contribute-guide-sync-demo">
+  <TabItem label="JavaScript">Use `npm install`.</TabItem>
+  <TabItem label="PHP">Use `composer require`.</TabItem>
+</Tabs>
+
+<Tabs syncKey="contribute-guide-sync-demo">
+  <TabItem label="JavaScript">Second group follows the first.</TabItem>
+  <TabItem label="PHP">Second group follows the first.</TabItem>
+</Tabs>
+```
+
+**Output**
+
+<Tabs syncKey="contribute-guide-sync-demo">
+  <TabItem label="JavaScript">Use `npm install`.</TabItem>
+  <TabItem label="PHP">Use `composer require`.</TabItem>
+</Tabs>
+
+<Tabs syncKey="contribute-guide-sync-demo">
+  <TabItem label="JavaScript">Second group follows the first.</TabItem>
+  <TabItem label="PHP">Second group follows the first.</TabItem>
 </Tabs>
