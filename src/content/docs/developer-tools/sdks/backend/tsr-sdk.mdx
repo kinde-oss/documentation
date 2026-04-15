@@ -1,7 +1,7 @@
 ---
 page_id: 7eb15b27-864c-49fd-a12e-3f4d415f47fa
 title: TanStack React Start SDK
-description: "Install and configure the Kinde SDK for TanStack Start: environment variables, auth routes, middleware, route protection, and client hooks."
+description: "Install and configure the Kinde SDK for TanStack Start: environment variables, auth routes, route protection, and client hooks."
 sidebar:
   order: 10
 tableOfContents:
@@ -36,10 +36,10 @@ keywords:
   - route protection
   - environment variables
   - Vite
-updated: 2026-04-07
+updated: 2026-04-15
 featured: false
 deprecated: false
-ai_summary: Install and configure the Kinde SDK for TanStack Start with auth handlers, global middleware, KindeTanstackProvider, useKindeAuth, server loaders, and protect utilities.
+ai_summary: Install and configure the Kinde SDK for TanStack Start with auth handlers, KindeTanstackProvider, useKindeAuth, server loaders, and protect utilities.
 ---
 
 Official Kinde SDK for [TanStack Start](https://tanstack.com/start)—a full-stack React framework on [TanStack Router](https://tanstack.com/router).
@@ -48,7 +48,7 @@ Official Kinde SDK for [TanStack Start](https://tanstack.com/start)—a full-sta
 
 - A [Kinde](https://app.kinde.com/) account (Sign up for free)
 - [Node.js](https://nodejs.org/) version 20 or higher
-- A [TanStack Start project](https://tanstack.com/start) using `@tanstack/react-router` and `@tanstack/react-start` `v1.132.25` or higher
+- A [TanStack Start project](https://tanstack.com/start) using `@tanstack/react-router` and `@tanstack/react-start` `^1.167.8` or higher
 
 ## Quickstart
 
@@ -56,9 +56,7 @@ Official Kinde SDK for [TanStack Start](https://tanstack.com/start)—a full-sta
 
 If you don't have a TanStack Start project, create one using the following command:
 
-    ```bash
-    npx @tanstack/cli@latest create kinde-tanstack-app --yes
-    ```
+    <PackageManagers type="dlx" pkg="@tanstack/cli@latest" args="create kinde-tanstack-app --yes" />
 
 ### 2. Create a Kinde app and set callback URLs
 
@@ -66,10 +64,12 @@ If you don't have a TanStack Start project, create one using the following comma
 2. Go to **View details** and copy the **Domain**, **Client ID** and **Client secret** values.
 2. Add callback URLs, for example:
    - **Allowed callback URLs** — `http://localhost:3000/api/auth/callback`
-   - **Allowed logout redirect URLs** — `http://localhost:3000`
+   - **Allowed logout redirect URLs** — `http://localhost:3000` 
+  
+        For production, add the same paths using your real domain.
 3. Select **Save**.
 
-For production, add the same paths using your real domain.
+
 
 ### 3. Install the Kinde SDK
 
@@ -99,16 +99,16 @@ Variables prefixed with `VITE_` are exposed to the client. `KINDE_CLIENT_SECRET`
 
 ### 5. Add the Kinde auth route handler
 
-1. Create `src/routes/api.auth.$.ts`:
+1. Create `src/routes/api.auth.$.tsx`:
 
     ```bash
-    touch "src/routes/api.auth.$/route.ts"
+    touch "src/routes/api.auth.$.tsx"
     ```
 
 2. Add the following code:
 
-    ```tsx
-    // src/routes/api.auth.$/route.ts
+    ```typescript
+    // src/routes/api.auth.$.tsx
     import { kindeAuthHandler } from "@kinde/tsr/server"
     import { createFileRoute } from "@tanstack/react-router"
 
@@ -122,124 +122,37 @@ Variables prefixed with `VITE_` are exposed to the client. `KINDE_CLIENT_SECRET`
     })
     ```
 
-    This exposes flows such as:
+    This single route handles all auth flows:
 
     - `/api/auth/login`
     - `/api/auth/logout`
     - `/api/auth/callback`
     - `/api/auth/register`
     - `/api/auth/create-org`
+    - `/api/auth/health`
 
-### 6. Register global auth middleware
-
-Middleware protects the server, refreshes tokens, and powers route rules. It does **not** run in the browser, so client navigations still need [client-side protection](#how-do-i-protect-client-side-navigations).
-
-<Aside type="warning">
-Middleware in TanStack Start does not run on the client. Use `beforeLoad` with `protect` for client navigations as well as server rules.
-</Aside>
-
-1. Create `start.ts` in the project root 
-
-    ```bash
-    touch "start.ts"
-    ```
-
-2. Add the following code:
-
-    ```ts
-    // start.ts
-    import { createStart } from "@tanstack/react-start"
-    import { createKindeGlobalMiddleware } from "@kinde/tsr/server"
-
-    export const startInstance = createStart(() => {
-      return {
-        requestMiddleware: [
-          createKindeGlobalMiddleware({
-            routeRules: [],
-          }),
-        ],
-      }
-    })
-    ```
-
-**Route rules** control which paths require auth and optional checks (permissions, roles, feature flags, billing entitlements). Paths support globs, for example:
-
-- `/admin/*` — `/admin` and descendants
-- `*/faq` — any route ending in `/faq`
-- `/admin/*/settings` — nested segments
-
-Example:
-
-```ts
-import { createStart } from "@tanstack/react-start"
-import { createKindeGlobalMiddleware } from "@kinde/tsr/server"
-
-export const startInstance = createStart(() => {
-  return {
-    requestMiddleware: [
-      createKindeGlobalMiddleware({
-        routeRules: [
-          {
-            path: "/dashboard/*",
-            redirectTo: "/",
-          },
-          {
-            path: "/admin/*",
-            redirectTo: "/",
-            has: {
-              permissions: ["read:admin"],
-              roles: ["admin"],
-            },
-          },
-          {
-            path: "/pro/*",
-            redirectTo: "/",
-            has: {
-              billingEntitlements: ["pro"],
-            },
-          },
-          {
-            path: "*/new-wip-page",
-            redirectTo: "/current-page",
-            has: {
-              featureFlags: ["new-wip-page-access"],
-            },
-          },
-        ],
-      }),
-    ],
-  }
-})
-```
-
-### 7. Wrap the root route with `KindeTanstackProvider`
+### 6. Wrap the root route with `KindeTanstackProvider`
 
 1. In `src/routes/__root.tsx`, wrap the app so hooks and token refresh work:
 
     ```tsx
     // src/routes/__root.tsx
-    import {
-      createRootRouteWithContext,
-      HeadContent,
-      Outlet,
-      Scripts,
-    } from "@tanstack/react-router"
-    import { KindeTanstackProvider } from "@kinde/tsr/client"
+    import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router"
+    import { KindeTanstackProvider } from "@kinde/tsr"
+    import type { ReactNode } from "react"
 
-    export const Route = createRootRouteWithContext()({
-      component: RootComponent,
+    export const Route = createRootRoute({
+      shellComponent: RootDocument,
     })
 
-    function RootComponent() {
+    function RootDocument({ children }: { children: ReactNode }) {
       return (
         <html lang="en">
           <head>
             <HeadContent />
           </head>
           <body>
-            <KindeTanstackProvider>
-              <Outlet />
-            </KindeTanstackProvider>
+            <KindeTanstackProvider>{children}</KindeTanstackProvider>
             <Scripts />
           </body>
         </html>
@@ -247,25 +160,15 @@ export const startInstance = createStart(() => {
     }
     ```
 
-Add a router context type to `createRootRouteWithContext<MyRouterContext>()` when your app needs typed context.
+Pass `waitForInitialLoad` to hold rendering until the session sync completes:
 
-### 8. Add auth UI components
+```tsx
+<KindeTanstackProvider waitForInitialLoad>{children}</KindeTanstackProvider>
+```
 
-Use `useKindeAuth` hook for authentication utility and components:
+### 7. Add auth UI components
 
-**Auth utilities**:
-
-- `user`
-- `isAuthenticated`
-- `isLoading`
-
-**Auth components**:
-
-- `LoginLink`
-- `LogoutLink`
-- `RegisterLink`
-
-Example:
+Use the `useKindeAuth` hook and link components from `@kinde/tsr`:
 
 ```tsx
 // src/components/auth-ui.tsx
@@ -276,41 +179,34 @@ import {
   RegisterLink,
 } from "@kinde/tsr"
 
-function MyComponent() {
-  const { user, isAuthenticated, isLoading } = useKindeAuth()
+function AuthButtons() {
+  const { isAuthenticated, isLoading, user } = useKindeAuth()
 
   if (isLoading) {
     return <div>Loading...</div>
   }
 
-  return (
+  return isAuthenticated ? (
     <div>
-      {isAuthenticated ? (
-        <>
-          <p>Welcome, {user?.givenName}!</p>
-          <LogoutLink>Log out</LogoutLink>
-        </>
-      ) : (
-        <>
-          <LoginLink>Sign in</LoginLink>
-          <RegisterLink>Sign up</RegisterLink>
-        </>
-      )}
+      <p>Welcome, {user?.givenName ?? "friend"}.</p>
+      <LogoutLink>Sign out</LogoutLink>
+    </div>
+  ) : (
+    <div>
+      <LoginLink>Sign in</LoginLink>
+      <RegisterLink>Create account</RegisterLink>
     </div>
   )
 }
 ```
 
-### 9. Display logged-in user information
+### 8. Display logged-in user information
 
-Use server helpers in a route `loader` (or other server code):
+Use server helpers from `@kinde/tsr/server` in a route `loader`:
 
 ```tsx
 import { createFileRoute } from "@tanstack/react-router"
-import {
-  getUserProfile,
-  isAuthenticated,
-} from "@kinde/tsr/server"
+import { getUserProfile, isAuthenticated } from "@kinde/tsr/server"
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
@@ -332,67 +228,59 @@ function Dashboard() {
 
 ## Protect routes with roles and permissions
 
-### Per-route middleware and `protect`
+Use `protect` in `beforeLoad` to guard a route. It throws a TanStack redirect when the user is unauthenticated or does not satisfy the `has` checks — do not wrap it in a `try/catch` unless you plan to re-throw the redirect.
 
-Use `KindeAuthMiddleware` with `protect` and optional `has` checks:
-
-```tsx
-import { createFileRoute } from "@tanstack/react-router"
-import {
-  KindeAuthMiddleware,
-  protect,
-  getUserProfile,
-} from "@kinde/tsr/server"
-
-export const Route = createFileRoute("/protected")({
-  component: ProtectedPage,
-
-  server: {
-    middleware: [KindeAuthMiddleware],
-  },
-
-  beforeLoad: () =>
-    protect({
-      has: {
-        permissions: ["read:protected"],
-        // roles: ["admin"],
-        // featureFlags: ["new-dashboard"],
-        // billingEntitlements: ["pro"],
-      },
-      redirectTo: "/",
-    }),
-
-  loader: async () => {
-    const user = await getUserProfile()
-    return { user }
-  },
-})
-
-function ProtectedPage() {
-  const { user } = Route.useLoaderData()
-
-  return <div>Protected content for {user?.givenName}</div>
-}
-```
-
-`redirectTo` defaults to `KINDE_SITE_URL` if omitted.
-
-### Protect client-side navigations
-
-`protect` in `beforeLoad` should receive the route path so it can apply the same **route rules** as global middleware:
+### Authenticated users only
 
 ```tsx
 import { createFileRoute } from "@tanstack/react-router"
 import { protect } from "@kinde/tsr/server"
 
-export const Route = createFileRoute("/protected/")({
-  beforeLoad: async (ctx) => {
-    await protect(ctx.location.pathname)
+export const Route = createFileRoute("/protected")({
+  beforeLoad: async () => {
+    await protect()
   },
 })
 ```
 
-Code after `protect` does not run if the user is redirected.
+### With roles, permissions, feature flags, or billing entitlements
+
+```tsx
+import { createFileRoute } from "@tanstack/react-router"
+import { protect } from "@kinde/tsr/server"
+
+export const Route = createFileRoute("/protected/admin")({
+  beforeLoad: async () => {
+    await protect({
+      has: {
+        roles: ["admin"],
+        permissions: ["read:admin"],
+        featureFlags: ["new-dashboard"],
+        billingEntitlements: ["pro"],
+      },
+      redirectTo: "/",
+    })
+  },
+})
+```
+
+`redirectTo` defaults to `/` if omitted. Pass `forceApi: true` inside `has` to force a Kinde API check instead of reading from tokens.
+
+### Protect multiple routes with a layout
+
+To protect a group of routes, add `protect` to a [pathless layout route](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#pathless-routes):
+
+```tsx
+import { createFileRoute } from "@tanstack/react-router"
+import { protect } from "@kinde/tsr/server"
+
+// Everything under _auth is protected.
+export const Route = createFileRoute("/_auth")({
+  beforeLoad: async () => {
+    await protect()
+  },
+})
+```
 
 ## Change default `/api/auth` paths
 
@@ -410,12 +298,11 @@ Optional overrides for sub-routes (defaults shown in parentheses):
 - `KINDE_AUTH_REGISTER_ROUTE` (`register`)
 - `KINDE_AUTH_CREATE_ORG_ROUTE` (`create-org`)
 - `KINDE_AUTH_HEALTH_ROUTE` (`health`)
-- `KINDE_AUTH_SETUP_ROUTE` (`setup`)
 
-**Example:** If `KINDE_AUTH_API_PATH="/my/custom/path"` and `KINDE_AUTH_LOGIN_ROUTE="app_login"`, login is at `/my/custom/path/app_login`. Rename the route file to match your API path if you change it.
+**Example:** If `KINDE_AUTH_API_PATH="/my/custom/path"` and `KINDE_AUTH_LOGIN_ROUTE="app_login"`, login is at `/my/custom/path/app_login`.
 
 <Aside type="warning">
-Update the auth route file path if you change `KINDE_AUTH_API_PATH` so it still matches your server routes.
+Rename the route file to match your API path if you change `KINDE_AUTH_API_PATH`. The file route path must match your server routes.
 </Aside>
 
 ## Redirect after login
@@ -443,16 +330,23 @@ You can also achieve the same result by sending users to `/api/auth/login?post_l
 <Link href="/api/auth/login?post_login_redirect_url=/dashboard">Sign in</Link>
 ```
 
-## Debug mode
+## Debug mode and health route
 
-Set in `.env`:
+Set `KINDE_DEBUG_MODE` in `.env`:
 
 ```env
 # .env
 KINDE_DEBUG_MODE=true
 ```
 
-You will see extra logs in the console, useful when troubleshooting.
+When enabled, you will see extra logs in the console useful for troubleshooting.
+
+The health route at `/api/auth/health` also changes behavior based on this flag:
+
+- **`KINDE_DEBUG_MODE` unset or `false`** — returns `OK`
+- **`KINDE_DEBUG_MODE=true`** — returns JSON describing the resolved config and generated auth URLs
+
+Use the health route to verify your environment variables are set correctly during setup.
 
 ## Deploy to production
 
@@ -462,13 +356,707 @@ You will see extra logs in the console, useful when troubleshooting.
    - `https://yourdomain.com/api/auth/callback`
    - `https://yourdomain.com`
 
-## API Reference
 
-To be added.
+## API reference - `KindeTanstackProvider`
+
+Wraps the Kinde React provider and syncs the server session into the client store. Place it near the root of your app in `__root.tsx`.
+
+Props:
+
+- `children` (`ReactNode`) — Required. The app subtree.
+- `waitForInitialLoad` (`boolean`) — Optional. Hold rendering until the initial session sync completes.
+
+Usage:
+
+```tsx
+import { KindeTanstackProvider } from "@kinde/tsr"
+
+<KindeTanstackProvider waitForInitialLoad>
+  {children}
+</KindeTanstackProvider>
+```
+
+## Client components
+
+### `LoginLink`
+
+A TanStack Router `Link` pointed at the configured login route (`/api/auth/login` by default).
+
+Props:
+
+- `children` (`ReactNode`) — Required. Link label.
+
+Usage:
+
+```tsx
+import { LoginLink } from "@kinde/tsr"
+
+<LoginLink>Sign in</LoginLink>
+```
+
+### `LogoutLink`
+
+A TanStack Router `Link` pointed at the configured logout route (`/api/auth/logout` by default).
+
+Props:
+
+- `children` (`ReactNode`) — Required. Link label.
+
+Usage:
+
+```tsx
+import { LogoutLink } from "@kinde/tsr"
+
+<LogoutLink>Sign out</LogoutLink>
+```
+
+### `RegisterLink`
+
+A TanStack Router `Link` pointed at the configured register route (`/api/auth/register` by default).
+
+Props:
+
+- `children` (`ReactNode`) — Required. Link label.
+
+Usage:
+
+```tsx
+import { RegisterLink } from "@kinde/tsr"
+
+<RegisterLink>Create account</RegisterLink>
+```
+
+### `PortalLink`
+
+Re-exported from `@kinde-oss/kinde-auth-react/components`. Sends the user to the Kinde self-serve portal. Learn more about the [self-serve portal for users](/build/self-service-portal/self-serve-portal-for-users/).
+
+Props:
+
+- `children` (`ReactNode`) — Required. Link label.
+- `subNav` (`PortalPage`) — Optional. The area of the portal to land on (default: profile).
+- `returnUrl` (`string`) — Optional. Absolute URL to return to after portal actions.
+
+Usage:
+
+```tsx
+import { PortalLink } from "@kinde/tsr"
+
+<PortalLink>Manage account</PortalLink>
+```
+
+## API references - `useKindeAuth`
+
+Call this hook inside any client component to access auth state and token helpers.
+
+Usage:
+
+```tsx
+import { useKindeAuth } from "@kinde/tsr"
+
+function MyComponent() {
+  const { isAuthenticated, isLoading, user } = useKindeAuth()
+
+  if (isLoading) return <div>Loading...</div>
+
+  return isAuthenticated ? (
+    <p>Welcome, {user?.givenName}!</p>
+  ) : (
+    <p>Not signed in.</p>
+  )
+}
+```
+
+### `isAuthenticated`
+
+Returns `true` if the user is currently authenticated.
+
+Type: `boolean`
+
+### `isLoading`
+
+`true` while the initial auth state is being resolved. Use this to avoid rendering before the session is known.
+
+Type: `boolean`
+
+### `user`
+
+The profile of the currently signed-in user. `null` when unauthenticated.
+
+Available properties:
+
+- `id` (`string`) — The user's Kinde ID, e.g. `kp_1234567890`
+- `givenName` (`string`) — First name
+- `familyName` (`string`) — Last name
+- `email` (`string`) — Email address
+- `picture` (`string`) — Profile picture URL if available
+
+### `getPermission`
+
+Returns the state of a given permission for the current user.
+
+Arguments:
+
+```typescript
+key: string
+```
+
+Usage:
+
+```tsx
+const { getPermission } = useKindeAuth()
+
+const permission = await getPermission("read:todos")
+```
+
+Output:
+
+```javascript
+{
+  permissionKey: "read:todos",
+  orgCode: "org_1234",
+  isGranted: true
+}
+```
+
+### `getPermissions`
+
+Returns all permissions for the current user for the organization they are signed into.
+
+Usage:
+
+```tsx
+const { getPermissions } = useKindeAuth()
+
+const permissions = await getPermissions()
+```
+
+Output:
+
+```javascript
+{
+  orgCode: "org_1234",
+  permissions: ["create:todos", "update:todos", "read:todos"]
+}
+```
+
+### `getRoles`
+
+Returns all roles for the current user for the organization they are signed into.
+
+Usage:
+
+```tsx
+const { getRoles } = useKindeAuth()
+
+const roles = await getRoles()
+```
+
+Output:
+
+```javascript
+{
+  orgCode: "org_1234",
+  roles: ["admin", "user"]
+}
+```
+
+### `getFlag`
+
+Gets a feature flag value from the `feature_flags` claim of the access token.
+
+Arguments:
+
+```typescript
+code: string, options?: { defaultValue?: string | boolean | number }
+```
+
+Usage:
+
+```tsx
+const { getFlag } = useKindeAuth()
+
+const flag = await getFlag("theme")
+```
+
+Output:
+
+```json
+{
+  "code": "theme",
+  "type": "string",
+  "value": "pink",
+  "is_default": false
+}
+```
+
+### `getClaim`
+
+Gets a single claim from the access or ID token. Defaults to the access token.
+
+Arguments:
+
+```typescript
+claim: string, tokenKey?: "accessToken" | "idToken"
+```
+
+Usage:
+
+```tsx
+const { getClaim } = useKindeAuth()
+
+const claim = await getClaim("given_name", "idToken")
+```
+
+### `getClaims`
+
+Returns all claims from the access or ID token.
+
+Arguments:
+
+```typescript
+tokenKey?: "accessToken" | "idToken"
+```
+
+Usage:
+
+```tsx
+const { getClaims } = useKindeAuth()
+
+const claims = await getClaims()
+```
+
+### `getOrganization`
+
+Gets the org code of the organization the user is currently signed into.
+
+Usage:
+
+```tsx
+const { getOrganization } = useKindeAuth()
+
+const org = await getOrganization()
+```
+
+Output:
+
+```text
+org_1234
+```
+
+### `getUserOrganizations`
+
+Gets all organizations the user has access to.
+
+Usage:
+
+```tsx
+const { getUserOrganizations } = useKindeAuth()
+
+const orgs = await getUserOrganizations()
+```
+
+Output:
+
+```text
+["org_1234", "org_5678"]
+```
+
+### `getAccessToken`
+
+Returns the raw access token JWT from session storage. Does not refresh — the value may be expired. Returns `undefined` when the user is signed out.
+
+Type: `Promise<string | undefined>`
+
+Usage:
+
+```tsx
+const { getAccessToken } = useKindeAuth()
+
+const token = await getAccessToken()
+```
+
+### `refreshToken`
+
+Manually refreshes the access token and returns new token values.
+
+Usage:
+
+```tsx
+const { refreshToken } = useKindeAuth()
+
+const result = await refreshToken({
+  clientId: "your_client_id",
+  domain: "https://your_kinde_domain.kinde.com",
+})
+```
+
+Output:
+
+```text
+{
+  success: true,
+  accessToken: "<access_token>",
+  idToken: "<id_token>",
+  refreshToken: "<refresh_token>"
+}
+```
+
+## API references - Server
+
+### `kindeAuthHandler`
+
+Handles all Kinde auth requests (login, logout, callback, register, create-org, health). Use it in the catch-all route file.
+
+Arguments:
+
+```typescript
+request: Request
+```
+
+Returns: `Promise<Response>`
+
+Usage:
+
+```tsx
+import { kindeAuthHandler } from "@kinde/tsr/server"
+import { createFileRoute } from "@tanstack/react-router"
+
+export const Route = createFileRoute("/api/auth/$")({
+  server: {
+    handlers: {
+      GET: async ({ request }) => kindeAuthHandler(request),
+      POST: async ({ request }) => kindeAuthHandler(request),
+    },
+  },
+})
+```
+
+### `protect`
+
+Guards a TanStack route from `beforeLoad`. Throws a TanStack redirect when the user is unauthenticated or does not satisfy the `has` checks. Do not wrap in a `try/catch` unless you plan to re-throw the redirect.
+
+Arguments:
+
+```typescript
+options?: {
+  has?: {
+    roles?: string[]
+    permissions?: string[]
+    featureFlags?: string[]
+    billingEntitlements?: string[]
+    forceApi?: boolean
+  }
+  redirectTo?: string  // default: "/"
+}
+```
+
+Returns: `Promise<void>` — or throws a redirect
+
+Usage:
+
+```tsx
+import { createFileRoute } from "@tanstack/react-router"
+import { protect } from "@kinde/tsr/server"
+
+export const Route = createFileRoute("/admin")({
+  beforeLoad: async () => {
+    await protect({
+      has: {
+        roles: ["admin"],
+        permissions: ["read:admin"],
+      },
+      redirectTo: "/",
+    })
+  },
+})
+```
+
+### `getUserProfile`
+
+Returns the profile of the currently signed-in user.
+
+Usage:
+
+```tsx
+import { getUserProfile } from "@kinde/tsr/server"
+
+const user = await getUserProfile()
+```
+
+Output:
+
+```text
+{
+  id: "kp_1234567890",
+  givenName: "Dave",
+  familyName: "Smith",
+  email: "dave@smith.com",
+  picture: "public_image_url"
+}
+```
+
+### `isAuthenticated`
+
+Returns `true` if the current user has a valid session.
+
+Usage:
+
+```tsx
+import { isAuthenticated } from "@kinde/tsr/server"
+
+const authed = await isAuthenticated()
+```
+
+Output:
+
+```text
+true
+```
+
+### `getPermission`
+
+Returns the state of a given permission for the current user.
+
+Arguments:
+
+```typescript
+key: string
+```
+
+Usage:
+
+```tsx
+import { getPermission } from "@kinde/tsr/server"
+
+const permission = await getPermission("read:todos")
+```
+
+Output:
+
+```javascript
+{
+  permissionKey: "read:todos",
+  orgCode: "org_1234",
+  isGranted: true
+}
+```
+
+### `getPermissions`
+
+Returns all permissions for the current user for the organization they are signed into.
+
+Usage:
+
+```tsx
+import { getPermissions } from "@kinde/tsr/server"
+
+const permissions = await getPermissions()
+```
+
+Output:
+
+```javascript
+{
+  orgCode: "org_1234",
+  permissions: ["create:todos", "update:todos", "read:todos"]
+}
+```
+
+### `getRoles`
+
+Returns all roles for the current user for the organization they are signed into.
+
+Usage:
+
+```tsx
+import { getRoles } from "@kinde/tsr/server"
+
+const roles = await getRoles()
+```
+
+Output:
+
+```javascript
+{
+  orgCode: "org_1234",
+  roles: ["admin", "user"]
+}
+```
+
+### `getFlag`
+
+Gets a feature flag value from the `feature_flags` claim of the access token.
+
+Arguments:
+
+```typescript
+code: string, options?: { defaultValue?: string | boolean | number }
+```
+
+Usage:
+
+```tsx
+import { getFlag } from "@kinde/tsr/server"
+
+const flag = await getFlag("theme")
+```
+
+Output:
+
+```json
+{
+  "code": "theme",
+  "type": "string",
+  "value": "pink",
+  "is_default": false
+}
+```
+
+### `getClaim`
+
+Gets a single claim from the access or ID token. Defaults to the access token.
+
+Arguments:
+
+```typescript
+claim: string, tokenKey?: "accessToken" | "idToken"
+```
+
+Usage:
+
+```tsx
+import { getClaim } from "@kinde/tsr/server"
+
+const claim = await getClaim("given_name", "idToken")
+```
+
+Output:
+
+```text
+{ name: "given_name", value: "Dave" }
+```
+
+### `getClaims`
+
+Returns all claims from the access or ID token.
+
+Arguments:
+
+```typescript
+tokenKey?: "accessToken" | "idToken"
+```
+
+Usage:
+
+```tsx
+import { getClaims } from "@kinde/tsr/server"
+
+const claims = await getClaims()
+// or for the ID token:
+const idTokenClaims = await getClaims("idToken")
+```
+
+### `getCurrentOrganization`
+
+Gets the org code of the organization the user is currently signed into.
+
+Usage:
+
+```tsx
+import { getCurrentOrganization } from "@kinde/tsr/server"
+
+const org = await getCurrentOrganization()
+```
+
+Output:
+
+```text
+org_1234
+```
+
+### `getUserOrganizations`
+
+Gets all organizations the user has access to.
+
+Usage:
+
+```tsx
+import { getUserOrganizations } from "@kinde/tsr/server"
+
+const orgs = await getUserOrganizations()
+```
+
+Output:
+
+```text
+["org_1234", "org_5678"]
+```
+
+### `getEntitlement`
+
+Returns the state of a given billing entitlement for the current user.
+
+Arguments:
+
+```typescript
+key: string
+```
+
+Usage:
+
+```tsx
+import { getEntitlement } from "@kinde/tsr/server"
+
+const entitlement = await getEntitlement("pro")
+```
+
+### `getEntitlements`
+
+Returns all billing entitlements for the current user.
+
+Usage:
+
+```tsx
+import { getEntitlements } from "@kinde/tsr/server"
+
+const entitlements = await getEntitlements()
+```
+
+### `has`
+
+Checks whether the current user satisfies one or more access conditions — roles, permissions, feature flags, or billing entitlements. Returns `true` only if all specified conditions are met.
+
+Arguments:
+
+```typescript
+options: {
+  roles?: string[]
+  permissions?: string[]
+  featureFlags?: string[]
+  billingEntitlements?: string[]
+  forceApi?: boolean
+}
+```
+
+Returns: `Promise<boolean>`
+
+Usage:
+
+```tsx
+import { has } from "@kinde/tsr/server"
+
+const canAccess = await has({
+  roles: ["admin"],
+  permissions: ["read:admin"],
+  featureFlags: ["new-dashboard"],
+  billingEntitlements: ["pro"],
+})
+```
 
 ## Resources
 
 - [Kinde documentation](/)
 - [TanStack Start](https://tanstack.com/start)
 - [TanStack Router](https://tanstack.com/router)
-- [SDK issues on GitHub](https://github.com/kinde-oss/kinde-auth-tsr/issues)
+- [React SDK documentation](/developer-tools/sdks/frontend/react-sdk/)
+- [SDK issues on GitHub](https://github.com/kinde-oss/kinde-tsr/issues)
