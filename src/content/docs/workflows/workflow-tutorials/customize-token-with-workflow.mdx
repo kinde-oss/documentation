@@ -8,12 +8,17 @@ tableOfContents:
 relatedArticles:
   - 62fafade-5d33-4f85-9fd2-712c533db3d0
   - f499ebb0-d7f5-4244-bf92-6bf0f6082b62
-description: Learn how to customize tokens using workflows, to help distinguish customer types.
+description: Customize access and ID tokens in Kinde using workflows
 topics:
   - "workflows"
   - "example-workflows"
   - "authentication"
+  - "tokens"
+  - "bindings"
 sdk: "kinde infrastructure"
+app_context:
+  - m: ["Workflows", "Git repo"]
+  - s: "User token generation"
 languages:
   - "TypeScript"
   - "JavaScript"
@@ -21,24 +26,25 @@ audience:
   - "developers"
 complexity: "intermediate"
 keywords:
-  - "pre-registration"
-  - "user registration"
-  - "IP checks"
-  - "disposable emails"
-  - "spam prevention"
-  - "authentication triggers"
-updated: "2026-04-14"
+  - "custom claims"
+  - "access token"
+  - "ID token"
+  - "user token generation"
+  - "JWT claims"
+  - "token customization"
+  - "workflow bindings"
+updated: "2026-04-17"
 featured: false
 deprecated: false
-ai_summary: "Learn how to customize tokens using workflows, to help distinguish customer types."
+ai_summary: "This tutorial teaches developers how to customize Kinde access and ID tokens using workflows that run when a user token is generated. It walks through TypeScript examples in Workflow.ts using the User token generation trigger, workflowSettings (including failurePolicy behavior), required bindings, and helper APIs from @kinde/infrastructure. For access tokens, you bind kinde.accessToken and url, then use accessTokenCustomClaims with typed shapes to inject custom string claims or replace bulky built-in claims such as permissions and feature_flags with empty values to reduce token size for APIs. For ID tokens, you bind kinde.idToken and url, then use idTokenCustomClaims to add new claims or change existing ones such as name. The doc clarifies you may not be able to remove or modify every default claim. A glossary explains that kinde.m2mToken is needed for M2M token edits and lists prohibited claims workflows cannot touch, split into common, access-only, ID-only, and M2M-only restrictions covering standard JWT metadata fields. Prerequisites are a Kinde account and the connected workflow repo from the quick start. The page points to about-access-tokens and about-id-tokens for complete claim catalogs."
 ---
 
 Use workflows to add or remove claims from Kinde's access or ID tokens.
 
-### What you need 
+### What you need
 
-- A [Kinde](https://app.kinde.com/register) account (sign up for free)
-- A workflow git repository connected to your Kinde account (Use the [workflow base template](/workflows/getting-started/quick-start-guide/))
+- A [Kinde](https://app.kinde.com/register) account (Sign up for free)
+- A workflow Git repository connected to your Kinde account (use the [workflow base template](/workflows/getting-started/quick-start-guide/))
 
 ## Customize the access token
 
@@ -65,14 +71,14 @@ Use workflows to add or remove claims from Kinde's access or ID tokens.
       },
       bindings: {
         "kinde.accessToken": {}, // required to modify access token claims
-        url: {}, // required for url params
+        url: {}, // required for URL parameters
       },
     };
 
     // The workflow code to be executed when the event is triggered
     export default async function Workflow(event: onUserTokenGeneratedEvent) {
       const accessToken = accessTokenCustomClaims<{
-        companyName: string
+        companyName: string,
       }>()
 
       accessToken.companyName = "Acme Inc."
@@ -104,15 +110,15 @@ The above code adds the `companyName` claim to the access token, with the value 
       },
       bindings: {
         "kinde.accessToken": {}, // required to modify access token claims
-        url: {}, // required for url params
+        url: {}, // required for URL parameters
       },
     };
 
     // The workflow code to be executed when the event is triggered
     export default async function Workflow(event: onUserTokenGeneratedEvent) {
       const accessToken = accessTokenCustomClaims<{
-        permissions: string[]
-        feature_flags: Record<string, unknown>
+        permissions: string[],
+        feature_flags: Record<string, unknown>,
       }>()
 
       accessToken.permissions = []
@@ -122,7 +128,7 @@ The above code adds the `companyName` claim to the access token, with the value 
 
 The above code removes the `permissions` and `feature_flags` claims from the access token, replacing them with an empty array and object respectively. This is useful for reducing the size of access tokens that are used in API calls.
 
-Take a look at the available access token claims in the [about access tokens](/build/tokens/about-access-tokens/) doc. You may not be able to remove every default claims.
+Take a look at the available access token claims in the [about access tokens](/build/tokens/about-access-tokens/) doc. You may not be able to remove every default claim. See the [prohibited claims](#prohibited-claims) section for more information.
 
 ## Customize the ID token
 
@@ -134,8 +140,7 @@ Take a look at the available access token claims in the [about access tokens](/b
       onUserTokenGeneratedEvent,
       WorkflowSettings,
       WorkflowTrigger,
-      idTokenCustomClaims
-      
+      idTokenCustomClaims,
     } from "@kinde/infrastructure";
 
     // The setting for this workflow
@@ -147,37 +152,42 @@ Take a look at the available access token claims in the [about access tokens](/b
         action: "stop",
       },
       bindings: {
-        "kinde.idToken": {}, // required to modify id token claims
-        url: {}, // required for url params
+        "kinde.idToken": {}, // required to modify ID token claims
+        url: {}, // required for URL parameters
       },
     };
 
     // The workflow code to be executed when the event is triggered
     export default async function Workflow(event: onUserTokenGeneratedEvent) {
       const idToken = idTokenCustomClaims<{
-        house: string
-        name: string
+        house: string,
+        name: string,
       }>()
 
       idToken.house = "Gryffindor"
       idToken.name = "Harry Potter"
     }
     ```
-The above code adds a custom `house` and modifies the default `name` claim to the ID token, with custom values.
+
+The above code adds a custom `house` claim to the ID token and updates the `name` claim as shown.
+
+Take a look at the available ID token claims in the [about ID tokens](/build/tokens/about-id-tokens/) doc. You may not be able to modify every default claim. See the [prohibited claims](#prohibited-claims) section for more information.
 
 ## Glossary
 
-### Required bindings 
+### Required bindings
 
-The following bindings are required to modify the tokens:
+Declare the token binding that matches the JWT you are modifying:
 
 - `kinde.accessToken`: required to modify access token claims
 - `kinde.idToken`: required to modify ID token claims
 - `kinde.m2mToken`: required to modify M2M token claims
 
+The workflow examples on this page also declare the native `url` binding (for URL parameters).
+
 ### Prohibited claims
 
-You can't modify the following claims from the tokens:
+You can't modify the following token claims:
 
 **Common prohibited claims:**
 
