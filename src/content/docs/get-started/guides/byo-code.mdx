@@ -30,7 +30,7 @@ keywords:
   - environment variables
   - user registration
   - setup tasks
-updated: 2026-04-25
+updated: 2026-04-26
 featured: false
 deprecated: false
 ai_summary: Guide for connecting existing codebases to Kinde including SDK selection, app configuration, callback URLs, and environment setup.
@@ -106,7 +106,7 @@ You can add more URLs later, when your production environment is ready to go liv
 
 Your code base will include an .env file (or something similar) for storing configuration information. Add the Kinde app details you copied from the **Details** page to your .env file.
 
-Here’s an example from the Next.js app router SDK:
+Here’s an example from the [Next.js app router SDK](/developer-tools/sdks/backend/nextjs-sdk/):
 
 ```env
 # .env
@@ -124,25 +124,87 @@ Make sure you do not commit your client secret to source control, by adding your
 
 ### 7. Test user registration
 
-Run your app locally and click on the **Sign up** button. It will redirect you to the Kinde login page.
+1. Run your app locally and click on the **Sign up** button. It will redirect you to the Kinde login page.
 
-![kinde hosted login page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/e13f9836-cb8a-4f06-5556-69d668a5a200/socialsharingimage)
+    ![kinde hosted login page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/e13f9836-cb8a-4f06-5556-69d668a5a200/socialsharingimage)
 
-Complete the sign up process and it will redirect back to your app's dashboard page. If you run into an issue, take a look at the [common error codes page](/get-started/guides/error-codes/).
+2. Complete the sign up process and it will redirect back to your app's dashboard page. If you run into an issue, take a look at the [common error codes page](/get-started/guides/error-codes/).
 
-Go to your **Kinde dashboard > Users** to find the user profile you just created.
+3. Go to your **Kinde dashboard > Users** to find the user profile you just created.
 
-![kinde dashboard users page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9f3ace08-61d1-4392-89b8-6e8ea3f85100/socialsharingimage)
+    ![kinde dashboard users page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9f3ace08-61d1-4392-89b8-6e8ea3f85100/socialsharingimage)
 
-## Set up Kinde to work how you want it
+    Here, you can edit this user's profile details and even perform admin actions like suspending or deleting the user. Read more about [user management](/manage-users/about/) in Kinde.
 
-Start configuring Kinde to work the way you want by exploring [common set up tasks](/get-started/guides/set-up-tasks/) and customizations. That’s when you’ll really start to build your business on Kinde.
+    <Aside>
+    Users created in different applications all add to the same environment in your Kinde business.
+    </Aside>
 
-## Add social and enterprise connections 
+## Advanced configuration
 
-To be added.
+### Change Kinde design and branding
 
-## Set up a test environment
+You can change the Kinde hosted login page to match your brand.
+
+1. Go to Kinde dashboard > **Design** to change your brand colors, logo, favicon, button colors, and content copy.
+2. To remove the Kinde branding, go to Kinde dashboard > select **Your business name > Business details > Global display settings** > disable the **Show Kinde branding** switch.
+
+    <Aside type="upgrade">
+    To remove the Kinde branding, you need to be on a paid plan. See [Kinde pricing](https://kinde.com/pricing/) for more details.
+    </Aside>
+
+Take a look at the [guide for changing Kinde design and branding](/design/brand/global-brand-defaults/) for more details.
+
+### Import users to Kinde
+
+You can add users from the Kinde dashboard or import your existing users from other platforms or your database. To add single users:
+
+1. Go to Kinde dashboard > **Users** > **Add user**.
+2. Enter the user's email address and select **Save**.
+3. The user will receive an email to set their password.
+
+You can migrate users from other platforms such as Auth0, Clerk, Firebase, or your own custom platform. Take a look at the [dedicated migration guides here](/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/).
+
+### Change authentication strategies
+
+The default authentication strategy is to use email and OTP code for user sign up and sign in. You can add different auth strategies for your app such as:
+
+- Email + code (default)
+- Phone or WhatsApp auth
+- Username + code
+- Email + password
+- Username + password
+
+Here is a general guide to configure the authentication strategies:
+
+1. Go to your application > **View details** > **Authentication**.
+2. Enable the authentication strategy you want to use.
+3. Select **Save**.
+
+If you are using phone or WhatsApp connections, you may need to configure it in Kinde. Take a look at the [authentication methods](/authenticate/authentication-methods/set-up-user-authentication/) page for more details and setup instructions for each.
+
+<Aside>
+You can use different authentication strategies for different applications in your environment.
+</Aside>
+
+### Setup social or enterprise connections
+
+You can allow your users to sign in with social profiles such as Google, Facebook, GitHub, etc. You can also use enterprise connections such as Microsoft Entra ID or SAML. To configure social or enterprise connections, these are the general steps:
+
+1. Go to **Settings > Environment > Authentication**.
+2. In the **Social connections** or **Enterprise connections** section, select **Add connection**.
+3. In the window that appears, select the service you want to use and select **Next**.
+4. Configure the connection details and select **Save**.
+5. Go to your application > **View details** > **Authentication** and enable the connection you just added.
+
+Take a look at the detailed sections for each of the auth methods and how to configure them.
+
+- [Add social sign in with Kinde](/authenticate/social-sign-in/add-social-sign-in/)
+- [Add enterprise connections with Kinde](/authenticate/enterprise-connections/about-enterprise-connections/)
+
+## Advanced developer topics
+
+### Set up a test environment
 
 Kinde comes with a default production environment, and the ability to create additional non-production environments. This is useful for testing in different environments without having to sign up for a new account.
 
@@ -165,18 +227,29 @@ To create a test environment, do the following:
     Kinde free plan allows you to create only one non-production environment. If you want to create more (e.g., dev, staging), you will need a paid plan. See [Kinde pricing](https://kinde.com/pricing/) for more details.
     </Aside>
 
-## End to end testing your Kinde apps
+### Use Kinde Management API to perform admin actions
 
-To be added.
+The Kinde Management API lets you automate admin tasks such as managing users, roles, permissions, and applications. To get started:
 
-## Copy application configuration across environments
+1. Go to your Kinde dashboard and select **Add application**. Give it a name, select **Machine to machine** as the type, then select **Save**.
+2. Go to **APIs** page, select the three dots next to the **Kinde Management API** and choose **Authorize application**.
+3. Select the three dots again and choose **Manage scopes**. Enable only the scopes you need, then select **Save**.
+4. Select **View details** on the Kinde Management API, then select **Test**. Choose your M2M application and select **Get token** to generate a test token.
 
-To be added. 
+See the full [Kinde Management API reference](/kinde-apis/management/) for available endpoints and usage examples.
 
-## Import users from another system
+### Copy application configuration across environments
 
-To be added. 
+Because Kinde environments are isolated and changes don't auto-promote, you need to manage your configuration as code. You can use a seeding script with the Kinde Management API to replicate application settings, such as connections, roles, and permissions consistently across dev, staging, and production. [See the guide for managing Kinde configuration via API](/developer-tools/guides/manage-kinde-configuration/).
 
-## Deploy to production
+### End to end testing your Kinde apps
 
-## Next steps
+Kinde supports automated testing for authentication flows, protected features, and backend API endpoints. You can use browser automation tools like Playwright or Cypress to test sign-up, sign-in, and sign-out flows, or use refresh tokens to test protected API routes without a browser.
+
+[See the end-to-end testing overview](/testing/) for setup instructions and implementation guides for each approach.
+
+### Deploy to production
+
+- [Prepare your production environment to go live](/build/environments/production-to-live/).
+- Deploy your app to: [Vercel](/developer-tools/guides/deploy-on-vercel/), [Netlify](/developer-tools/guides/deploy-on-netlify/) or [Cloudflare Workers](/developer-tools/guides/deploy-on-cloudflare-workers/).
+
