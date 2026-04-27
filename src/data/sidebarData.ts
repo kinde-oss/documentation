@@ -9,7 +9,16 @@ const sidebarData = [
     collapsed: true,
     cardLink: "/get-started/guides/first-things-first/",
     items: [
-      {label: "Guides", autogenerate: {directory: "get-started/guides"}, collapsed: false},
+      {
+        label: "Guides",
+        items: [
+          {label: "First things first", link: "/get-started/guides/first-things-first/"},
+          {label: "Add Kinde to your codebase", link: "/get-started/guides/byo-code/"},
+          {label: "Common setup tasks", link: "/get-started/guides/set-up-tasks/"},
+          {label: "Error codes", link: "/get-started/guides/error-codes/"}
+        ],
+        collapsed: false
+      },
       {
         label: "Learn about Kinde",
         autogenerate: {directory: "get-started/learn-about-kinde"},
