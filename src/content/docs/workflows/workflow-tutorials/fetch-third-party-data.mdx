@@ -1,0 +1,173 @@
+---
+page_id: 4cb565d2-5c3b-47a1-8fc0-2f39879bcaf7
+title: Tutorial - Fetch third party data in workflows
+description: Fetch third party data from your Kinde workflows
+sidebar:
+  order: 2
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - f499ebb0-d7f5-4244-bf92-6bf0f6082b62
+  - 56db51a5-5542-4631-8bc6-36339a813a85
+  - b5a147ac-c189-40b5-8300-b518dd353f92
+  - a5c850c0-0251-44ea-adef-73606694ace3
+app_context:
+  - m: workflows
+  - s: workflows
+topics:
+  - "workflows"
+  - "workflow-tutorials"
+  - "third-party-integrations"
+  - "fetch-binding"
+  - "environment-variables"
+  - "user-token-generation"
+  - "custom-claims"
+sdk: "kinde infrastructure"
+languages:
+  - "TypeScript"
+  - "JavaScript"
+audience:
+  - "developers"
+complexity: "intermediate"
+keywords:
+  - "third party API"
+  - "external API"
+  - "kinde.fetch"
+  - "HTTP GET"
+  - "workflow bindings"
+  - "access token custom claims"
+  - "UserTokenGeneration"
+  - "getEnvironmentVariable"
+  - "kinde.env"
+  - "API key"
+  - "Workflow.ts"
+updated: 2026-04-21
+featured: false
+deprecated: false
+ai_summary: "Learn how to call a third-party HTTP API from a Kinde workflow during user token generation and map the response into access token custom claims. The tutorial uses `@kinde/infrastructure` (`onUserTokenGeneratedEvent`, `accessTokenCustomClaims`, `fetch`) with bindings `kinde.fetch`, `url`, and `kinde.accessToken`, reads the signed-in user from `event.context.user.id`, handles failed responses, and parses JSON into typed claims. It also shows storing secrets in Kinde env vars (**Settings > Data management > Env variables**), adding the `kinde.env` binding, and using `getEnvironmentVariable` (for example `API_KEY`) in headers such as `Authorization: Bearer`. Pointers link to the fetch binding and environment variable docs."
+---
+
+You can fetch third party data from your workflows and use within them.
+
+### What you need?
+
+- A [Kinde](https://app.kinde.com/register) account (Sign up for free)
+- A workflow Git repository connected to your Kinde account (use the [workflow base template](/workflows/getting-started/quick-start-guide/))
+- A third party data source such as a database or API
+
+## Fetch third party data from the workflow
+
+### Basic example
+
+1. Add the following code to your `Workflow.ts` file:
+
+    ```typescript
+    import {
+      onUserTokenGeneratedEvent,
+      accessTokenCustomClaims,
+      WorkflowSettings,
+      WorkflowTrigger,
+      fetch,
+    } from "@kinde/infrastructure";
+
+    export const workflowSettings: WorkflowSettings = {
+      id: "addThirdPartyDataToAccessToken",
+      name: "Add third party data to access token",
+      trigger: WorkflowTrigger.UserTokenGeneration,
+      bindings: {
+        "kinde.accessToken": {},
+        "kinde.fetch": {},
+        url: {},
+      },
+    };
+
+    export default async function FetchThirdPartyDataWorkflow(
+      event: onUserTokenGeneratedEvent
+    ) {
+      const accessToken = accessTokenCustomClaims<{
+        lifetime_subscriber: boolean;
+      }>();
+      
+      const loggedInUserId = event.context.user.id;
+      const { data: userData } = await fetch(`https://my-website.com/api/user/${loggedInUserId}`, {
+        method: "GET",
+        responseFormat: "json",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
+      accessToken.lifetime_subscriber = userData.lifetime_subscriber || false;
+    }
+    ```
+
+    The code fetches the user data from the third party data source and stores it in the access token. **GET** is appropriate for a read-only lookup by user ID, matching the [kinde.fetch](/workflows/bindings/fetch-binding/) examples. If you need to send sensitive data in the request body, use **POST** and consider [`kinde.secureFetch`](/workflows/bindings/secure-fetch-binding/) instead.
+
+**Required bindings:**
+
+    - `kinde.fetch`: to fetch the third party data
+    - `url`: required for Kinde to use fetch under the hood
+    - `kinde.accessToken`: to update the the access token
+
+Read more about the [kinde.fetch binding](/workflows/bindings/fetch-binding/).
+
+### Add environment variables
+
+1. Go to **Kinde > Settings > Data management > Env variables** and add any environment variables you need to use in your workflow. (e.g., `API_URL`, `API_KEY`, etc.)
+
+2. Add the following sample code to your `Workflow.ts` file:
+
+    ```typescript
+    import {
+      onUserTokenGeneratedEvent,
+      accessTokenCustomClaims,
+      WorkflowSettings,
+      WorkflowTrigger,
+      fetch,
+      getEnvironmentVariable,
+    } from "@kinde/infrastructure";
+
+    export const workflowSettings: WorkflowSettings = {
+      id: "addThirdPartyDataUsingEnvs",
+      name: "Add third party data to access token using environment variables",
+      trigger: WorkflowTrigger.UserTokenGeneration,
+      bindings: {
+        "kinde.accessToken": {},
+        "kinde.fetch": {},
+        "kinde.env": {},
+        url: {},
+      },
+    };
+
+    export default async function FetchThirdPartyDataWorkflow(
+      event: onUserTokenGeneratedEvent
+    ) {
+      const accessToken = accessTokenCustomClaims<{
+        lifetime_subscriber: boolean;
+      }>();
+
+      const apiKey = getEnvironmentVariable("API_KEY")?.value;
+      if (!apiKey) {
+        console.error("API_KEY environment variable is not set");
+        return;
+      }
+      
+      const loggedInUserId = event.context.user.id;
+      const { data: userData } = await fetch(`https://my-website.com/api/user/${loggedInUserId}`, {
+        method: "GET",
+        responseFormat: "json",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+      
+      accessToken.lifetime_subscriber = userData.lifetime_subscriber || false;
+    }
+    ```
+
+**Required additional binding:**
+
+- `kinde.env`: to access the environment variables
+
+Read more about the [environment variables and secrets](/workflows/configuration/environment-variables-and-secrets/).

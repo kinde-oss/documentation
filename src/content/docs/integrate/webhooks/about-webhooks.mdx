@@ -30,7 +30,7 @@ keywords:
   - security
   - retry policy
   - endpoints
-updated: 2026-02-04
+updated: 2026-04-03
 featured: false
 deprecated: false
 ai_summary: Comprehensive guide to Kinde webhooks including event monitoring, security best practices, JWT handling, and retry policies for real-time notifications.
@@ -76,7 +76,7 @@ You’ll come across these terms when you start using webhooks.
 1. Webhook endpoints are registered in Kinde.
 2. An event occurs in your account, e.g. `user.created`.
 3. Your endpoint will be called with a JWT containing the data object about that event, and details about the webhook.
-   1. If a `200` response is received, the workflow is complete.
+   1. If a `200` response is received, the workflow is complete. Once you respond with HTTP 200, Kinde considers delivery successful and will not resend.
    2. If Kinde fails to receive a response, it will retry using a back-off policy (see **Webhooks responses and retry policy** below).
 4. In your application you should verify the authenticity of the webhook request, and decode the JWT (see **Webhooks security** below).
 5. Logic is triggered in your application using the event data.
@@ -201,6 +201,14 @@ If Kinde fails to receive a 200 response from your endpoint, Kinde operates a ba
 ## Webhooks auto-disable policy
 
 Webhooks that fail consistently for 72 hours are automatically disabled, and you’ll receive an email notification when this happens. This prevents runaway failures from impacting your system and keeps you informed so you can investigate and re-enable when ready.
+
+## Does Kinde support organization-scoped webhooks?
+
+No. Kinde does not support organization-scoped webhooks. You cannot configure different webhook endpoints per organization (tenant) within the same environment. Webhooks can only be configured at the environment level.
+
+## Do multiple webhook endpoints for the same event run in a defined order?
+
+No. Kinde delivers webhooks using an **asynchronous job** model. If you register **more than one endpoint** for the **same event**, delivery work is typically **queued per endpoint** and may run **in parallel or near-parallel**. **Order between endpoints is not guaranteed**—do not rely on one endpoint being called before another. Make handlers **idempotent** (see **Webhooks security** and **Webhooks best practices** above) so retries and unordered deliveries do not corrupt your data.
 
 ## Next steps
 

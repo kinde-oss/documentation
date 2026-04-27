@@ -1,7 +1,7 @@
 ---
 page_id: 7d311fcf-ca33-49ec-9286-419da4a91f41
 title: Next.js App Router SDK
-description: "Complete guide for Next.js App Router SDK including installation, configuration, middleware setup, route protection, and authentication integration for Next.js 13+ applications."
+description: "Add Kinde auth to Next.js App Router in 2 minutes. Fastest way to add authentication, session and user management to your Next.js app."
 sidebar:
   order: 10
 tableOfContents:
@@ -20,6 +20,8 @@ topics:
   - sdks
   - nextjs
   - backend
+  - authenticate
+  - deployment
 sdk:
   - nextjs
 languages:
@@ -30,17 +32,22 @@ languages:
 audience: developers
 complexity: intermediate
 keywords:
-  - Next.js SDK
-  - App Router
-  - Server Side Components
-  - middleware
-  - authentication
+  - Next.js App Router
+  - kinde-auth-nextjs
+  - Server Components
+  - withAuth
+  - getKindeServerSession
+  - useKindeBrowserClient
+  - KindeProvider
   - route protection
+  - session management
+  - permissions and feature flags
   - environment variables
-updated: 2026-01-24
+  - Vercel preview deployments
+updated: 2026-04-15
 featured: false
 deprecated: false
-ai_summary: Complete guide for Next.js App Router SDK including installation, configuration, middleware setup, route protection, and authentication integration for Next.js 13+ applications.
+ai_summary: "This page documents Kinde authentication for Next.js App Router (13+, Server Components) with @kinde-oss/kinde-auth-nextjs, including links to the V1 App Router and Pages Router SDKs. It covers prerequisites, creating a Back-end web app in Kinde, callback and logout URLs, the official starter kit path, and integrating an existing project with the required app/api/auth/[kindeAuth]/route.ts handleAuth handler, environment variables, optional KindeProvider in the root layout, and UI components (LoginLink, RegisterLink, LogoutLink, CreateOrgLink, PortalLink). It explains customizing auth routes via KINDE_AUTH_API_PATH and related env vars, securing the app with proxy.ts (Next.js 16+) or middleware.ts using withAuth, matchers, publicPaths, req.kindeAuth, and authorization options. It documents server getKindeServerSession and client useKindeBrowserClient APIs for session state, users, organizations, permissions, feature flags, raw and decoded tokens, claims, and token refresh; patterns for protecting routes; Management API usage with @kinde/management-api-js; org flows; self-serve portal options; UTM and language parameters; KINDE_AUDIENCE; KINDE_COOKIE_DOMAIN; Vercel preview URL strategies including an M2M script; health and debug endpoints; resolving state-not-found issues; manual cookie clearing; a Next.js–SDK compatibility matrix; and migrating from SDK V1 (async session helpers)."
 ---
 
 Complete guide for Next.js App Router SDK. 
@@ -48,7 +55,7 @@ Complete guide for Next.js App Router SDK.
 New to Kinde? Kinde is the all-in-one developer platform for authentication, access management and billing - secure and monetize your SaaS from day one. [Get started for free](https://app.kinde.com/register)
 
 <Aside title="Next.js version 13 or later">
-This SDK is for Next.js version 13+ and uses Server Side Components and App Router.
+This SDK is for Next.js version 13+ and uses Server Side Components and App Router. See [Version compatibility](#version-compatibility)
 
 - If you’re using version 1 see [Next.js App Router V1](/developer-tools/sdks/backend/nextjs-sdkv1/)
 
@@ -60,7 +67,6 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
 
 - A [Kinde](https://app.kinde.com/) account (Sign up for free)
 - [Node.js](https://nodejs.org) version 20 or higher
-
 
 ## Set up a Kinde application 
 
@@ -90,9 +96,8 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
 5. Copy the environment variables from the **Quick start** page to the `.env.local` file and save changes.
 6. Start the development server:
 
-    ```bash
-    npm run dev
-    ```
+    <PackageManagers type='run' pkg='dev' />
+
 7. Open the browser and navigate to http://localhost:3000 to see the application.
 8. Sign-up for a new user.
 
@@ -137,13 +142,39 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
 
     You can create an environment file using the command `touch .env.local`
 
-### Add middleware
+### Add proxy
 
-Create a middleware route and add the following code:
+<Aside title="Next.js 16+">
+The file convention was renamed from `middleware.ts` to `proxy.ts`. The Kinde import path (`@kinde-oss/kinde-auth-nextjs/middleware`) and `withAuth` helper remain unchanged — only the file name and exported function name change.
+</Aside>
+
+Create or update the `proxy.ts` file and add the following code:
 
     ```bash
-    touch middleware.ts
+    touch proxy.ts
     ```
+
+    ```typescript
+    // proxy.ts
+    import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
+
+    export default withAuth(
+      async function proxy(req) {
+      },
+      {
+        // Proxy still runs on all routes, but doesn't protect the home route
+        publicPaths: ["/"], // e.g. ["/api/public", "/blog", "/about"]
+      }
+    );
+
+    export const config = {
+      matcher: [
+        '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+      ],
+    }
+    ```
+
+    If your app uses the legacy `middleware.ts` file, you can use the following code:
 
     ```typescript
     // middleware.ts
@@ -165,9 +196,9 @@ Create a middleware route and add the following code:
     }
     ```
 
-    The middleware will protect all routes except the ones specified in the `publicPaths` array. It will also ignore Next.js internals and static files.
+    The proxy (previously middleware) will protect all routes except the ones specified in the `publicPaths` array. It will also ignore Next.js internals and static files.
 
-    Learn more about middlewares in the [Middleware](#about-the-middleware) sections.
+    Learn more about the proxy in the [Proxy](#about-the-proxy) sections.
 
 ### Add KindeProvider (Optional)
 
@@ -286,9 +317,8 @@ Wrap your `RootLayout` component with the `AuthProvider`:
 
 4. Start the development server:
 
-    ```bash
-    npm run dev
-    ```
+    <PackageManagers type='run' pkg='dev' />
+
 5. Open the browser and navigate to http://localhost:3000 to see the application.
 
 Watch the video guide:
@@ -323,31 +353,36 @@ KINDE_AUTH_LOGIN_ROUTE="app_login"
 
 The Kinde login route for your application will be `/my/custom/path/app_login`.
 
-## About the middleware
+## About the proxy
 
-Middleware is used to protect routes in your Next.js app, and is a requirement for a seamless authentication experience.
+<Aside title="Upgrading from middleware?">
+
+The proxy works exactly the same as the old `middleware.ts` — same `withAuth` helper, same matcher config, same behavior. The only changes are renaming your file to `proxy.ts` and the exported function to `proxy`.
+</Aside>
+
+The proxy is used to protect routes in your Next.js app, and is a requirement for a seamless authentication experience.
 
 We provide a `withAuth` helper that will protect routes covered by the matcher. If the user is not authenticated then they are redirected to login and once they have logged in they will be redirected back to the protected page which they should now have access to.
 
-We require this middleware to run on all routes beside Next.js internals and static files. The provided matcher will do this for you.
+We require this proxy to run on all routes beside Next.js internals and static files. The provided matcher will do this for you.
 
-This means that by default, all routes will be protected. You must opt-out public routes - see [opting routes out of middleware protection](#opting-routes-out-of-middleware-protection) for more information.
+This means that by default, all routes will be protected. You must opt-out public routes - see [opting routes out of proxy protection](#opting-routes-out-of-proxy-protection) for more information.
 
 <Aside>
 
-Want to learn more about middleware? Check out the [Next.js middleware docs](https://nextjs.org/docs/app/building-your-application/routing/middleware).
+Want to learn more about the proxy? Check out the [Next.js proxy docs](https://nextjs.org/docs/app/api-reference/file-conventions/proxy).
 
 </Aside>
 
 ### Standard configuration
 
-This is the standard `middleware.ts` file that will protect all routes in your Next.js application.
+This is the standard `proxy.ts` file that will protect all routes in your Next.js application.
 
 ```ts
-// middleware.ts
+// proxy.ts
 import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
 
-export default function middleware(req) {
+export default function proxy(req) {
   return withAuth(req);
 }
 
@@ -361,16 +396,16 @@ export const config = {
 
 ### Route protection with a callback function
 
-You can use the `withAuth` helper to pass your middleware as a callback function.
+You can use the `withAuth` helper to pass your proxy as a callback function.
 The callback function has access to `kindeAuth` object via the `req` parameter, which exposes the token and user data. 
 
-Using the `withAuth` helper, you can add additional configuration options object to your middleware.
+Using the `withAuth` helper, you can add additional configuration options object to your proxy.
 
 ```ts
-// middleware.ts
+// proxy.ts
 import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
 
-export default withAuth(async function middleware(req) {
+export default withAuth(async function proxy(req) {
   console.log("look at me", req.kindeAuth);
 });
 
@@ -381,16 +416,16 @@ export const config = {
 };
 ```
 
-### Opting public routes out of middleware protection
+### Opting public routes out of proxy protection
 
-As the middleware matcher is set to protect all routes, you can opt routes out of middleware protection by adding them to the `publicPaths` array.
+As the proxy matcher is set to protect all routes, you can opt routes out of proxy protection by adding them to the `publicPaths` array.
 
 ```ts
-// middleware.ts
+// proxy.ts
 import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
 
 export default withAuth(
-  async function middleware(req) {
+  async function proxy(req) {
   },
   {
     // Middleware still runs on all routes, but doesn't protect the blog route
@@ -405,9 +440,9 @@ export const config = {
 }
 ```
 
-### Additional middleware options object
+### Additional proxy options object
 
-You can pass an additional configuration options object to the `withAuth` helper to configure the middleware functionality.
+You can pass an additional configuration options object to the `withAuth` helper to configure the proxy functionality.
 
 - `isReturnToCurrentPage`:Boolean - redirect the user back to the page they were trying to access
 - `loginPage`:String - define the path of the login page (where the users are redirected to when not authenticated)
@@ -415,11 +450,11 @@ You can pass an additional configuration options object to the `withAuth` helper
 - `isAuthorized`:Function - define the criteria for authorization
 
 ```ts
-// middleware.ts
+// proxy.ts
 import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
 
 export default withAuth(
-  async function middleware(req) {
+  async function proxy(req) {
     console.log("look at me", req.kindeAuth);
   },
   {
@@ -1647,7 +1682,7 @@ export default async function Protected() {
 
 // As of right now, this can't be done in Client Components because of how Next.js handles
 // navigation in client components with prefetching and caching.
-// But you can still achieve an automatic redirect with middleware
+// But you can still achieve an automatic redirect with the proxy
 ```
 
 If you want the user to be redirected back to that route after signing in, you can set `post_login_redirect_url` in the search params of the redirect.
@@ -1662,7 +1697,7 @@ if (!(await isAuthenticated())) {
 
 ## Refreshing Kinde data
 
-Our middleware will automatically refresh the tokens in your session in the background. 
+Our proxy will automatically refresh the tokens in your session in the background. 
 
 Sometimes, you may want to refresh these tokens on demand. An example of this is when you update Kinde data via the UI or with the Management API. 
 
@@ -2121,15 +2156,88 @@ The reason why you are redirected to the wrong domain because is likely because 
 
 You should set the `KINDE_POST_LOGIN_REDIRECT_URL` dynamically based on the domain you initiating the auth flow from.
 
+## Clearing Kinde session cookies manually
+
+There are situations — such as debugging a stuck session, forcing a clean logout without a redirect, or testing authentication flows — where you may need to clear Kinde's session cookies directly from your Next.js application.
+
+### Step 1: Identify the cookies
+
+Kinde stores session data in httpOnly cookies. Open your browser's DevTools (**Application > Cookies**) after signing in and look for cookies that match these patterns on your domain:
+
+- `ac-state-key` — state parameter cookie set at the start of the auth flow
+- `id_token` — ID token cookie (if set)
+- `access_token` — access token cookie (if set)
+- `refresh_token_<prefix>` — refresh token cookie (prefix is the first 6 characters of your Kinde client ID, e.g. `refresh_token_abc123`)
+
+The exact set of cookies present depends on your SDK version and configuration.
+
+### Step 2: Clear the cookies via an API route
+
+Create a server-side API route to delete the cookies. This must be done server-side because the cookies are `httpOnly` and cannot be deleted from client-side JavaScript.
+
+```typescript
+// app/api/auth/clear-session/route.ts
+import { cookies } from "next/headers"
+import { NextResponse } from "next/server"
+
+export async function POST() {
+  const cookieStore = await cookies()
+  const allCookies = cookieStore.getAll()
+
+  // Delete all cookies that belong to Kinde
+  const kindeCookiePatterns = ["ac-state-key", "id_token", "access_token", "refresh_token_"]
+
+  for (const cookie of allCookies) {
+    if (kindeCookiePatterns.some((pattern) => cookie.name.startsWith(pattern))) {
+      cookieStore.delete(cookie.name)
+    }
+  }
+
+  return NextResponse.redirect(new URL("/", process.env.KINDE_SITE_URL ?? "http://localhost:3000"))
+}
+```
+
+### Step 3: Call the route
+
+Navigate the user to `/api/auth/clear-session` to clear the session, or call it programmatically:
+
+```tsx
+// Trigger from a button or link in your UI
+<form action="/api/auth/clear-session" method="post">
+  <button type="submit">Clear session</button>
+</form>
+```
+
+<Aside type="warning">
+
+Clearing cookies manually ends the local session but does not sign the user out of Kinde's authorization server. To fully sign a user out — including ending the Kinde session — use the standard [logout flow](/developer-tools/sdks/backend/nextjs-sdk/#logout) instead. Use cookie clearing only as a debugging tool or last resort.
+
+</Aside>
+
 ## Debug mode
 
 In debug mode you will see more logs in your console that may help with debugging.
 
 ```jsx
 // .env
-
-KINDE_DEBUG_MODE = true;
+KINDE_DEBUG_MODE=true
 ```
+
+## Version compatibility
+
+### Which Next.js versions does the Kinde SDK support?
+
+The `@kinde-oss/kinde-auth-nextjs` SDK supports Next.js 12 through 16. Each major Next.js version requires a minimum SDK version — make sure you're on a compatible release before upgrading Next.js.
+
+| Next.js version | Minimum SDK version |
+| --------------- | ------------------- |
+| 12.3.x          | 2.x                 |
+| 13.5.x          | 2.x                 |
+| 14.2.x          | 2.x                 |
+| 15.2.x          | 2.x                 |
+| 16.x            | 2.11.0              |
+
+For the latest compatibility information, check the [@kinde-oss/kinde-auth-nextjs npm page](https://www.npmjs.com/package/@kinde-oss/kinde-auth-nextjs) or [release notes](https://github.com/kinde-oss/kinde-auth-nextjs/releases).
 
 ## Migrate from V1
 

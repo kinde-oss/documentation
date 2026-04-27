@@ -1,0 +1,390 @@
+---
+page_id: 8b6b2bda-26ef-4b74-b45e-d7f6d25b5f4b
+title: Use Kinde permissions in React and any backend
+description: Learn how to use Kinde permissions in a React frontend and enforce the same permissions in any backend API using access tokens.
+authors: ["Koosha", "Tamal"]
+sidebar:
+  order: 9
+relatedArticles:
+  - f74a81d3-3588-4fd4-a0ba-13eba550eff1
+  - 51899f7f-3436-46e0-9a1b-6ecc3603a0df
+  - f164c06e-9049-4372-b3ff-d2c6e7a13305
+  - d2d64a2b-1fb7-4c18-88bc-2986723724cb
+  - 684fc526-a338-4a67-9af6-742a39b66aff
+tableOfContents:
+  maxHeadingLevel: 3
+topics:
+  - developer-tools
+  - guides
+  - react
+  - permissions
+  - authorization
+sdk:
+  - react
+languages:
+  - javascript
+  - jsx
+  - typescript
+  - json
+audience: developers
+complexity: intermediate
+keywords:
+  - React permissions
+  - access token permissions
+  - frontend authorization
+  - backend route protection
+  - JWT validation
+  - role based access control
+  - Kinde permissions
+updated: 2026-04-14
+featured: false
+deprecated: false
+ai_summary: Guide to implementing Kinde permissions in a React frontend and enforcing the same permissions on backend API routes using access tokens, without calling the Management API.
+---
+
+This guide shows how to implement a permissions model where your React frontend handles authentication and page-level access control, while your backend enforces permissions on API routes using Kinde's built-in permissions.
+
+You do not need the Management API for this flow. Permissions are included in the access token at sign-in.
+
+### How it works
+
+When a user signs in through the Kinde React SDK, they receive a JWT access token. That token includes a `permissions` array based on the roles and permissions you configured in Kinde.
+
+Both your frontend and backend read from the same token:
+
+1. User signs in through the React SDK (Kinde handles the hosted login page).
+2. Kinde issues an access token that contains a `permissions` array.
+3. React reads the token to decide which pages and UI elements the user can see.
+4. React sends the token as a Bearer token when calling your backend API.
+5. Your backend reads the same token to allow or deny API requests.
+
+The access token is a standard JWT. Any backend (Python, Node.js, .NET, Ruby, and others) can validate and decode it, then read the `permissions` claim.
+
+### What you need
+
+- A [Kinde](https://app.kinde.com/register) account (Sign up for free)
+- A React app (v18+) configured with Kinde, such as the [React Starter Kit](/developer-tools/sdks/frontend/react-sdk/)
+- A backend that can validate JWTs (using a Kinde backend SDK or any JWT library)
+
+## Step 1: Define permissions in Kinde
+
+Before writing code, set up permissions in the Kinde dashboard:
+
+1. Go to **Settings > User Management > Permissions**.
+2. Select **Add permission**.
+3. For each permission, provide:
+   - **Name** - human-readable label (for example, `Create todos`)
+   - **Key** - value your code uses (for example, `create:todos`)
+   - **Description** - context for admins
+
+Example permissions:
+
+| Key | Description |
+| --- | --- |
+| `create:todos` | Can create new todo items |
+| `read:todos` | Can view todo items |
+| `update:todos` | Can edit existing todo items |
+
+**Group permissions into roles:**
+
+After creating permissions, go to **Settings > User Management > Roles** and create roles that bundle permissions together.
+
+For example:
+
+- **Viewer**: `read:todos`, `read:reports`
+- **Editor**: `read:todos`, `create:todos`, `update:todos`
+- **Admin**: all of the above plus `delete:todos`, `manage:users`
+
+Assign roles to users in the **Users** section. Role-based permissions are then automatically included in each user's access token at sign-in.
+
+## Step 2: Check permissions in React
+
+The React SDK gives you three common ways to enforce permissions in the frontend.
+
+### Option A: `has()`
+
+
+<Aside>
+For production, extend this pattern with correct effect dependencies, auth/loading guards, error handling, and cleanup for in-flight async work.
+</Aside>
+
+```tsx
+// TodoHeader.tsx
+import { useEffect, useState } from "react";
+import { has } from "@kinde-oss/kinde-auth-react/utils";
+
+export default function TodoHeader() {
+  const [canCreateTodos, setCanCreateTodos] = useState(false);
+  const [canManageUsers, setCanManageUsers] = useState(false);
+
+  useEffect(() => {
+    const checkAccess = async () => {
+      const createTodosAccess = await has({ permissions: ["create:todos"] });
+      const manageUsersAccess = await has({
+        roles: ["admin"],
+        permissions: ["manage:users"],
+      });
+
+      setCanCreateTodos(createTodosAccess);
+      setCanManageUsers(manageUsersAccess);
+    };
+
+    checkAccess();
+  }, []);
+
+  return (
+    <header>
+      <h1>Todos</h1>
+      {canCreateTodos && <button>Create todo</button>}
+      {canManageUsers && <a href="/admin/users">Manage users</a>}
+    </header>
+  );
+}
+```
+
+Import `has` from `@kinde-oss/kinde-auth-react/utils`, then call it with an object containing `permissions` (and optionally `roles`).
+
+It returns a Promise that resolves to `true` only when all requested conditions pass.
+
+Examples:
+
+- `await has({ permissions: ["create:todos"] })`
+- `await has({ roles: ["admin"], permissions: ["manage:users"] })`
+
+Use this for conditional UI rendering after resolving the async check, like showing a **New todo** button only when `create:todos` exists.
+
+### Option B: `ProtectedRoute` (react-router-dom)
+
+```tsx
+// AppRoutes.tsx
+import { Routes, Route } from "react-router-dom";
+import { ProtectedRoute } from "@kinde-oss/kinde-auth-react/react-router";
+
+function AdminPage() {
+  return <h2>Admin</h2>;
+}
+
+function UnauthorizedPage() {
+  return <h2>You are not authorized</h2>;
+}
+
+export default function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/unauthorized" element={<UnauthorizedPage />} />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute
+            has={{ permissions: ["manage:users"] }}
+            fallbackPath="/unauthorized"
+          >
+            <AdminPage />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  );
+}
+```
+
+Import `ProtectedRoute` from `@kinde-oss/kinde-auth-react/react-router` and wrap route elements.
+
+**Required props:**
+
+- `has` - access requirements (`permissions`, `roles`, `featureFlags`, or `billingEntitlements`)
+- `fallbackPath` - where to redirect unauthorized users
+
+Use this for route-level guards such as restricting `/admin` to users with `manage:users`.
+
+### Option C: `useKindeAuth()` hook
+
+```tsx
+// PermissionsPanel.tsx
+import { useEffect, useState } from "react";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+
+export default function PermissionsPanel() {
+  const { getPermission, getPermissions } = useKindeAuth();
+  const [canCreateTodo, setCanCreateTodo] = useState(false);
+  const [allPermissions, setAllPermissions] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadPermissions = async () => {
+      const createTodoPermission = await getPermission("create:todos");
+      const permissionSet = await getPermissions();
+
+      setCanCreateTodo(Boolean(createTodoPermission?.isGranted));
+      setAllPermissions(permissionSet?.permissions ?? []);
+    };
+
+    loadPermissions();
+  }, [getPermission, getPermissions]);
+
+  return (
+    <section>
+      {canCreateTodo && <button>Create todo</button>}
+      <pre>{JSON.stringify(allPermissions, null, 2)}</pre>
+    </section>
+  );
+}
+```
+
+For inline checks and full permission objects (including org context), use:
+
+- `await getPermission("create:todos")`
+- `await getPermissions()`
+
+**Typical return shapes:**
+
+```json
+{
+  "permissionKey": "create:todos",
+  "orgCode": "org_1234",
+  "isGranted": true
+}
+```
+
+```json
+{
+  "orgCode": "org_1234",
+  "permissions": ["create:todos", "update:todos", "read:todos"]
+}
+```
+
+## Step 3: Send the token to your backend API
+
+### Send token from React frontend
+
+```tsx
+// CreateTodoButton.tsx
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+
+type TodoPayload = {
+  title: string;
+};
+
+export default function CreateTodoButton() {
+  const { getAccessToken } = useKindeAuth();
+
+  const createTodo = async () => {
+    const accessToken = await getAccessToken();
+
+    const payload: TodoPayload = { title: "Ship docs update" };
+
+    const response = await fetch("https://api.example.com/todos", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error("Request failed");
+    }
+
+    const data = await response.json();
+    console.log("Created todo:", data);
+  };
+
+  return <button onClick={createTodo}>Create todo</button>;
+}
+```
+
+Retrieve the token with `getAccessToken()` from `useKindeAuth()`, then send it as `Authorization: Bearer <token>` using `fetch` (or any HTTP client).
+
+### Validate the token on the backend
+
+Use Kinde's JWT validator and decoder packages to validate the token and read claims on the backend.
+
+<PackageManagers pkg='@kinde/jwt-validator @kinde/jwt-decoder' />
+
+**Next.js example:**
+
+```typescript
+// app/api/todos/route.ts
+import { NextResponse } from "next/server";
+import { validateToken } from "@kinde/jwt-validator";
+import { jwtDecoder } from "@kinde/jwt-decoder";
+
+export async function POST(req: Request) {
+  const authHeader = req.headers.get("authorization");
+  const token = authHeader?.replace("Bearer ", "");
+
+  if (!token) {
+    return NextResponse.json({ error: "Missing bearer token" }, { status: 401 });
+  }
+
+  try {
+    const validationResult = await validateToken({
+      token,
+      domain: process.env.KINDE_ISSUER_URL,
+    });
+
+    if (!validationResult.valid) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    // Decode claims after successful validation
+    const decodedToken = jwtDecoder(token);
+    const { sub, aud, permissions = [] } = decodedToken;
+    const expectedAudience = process.env.KINDE_API_AUDIENCE;
+    const audiences = Array.isArray(aud) ? aud : [aud].filter(Boolean);
+
+    if (!expectedAudience || !audiences.includes(expectedAudience)) {
+      return NextResponse.json({ error: "Invalid audience" }, { status: 401 });
+    }
+
+    if (!permissions.includes("create:todos")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      claims: { sub, aud, permissions },
+    });
+  } catch (error) {
+    return NextResponse.json({ error: "Token validation failed" }, { status: 401 });
+  }
+}
+```
+
+<Aside title="KINDE_ISSUER_URL">
+  The `KINDE_ISSUER_URL` environment variable is created when you set up your Kinde application. Setup details vary by framework.
+</Aside>
+
+1. Validate the JWT signature and claims (issuer, audience, expiry).
+2. Read the `permissions` claim.
+3. Allow or deny each route based on required permission keys.
+
+If you use a Kinde backend SDK, helper methods can simplify permission checks. Otherwise, any JWT validation library works if you validate tokens against your Kinde issuer URL.
+
+### Using the audience claim
+
+If you want an access token minted for your registered API, set the `audience` prop on `KindeProvider` to that API's identifier.
+
+[Register your API in Kinde](/developer-tools/your-apis/register-manage-apis/#to-register-an-api-in-kinde) first, then use that identifier as the audience value.
+
+```tsx
+// src/main.tsx
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { KindeProvider } from "@kinde-oss/kinde-auth-react";
+import App from "./App";
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <KindeProvider
+      clientId={"your_kinde_client_id"}
+      domain={"your_kinde_domain"}
+      logoutUri={"your_logout_uri"}
+      redirectUri={"your_redirect_uri"}
+      audience="api.example.com/v1"
+    >
+      <App />
+    </KindeProvider>
+  </StrictMode>
+);
+```

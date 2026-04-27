@@ -3,49 +3,64 @@ page_id: fe9fea0c-274c-4d6b-9cc5-eccdbaad85b7
 title: Create plans
 sidebar:
   order: 2
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 88e1773a-b681-441f-b4c7-d7d339116867
   - e6dde80d-2977-419f-a05a-62ad0a7ac6de
   - 46241baf-30aa-43c0-ac0c-b2b7e99941f1
-app_context: 
+app_context:
   - m: billing
   - s: plans
-description: Step-by-step guide to creating plans in Kinde including plan groups, fixed charges, metered features, and tiered pricing configuration.
-metadata:
-  topics: [billing]
-  sdk: []
-  languages: []
-  audience: [developer, product-manager, business-owner]
-  complexity: intermediate
-  keywords: [create plans, plan groups, fixed charges, billing interval, offer as annual, metered features, tiered pricing, plan features, subscription fees]
-  updated: 2025-11-27
+description: >-
+  Step-by-step guide to creating plans in Kinde including plan groups, fixed
+  charges, metered features, and tiered pricing configuration.
 featured: false
 deprecated: false
+topics:
+  - billing
+sdk: []
+languages: []
+audience:
+  - developer
+  - product-manager
+  - business-owner
+complexity: intermediate
+keywords:
+  - create plans
+  - plan groups
+  - fixed charges
+  - billing interval
+  - offer as annual
+  - metered features
+  - tiered pricing
+  - plan features
+  - subscription fees
+  - trial
+  - free trial
+  - trial period
+updated: 2026-04-07
 ---
 
-Once you’ve got a plan strategy along with a plan feature list, prices, and details, you’re ready to create plans them in Kinde.
+Once you’ve got a plan strategy along with a plan feature list, prices, and details, you’re ready to create plans in Kinde.
 
 All plans must belong to a plan group. When you create your first plan, it will be automatically added to the default group. A plan group can only contain either user plans or organization plans. When you create your first plan, we automatically create a group based on the plan type you select. 
 
-<Aside>
+Remember you can create one charge or feature that can be used and redefined across all plans. E.g. You can have one ‘Base price’ charge that is defined as `0.00` in a **free plan**, `10.00` in a **Plus plan**, and `25.00` in a **Pro plan**.
 
-Remember you can create one charge or feature that can be used and redefined across all plans. E.g. You can have one ‘Base price’ charge that is defined as 0.00 in a free plan, 10.00 in a Plus plan, and 25.00 in a Pro plan.
-
-</Aside>
 
 ## Add a plan
 
-1. Go to **Billing > Plans**. 
-2. If this is the first plan, select **Add plan** on the empty page. 
-3. If you already have plans, select **Add plan** in the top right. The **Add plan** window opens.
+1. Go to **Billing > Plans**
+2. Select **Add plan**, a window opens
     
     ![Add plans window](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/a8a237d5-c242-45dc-453e-a7ad66e33a00/public)
     
-4. Choose whether the plan is for **Organizations** or **Users**, or select the **Group** the plan belongs to. Only one of these options will appear. You cannot change these selections later.
-5. Give the plan a **Name** (e.g. `Free`), a **Description**. This is the name that will also appear in the pricing table (if you use one).
-6. Give your plan a **Key** for referencing in your code. This cannot be changed after a plan is published.
-7. Select a **Default currency**. This field only appears if one has not been set. You can change this later in **Settings > Billing**, but only before any of your plans are published.
-8. Select **Save**.
+3. Choose whether the plan is for **Organizations** or **Users**, or select the **Group** the plan belongs to. Only one of these options will appear. You cannot change these selections later.
+4. Give the plan a **Name** (e.g., `Free`), a **Description**. This is the name that will also appear in the pricing table (if you use one).
+5. Give your plan a **Key** (e.g., `free_plan`) for referencing in your code. This cannot be changed after a plan is published.
+6. Select a **Default currency**. This field only appears if one has not been set. You can change this later in **Settings > Billing**, but only before any of your plans are published.
+7. Select **Save**
 
 ## Configure plan settings
 
@@ -62,11 +77,13 @@ This toggle controls whether users must enter credit card details when subscribi
 - **Enabled (default)**: Users will be prompted to enter their payment details during signup via a secure Stripe payment form.
 - **Disabled**: Users can subscribe without providing payment information and proceed directly to your application.
 
-<Aside type="warning">
+    ![Ask for credit card toggle](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4c118f78-9f3a-49f4-a681-df79c127b400/socialsharingimage)
 
-This option can only be disabled for plans that have no charges. If your plan includes any pricing (fixed charges or metered/usage-based billing), credit card collection is always required.
+    <Aside type="warning">
 
-</Aside>
+    This option can only be disabled for plans that have no charges. If your plan includes any pricing (fixed charges or metered/usage-based billing), credit card collection is always required.
+
+    </Aside>
 
 ### When to use each setting
 
@@ -74,25 +91,52 @@ This option can only be disabled for plans that have no charges. If your plan in
 |-----------|---------------------|
 | Reduce signup friction for a free tier | Disable—let users try your product without entering payment details |
 | Capture payment info for easier upgrades | Enable—collect card details upfront for seamless plan transitions |
-| Run a trial that converts automatically | Enable—billing can start when the trial ends without user action |
-| Offer a commitment-free trial | Disable—users can evaluate your product with no strings attached |
+| Offer a free trial that converts to paid | Enable—required when trial period is enabled; payment details are collected before the trial ends |
 
+### Configure trial period
+
+<Aside>
+
+Trial periods are a beta feature. Contact Kinde support at [support@kinde.com](mailto:support@kinde.com) to get it enabled and help us test it.
+
+</Aside>
+
+Trial periods let customers try a paid plan before being charged. When a trial is active, the customer's Stripe subscription is created with a trial window — no charges are made until the trial expires.
+
+<Aside type="warning">
+
+Enabling a trial period requires the **Ask for credit card** toggle to be on. You cannot enable trials on a plan where credit card collection is disabled.
+
+</Aside>
+
+In **Trials** section:
+
+1. Enable **Trial period**.
+2. Set the **Trial length (days)** (default: 30, minimum: 1). This is how many days the customer can use the plan for free.
+3. Set **Ask for credit card before trial ends (days)** (default: 3, minimum: 0). This must be less than the trial length. This controls when the customer is asked to provide payment details before the trial expires.
 4. Select **Save draft** or **Publish** to apply your changes.
+
+    ![Trial period settings](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/eb377c66-a42f-4759-a7ef-a3eea3dce800/socialsharingimage)
+
+#### How trials work at runtime
+
+- When a customer subscribes to a trial plan, they get full access to the plan features immediately — no payment is collected upfront.
+- The pricing table shows a **"Free trial for N day(s)"** badge on plans with a trial enabled.
+- A background process automatically prompts the customer to verify or update their payment details the configured number of days before the trial ends.
+- When the trial period ends, Stripe attempts to convert the subscription to paid according to your plan pricing, provided valid payment details are in place.
+
+#### Trial period configuration reference
+
+| Setting | Description | Default | Constraints |
+|---------|-------------|---------|-------------|
+| Trial period | Enable or disable the trial for this plan | Off | Requires "Ask for credit card" to be on |
+| Trial length in days | Number of days the customer can use the plan for free | 30 | Must be ≥ 1 |
+| Days before trial end to prompt for credit card | How many days before trial expiry the customer is prompted for payment details | 3 | Must be ≥ 0 and less than the trial length |
+
 
 ## Add a subscription fee or fixed charge to a plan
 
 A fixed charge is a recurring charge such as base price or subscription fee. You can set **billing intervals** (daily, weekly, monthly, or yearly) and optionally **offer the charge as annual** with a custom yearly price when customers choose yearly billing.
-
-<Aside title="Billing intervals and Offer as annual">
-
-When adding a charge, choose **Day**, **Week**, **Month**, or **Year** as the billing interval. To give customers a yearly option at a fixed annual price, turn on **Offer as annual** and set the **Annual price**—only one fixed charge per plan can be offered as annual.
-</Aside>
-
-<Aside type="warning">
-
-You need to create a $0.00 charge for Free plans. This ensures the plan is added to Stripe, and is included on the pricing table.
-
-</Aside>
 
 1. In **Fixed charges**, select **Add charge**.
     1. If the charge exists, select **Use existing feature** then select it from the list. 
@@ -105,18 +149,30 @@ You need to create a $0.00 charge for Free plans. This ensures the plan is added
         
     2. If this is a new charge, give it a name (e.g., `Base subscription fee`). If you’ll reuse this charge across plans, choose a generic name. This cannot be changed later.
 2. Add a **Line item description**. This appears on the customer invoice, so might be more specific than the name, e.g. `Base subscription - Pro plan`.
-
 3. Set the **Price** and choose the **Billing interval**: **Day**, **Week**, **Month**, or **Year**. (You may be asked to set a default currency if you haven’t already).
-4. **(Optional) Offer as annual** – Turn on **Offer as annual** to bill this charge once per year at a fixed price when the customer selects yearly billing. Enter the **Annual price** in the field below. Only one fixed charge per plan can be offered as annual.
-5. Select **Save**.
-6. Select **Save draft**.
-7. Repeat from step 1 for each fixed charge you want to add, or start adding features.
+4. **(Optional) Offer as annual** with a yearly price for this plan.
+5. Select **Save** or **Save draft** to commit your changes.
+6. Repeat for each fixed charge you want to add, or start adding features.
 
-<Aside title="Feature price sync">
+### Offer annual pricing
 
-If you are successfully connected to Stripe and the charge is part of a published plan, it will show as `price synced`. Otherwise the charge will show as `price not synced`.
+<Aside>
+
+Annual subscriptions are a beta feature. Contact Kinde support at [support@kinde.com](mailto:support@kinde.com) to get it enabled and help us test it.
 
 </Aside>
+
+To give customers a yearly option at a fixed annual price, turn on **Offer as annual** and set the **Annual price**. 
+
+    <Aside>
+    Only one fixed charge per plan can be offered as annual.
+    </Aside>
+
+    ![Offer as annual pricing](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6e5a440f-88f8-4af7-5ab2-a28dd0f58900/socialsharingimage)
+
+### Free plans
+
+To create a free plan, set the **Price** to `0.00`. This ensures the plan is added to Stripe, and is included on the pricing table as a free plan.
 
 ## Add features (entitlements) to a plan
 
@@ -152,18 +208,14 @@ You cannot change the Name, the Key or the Type of feature once you have created
 13. For tiered pricing, select **Tiered - Graduated** and define each tier with unit numbers and add the price per unit. 
 14. Select **Add tier** to add a different price for higher unit tiers. For example, a unit might be $10 each if you use 1-10, but is $9 per unit if you use 11 or more.
     
-    <Aside type="warning">
-    
     Ensure the tiered units amounts don’t overlap. E.g. make sure they follow a pattern like 1-10, 11-20, 21-30, etc. If you want to make it so an upper limit is limitless, E.g. 1-10, 11-(blank/limitless); use 1-10, 11-1,000,000 (or a very high number). Graduated unit fields can’t be left blank.
-    
-    </Aside>
     
 15. Select **Save.**
 16. In the **Plan** window, select **Save** to commit your changes.
 17. Repeat for each feature you want to add to the plan. Then repeat this procedure for each plan. 
 
-<Aside title="Feature price sync">
+## Price sync status
 
-If you are successfully connected to Stripe and the feature is part of a published plan, it will show as `price synced`. Otherwise the feature will show as `price not synced`.
+If you are successfully connected to Stripe and the plan/feature is part of a published plan, it will show as `price synced`. Otherwise the feature will show as `price not synced`.
 
-</Aside>
+    ![Price sync status](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/bc88b122-c6d6-4352-1a54-2fe844f23c00/socialsharingimage)

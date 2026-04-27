@@ -89,6 +89,9 @@ export function extractCompleteDocs() {
         fileName: fileName,
         title: frontmatter.title || '',
         description: frontmatter.description || '',
+        updated: frontmatter.updated instanceof Date
+          ? frontmatter.updated.toISOString().split('T')[0]
+          : frontmatter.updated || '',
         keywords: keywords,
         topics: topics,
         content: cleanContent(content)
@@ -157,7 +160,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     if (result.description) {
       completeContent += `> ${result.description}\n\n`;
     }
-    
+
+    if (result.updated) {
+      completeContent += `Last updated: ${result.updated}\n\n`;
+    }
+
     // Add keywords and topics if available
     if (result.keywords || result.topics) {
       let metadata = '';

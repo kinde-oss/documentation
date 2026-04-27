@@ -28,13 +28,54 @@ keywords:
   - feature flags
   - permissions
   - organization claims
-updated: 2024-01-15
+  - billing trial
+updated: 2026-04-13
 featured: false
 deprecated: false
 ai_summary: Comprehensive guide to Kinde access tokens including standard JWT claims, Kinde-specific claims like organization codes and feature flags, and token behavior during refresh operations.
 ---
 
-Access tokens are a secure way of authenticating users, and passing information about a user to to a system.
+Access tokens are a secure way of authenticating users and passing information about a user to a system.
+
+## Example access token
+
+```jsonc
+{
+  "aud": [
+    "myapp:prod-api"
+  ],
+  "azp": "dee7f3c57b3c47e8b96edde2c7ecab7d",
+  "exp": 1693371599,
+  "feature_flags": {
+    "analytics": {
+      "t": "b",
+      "v": true
+    },
+    "theme": {
+      "t": "s",
+      "v": "pink"
+    }
+  },
+  "iat": 1693285199,
+  "iss": "https://<your_subdomain>.kinde.com",
+  "jti": "fbb6bc62-x64e-4256-8ea4-8fb9a645b123",
+  "org_code": "org_xxxxxxxxx",
+  "permissions": [
+    "create:competitions",
+    "delete:competitions",
+    "view:stats",
+    "invite:users",
+    "view:profile"
+  ],
+  "scp": [
+    "openid",
+    "profile",
+    "email",
+    "offline"
+  ],
+  "sub": "kp:_xxxxxxxxx" // your user id
+}
+```
 
 ## Access token standard claims
 
@@ -42,7 +83,7 @@ Access tokens are a secure way of authenticating users, and passing information 
 - **Expiration Time** - `exp` **-** Access tokens come with an expiration time (also known as expiry or lifetime) after which it is no longer valid. The timestamp is usually represented in **seconds** and can be calculated using the [Epoch](https://www.epochconverter.com/) timestamp (UNIX) or other methods. More about [setting token expiry in Kinde](/build/tokens/configure-tokens/).
 - **Scopes** - `scp` - information about the scopes granted to the token holder. These scopes define what actions or resources the token can access. There can be multiple scope values, so the type of this claim is an `array`.
 - **Issuer -** the entity that issued the access token. This is often represented as the token's `iss` claim in JWT. Typically your kinde domain e.g. `https://<your_subdomain>.kinde.com`
-- **Subject** - subject of the token, i.e., the user or entity for which the token was issued. Represented as the token's `sub` claim in JWT. If this is an access token for a Kinde user this will be their ID e.g. `kp_xxxx`
+- **Subject** - subject of the token, i.e., the user or entity for which the token was issued. Represented as the token's `sub` claim in JWT. If this is an access token for a Kinde user this will be their ID e.g. `kp_xxxx`. The `sub` claim is set by Kinde and cannot be overridden.
 - **Audience** - intended recipient of the access token. Represented as the token's `aud` claim in JWT. There can be multiple audience values, so the type of this claim is an `array`.
 - **Issued At** - timestamp of when the access token was issued. Represented as the token's `iat` claim in JWT. The timestamp is usually represented in **seconds** and can be calculated using the [Epoch](https://www.epochconverter.com/) timestamp (UNIX) or other methods.
 - **Token ID** - `jti` - identifier for the access token, useful for tracking and validation purposes. See [this definition](https://www.rfc-editor.org/rfc/rfc7519#section-4.1.7).
@@ -85,6 +126,8 @@ Access tokens are a secure way of authenticating users, and passing information 
   ]
   ```
 
+- **Billing trial** - When a user has an active billing trial on their plan, the token may include `has_trial_period` (boolean) and `trial_expires_on` (ISO 8601 datetime string for when the trial ends). `trial_expires_on` is typically present when `has_trial_period` is `true`. For definitions, see [Billing concepts & terms](/billing/about-billing/billing-concepts-terms/).
+
 - **External provider ID** - The ID you use to identify the organization the user is authorized against
 
 - (MS Entra ID authentication only) Claims starting with `ext_` indicate that user details have come from a third party enterprise auth provider like Microsoft. For example:
@@ -102,45 +145,17 @@ Access tokens are a secure way of authenticating users, and passing information 
 
   ```
 
-## Example access token
+## Can I remove claims to reduce token size?
 
-```jsx
-{
-  "aud": [
-    "myapp:prod-api
-  ],
-  "azp": "dee7f3c57b3c47e8b96edde2c7ecab7d",
-  "exp": 1693371599,
-  "feature_flags": {
-    "analytics": {
-      "t": "b",
-      "v": true
-    },
-    "theme": {
-      "t": "s",
-      "v": "pink"
-    }
-  },
-  "iat": 1693285199,
-  "iss": "https://<your_subdomain>.kinde.com",
-  "jti": "fbb6bc62-x64e-4256-8ea4-8fb9a645b123",
-  "org_code": "org_xxxxxxxxx",
-  "permissions": [
-    "create:competitions",
-    "delete:competitions",
-    "view:stats",
-    "invite:users",
-    "view:profile
-  ],
-  "scp": [
-    "openid",
-    "profile",
-    "email",
-    "offline
-  ],
-  "sub": "kp:_xxxxxxxxx" // your user id
-}
-```
+Yes. Kinde automatically populates the access token with claims like `permissions`, `feature_flags`, and `org_code`. If your app handles this data another way — or you want to keep JWTs small and free of client-readable claims — you can strip any of these from the token at generation time using the [user token generation workflow](/workflows/example-workflows/user-token-generation/#reduce-token-size).
+
+The workflow fires whenever a token is issued and gives you full control over what goes into the final token. You can also use it to retrieve data from the [Kinde Management API](/kinde-apis/management/) server-side instead of embedding it in the JWT.
+
+## How long does an access token last?
+
+Access tokens have a default lifetime of **24 hours (86,400 seconds)**. You can change this in **Settings > Environment > Applications > [your app] > Tokens**. Kinde does not recommend extending the access token lifetime beyond 1 day, as access tokens are the most exposed token type and a longer lifetime increases the window of risk if one is compromised.
+
+For a comparison of all token default lifetimes, see [Configure token and session expiry](/build/tokens/configure-tokens/).
 
 ## Behaviour of Access Tokens on refresh
 
