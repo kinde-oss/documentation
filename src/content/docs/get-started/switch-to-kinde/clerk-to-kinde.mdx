@@ -1,0 +1,151 @@
+---
+page_id: 8b3e1d47-2f96-4a0c-c8d5-6e7a2b9f3150
+title: Migrate to Kinde from Clerk
+sidebar:
+  order: 3
+  label: Clerk
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - c4bc277a-5ec7-418c-ba1c-4d58c9ddfd7d
+  - b338980f-7dd6-4ba5-90aa-330247a45536
+  - e89d246a-5cdf-4993-9cee-94b31ec27583
+description: Step-by-step guide to migrating users and hashed passwords from Clerk to Kinde, including how to export user data and import it into Kinde.
+topics:
+  - get-started
+  - switch-to-kinde
+sdk: []
+languages:
+  - csv
+audience:
+  - developers
+  - admins
+complexity: advanced
+keywords:
+  - clerk migration
+  - clerk to kinde
+  - user import
+  - password migration
+  - hashed passwords
+  - csv import
+updated: 2026-04-28
+featured: false
+deprecated: false
+ai_summary: Step-by-step guide to migrating users and hashed passwords from Clerk to Kinde, including how to export user data and import it into Kinde.
+---
+
+Migrate your users from Clerk to Kinde. The process involves contacting Clerk support to get the export, preparing the data, and importing into Kinde.
+
+Clerk supports exporting user data including hashed passwords, which means your users can migrate without needing to reset their passwords. 
+
+## Clerk migration guide
+
+### 1. Export users from Clerk
+
+1. Sign in to your [Clerk dashboard](https://dashboard.clerk.com/).
+2. Select your application.
+3. Go to **Configure > Settings**.
+4. Under the **User exports** select, **Export users**.
+5. When the export is ready, select **Download**. It will download a CSV file.
+
+Clerk's documentation on [exporting users from Clerk](https://clerk.com/docs/guides/development/migrating/overview#export-your-users-data-from-the-clerk-dashboard).
+
+### ?. Import users into Kinde
+
+1. In Kinde, go to **Users**, then select **Import users**.
+2. Select the **Import users** tab, then select **Import from a CSV**.
+3. Follow the on-screen prompts to upload your file.
+4. If there are errors, view them after the import, fix the CSV, and re-import.
+
+For full instructions, see [Import or update users in bulk](/manage-users/add-and-edit/import-users-in-bulk/).
+
+**Importing passwords separately:**
+
+If you imported users first and want to add passwords in a second pass:
+
+1. In Kinde, go to **Users**, then select **Import users**.
+2. Select the **Import users** tab and choose to update existing users by re-importing the same emails with the password columns included.
+
+## Prepare your Kinde business
+
+Configure your Kinde business to match or improve on your current Clerk setup.
+
+1. Register for a Kinde account and [finish the onboarding process](/get-started/guides/first-things-first/) if you haven't already.
+2. Set up [authentication methods](/authenticate/about-auth/about-authentication/) to match your current Clerk setup.
+   - **Password** — enable this before importing password hashes so users can sign in without resetting
+   - **Passwordless** — one-time code via email or SMS
+   - **Social sign-on** — Google, Apple, GitHub, Microsoft, and more
+   - **Enterprise** — SAML or Microsoft Entra ID
+3. [Create organizations](/build/organizations/add-and-manage-organizations/) in Kinde if you use multi-tenancy (e.g. a B2B app).
+4. Add [roles](/manage-users/roles-and-permissions/user-roles/) and [permissions](/manage-users/roles-and-permissions/user-permissions/) in Kinde if you plan to import these alongside users.
+
+## Prepare your user CSV
+
+Kinde imports users from a CSV file. If Clerk provides a JSON export, you'll need to convert it to CSV format. Structure the file with these columns.
+
+### Required columns
+
+| Column | Notes |
+|--------|-------|
+| `email` | Minimum required field |
+
+### Recommended columns
+
+| Column | Notes |
+|--------|-------|
+| `first_name`, `last_name` | User's name |
+| `email_verified` | `TRUE` or `FALSE` |
+| `id` | Clerk user ID — helps match records during import |
+| `phone` | International format, e.g. `+61555111555` |
+| `external_organization_id` | Organization ID to import the user into (if applicable) |
+| `role_key` | Role key(s) to assign; comma-separate multiple values |
+| `permission_key` | Permission key(s) to assign; comma-separate multiple values |
+
+### Password columns (if importing hashed passwords)
+
+| Column | Notes |
+|--------|-------|
+| `hashed_password` | The user's password encrypted with a hashing algorithm |
+| `hashing_method` | The algorithm used — Kinde supports `bcrypt`, `sha256`, `md5`, `crypt`, `wordpress` |
+| `salt` | Extra characters added to passwords (if applicable) |
+| `salt_position` | `prefix` or `suffix` (required if salt is included) |
+| `salt_format` | Format of the salt, e.g. `hex` or `string` |
+
+<Aside title="Password authentication must be enabled first">
+
+Enable password authentication in Kinde **before** importing password hashes, otherwise users won't be able to sign in with their existing password.
+
+</Aside>
+
+<Aside title="bcrypt $2b variant">
+
+If Clerk exports bcrypt hashes using the `$2b` variant, Kinde will substitute `$2a`. These are interchangeable unless your hashes were generated on OpenBSD.
+
+</Aside>
+
+### Example CSV (with passwords)
+
+```text
+email,first_name,last_name,email_verified,id,hashed_password,hashing_method
+alice@example.com,Alice,Smith,TRUE,clerk_uid_abc123,#########,bcrypt
+bob@example.com,Bob,Jones,TRUE,clerk_uid_xyz789,#########,bcrypt
+```
+
+### Example CSV (without passwords)
+
+```text
+email,first_name,last_name,email_verified,id
+alice@example.com,Alice,Smith,TRUE,clerk_uid_abc123
+bob@example.com,Bob,Jones,FALSE,clerk_uid_xyz789
+```
+
+### Check for errors before importing
+
+Review the CSV for missing or duplicated values. Kinde will flag errors during import and report them back. Most errors can be fixed by editing the CSV and re-importing — records already imported without changes will be skipped.
+
+
+
+## Next steps
+
+- Notify your users of the change before going live, especially if they’ll experience a different sign-in flow.
+- Verify users are able to sign in with their existing password to Kinde. 
