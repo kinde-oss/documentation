@@ -30,6 +30,13 @@ const sdkList: SDK[] = [
     type: "Back end"
   },
   {
+    name: "TanStack Start",
+    link: "/developer-tools/sdks/backend/tsr-sdk/",
+    icon: "tanstack",
+    iconWidth: "36",
+    type: "Back end"
+  },
+  {
     name: "Remix",
     link: "/developer-tools/sdks/backend/remix-sdk/",
     icon: "remix",
