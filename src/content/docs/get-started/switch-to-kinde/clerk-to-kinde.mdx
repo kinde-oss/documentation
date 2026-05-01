@@ -1,0 +1,134 @@
+---
+page_id: 8b3e1d47-2f96-4a0c-c8d5-6e7a2b9f3150
+title: Migrate to Kinde from Clerk
+sidebar:
+  order: 3
+  label: Clerk
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - c4bc277a-5ec7-418c-ba1c-4d58c9ddfd7d
+  - b338980f-7dd6-4ba5-90aa-330247a45536
+  - e89d246a-5cdf-4993-9cee-94b31ec27583
+description: Step-by-step guide to migrating users and hashed passwords from Clerk to Kinde, including how to export user data and import it into Kinde.
+topics:
+  - get-started
+  - switch-to-kinde
+app_context:
+  - m: users
+  - s: list
+sdk: []
+languages:
+  - csv
+audience:
+  - developers
+  - admins
+complexity: advanced
+keywords:
+  - clerk migration
+  - clerk to kinde
+  - migrate from clerk
+  - user import
+  - password migration
+  - hashed passwords
+  - csv import
+  - authentication migration
+  - clerk export
+updated: 2026-04-28
+featured: false
+deprecated: false
+ai_summary: "This guide walks through migrating users from Clerk to Kinde in five steps. Because Clerk supports exporting hashed passwords, migrated users can sign in with their existing passwords without a forced reset. First, export users from the Clerk dashboard as a CSV. Second, prepare the CSV by mapping columns to Kinde's format — the only required field is `email`, but you can also include `hashed_password` and `hashing_method` (bcrypt, sha256, md5, crypt, or wordpress), plus recommended fields like `first_name`, `last_name`, `email_verified`, `id`, `phone`, `external_organization_id`, `role_key`, and `permission_key`. Third, set up your Kinde business by enabling authentication methods, creating organizations, and defining roles and permissions before importing. Fourth, import the CSV via Users > Import users > Custom CSV. Fifth, test the migration by signing in with a migrated user. Review the CSV for errors before importing — Kinde reports issues and skips already-imported records on re-import. After migration, notify users of any changes to their sign-in experience."
+---
+
+Migrate your users from Clerk to Kinde. The process involves exporting user data from the Clerk dashboard, preparing the CSV, and importing it into Kinde.
+
+Clerk supports exporting hashed passwords out of the box, so your migrated users can sign in with their existing passwords without having to reset them. 
+
+## Migration guide
+
+### 1. Export users from Clerk
+
+1. Sign in to your [Clerk dashboard](https://dashboard.clerk.com/apps).
+2. Select the application you are exporting users from.
+3. Go to **Configure > Settings**.
+4. Under the **User exports** section, select **Export users**.
+5. When the export is ready, select **Download**. It will download a CSV file.
+
+![Clerk export users](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/466e727b-0a72-4475-a019-4a685579a200/socialsharingimage)
+
+See Clerk's documentation on [exporting users](https://clerk.com/docs/guides/development/migrating/overview#export-your-users-data-from-the-clerk-dashboard).
+
+### 2. Prepare your user CSV
+
+Modify your Clerk CSV columns to match the supported columns by Kinde:
+
+**Required columns:**
+
+| Column | Notes |
+|--------|-------|
+| `email` | Minimum required field |
+
+**Password columns (if importing hashed passwords):**
+
+| Column | Notes |
+|--------|-------|
+| `hashed_password` | The user's password hashed with a hashing algorithm |
+| `hashing_method` | Kinde supports `bcrypt`, `sha256`, `md5`, `crypt`, `wordpress` |
+
+**Recommended columns:**
+
+| Column | Notes |
+|--------|-------|
+| `first_name`, `last_name` | User's name |
+| `email_verified` | `TRUE` or `FALSE` |
+| `id` | Clerk user ID — helps match records during import |
+| `phone` | International format, e.g. `+61555111555` |
+| `external_organization_id` | Organization ID to import the user into (if applicable) |
+| `role_key` | Role key(s) to assign; comma-separate multiple values |
+| `permission_key` | Permission key(s) to assign; comma-separate multiple values |
+
+<Aside title="Password authentication must be enabled first">
+
+If you are importing hashed passwords, you must also enable password authentication in Kinde before importing. See below.
+</Aside>
+
+### 3. Prepare your Kinde business
+
+Configure your Kinde business to match or improve on your current Clerk setup.
+
+1. Register for a Kinde account and [finish the onboarding process](/get-started/guides/first-things-first/) if you haven't already.
+2. Set up [authentication methods](/authenticate/authentication-methods/set-up-user-authentication/) to match your current Clerk setup.
+   - **Password** — enable this before importing password hashes so users can sign in without resetting
+   - **Passwordless** — one-time code via email or SMS
+   - **Social sign-on** — Google, Apple, GitHub, Microsoft, and more
+   - **Enterprise** — SAML or Microsoft Entra ID
+3. [Create organizations](/build/organizations/add-and-manage-organizations/) in Kinde if you use multi-tenancy (e.g. a B2B app).
+4. Add [roles](/manage-users/roles-and-permissions/user-roles/) and [permissions](/manage-users/roles-and-permissions/user-permissions/) in Kinde if you plan to import these alongside users.
+
+
+### 4. Import users into Kinde
+
+1. In Kinde, go to **Users**, then select **Import users**.
+2. Select **Custom CSV**, then select **Next**.
+3. Select the CSV file you prepared and select **Import**.
+
+    After the import, you will find the list of users in the **Users** tab.
+
+    For full instructions, see [Import or update users in bulk](/manage-users/add-and-edit/import-users-in-bulk/).
+
+### 5. Test the migration
+
+1. Run your Kinde application.
+2. Sign in with a test user you migrated.
+3. Verify you can sign in with the test user.
+
+## Troubleshooting
+
+**Check for errors before importing:**
+
+Review the CSV for missing or duplicated values. Kinde will flag errors during import and report them back. Most errors can be fixed by editing the CSV and re-importing — records already imported without changes will be skipped.
+
+## Next steps
+
+- Notify your users of the change before going live, especially if they’ll experience a different sign-in flow.
+- Verify users are able to sign in to Kinde with their existing Clerk login methods.
