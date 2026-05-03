@@ -1,6 +1,7 @@
 ---
 page_id: fa5b704d-1682-47df-ac41-524b56096e79
 title: Call the Kinde Management API
+description: Use the OAuth2 client credentials flow to get a machine-to-machine (M2M) access token and make authenticated requests to the Kinde Management API.
 sidebar:
   order: 2
   label: "Call the API - General Guide"
@@ -17,6 +18,9 @@ app_context:
 topics:
   - developer-tools
   - kinde-api
+  - authentication
+  - api-access
+  - m2m
 sdk: []
 languages:
   - csharp
@@ -25,7 +29,10 @@ languages:
   - javascript
   - objective-c
   - php
+  - python
+  - ruby
   - shell
+  - swift
 audience:
   - developers
 complexity: intermediate
@@ -33,27 +40,36 @@ keywords:
   - management api
   - access token
   - m2m application
+  - machine to machine
   - client credentials
   - oauth2
+  - oauth2 token
   - api authentication
-updated: 2024-01-15
+  - bearer token
+  - jwt access token
+  - kinde api
+  - api authorization
+  - scope parameter
+  - token scopes
+  - kinde subdomain
+updated: 2026-05-03
 featured: false
 deprecated: false
-ai_summary: "Comprehensive guide to obtaining access tokens and calling the Kinde Management API using M2M applications and OAuth2 client credentials flow"
+ai_summary: "This guide explains how to authenticate with the Kinde Management API using the OAuth2 client credentials flow. It covers the full process: starting with a Kinde M2M (machine-to-machine) application that has Management API access and the required scopes configured, then making a POST request to the /oauth2/token endpoint to exchange your client ID and client secret for a signed JWT access token. The guide provides code examples in cURL, C#, Go, Java, Node.js, Objective-C, PHP, Python, Ruby, and Swift. It also explains how to decode the returned JWT and understand its claims, including audience, issued-at time, and granted scopes. Once you have the token, the guide shows how to pass it as a Bearer token in the Authorization header to make authenticated API calls — using the list users endpoint as a worked example. Finally, it covers the optional scope parameter, which lets you request a restricted subset of your M2M application's enabled scopes, reducing the token's permission surface for improved security."
 ---
 
-Learn how to call the Kinde Management API using client credentials.
+Use the OAuth2 client credentials flow to get a machine-to-machine (M2M) access token and make authenticated requests to the Kinde Management API.
 
 ### What you need
 
-- A Kinde M2M application with Management API access, appropriate scopes, and app keys [see the quickstart guide](/developer-tools/kinde-api/connect-to-kinde-api/)
+- A Kinde M2M application with Management API access, appropriate scopes, and app keys — see the [quickstart guide](/developer-tools/kinde-api/connect-to-kinde-api/)
 
 ## Call the API
 
 ### 1. Get an access token
 
 1. Get the app keys for your M2M application (Domain, Client ID, and Client Secret).
-2. Make a POST request to the `https://<your_subdomain>.kinde.com/oauth2/token` endpoint using your prefered programming language below:
+2. Make a POST request to the `https://<your_subdomain>.kinde.com/oauth2/token` endpoint using your preferred programming language:
 
     Make sure to replace `<your_subdomain>`, `<your_m2m_client_id>` and `<your_m2m_client_secret>` with your own details.
 
@@ -312,28 +328,43 @@ dataTask.resume()
 
 </Tabs>
 
-3. You will get a response with an access token. The response will contain a signed JWT containing claims including the scopes the token is allowed to access and the expiry time. Here is an example of a decoded access token:
+3. The response includes an access token:
 
-```json
-{
-  "aud": [
-    "https://example.kinde.com/api
-  ],
-  "azp": "bd69bb9fe5db44a38b6b2dacd1f4b451",
-  "exp": 1729812040,
-  "gty": [
-    "client_credentials
-  ],
-  "iat": 1729725640,
-  "iss": "https://example.kinde.com",
-  "jti": "6f091ebe-44ba-4afc-bd2f-05fcccafc89e",
-  "scope": "read:users update:users"
-}
-```
+    ```jsonc
+    {
+      "access_token": "<your_access_token>", // the JWT access token
+      "expires_in": 86399,
+      "scope": "", // any sub scopes you defined in the request
+      "token_type": "Bearer",
+    }
+    ```
+
+    The `access_token` field will contain a signed JWT for you to use in the API requests. Use the [Kinde Online JWT decoder](https://www.kinde.com/tools/online-jwt-decoder/) to decode the token.
+
+    Here is the decoded M2M access token:
+
+    ```json
+    {
+      "aud": [
+        "https://<your_subdomain>.kinde.com/api"
+      ],
+      "azp": "<your_m2m_client_id>",
+      "exp": 1777887031,
+      "gty": [
+        "client_credentials"
+      ],
+      "iat": 1777800631,
+      "iss": "https://<your_subdomain>.kinde.com",
+      "jti": "61859f4b-75e1-4ac8-bda7-8a69a5f6660e",
+      "scope": "create:users read:users",
+      "scp": [],
+      "v": "2"
+    }
+    ```
 
 ### 2. Use the access token
 
-1. Include the access token in the Authorization header of your request. For example to get all users you would call:
+1. Include the access token in the `Authorization` header of your request. For example, to retrieve all users:
 
 <Tabs syncKey="lang">
 
@@ -573,10 +604,34 @@ dataTask.resume()
 
 </Tabs>
 
-2. You will get the appropriate response from the Management API.
+2. The Management API returns the appropriate response.
 
-## JavaScript SDK
+## The scope parameter
 
-As an alternative to making HTTP calls, you can also use the [Kinde Management API JS](https://github.com/kinde-oss/management-api-js/) SDK.
+You can include an optional `scope` parameter in the request to the `/oauth2/token` endpoint to request a subset of scopes for the token.
 
-You can use it to automatically obtain tokens for, and interact with the Kinde management API.
+For example, if you have enabled the following scopes for your M2M application:
+
+- `create:users`
+- `read:users`
+- `update:users`
+- `delete:users`
+
+Using the `scope` parameter, you can request a subset of those scopes for the token — in this case, `create:users` and `read:users`.
+
+```bash
+curl --request POST \
+  --url 'https://<your_subdomain>.kinde.com/oauth2/token' \
+  --header 'content-type: application/x-www-form-urlencoded' \
+  --data grant_type=client_credentials \
+  --data 'client_id=<your_m2m_client_id>' \
+  --data 'client_secret=<your_m2m_client_secret>' \
+  --data 'audience=https://<your_subdomain>.kinde.com/api' \
+  --data 'scope=create:users read:users'
+```
+
+The token will be scoped to only the permissions you requested, which reduces the attack surface and limits exposure if the token is compromised.
+
+## Next steps
+
+With a working access token, you can now call the Management API to automate account actions. See the [Kinde Management API](/kinde-apis/management/) for all available endpoints.
