@@ -1,10 +1,10 @@
 ---
 page_id: 19b5cea3-bfce-4fe9-94ac-ddd8b872af3e
-title: Tutorial - Search users via the Kinde Management API
+title: Advanced User Search with the Kinde Management API
 description: "Guide to searching and filtering users via the Kinde Management API using query parameters and property filters"
 sidebar:
   order: 7
-  label: "Tutorial - Search users"
+  label: "Guide - Advanced User Search"
 tableOfContents:
   maxHeadingLevel: 3
 relatedArticles:
@@ -14,6 +14,8 @@ relatedArticles:
 topics:
   - developer-tools
   - kinde-api
+  - user-management
+  - search-and-filtering
 sdk: []
 languages: []
 audience:
@@ -22,54 +24,44 @@ audience:
 complexity: intermediate
 keywords:
   - search users
+  - filter users
   - api search
   - user filtering
   - properties filter
   - wildcard search
   - management api
-updated: 2024-01-15
+  - query parameter
+  - AND filter
+  - OR filter
+  - expand identities
+  - expand properties
+updated: 2026-05-03
 featured: false
 deprecated: false
-ai_summary: Guide to searching and filtering users via the Kinde Management API using query parameters and property filters
+ai_summary: "This guide explains how to search and filter users via the Kinde Management API using the GET /api/v1/search/users endpoint. It covers searching by name or email using the query parameter, and filtering by custom user properties using the properties[key]=value syntax. Developers can combine multiple property filters using AND logic (chained & parameters) or OR logic (comma-separated values), and use a wildcard (query=*) to match all users while applying property-level filters. The expand parameter can be added to include nested identities and properties in the response. An example JSON response is included."
 ---
 
-You can search users and filter results via the Kinde Management API. You might need to do this to isolate users with specific properties defined, for example, to find users in a particular city.
+Search and filter users via the Kinde Management API. Use this to find users with specific properties — for example, users in a particular city or industry.
 
+### What you need
 
-## Make an API search request
+- A Kinde M2M application with Management API access — see the [connect to the Kinde API guide](/developer-tools/kinde-api/connect-to-kinde-api/)
+- Scope: `read:users`
+- A way to call the API (cURL, Postman, or the JS SDK)
 
-Search with `GET` request: `/api/v1/search/users?query=searchterm`
+## Search users by name or email
 
-Add additional filters to the request: `&filterA=X&filterB=Y`
+```
+GET /api/v1/search/users?query={searchterm}
+```
 
-Search and filter: GET `/api/v1/search/users?query=searchterm&filterA=X&filterB=Y`
+The `query` parameter searches against a user's name and email address. To match all users, use a wildcard (`*`).
 
-The query= part is for searching by user name or email, additional filters can be applied separately. For example, use /api/v1/search/users?query=*&properties[kp_user_city]=Sydney to find all users from Sydney based on the kp_user_city property.
+```
+GET /api/v1/search/users?query=*
+```
 
-Here's some examples of search requests with different filter types.
-
-- Filter for users with multiple properties using AND(&) statements. 
-
-
-  ```/api/v1/search/users?query=properties[kp_usr_last_name]=Swan&properties[kp_usr_industry]=Construction```
-
-
-- Filter for users with any property filter using OR(comma) statements.
-
-
-  ```/api/v1/search/users?query=properties[kp_usr_last_name]=Hornet,Swan```
-  
-
-- Use a combination of filters.
-
-  ```/api/v1/search/users?query=properties[kp_usr_last_name]=Hornet,Swan&properties[kp_usr_industry]=Construction&expand=identities,properties```
-
-
-- Wildcards can also be used. 
-
-  ```/api/v1/search/users?query=*&properties[kp_usr_middle_name]=Hornet,Swan&properties[kp_usr_industry]=Construction&expand=identities,properties```
-
-### Example response
+**Example response:**
 
 ```json
 {
@@ -89,9 +81,7 @@ Here's some examples of search requests with different filter types.
       "failed_sign_ins": 0,
       "last_signed_in": "2025-02-12T18:02:23.614638+00:00",
       "created_on": "2025-02-12T18:02:23.614638+00:00",
-      "organizations": [
-        "…"
-      ],
+      "organizations": ["…"],
       "identities": [
         {
           "type": "…",
@@ -113,15 +103,73 @@ Here's some examples of search requests with different filter types.
 }
 ```
 
+## Filter users by property
+
+Append `properties[key]=value` parameters to filter by [user properties](/manage-users/user-properties/about-user-properties/). You can combine `query` with property filters.
+
+```
+GET /api/v1/search/users?query={searchterm}&properties[{key}]={value}
+```
+
+For example, find all users from Sydney:
+
+```
+GET /api/v1/search/users?query=*&properties[kp_user_city]=Sydney
+```
+
+### Filter with AND (multiple conditions)
+
+Use multiple `properties[key]=value` parameters joined with `&` to require all conditions to match.
+
+```
+GET /api/v1/search/users?query=*&properties[kp_usr_last_name]=Swan&properties[kp_usr_industry]=Construction
+```
+
+Returns users whose last name is Swan **and** whose industry is Construction.
+
+### Filter with OR (comma-separated values)
+
+Use a comma-separated list of values within a single property filter to match any of them.
+
+```
+GET /api/v1/search/users?query=*&properties[kp_usr_last_name]=Hornet,Swan
+```
+
+Returns users whose last name is Hornet **or** Swan.
+
+### Combined filters
+
+Mix AND and OR conditions, and use `expand` to include nested data such as identities and properties in the response.
+
+```
+GET /api/v1/search/users?query=*&properties[kp_usr_last_name]=Hornet,Swan&properties[kp_usr_industry]=Construction&expand=identities,properties
+```
+
+Returns users whose last name is Hornet or Swan **and** whose industry is Construction, with their identities and properties expanded.
+
+### Use wildcards
+
+Use `query=*` to match all users, then narrow results with property filters.
+
+```
+GET /api/v1/search/users?query=*&properties[kp_usr_middle_name]=Hornet,Swan&properties[kp_usr_industry]=Construction&expand=identities,properties
+```
+
 ## Search users by last activity date
 
-Search users based on last activity date using the `active_since` parameter in the `GET /api/v1/users` endpoint. This searches for users by their last login date, useful for identifying inactive accounts or targeting recently active users.
+```
+GET /api/v1/users?active_since={ISO8601datetime}
+```
 
-  ```/api/v1/users?active_since=2024-01-01T00:00:00Z```
+Use the `active_since` parameter to return users whose last login is on or after the specified date. This is useful for identifying inactive accounts or targeting recently active users.
 
-  The `active_since` parameter accepts an [ISO 8601 formatted date/time string](https://www.cdisc.org/kb/articles/when-would-i-use-iso8601-interval-format). Users with a last login date on or after the specified date will be returned.
+```
+GET /api/v1/users?active_since=2024-01-01T00:00:00Z
+```
 
-### Example response
+The `active_since` value must be an [ISO 8601 formatted date/time string](https://www.cdisc.org/kb/articles/when-would-i-use-iso8601-interval-format).
+
+**Example response:**
 
 ```json
 {
@@ -148,9 +196,7 @@ Search users based on last activity date using the `active_since` parameter in t
           "last_signed_in": "2026-01-28T14:26:02.448856+00:00"
         }
       ],
-      "organizations": [
-        "…"
-      ],
+      "organizations": ["…"],
       "identities": [
         {
           "type": "…",
