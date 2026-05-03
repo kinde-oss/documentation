@@ -1,6 +1,7 @@
 ---
 page_id: cdb62fdc-cc83-4247-a0e0-7196bc7edb3e
 title: Call the Kinde Management API with Postman
+description: This guide walks you through setting up Postman to authenticate with the Kinde Management API using OAuth 2.0 client credentials, and shows you how to make your first API calls to list and create users.
 sidebar:
   order: 3
   label: "Call the API - Postman"
@@ -17,14 +18,10 @@ app_context:
 topics:
   - developer-tools
   - kinde-api
+  - authentication
+  - api-testing
 sdk: []
 languages:
-  - csharp
-  - go
-  - java
-  - javascript
-  - objective-c
-  - php
   - shell
 audience:
   - developers
@@ -35,140 +32,184 @@ keywords:
   - m2m application
   - client credentials
   - oauth2
+  - oauth 2.0
   - api authentication
-updated: 2024-01-15
+  - postman
+  - postman environment
+  - bearer token
+  - audience parameter
+  - kinde management api
+  - client credentials flow
+  - api testing
+  - create users api
+  - list users api
+  - postman tutorial
+  - postman troubleshooting
+updated: 2026-05-03
 featured: false
 deprecated: false
-ai_summary: Comprehensive guide to obtaining access tokens and calling the Kinde Management API using M2M applications and OAuth2 client credentials flow
+ai_summary: "This guide explains how to call the Kinde Management API using Postman with OAuth 2.0 client credentials. It covers three main areas: setting up a Postman environment, obtaining an access token, and testing API endpoints. In the environment setup, you configure variables for your Kinde domain, M2M client ID, and client secret, and mark the secret as sensitive. To get an access token, you create a Postman collection, configure OAuth 2.0 with the client credentials grant type, set the access token URL, and add the audience parameter in the advanced token request settings. The guide then demonstrates two API calls — fetching a list of users via GET /api/v1/users and creating a new user via POST /api/v1/user with email, phone, and username identities. A troubleshooting section addresses three common errors: client authentication failure (invalid credentials), a 403 missing audience error (incorrect or missing audience value), and a 403 SCOPE_MISSING error (missing scopes on the M2M application). Prerequisites include a Postman client, a Kinde M2M application with Management API access, and the create:users and read:users scopes."
 ---
 
-Learn how to call the Kinde Management API using Postman.
+This guide walks you through setting up Postman to authenticate with the Kinde Management API using OAuth 2.0 client credentials, and shows you how to make your first API calls to list and create users.
 
 ### What you need
 
-- A Kinde M2M application with Management API access, appropriate scopes, and app keys [see the quickstart guide](/developer-tools/kinde-api/connect-to-kinde-api/)
 - A [Postman client](https://www.postman.com/) installed on your machine
+- A Kinde M2M application with Management API access, and app keys [see the quickstart guide](/developer-tools/kinde-api/connect-to-kinde-api/)
+- Minimum scopes for this example: `create:users` and `read:users`
 
-## Postman guide
+## Postman tutorial
 
-### 1. Set up Postman environment
+### 1. Create a Postman environment
 
-We recommend that you set up a Postman environment and test this in a non-production environment first. Here's some [troubleshooting solutions](/developer-tools/kinde-api/troubleshoot-kinde-api/) in case you need them.
+We recommend that you set up a Postman environment and test this in a non-production space first.
 
-1. Add your Kinde machine to machine application keys as environment variables.
+1. On your Postman client, select the **No environment** dropdown from the top right and select the plus icon to create a new environment.
 
-    <img
-      src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/69800dc4-2d22-468c-4300-71e4b4ee8b00/public"
-      alt="Adding environment variables in Postman"
-      width="672px"
-      height="auto"
-      fetchpriority="low"
-      loading="lazy"
-      decoding="async"
-    />
+    ![Creating a new environment in Postman](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/060191ee-65c1-452f-1bc1-63ede028b200/socialsharingimage)
 
-2. Select **Save** for the variables to persist.
+2. Enter a name for the environment (e.g., Local).
+3. Copy the [app keys from your M2M application](/developer-tools/kinde-api/connect-to-kinde-api/#4-get-app-keys) and enter them as environment variables:
+
+        - `KINDE_DOMAIN` - `https://<your_subdomain>.kinde.com`
+        - `M2M_CLIENT_ID` - the client ID from your M2M application
+        - `M2M_CLIENT_SECRET` - the client secret from your M2M application
+
+    ![Local environment variables in Postman](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8b4bb03e-ef5d-482a-7cd0-406a3d07a300/socialsharingimage)
+
+4. Mark the client secret variable as **Sensitive** so it will not accidentally leak to your team.
 
 ### 2. Get the access token
 
-1. Go to **Collections**. Create a new collection called **Kinde**.
-2. In the three dots menu next to the new **Kinde** folder, select **Add request**.
+1. Go to **Collections**. Create a new collection (e.g., **Kinde**).
 
-    <img
-      src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ececdf0a-452f-49bc-6a96-f5343d8a8d00/public"
-      alt="Adding a request in Postman"
-      width="672px"
-      height="auto"
-      fetchpriority="low"
-      loading="lazy"
-      decoding="async"
-    />
+    ![Creating a new collection in Postman](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/10a9036f-bd38-4359-e352-698abb51b000/socialsharingimage)
 
-3. Go to the **Authorization** section and set the **Type** to **OAuth 2.0** and set the **Header Prefix** to **Bearer**.
-4. In the **Configure New Token > Configuration options** section, set the **Grant Type** to **Client Credentials**.
-5. Enter the **Access Token URL** using the domain variable you created above. For example, `{{business_domain}}/oauth2/token`. Note that even if you use a custom domain, the access token URL should still use your `https://<your_subdomain>.kinde.com` domain.
+2. In the three dots menu next to the new **Kinde** folder, select **Add request**.
+3. Go to the **Authorization** section and set the **Type** to **OAuth 2.0** and make sure the **Header Prefix** is set to **Bearer**.
 
-    <img
-      src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8149baf6-e3b7-406d-7447-390fe4bc2100/public"
-      alt="Entering the access token URL"
-      width="672px"
-      height="auto"
-      fetchpriority="low"
-      loading="lazy"
-      decoding="async"
-    />
+    ![authorization configuration in Postman](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/e3e6269f-abb4-45b0-246f-a8c4f6de4500/socialsharingimage)
 
-6. Enter the **Client ID** and **Client Secret** using the environment variables you created earlier or by copying them from the Kinde application.
-7. Set the **audience** to `{{business_domain}}/api`. To do this:
-   - Scroll down click **Advanced**. In the **Token request** section, select the `audience` key and enter the above URL in the **Value** field. Ensure it is being sent in the `body` of the request
+4. In the **Configure New Token** section, set the **Grant Type** to **Client Credentials**.
 
-    <img
-      src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f2c9f0dc-ef24-40e4-dae9-2d1fd6731b00/public"
-      alt=""
-      width="672px"
-      height="auto"
-      fetchpriority="low"
-      loading="lazy"
-      decoding="async"
-    />
+    ![grant type configuration in Postman](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f5f02827-18b1-45cf-3c94-5cea38a66600/socialsharingimage)
 
-8. Go to the **Headers** tab.
+5. Enter the **Access Token URL** using the domain variable you created above: `{{KINDE_DOMAIN}}/oauth2/token`. 
 
-    <img
-      src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/92102061-66fb-48f8-f94a-f048b80a3f00/public"
-      alt="Setting the Content-Type value in Postman"
-      width="672px"
-      height="auto"
-      fetchpriority="low"
-      loading="lazy"
-      decoding="async"
-    />
+    <Aside>
+    Note that even if you use a custom domain, the access token URL should still use your `https://<your_subdomain>.kinde.com` domain.
+    </Aside>
 
-9. Select **Accept** and ensure the value is `application/json`.
-10. In the **Authorization** section, select **Get New Access Token**. You should see a confirmation message.
-11. Select **Proceed**.
+6. Enter the **Client ID** and **Client Secret** using the environment variables you created earlier.
+7. Scroll down and select **Advanced**. In the **Token request** section, add a new `audience` key and enter `{{KINDE_DOMAIN}}/api` in the **Value** field. Ensure it is being sent in the `Request Body`.
 
-    <img
-      src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b736bc91-3f30-4d48-62c6-37f131e88300/public"
-      alt="Access Token in Postman"
-      width="672px"
-      height="auto"
-      fetchpriority="low"
-      loading="lazy"
-      decoding="async"
-    />
+    ![advanced audience parameter in Postman token request](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/960e0dd8-99aa-4745-c30b-ced939479400/socialsharingimage)
 
-12. Select **Use Token**. You should now have the access token for making requests to the Kinde management API. See the [Kinde API documentation](/kinde-apis/management/) for all the available end points.
+8. Scroll down to the **Authorization** section and select **Get New Access Token**. You should see a confirmation message.
+9. Select **Proceed**.
+10. Select **Use Token**. You now have an access token for making requests to the Kinde Management API. Optionally, set a name for the token for easier identification.
+
+    ![M2M access token obtained in Postman](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/552f3abd-c13a-4f5a-b4b7-f6cda406e200/socialsharingimage)
 
 ### 3. Test the API endpoints
 
-You can test your API access in Postman by sending a `GET` request to any Kinde API endpoint. See the [Kinde Management API library](/kinde-apis/management/) for options.
+**Get users list from API:**
 
-Here’s an example using the `Get users` endpoint.
+1. Create a new request.
+2. In the URL field, use the `/api/v1/users` endpoint: `{{KINDE_DOMAIN}}/api/v1/users`
+3. Go to the **Authorization** section and select **OAuth 2.0** as the Auth Type.
+4. Select the **Token** from the previously saved token.
+5. Select **Send**.
+6. You should see a list of your account users in the response body.
 
-1. Create a new `GET` request.
-2. Enter a URL that contains the `/users` endpoint, e.g. `https://<your_subdomain>.kinde.com/api/v1/users` .
+    ![users response body in Postman](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c4be21e1-a1a4-498b-723e-f71b06076c00/socialsharingimage)
 
-    <img
-      src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/44dd0ac2-b96e-4a91-79dd-4a9f9dda2000/public"
-      alt="Entering a Request URL in Postman"
-      width="672px"
-      height="auto"
-      fetchpriority="low"
-      loading="lazy"
-      decoding="async"
-    />
+**Create a new user with API:**
 
-3. Send the request. It should return your users in the body section. If it does, the connection is successful.
+1. Create a new request, set the type to **POST** and the URL to `/api/v1/user`.
+2. Go to **Body**, select **raw** and enter the following JSON:
 
-    <img
-      src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8f4aae17-6f38-43e4-9bf7-55ac0bf2d300/public"
-      alt="Response body in Postman"
-      width="672px"
-      height="auto"
-      fetchpriority="low"
-      loading="lazy"
-      decoding="async"
-    />
+    ```json
+    {
+      "profile": {},
+      "identities": [
+        {"type": "email", "is_verified": true, "details": {"email": "jamesbond@mi6.com"}},
+        {
+          "type": "phone",
+          "is_verified": false,
+          "details": {"phone": "+61426148233", "phone_country_id": "au"}
+        },
+        {"type": "username", "details": {"username": "jamesbond007"}}
+      ]
+    }
+    ```
+    This will create a new user in your Kinde business.
 
-4. Repeat from step 1 for any other [Kinde API endpoints](/kinde-apis/management/) you want to test.
+3. Set the **Authorization** as before.
+4. Select **Send**.
+5. You should see a success response with the new user in the response body section.
+
+    ```json
+    {
+        "id": "kp_1234",
+        "created": true,
+        "identities": [
+            {
+                "type": "email",
+                "result": {
+                    "created": true
+                }
+            },
+            {
+                "type": "phone",
+                "result": {
+                    "created": true
+                }
+            },
+            {
+                "type": "username",
+                "result": {
+                    "created": true
+                }
+            }
+        ]
+    }
+    ```
+6. Go to your Kinde dashboard > **Users** and you should see the new user in the list.
+
+## Troubleshooting
+
+### Authentication failed
+
+**Error message:**
+
+invalid_client, Description: Client authentication failed (e.g., unknown client, no client authentication included, or unsupported authentication method).
+
+**Solution:**
+
+Verify that you have copied the correct domain, client ID, and client secret, with no typos.
+
+### Missing audience
+
+**Error message:**
+
+403 Forbidden: Missing or incorrect Management API audience.
+
+**Solution:**
+
+Verify that you have added the correct audience value `https://<your-subdomain>.kinde.com/api` to the `audience` parameter in Step 2 of this doc.
+
+### Scope is missing
+
+**Error message:**
+
+403 Forbidden: SCOPE_MISSING
+
+**Solution:**
+
+Add the missing scopes to your M2M application, get a new access token and try again.
+
+## Next steps
+
+Now that Postman is configured to call the Kinde Management API, explore it to automate your account actions. Check out the [Kinde Management API](/kinde-apis/management/) for all available endpoints.
