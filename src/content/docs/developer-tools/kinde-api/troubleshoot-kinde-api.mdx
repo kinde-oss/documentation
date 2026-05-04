@@ -1,54 +1,222 @@
 ---
 page_id: 601dd8c5-6ee1-474f-ad36-201e65280462
 title: Troubleshooting Kinde Management API
-description: "Troubleshooting guide for common Kinde API issues including null responses and scope errors"
+description: "Common errors when calling the Kinde Management API and how to fix them."
 sidebar:
   order: 10
   label: "Troubleshooting"
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 51899f7f-3436-46e0-9a1b-6ecc3603a0df
   - 6bf993fc-a195-4836-8eaf-133812be8876
   - 50284476-2442-414c-af20-01ed3ef4ca4e
+  - c944dcc9-35d1-4816-b2d3-a39fb0d3e68f
 topics:
   - developer-tools
   - kinde-api
 sdk: []
-languages: []
+languages:
+  - shell
 audience:
   - developers
 complexity: intermediate
 keywords:
   - troubleshooting
   - api errors
+  - 401 unauthorized
+  - 403 forbidden
+  - 429 too many requests
   - null response
   - scope errors
+  - invalid_client
+  - missing audience
   - token customization
   - custom claims
-updated: 2024-01-15
+  - rate limiting
+updated: 2026-05-04
 featured: false
 deprecated: false
-ai_summary: Troubleshooting guide for common Kinde API issues including null responses and scope errors
+ai_summary: "Troubleshooting reference for common Kinde Management API errors, grouped into three areas. Token exchange errors: a 404 Not Found caused by an incorrect domain or client ID (fix by copying values from App keys); an invalid_client error caused by wrong credentials (fix by verifying the Client ID and Client Secret); a 403 invalid_request caused by a missing or incorrect audience parameter (fix by adding the correct audience in the format https://<subdomain>.kinde.com/api, with a cURL example); and a 403 invalid_scope caused by a scope not being enabled on the M2M application during token exchange. API request errors: a ROUTE_NOT_FOUND error from calling a non-existent endpoint (fix by checking the Management API reference); and a SCOPE_MISSING error from calling an endpoint without the required scope enabled on the M2M application (fix by updating scopes under Settings > Applications > APIs > Manage scopes). Other errors: a null or empty response caused by missing custom claims (fix via token customization in the application settings); and a 429 Too Many Requests error from exceeding the rate or concurrency limit (handled by reading the RateLimit-Reset header and retrying with backoff — links to the API rate limits page)."
 ---
 
-There's a lot of configurations and events that support API connections. Sometimes things go wrong. Here's a few common errors people come across.
+If you're getting unexpected errors from the Kinde Management API, use this guide to identify the cause and apply a fix.
 
-## When a request returns `null`
+## Token exchange errors
 
-When you request to receive data back via the API and get an unexpected or `null` response, you may need to add custom claims to the token.
+### Not found
 
-1. In Kinde, go to **Settings > Applications** and open the relevant application.
-2. Select **Tokens** in the menu.
-3. Scroll to the **Token customization** section.
-4. Select **Customize** on the Access or ID token type and switch on / select any claims or properties you want to include in the token.
-5. Select **Save**.
-For more detailed information, see [Token customization](/build/tokens/token-customization/)
+**Error response:**
 
-## Kinde Management API scope errors
+```http
+HTTP/1.1 404 Not Found
+```
 
-Access to Kinde's Management API is limited by scopes. When you create or update a M2M application, you need to review and select scopes. If you find that some information is not included in a returned token, check the scopes.
+**Solution:**
 
-1. In Kinde, go to **Settings > Applications** and select **View details** on the relevant M2M application.
+Make sure you have copied the correct Kinde domain and client ID. Even if you have set up a custom domain, you must use the original Kinde domain in your request (e.g. `https://<your_subdomain>.kinde.com`).
+
+1. Go to **Settings > Applications** and open your M2M application.
+2. Select **App keys**.
+3. Copy the **Domain**, **Client ID** and **Client Secret** and update them in your request.
+
+### Authentication failed
+
+**Error response:**
+
+```json
+{
+  "error": "invalid_client",
+  "error_description": "Client authentication failed (e.g., unknown client, no client authentication included, or unsupported authentication method)."
+}
+```
+
+**Solution:**
+
+Verify that the **Client Secret** is copied exactly, with no typos.
+
+### Missing audience
+
+**Error response:**
+
+```http
+HTTP/1.1 403 Forbidden
+```
+
+```json
+{
+  "error":"invalid_request",
+  "error_description":"The request is missing a required parameter, includes an invalid parameter value, includes a parameter more than once, or is otherwise malformed. Requested audience 'https://<your_subdomain>.kinde.com/api' has not been whitelisted by the OAuth 2.0 Client."
+}
+```
+
+**Solution:**
+
+Add the correct `audience` parameter to your token request. The value must be your Kinde domain followed by `/api`. Even if you use a custom domain, the `audience` value must still use your `https://<your_subdomain>.kinde.com` domain.
+
+To find your Kinde domain:
+
+1. Go to **Settings > Applications** and open your M2M application.
+2. Select **Details**.
+3. Copy the **Domain** value and use it in your request as follows:
+
+```bash
+curl --request POST \
+  --url 'https://<your_subdomain>.kinde.com/oauth2/token' \
+  --header 'content-type: application/x-www-form-urlencoded' \
+  --data grant_type=client_credentials \
+  --data 'client_id=<your_m2m_client_id>' \
+  --data 'client_secret=<your_m2m_client_secret>' \
+  --data 'audience=https://<your_subdomain>.kinde.com/api'
+```
+
+### Scope is missing
+
+**Error response:**
+
+```http
+HTTP/1.1 403 Forbidden
+```
+
+```json
+{
+  "error":"invalid_scope",
+  "error_description":"The requested scope is invalid, unknown, or malformed. The OAuth 2.0 Client is not allowed to request scope '<scope>'."
+}
+```
+
+**Solution:**
+
+Your M2M application does not have the required scope enabled for the endpoint you're calling. Add the missing scope to your application and then get a new access token before retrying.
+
+1. Go to **Settings > Applications** and open your M2M application.
 2. Select **APIs** in the menu.
 3. In the **Kinde Management API** entry, select the three dots menu and select **Manage scopes**.
-4. Select and deselect scopes as required. 
+4. Enable the missing scopes.
 5. Select **Save**.
+
+For a full list of available scopes, see [API scopes](/developer-tools/kinde-api/about-m2m-scopes/).
+
+## API request errors
+
+### Route not found
+
+**Error response:**
+
+```json
+{
+  "errors": {
+    "code": "ROUTE_NOT_FOUND",
+    "message": "The requested API route does not exist"
+  }
+}
+```
+
+**Solution:**
+
+The API route you're calling does not exist. Check the [Management API reference](https://kinde.com/kinde-apis/management/) for the correct endpoint path and correct any typos.
+
+### Scope missing error
+
+**Error response:**
+
+```json
+{
+  "errors": [
+    {
+      "code": "SCOPE_MISSING",
+      "message": "Scope is missing: read:environments"
+    }
+  ]
+}
+```
+
+**Solution:**
+
+Your M2M application does not have the required scope enabled for the endpoint you're calling. Add the missing scope to your application and then get a new access token before retrying.
+
+1. Go to **Settings > Applications** and open your M2M application.
+2. Select **APIs** in the menu.
+3. In the **Kinde Management API** entry, select the three dots menu and select **Manage scopes**.
+4. Enable the missing scopes.
+5. Select **Save**.
+
+For a full list of available scopes, see [API scopes](/developer-tools/kinde-api/about-m2m-scopes/).
+
+## Other errors
+
+### API request returns null or empty
+
+**Solution:**
+
+The data you're requesting exists but isn't included in the token by default. Add custom claims to include it:
+
+1. Go to **Settings > Applications** and open the relevant application.
+2. Select **Tokens** in the menu.
+3. Scroll to the **Token customization** section.
+4. Select **Customize** on the Access or ID token type and enable the claims or properties you need.
+5. Select **Save**.
+
+For more information, see [Token customization](/build/tokens/token-customization/).
+
+### Too many requests
+
+**Error response:**
+
+```http
+HTTP/1.1 429 Too Many Requests
+RateLimit-Reset: 30
+```
+
+**Solution:**
+
+You've exceeded the API rate or concurrency limit. Read the `RateLimit-Reset` header value to get the number of seconds before the limit resets, then wait before retrying.
+
+See [API rate limits](/developer-tools/kinde-api/api-rate-limits/) for a full breakdown of limits and a recommended retry strategy using exponential backoff.
+
+## Get support
+
+If you're still having problems:
+
+- Contact [Kinde support](https://kinde.com/support)
+- See the [common error codes reference](/get-started/guides/error-codes/)
