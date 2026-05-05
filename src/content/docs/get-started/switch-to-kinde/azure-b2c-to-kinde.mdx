@@ -32,24 +32,27 @@ keywords:
   - drip feed migration
   - ropc
   - resource owner password credentials
-updated: 2026-05-04
+updated: 2026-05-05
 featured: false
 deprecated: false
-ai_summary: How to export users from Azure B2C and migrate to Kinde, covering four migration methods including bulk import, API-based sync, drip-feed via ROPC, and hard cutover during a maintenance window.
+ai_summary: "Step-by-step guide for migrating users from Azure B2C to Kinde. Because Azure B2C does not export passwords, the guide covers four migration approaches: drip-feed (recommended), bulk import with API sync, bulk import only, and hard cutover. Drip-feed uses Kinde's user:existing_password_provided workflow trigger to validate each login against Azure B2C's ROPC endpoint on first sign-in, with no password reset required. Bulk import options import users by email only and prompt them to set a new password or use passwordless on first sign-in. Covers exporting users via the Azure portal Download users option or programmatically via the Microsoft Graph API with pagination, and maps Azure B2C fields (id, mail, givenName, surname, accountEnabled) to Kinde's CSV format. Includes guidance on handling local accounts vs. federated social identities, setting up the MS Entra ID connection in Kinde before importing AD-based users, and enabling the ROPC user flow in Azure B2C and Enumeration protection in Kinde before starting drip-feed migration."
 ---
 
 Migrate your users from Azure B2C to Kinde. Azure B2C does not export passwords, so the migration approach you choose will determine how users authenticate on first sign-in.
 
+### What you need
+
+- A Kinde account with **Admin** access
+- Kinde account configured to match your current auth provider — see [before you migrate](/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/#before-you-migrate)
+- Azure B2C tenant with user export permissions
+
 ## Key considerations
 
 - **Passwords cannot be exported** — Azure B2C does not provide access to hashed passwords. Users will need to reset their password or use a new sign-in method, unless you use drip-feed migration.
-- **Drip-feed uses the ROPC endpoint** — the Azure B2C Resource Owner Password Credentials (ROPC) token endpoint allows the workflow to validate credentials on first login.
-- **Enable Enumeration protection** — before enabling drip-feed, go to **Settings > Attack protection > Enumeration protection** in Kinde and turn it on.
-- **Block registrations, not logins, during a maintenance window** — if using a hard cutover, blocking only new registrations (not logins) is sufficient since passwords are not being migrated.
 - **Local accounts vs. federated identities** — users who signed in via social providers (Google, Facebook, etc.) in Azure B2C can be imported by email and prompted to re-link their social login.
 - **MS Entra ID connection** — if you use Azure AD-based logins, [set up the MS Entra ID connection in Kinde](/authenticate/enterprise-connections/azure/) before importing users so Kinde can match them to the right connection.
 
-## Step 1: Export users from Azure B2C
+## Export users from Azure B2C
 
 ### Option A: Azure portal
 
@@ -91,9 +94,7 @@ Migrate users seamlessly as they log in. A Kinde workflow validates each login a
 2. Enable **Enumeration protection** in Kinde (**Settings > Attack protection > Enumeration protection**).
 3. Enable the ROPC user flow in your Azure B2C tenant.
 
-[Set up drip-feed migration →](/get-started/switch-to-kinde/drip-feed-migration/)
-
-The [full tutorial](/workflows/workflow-tutorials/drip-feed-migration/) includes the Azure B2C-specific workflow code.
+The [drip-feed migration tutorial](/workflows/workflow-tutorials/drip-feed-migration/) includes the Azure B2C-specific workflow code.
 
 ### Bulk import with API sync (catch new registrations)
 
@@ -131,3 +132,7 @@ For the cleanest cutover when a short service interruption is acceptable:
 - If using drip-feed, monitor the workflow logs to confirm users are migrating successfully.
 - Once migration traffic from Azure B2C drops to zero, disable the workflow and decommission your Azure B2C tenant.
 - Notify users of the change before go-live — especially that they will need to verify their email or set a new password on first sign-in.
+
+## Get support
+
+If you need help with your migration, contact [Kinde support.](https://kinde.com/support)

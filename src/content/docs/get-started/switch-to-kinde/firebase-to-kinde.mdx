@@ -25,21 +25,33 @@ audience:
 complexity: intermediate
 keywords:
   - firebase migration
-  - firebase authentication
+  - firebase to kinde
   - migrate from firebase
+  - firebase authentication
   - firebase export
+  - firebase cli
   - user import
   - scrypt
+  - scrypt password
   - password migration
   - csv import
+  - csv column mapping
+  - bulk import
   - authentication migration
-updated: 2026-05-04
+  - passwordless migration
+updated: 2026-05-05
 featured: false
 deprecated: false
-ai_summary: How to export users from Firebase Authentication and import them into Kinde. Firebase uses the SCRYPT hashing algorithm which Kinde does not currently support for import, so users will need to sign in via a new method or reset their password.
+ai_summary: "Step-by-step guide for migrating users from Firebase Authentication to Kinde using a bulk CSV import. Firebase uses the SCRYPT hashing algorithm, which Kinde does not currently support, so password migration is not possible — users will need to sign in via a passwordless method or reset their password on first login. The drip-feed migration approach is also not applicable for Firebase. The guide covers: exporting users with the Firebase CLI using firebase auth:export users.json --format=json; mapping Firebase JSON fields to Kinde's CSV format, including localId to id, emailVerified to email_verified, and omitting passwordHash, salt, createdAt, disabled, and providerUserInfo; adding first_name, last_name, and phone manually if available from other sources; and uploading the prepared CSV via Users > Import users > Custom CSV in Kinde. It is recommended to enable at least one passwordless sign-in option in Kinde before cutover to ensure a smooth first sign-in for migrated users. Links to the bulk import guide for the full CSV field reference covering organizations, roles, and permissions."
 ---
 
 Migrate your users from Firebase Authentication to Kinde. The process involves exporting user data from Firebase and importing into Kinde.
+
+### What you need
+
+- A Kinde account with **Admin** access 
+- Kinde account configured to match your current auth provider - see [before you migrate](/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/#before-you-migrate)
+- Firebase account with user export permissions
 
 ## Key considerations
 
@@ -47,7 +59,9 @@ Migrate your users from Firebase Authentication to Kinde. The process involves e
 - **Drip-feed is not applicable** — because Firebase's SCRYPT hashes cannot be verified against a standard API, the drip-feed workflow approach is not available for Firebase migrations.
 - **Recommended approach** — enable at least one passwordless option in Kinde before cutover, so users have a frictionless first sign-in. If password continuity is critical, [submit a feature request](https://updates.kinde.com/) to prioritize SCRYPT support.
 
-## Step 1: Export users from Firebase
+## Migration guide
+
+### 1. Export users from Firebase
 
 Make sure you have the [Firebase CLI](https://firebase.google.com/docs/cli) installed, then run:
 
@@ -57,27 +71,25 @@ firebase auth:export users.json --format=json
 
 This exports user records including email addresses, display names, UIDs, and hashed passwords. For full details, see the [Firebase Auth CLI documentation](https://firebase.google.com/docs/cli/auth).
 
-## Step 2: Prepare your CSV
+### 2. Map Firebase fields to Kinde's CSV format
 
-Convert your Firebase JSON export into a CSV. Omit the password columns — users will be prompted to set a new password or use another sign-in method on first login.
+Rename the fields in your Firebase JSON export to match what Kinde expects, then save as a CSV. The only required column is `email` — everything else is optional but recommended.
 
-**Required:**
+| Firebase field | Rename to | Notes |
+|---|---|---|
+| `email` | `email` | Required — primary sign-in identifier |
+| `emailVerified` | `email_verified` | `TRUE` or `FALSE` |
+| `localId` | `id` | Keep as Firebase UID — helps match records on re-import |
+| first name | `first_name` |  |
+| last name | `last_name` |  |
+| phone number | `phone` |  |
+| `passwordHash` | — | Omit — Firebase uses SCRYPT, which Kinde does not support for import |
+| `salt` | — | Omit |
+| `createdAt` | — | Omit |
+| `disabled` | — | Omit |
+| `providerUserInfo` | — | Omit |
 
-| Column | Notes |
-|--------|-------|
-| `email` | Minimum required field |
-
-**Recommended:**
-
-| Column | Notes |
-|--------|-------|
-| `first_name`, `last_name` | User's name (from `displayName` in Firebase) |
-| `email_verified` | `TRUE` or `FALSE` |
-| `id` | Firebase UID — helps match records during re-imports |
-| `phone` | International format, e.g. `+61555111555` |
-| `external_organization_id` | Organization ID (if applicable). Comma-separate multiple values |
-| `role_key` | Role key(s) to assign. Comma-separate multiple values |
-| `permission_key` | Permission key(s) to assign. Comma-separate multiple values |
+For the full list of supported CSV fields — including organizations, roles, and permissions — see [Prepare your CSV](/get-started/switch-to-kinde/migrate-users-bulk-import/#step-3-prepare-your-csv) in the bulk import guide.
 
 <Aside>
 
@@ -85,19 +97,21 @@ Kinde will not duplicate users with existing email addresses. If a user already 
 
 </Aside>
 
-## Step 3: Import into Kinde
+### 3. Import into Kinde
 
-Follow the [bulk import guide](/get-started/switch-to-kinde/migrate-users-bulk-import/) to prepare your Kinde business and import the CSV.
+1. In Kinde, go to **Users**, then select **Import users**.
+2. Select **Custom CSV**.
+3. Follow the on-screen prompts to upload your file.
+4. Review any errors reported after import. Fix the CSV and re-import to resolve them.
 
-When setting up authentication in Kinde, enable at least one of these given that passwords cannot be migrated:
+See the [bulk import guide](/get-started/switch-to-kinde/migrate-users-bulk-import/) to learn more.
 
-- **Passwordless** — one-time code via email or SMS (recommended)
-- **Social sign-on** — Google, Apple, GitHub, Microsoft, and more
-- **Password** — enable if you want users to set a new password on first sign-in
+### 4. Test the migration
 
-When prompted to select an import type in Kinde, select **Custom CSV**.
+1. Sign in to Kinde with a user from your Firebase export.
+2. Verify they can sign in with their existing Firebase credentials.
+3. Notify users of any changes to their sign-in experience before going live. 
 
-## Next steps
+## Get support
 
-- Notify users before going live — since Firebase passwords cannot be migrated, they will need to sign in using a new method.
-- Verify users can sign in using the authentication methods you configured.
+If you need help with your migration, contact [Kinde support.](https://kinde.com/support)
