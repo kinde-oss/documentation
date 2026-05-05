@@ -1,0 +1,101 @@
+---
+page_id: df969c6a-b071-46fe-958a-df2a8f913428
+title: Migrate to Kinde from AWS Cognito
+sidebar:
+  order: 6
+  label: AWS Cognito
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - c4bc277a-5ec7-418c-ba1c-4d58c9ddfd7d
+  - f3dc6458-7d1e-407e-bc4c-62ac0ee4c075
+  - f6eaf29b-d8d9-4caf-bc1d-5319b6fb8ffc
+  - e89d246a-5cdf-4993-9cee-94b31ec27583
+description: Export users from AWS Cognito and migrate to Kinde. Because Cognito does not export passwords, drip-feed migration is the recommended approach for a seamless user experience.
+topics:
+  - get-started
+  - switch-to-kinde
+sdk: []
+languages:
+  - bash
+  - csv
+audience:
+  - developers
+  - admins
+complexity: advanced
+keywords:
+  - aws cognito migration
+  - cognito to kinde
+  - migrate from cognito
+  - cognito export
+  - user pool export
+  - drip feed migration
+  - admin user password auth
+updated: 2026-05-04
+featured: false
+deprecated: false
+ai_summary: How to export users from AWS Cognito and migrate to Kinde. Cognito does not allow password export, so drip-feed migration using the user:existing_password_provided workflow is the recommended approach for migrating users without forced password resets.
+---
+
+Migrate your users from AWS Cognito to Kinde. The main constraint is that Cognito does not allow password export, so a direct password migration is not possible.
+
+## Key considerations
+
+- **Passwords cannot be exported** — Cognito does not provide access to hashed passwords. Users imported from Cognito will need to reset their password or sign in via a new method — unless you use drip-feed migration.
+- **Drip-feed migration is the recommended approach** — using Kinde's `user:existing_password_provided` workflow, you can validate each user's password against Cognito on first login and migrate them seamlessly with no password reset required.
+- **No native export UI** — Cognito doesn't have a one-click export. You'll need to use the AWS CLI or write a script to paginate through the user pool.
+- **Enable `ADMIN_USER_PASSWORD_AUTH`** — if using drip-feed, ensure this auth flow is enabled on your Cognito App Client before starting the migration.
+- **Track migrated users** — maintain a record of which users have been migrated in your own database to avoid re-checking Cognito on every login.
+
+## Step 1: Export users from Cognito
+
+Cognito has no UI export. Use the AWS CLI to list users from your User Pool:
+
+```bash
+aws cognito-idp list-users \
+  --user-pool-id YOUR_USER_POOL_ID \
+  --region YOUR_AWS_REGION \
+  --query 'Users[*].{email:Attributes[?Name==`email`].Value|[0], sub:Username, name:Attributes[?Name==`name`].Value|[0]}' \
+  --output json > cognito-users.json
+```
+
+For large user pools, use `--pagination-token` to page through results, or use a script to loop until all users are retrieved.
+
+Convert the JSON output to a Kinde-compatible CSV with these columns:
+
+```text
+id,email,first_name,last_name,email_verified
+{sub},{email},{given_name},{family_name},TRUE
+```
+
+The `id` field should be the Cognito `sub` (the user's UUID in Cognito).
+
+## Choose your migration method
+
+### Drip-feed (recommended)
+
+Migrate users with no downtime and no password resets. On first login, a Kinde workflow validates the user's password against Cognito using the `ADMIN_USER_PASSWORD_AUTH` flow. If valid, the user is created in Kinde and their password is set.
+
+**Before you start:**
+1. [Bulk import](/get-started/switch-to-kinde/migrate-users-bulk-import/) user email addresses (without passwords) to seed Kinde with your user list.
+2. Ensure `ADMIN_USER_PASSWORD_AUTH` is enabled on your Cognito App Client.
+3. Enable **Enumeration protection** in Kinde: **Settings > Attack protection > Enumeration protection**.
+
+[Set up drip-feed migration →](/get-started/switch-to-kinde/drip-feed-migration/)
+
+The [full tutorial](/workflows/workflow-tutorials/drip-feed-migration/) includes the Cognito-specific workflow code.
+
+### Bulk import (with password reset)
+
+If drip-feed is not an option, import users by email only. Users will be prompted to set a new password or sign in via a passwordless method on first sign-in.
+
+1. Export emails and user details using the CLI command above.
+2. Prepare your CSV (no password columns).
+3. Enable passwordless sign-in or password authentication in Kinde.
+4. Follow the [bulk import guide](/get-started/switch-to-kinde/migrate-users-bulk-import/).
+
+## Next steps
+
+- If using drip-feed, monitor the workflow logs to confirm users are migrating successfully.
+- Once migration traffic from Cognito drops to zero, disable the workflow and decommission your Cognito User Pool.
+- For users who never log in during the migration period, decide whether to keep them (force a password reset via [the API](/get-started/switch-to-kinde/create-users-with-api/)) or remove inactive accounts.

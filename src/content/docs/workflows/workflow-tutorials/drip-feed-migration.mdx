@@ -1,0 +1,367 @@
+---
+page_id: 0241b940-00bc-4ef0-b607-e70e388f4297
+title: Tutorial - Drip-feed user migration
+sidebar:
+  order: 25
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - ca483387-5987-4449-a775-a9dfdedc0c7c
+  - f3dc6458-7d1e-407e-bc4c-62ac0ee4c075
+  - c4bc277a-5ec7-418c-ba1c-4d58c9ddfd7d
+  - f6eaf29b-d8d9-4caf-bc1d-5319b6fb8ffc
+description: Step-by-step tutorial for setting up a drip-feed user migration from any legacy auth system to Kinde using the user:existing_password_provided workflow trigger.
+topics:
+  - workflows
+  - workflow-tutorials
+  - authentication
+sdk: kinde infrastructure
+languages:
+  - TypeScript
+  - JavaScript
+audience:
+  - developers
+complexity: advanced
+keywords:
+  - drip feed migration
+  - progressive migration
+  - password migration workflow
+  - existing password workflow
+  - zero downtime migration
+  - auth migration
+updated: 2026-05-04
+featured: false
+deprecated: false
+ai_summary: Tutorial for implementing drip-feed user migration using the user:existing_password_provided workflow trigger in Kinde, with provider-specific examples for Auth0, AWS Cognito, and Azure B2C.
+---
+
+Drip-feed migration lets you move users from your legacy auth system to Kinde progressively as they log in — no downtime, no forced password resets, and no bulk password export required.
+
+Each user is migrated the first time they sign in: Kinde validates their password against the legacy system, creates their account in Kinde, and takes over authentication from that point forward. Once all users have migrated naturally, you can decommission the legacy system.
+
+### What you need
+
+- A [Kinde](https://kinde.com/) account (sign up for free)
+- A [GitHub](https://github.com/) account
+- The [workflow base template](https://github.com/kinde-starter-kits/workflow-base-template) repo
+- Your legacy auth system's password validation API (examples for Auth0, Cognito, and Azure B2C are provided below)
+
+## Before you start
+
+### Bulk import emails first
+
+The `user:existing_password_provided` trigger only fires when the user's email already exists in Kinde. Run a [bulk import](/get-started/switch-to-kinde/migrate-users-bulk-import/) of user email addresses (without passwords) before enabling this workflow. This seeds Kinde with your user list so the trigger can fire on first login.
+
+### Enable Enumeration protection
+
+Go to **Settings > Attack protection > Enumeration protection** and turn it on. This is required for the workflow to function correctly.
+
+## Step 1: Create the workflow code
+
+1. Fork the [workflow base template](https://github.com/kinde-starter-kits/workflow-base-template) into your GitHub account by selecting **Use this template > Create a new repository**.
+
+2. Clone the repo:
+
+    ```bash
+    git clone https://github.com/your_github_username/workflow-base-template.git
+    cd workflow-base-template
+    ```
+
+3. Create a new workflow directory:
+
+    ```bash
+    mkdir kindeSrc/environment/workflows/dripFeedMigration
+    touch kindeSrc/environment/workflows/dripFeedMigration/Workflow.ts
+    ```
+
+4. Add the workflow code below. Choose the version for your legacy provider, or adapt the generic version for your own system.
+
+### Generic workflow
+
+Use this as a starting point if your legacy system has a custom password validation endpoint.
+
+```typescript
+import {
+  onExistingPasswordProvidedEvent,
+  WorkflowSettings,
+  WorkflowTrigger,
+  createKindeAPI,
+} from "@kinde/infrastructure";
+
+export const workflowSettings: WorkflowSettings = {
+  id: "dripFeedMigration",
+  name: "Drip-feed migration",
+  trigger: WorkflowTrigger.ExistingPasswordProvided,
+  failurePolicy: { action: "stop" },
+  bindings: {
+    "kinde.fetch": {},
+    "kinde.secureFetch": {},
+  },
+};
+
+export default async function Workflow(event: onExistingPasswordProvidedEvent) {
+  const { providedEmail, password, hasUserRecordInKinde } = event.context.auth;
+
+  // Already in Kinde — nothing to do
+  if (hasUserRecordInKinde) return;
+
+  // Validate the password against your legacy system
+  const legacyResponse = await kinde.secureFetch("https://your-legacy-api.example.com/validate", {
+    method: "POST",
+    responseFormat: "json",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: providedEmail, password }),
+  });
+
+  if (!legacyResponse.ok) return;
+
+  // Create user in Kinde and set their password
+  const kindeAPI = await createKindeAPI(event);
+  const { user } = await kindeAPI.post("/api/v1/user", {
+    profile: { email: providedEmail },
+    identities: [{ type: "email", details: { email: providedEmail } }],
+  });
+
+  await kindeAPI.put(`/api/v1/users/${user.id}/password`, {
+    password,
+    is_temporary_password: false,
+  });
+}
+```
+
+### Auth0 variant
+
+Validates credentials using Auth0's Resource Owner Password Flow.
+
+```typescript
+import {
+  onExistingPasswordProvidedEvent,
+  WorkflowSettings,
+  WorkflowTrigger,
+  createKindeAPI,
+} from "@kinde/infrastructure";
+
+export const workflowSettings: WorkflowSettings = {
+  id: "dripFeedMigrationAuth0",
+  name: "Drip-feed migration (Auth0)",
+  trigger: WorkflowTrigger.ExistingPasswordProvided,
+  failurePolicy: { action: "stop" },
+  bindings: {
+    "kinde.fetch": {},
+    "kinde.secureFetch": {},
+    "kinde.env": {},
+  },
+};
+
+export default async function Workflow(event: onExistingPasswordProvidedEvent) {
+  const { providedEmail, password, hasUserRecordInKinde } = event.context.auth;
+
+  if (hasUserRecordInKinde) return;
+
+  // Validate against Auth0 Resource Owner Password Flow
+  const auth0Response = await kinde.secureFetch(
+    `https://${kinde.env.get("AUTH0_DOMAIN")}/oauth/token`,
+    {
+      method: "POST",
+      responseFormat: "json",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        grant_type: "password",
+        username: providedEmail,
+        password,
+        audience: kinde.env.get("AUTH0_AUDIENCE"),
+        client_id: kinde.env.get("AUTH0_CLIENT_ID"),
+        client_secret: kinde.env.get("AUTH0_CLIENT_SECRET"),
+      }),
+    }
+  );
+
+  if (!auth0Response.ok) return;
+
+  const kindeAPI = await createKindeAPI(event);
+  const { user } = await kindeAPI.post("/api/v1/user", {
+    profile: { email: providedEmail },
+    identities: [{ type: "email", details: { email: providedEmail } }],
+  });
+
+  await kindeAPI.put(`/api/v1/users/${user.id}/password`, {
+    password,
+    is_temporary_password: false,
+  });
+}
+```
+
+Set the following [environment variables](/workflows/configuration/environment-variables-and-secrets/) in Kinde: `AUTH0_DOMAIN`, `AUTH0_AUDIENCE`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`.
+
+### AWS Cognito variant
+
+Uses Cognito's `ADMIN_USER_PASSWORD_AUTH` flow. Ensure this flow is enabled on your Cognito App Client before deploying.
+
+```typescript
+import {
+  onExistingPasswordProvidedEvent,
+  WorkflowSettings,
+  WorkflowTrigger,
+  createKindeAPI,
+} from "@kinde/infrastructure";
+
+export const workflowSettings: WorkflowSettings = {
+  id: "dripFeedMigrationCognito",
+  name: "Drip-feed migration (Cognito)",
+  trigger: WorkflowTrigger.ExistingPasswordProvided,
+  failurePolicy: { action: "stop" },
+  bindings: {
+    "kinde.fetch": {},
+    "kinde.secureFetch": {},
+    "kinde.env": {},
+  },
+};
+
+export default async function Workflow(event: onExistingPasswordProvidedEvent) {
+  const { providedEmail, password, hasUserRecordInKinde } = event.context.auth;
+
+  if (hasUserRecordInKinde) return;
+
+  // Validate against Cognito ADMIN_USER_PASSWORD_AUTH
+  const cognitoResponse = await kinde.secureFetch(
+    `https://cognito-idp.${kinde.env.get("AWS_REGION")}.amazonaws.com/`,
+    {
+      method: "POST",
+      responseFormat: "json",
+      headers: {
+        "Content-Type": "application/x-amz-json-1.1",
+        "X-Amz-Target": "AWSCognitoIdentityProviderService.AdminInitiateAuth",
+      },
+      body: JSON.stringify({
+        AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
+        ClientId: kinde.env.get("COGNITO_CLIENT_ID"),
+        UserPoolId: kinde.env.get("COGNITO_USER_POOL_ID"),
+        AuthParameters: {
+          USERNAME: providedEmail,
+          PASSWORD: password,
+        },
+      }),
+    }
+  );
+
+  if (!cognitoResponse.ok) return;
+
+  const kindeAPI = await createKindeAPI(event);
+  const { user } = await kindeAPI.post("/api/v1/user", {
+    profile: { email: providedEmail },
+    identities: [{ type: "email", details: { email: providedEmail } }],
+  });
+
+  await kindeAPI.put(`/api/v1/users/${user.id}/password`, {
+    password,
+    is_temporary_password: false,
+  });
+}
+```
+
+Set the following environment variables: `AWS_REGION`, `COGNITO_CLIENT_ID`, `COGNITO_USER_POOL_ID`. You will also need to sign the request with AWS Signature V4 — add your signing logic or use a Lambda proxy that handles auth.
+
+### Azure B2C variant
+
+Uses the Azure B2C Resource Owner Password Credentials (ROPC) token endpoint.
+
+```typescript
+import {
+  onExistingPasswordProvidedEvent,
+  WorkflowSettings,
+  WorkflowTrigger,
+  createKindeAPI,
+} from "@kinde/infrastructure";
+
+export const workflowSettings: WorkflowSettings = {
+  id: "dripFeedMigrationAzureB2C",
+  name: "Drip-feed migration (Azure B2C)",
+  trigger: WorkflowTrigger.ExistingPasswordProvided,
+  failurePolicy: { action: "stop" },
+  bindings: {
+    "kinde.fetch": {},
+    "kinde.secureFetch": {},
+    "kinde.env": {},
+  },
+};
+
+export default async function Workflow(event: onExistingPasswordProvidedEvent) {
+  const { providedEmail, password, hasUserRecordInKinde } = event.context.auth;
+
+  if (hasUserRecordInKinde) return;
+
+  const tenant = kinde.env.get("AZURE_B2C_TENANT");
+  const policy = kinde.env.get("AZURE_B2C_ROPC_POLICY");
+  const clientId = kinde.env.get("AZURE_B2C_CLIENT_ID");
+  const scope = kinde.env.get("AZURE_B2C_SCOPE");
+
+  const body = new URLSearchParams({
+    grant_type: "password",
+    client_id: clientId,
+    scope: `openid ${scope}`,
+    username: providedEmail,
+    password,
+    response_type: "token",
+  });
+
+  const azureResponse = await kinde.secureFetch(
+    `https://${tenant}.b2clogin.com/${tenant}.onmicrosoft.com/${policy}/oauth2/v2.0/token`,
+    {
+      method: "POST",
+      responseFormat: "json",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    }
+  );
+
+  if (!azureResponse.ok) return;
+
+  const kindeAPI = await createKindeAPI(event);
+  const { user } = await kindeAPI.post("/api/v1/user", {
+    profile: { email: providedEmail },
+    identities: [{ type: "email", details: { email: providedEmail } }],
+  });
+
+  await kindeAPI.put(`/api/v1/users/${user.id}/password`, {
+    password,
+    is_temporary_password: false,
+  });
+}
+```
+
+Set the following environment variables: `AZURE_B2C_TENANT`, `AZURE_B2C_ROPC_POLICY`, `AZURE_B2C_CLIENT_ID`, `AZURE_B2C_SCOPE`.
+
+5. Push your workflow code to GitHub:
+
+    ```bash
+    git add .
+    git commit -m "add drip-feed migration workflow"
+    git push
+    ```
+
+## Step 2: Deploy the workflow
+
+1. Sign in to your [Kinde dashboard](https://kinde.com/) and select **Workflows** from the sidebar.
+2. If you haven't connected a repo yet, select **Connect repo > Connect GitHub** and follow the prompts.
+3. Select your repository, choose the `main` branch, and select **Next**.
+4. Select **Sync code** to pull your workflow into Kinde. You'll see it listed in the dashboard.
+
+For full deployment instructions, see [Manage code and deployments](/workflows/manage-workflows/manage-code-and-deployments/).
+
+## Step 3: Test the migration
+
+1. Sign in to your Kinde dashboard and go to **Authentication**.
+2. Enable **Email + password** if it isn't already enabled, and select **Save**.
+3. Sign in as a test user (one who exists in your legacy system but not yet fully in Kinde).
+4. Confirm the user appears in **Users** in Kinde after signing in.
+5. Sign in as the same user a second time — they should authenticate directly through Kinde this time.
+
+## Decommission your legacy system
+
+Once the drip-feed is running:
+
+- Monitor sign-in volume on your legacy system over time.
+- When new validations drop to zero (all active users have migrated), remove or disable the workflow.
+- Decommission your legacy auth system.
+
+Users who never logged in during the migration period will not be migrated. Decide whether to keep inactive users (force a password reset via [the API](/get-started/switch-to-kinde/create-users-with-api/)) or remove them.
