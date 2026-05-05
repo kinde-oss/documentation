@@ -15,6 +15,8 @@ description: Export users and passwords from Auth0 and migrate to Kinde, with gu
 topics:
   - get-started
   - switch-to-kinde
+  - user-management
+  - authentication
 sdk: []
 languages:
   - json
@@ -26,25 +28,42 @@ audience:
 complexity: advanced
 keywords:
   - auth0 migration
+  - migrate from auth0
+  - auth0 to kinde
   - user import
   - password migration
+  - password export
+  - bulk import
+  - drip-feed migration
+  - ndjson
+  - user export extension
+  - resource owner password credentials
+  - ropc
+  - social identities
+  - identity provider
+  - migration window
   - oauth2
   - oidc
-  - social identities
   - organizations
   - roles
   - permissions
-updated: 2026-05-04
+updated: 2026-05-05
 featured: false
 deprecated: false
-ai_summary: How to export users and passwords from Auth0 and migrate to Kinde, including guidance on social identities, migration window handling, drip-feed options, and Auth0-specific object mapping.
+ai_summary: "Step-by-step guide for migrating users from Auth0 to Kinde. Covers installing the Auth0 User Import/Export extension, exporting user data as NDJSON (including the identities field for social logins), and preparing your Kinde business with matching auth methods, organizations, roles, and permissions. Explains three migration methods: drip-feed via the Kinde `user:existing_password_provided` workflow (recommended — no bulk export, no downtime), an app-hosted manual flow using Auth0's Resource Owner Password Credentials endpoint, and bulk import with a hard cutover. Includes guidance on handling new registrations and password changes during the migration window, supported authentication connection types, and a mapping of Auth0 concepts (tenants, environments, identity providers, Universal Login) to their Kinde equivalents. Also covers options when Auth0 password export is unavailable or impractical, such as importing users without passwords and letting Kinde prompt a reset on first sign-in."
 ---
 
-This guide covers the Auth0-specific steps for exporting your users and migrating to Kinde. For import instructions and handling the migration window, see the [migration method guides](/get-started/switch-to-kinde/).
+This guide covers the Auth0-specific steps for exporting your users and migrating to Kinde.
 
 A key point to note: Kinde is OAuth2/OIDC compatible and issues similar tokens to Auth0. You only need to update the token claims when you migrate.
 
 If you want to compare Kinde with Auth0, [this page](https://kinde.com/comparisons/auth0-alternative/) has some useful information.
+
+### What you need
+
+- A Kinde account with **Admin** access 
+- Kinde account configured to match your current auth provider - see [before you migrate](/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/#before-you-migrate)
+- Auth0 account with extension installation permissions
 
 ## Key considerations
 
@@ -81,27 +100,7 @@ The extension appears in your list of installed extensions. The first time you l
 
     You will have a JSON file to import into Kinde.
 
-## Step 4: Import into Kinde
-
-1. In Kinde, go to **Users**, then select **Import users**.
-2. Select **Auth0**.
-
-   ![Import from Kinde tool screen shot](to be added)
-
-3. Choose **Import users only** (import users first, then passwords separately) or **Import passwords only** (if users are already imported).
-4. Follow the on-screen prompts to upload the file.
-5. Review any [import errors](/manage-users/add-and-edit/troubleshoot-user-import-errors/) afterwards. Most can be fixed by editing the file and re-importing.
-
-For full import details, see [Bulk import users](/get-started/switch-to-kinde/migrate-users-bulk-import/).
-
 ## Choose your migration method
-
-### Bulk import (hard switch)
-
-Export users and passwords from Auth0, import into Kinde, then switch. To handle new registrations or password changes during the migration window:
-
-- Re-export and re-import from Auth0 to catch new registrations. Users who registered after your first export won't be able to sign in until the second import completes.
-- Use the [API to force a password reset](/get-started/switch-to-kinde/create-users-with-api/#step-4-force-a-password-reset-optional) for users whose password changed during the window.
 
 ### Drip-feed via Kinde Workflow (recommended)
 
@@ -109,7 +108,7 @@ Use the `user:existing_password_provided` workflow trigger to validate credentia
 
 The workflow calls Auth0's Resource Owner Password Flow (`POST /oauth/token`) to verify the password before creating the user in Kinde.
 
-[Set up drip-feed migration →](/get-started/switch-to-kinde/drip-feed-migration/)
+[Set up drip-feed migration →](/workflows/workflow-tutorials/drip-feed-migration/)
 
 ### App-hosted manual flow
 
@@ -135,17 +134,25 @@ If your app hosts its own login form (email + password), you can push users to K
 
 For the Kinde API steps, see [Create users with the API](/get-started/switch-to-kinde/create-users-with-api/).
 
-## Other objects you may want to bring from Auth0
+### Bulk import (hard switch)
 
-- **Tenants** → [Businesses](/build/set-up-options/run-multiple-businesses/) in Kinde. A single Kinde account can run multiple businesses.
-- **Organizations** → [Organizations](/build/organizations/multi-tenancy-using-organizations/) in Kinde. Kinde treats organizations as first-class citizens.
-- **Environments** → Kinde [Environments](/build/environments/environments/) contain organizations, users, and applications.
-- **Applications** → [Applications](/build/applications/add-and-manage-applications/) in Kinde work in essentially the same way.
-- **Identity Providers** → connections or authentication providers in Kinde.
-- **Roles and Permissions** → Kinde [Roles](/manage-users/roles-and-permissions/user-roles/) and [Permissions](/manage-users/roles-and-permissions/user-permissions/) are assigned per user per organization. For Auth0's equivalent of user-level roles/permissions, use the [default organization](/build/organizations/orgs-for-developers/).
-- Auth0's Universal Login → Kinde's hosted sign-up pages work the same way.
+Export users and passwords from Auth0, import into Kinde, then switch. Follow the steps below:
 
-Import objects via the [Kinde Management API](/kinde-apis/management/), or add them in the Kinde dashboard.
+1. In Kinde, go to **Users**, then select **Import users**.
+2. Select **Auth0**.
+
+   ![Import from Kinde tool screen shot](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/06ceef1a-0236-4f42-6598-c60dd511a400/socialsharingimage)
+
+3. Choose **Import users only** (import users first, then passwords separately) or **Import passwords only** (if users are already imported).
+4. Follow the on-screen prompts to upload the file.
+5. Review any [import errors](/manage-users/add-and-edit/troubleshoot-user-import-errors/) afterwards. Most can be fixed by editing the file and re-importing.
+
+For full import details, see [Bulk import users](/get-started/switch-to-kinde/migrate-users-bulk-import/).
+
+To handle new registrations or password changes during the migration window:
+
+- Re-export and re-import from Auth0 to catch new registrations. Users who registered after your first export won't be able to sign in until the second import completes.
+- Use the [API to force a password reset](/get-started/switch-to-kinde/create-users-with-api/) for users whose password changed during the window.
 
 ## More topics
 
@@ -165,17 +172,21 @@ Auth methods are shown in the `connection` attribute of the `identities` array:
 - `bitbucket`
 - `windowslive`
 
+### Other objects you may want to bring from Auth0
+
+- **Tenants** → [Businesses](/build/set-up-options/run-multiple-businesses/) in Kinde. A single Kinde account can run multiple businesses.
+- **Organizations** → [Organizations](/build/organizations/multi-tenancy-using-organizations/) in Kinde. Kinde treats organizations as first-class citizens.
+- **Environments** → Kinde [Environments](/build/environments/environments/) contain organizations, users, and applications.
+- **Applications** → [Applications](/build/applications/add-and-manage-applications/) in Kinde work in essentially the same way.
+- **Identity Providers** → connections or authentication providers in Kinde.
+- **Roles and Permissions** → Kinde [Roles](/manage-users/roles-and-permissions/user-roles/) and [Permissions](/manage-users/roles-and-permissions/user-permissions/) are assigned per user per organization. For Auth0's equivalent of user-level roles/permissions, use the [default organization](/build/organizations/orgs-for-developers/).
+- Auth0's Universal Login → Kinde's hosted sign-up pages work the same way.
+
+Import objects via the [Kinde Management API](/kinde-apis/management/), or add them in the Kinde dashboard.
+
 ### Can't get passwords from Auth0?
 
 Some Auth0 plans don't allow password exports, or the 2-week wait isn't practical. If that's the case, import users without passwords — Kinde will ask them to set a new password on first sign-in. Alternatively, use [drip-feed migration](/get-started/switch-to-kinde/drip-feed-migration/) to avoid the export entirely.
-
-## Step 1: Prepare your Kinde business
-
-1. [Register for a Kinde account](https://app.kinde.com/register) if you haven't already.
-2. Set up [authentication methods](/authenticate/authentication-methods/set-up-user-authentication/) to match your current Auth0 setup.
-3. Enable [password authentication](/authenticate/authentication-methods/password-authentication/) if your users sign in with passwords.
-4. [Create organizations](/build/organizations/add-and-manage-organizations/) if you use multi-tenancy.
-5. Add [roles](/manage-users/roles-and-permissions/user-roles/) and [permissions](/manage-users/roles-and-permissions/user-permissions/) if you plan to import these with users.
 
 ## Get support
 
