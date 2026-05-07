@@ -32,7 +32,7 @@ keywords:
 updated: 2026-05-04
 featured: false
 deprecated: false
-ai_summary: 
+ai_summary: "hello"
 ---
 
 Drip-feed migration lets you move users from your legacy auth system to Kinde progressively as they log in — no downtime, no forced password resets, and no bulk password export required.
@@ -45,17 +45,40 @@ Each user is migrated the first time they sign in: Kinde validates their passwor
 - A workflow Git repository connected to your Kinde account - use the [workflow base template](/workflows/getting-started/quick-start-guide/)
 - Your legacy auth system's password validation API (examples for Auth0, Cognito, and Azure B2C are provided below)
 
-## Before you start
+## Kinde configuration
 
-### 1. Bulk import emails first
+### 1. Bulk import emails into Kinde
 
-The `user:existing_password_provided` trigger only fires when the user's email already exists in Kinde. Run a [bulk import](/get-started/switch-to-kinde/migrate-users-bulk-import/) of user email addresses (without passwords) before enabling this workflow. This seeds Kinde with your user list so the trigger can fire on first login.
+The `user:existing_password_provided` trigger only fires when the user's email already exists in Kinde. Run a [bulk import](/get-started/switch-to-kinde/migrate-users-bulk-import/) of user email addresses (without passwords) before enabling this workflow. Make sure the imported emails are set to `email_verified` to `TRUE` so it can properly fire on first login. This seeds Kinde with your user list so the trigger can fire on first login. Here is an example CSV format of your exported users:
 
-### 2.Enable Enumeration protection
+```text
+# users.csv
+email,email_verified
+user1@example.com,TRUE
+user2@example.com,TRUE
+user3@example.com,TRUE
+```
+
+### 2. Enable Enumeration protection
 
 Go to your Kinde dashboard > **Settings > Attack protection > Enumeration protection** and turn it on. This is required for the workflow to function correctly.
 
+### 3. Setup a Kinde Management API
 
+This workflow will update the user password in Kinde, so you need to setup a Kinde Management API to do this.
+
+1. Go to your Kinde dashboard > **Add new application**
+2. Select **Machine to Machine** as the **Application type**, set a name (e.g., Drip feed migration app)
+3. Select **Save**
+4. Go to **APIs** in the side menu and select the **Three dots** next to the **Kinde Management API** and select **Authorize application**.
+5. Select the **Three dots** again and select **Manage scopes**.
+6. Enable the following scopes for your M2M app and select **Save**:
+    - `create:users`
+    - `update:user_passwords`
+7. Go to the application **Details** page and copy the **Client ID** and **Client secret**.
+8. Go to your Kinde dashboard > **Settings > Data management > Env variables** and set up the following variables with the values from the M2M application you created above:
+    - `KINDE_WF_M2M_CLIENT_ID`
+    - `KINDE_WF_M2M_CLIENT_SECRET` - Ensure this is setup with **Sensitive** flag enabled to prevent accidental sharing
 
 ## Workflow setup
 
@@ -78,6 +101,19 @@ Go to your Kinde dashboard > **Settings > Attack protection > Enumeration protec
     ```
 
 4. Add the workflow code below. Choose the version for your legacy provider, or adapt the generic version for your own system.
+
+### 2. Setup kinde application 
+
+Set up application in kinde and set password authentication.
+
+### 2. Deploy the workflow 
+
+git setup here.
+
+Go to settings **Environment > Git repo** and select **Connect GitHub** and follow the prompts to connect your GitHub repository.
+Select your workflow repo, choose the branch (defaults to main) and select **Next**.
+You will find your workflow by going to your Kinde dashboard > **Workflows** and select the **Drip-feed migration** workflow.
+
 
 ### Generic workflow
 
