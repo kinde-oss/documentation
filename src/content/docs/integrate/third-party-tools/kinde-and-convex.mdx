@@ -1,0 +1,532 @@
+---
+page_id: f3dcba7f-fa4f-4ea1-a470-f03af04ba347
+title: Integrate Convex with Kinde
+description: Integrate Kinde with Convex to enable real-time user data sync and secure authentication with Kinde access tokens.
+sidebar:
+  order: 9
+relatedArticles:
+  - 78f0242c-3a49-4c8d-8168-019fd69ef838
+  - a07f8f6b-5d6a-4096-be52-7b13b4a3b0a5
+tableOfContents:
+  maxHeadingLevel: 3
+topics:
+  - integrate
+  - third-party-tools
+sdk:
+  - React.js
+languages:
+  - bash
+  - typescript
+  - json
+audience:
+  - developers
+complexity: intermediate
+keywords:
+  - react
+  - convex
+  - express
+  - authentication
+  - database
+  - webhooks
+updated: 2026-04-14
+featured: false
+deprecated: false
+ai_summary: Integrate Kinde with Convex to enable real-time user data sync and secure authentication with Kinde access tokens.
+---
+
+[Convex](https://www.convex.dev/) gives you a backend with realtime data, file storage, search, and scheduling out of the box. Add Kinde for sign-in, user management, and access control, and you get a full stack without wiring everything yourself. This guide walks through connecting Kinde to a Convex app so users are authenticated and your backend stays secure.
+
+Example repository: [Kinde React + Convex Starter kit](https://github.com/kinde-starter-kits/kinde-react-convex-starter-kit)
+
+### Create a new project
+
+1. If you are starting from scratch, set up a new React project by running the following command:
+
+    ```bash
+    npm create vite@latest my-app -- --template react-ts
+    ```
+2. Go to your Kinde dashboard and create a new front-end web application. 
+    - Set the Callback and Logout URLs
+    - Obtain the **Client ID** and **Kinde domain**
+    
+    Learn more about setting up a [Kinde React application](/developer-tools/sdks/frontend/react-sdk/)
+
+
+### Install dependencies
+
+1. Install the Convex and Kinde React SDK dependencies:
+
+    <PackageManagers pkg='convex @kinde-oss/kinde-auth-react' />
+
+2. Use the following command to sign-in to Convex and initialize a new project. Keep this terminal running for the development server.
+
+    <PackageManagers type='dlx' pkg='convex' args='dev' />
+
+### Add Kinde and Convex providers
+
+1. Update your `main.tsx` file to include the Kinde and Convex providers:
+
+    ```tsx
+    // src/main.tsx
+    import { StrictMode } from "react";
+    import { createRoot } from "react-dom/client";
+    import "./index.css";
+    import App from "./App.tsx";
+    import { KindeProvider } from "@kinde-oss/kinde-auth-react";
+    import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
+    import useAuthFromKinde from "./hooks/useAuthFromKinde.ts";
+
+    const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+
+    createRoot(document.getElementById("root")!).render(
+      <StrictMode>
+        <KindeProvider
+          clientId="your_kinde_client_id"
+          domain="https://your_kinde_business.kinde.com"
+          logoutUri={window.location.origin}
+          redirectUri={window.location.origin}
+        >
+          <ConvexProviderWithAuth client={convex} useAuth={useAuthFromKinde}>
+            <App />
+          </ConvexProviderWithAuth>
+        </KindeProvider>
+      </StrictMode>,
+    );
+    ```
+
+2. Create a new hook directory and add the following code to the hook:
+
+    ```bash
+    mkdir -p src/hooks
+    touch src/hooks/useAuthFromKinde.ts
+    ```
+
+    ```tsx
+    // src/hooks/useAuthFromKinde.ts
+    import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+    import { useCallback, useMemo } from "react";
+
+    export default function useAuthFromKinde() {
+      const { isLoading, isAuthenticated, getIdToken } = useKindeAuth();
+      const fetchAccessToken = useCallback(
+        async ({
+          forceRefreshToken,
+        }: {
+          forceRefreshToken: boolean;
+        }) => {
+          void forceRefreshToken; // Convex passes this; Kinde's getIdToken() has no refresh option
+          try {
+            const response = await getIdToken();
+            return response as string;
+          } catch {
+            return null;
+          }
+        },
+        [getIdToken],
+      );
+      return useMemo(
+        () => ({ isLoading, isAuthenticated, fetchAccessToken }),
+        [isLoading, isAuthenticated, fetchAccessToken],
+      );
+    }
+    ```
+
+    <Aside type="warning" title="About the function name 'fetchAccessToken'">
+      The function name `fetchAccessToken` is required by Convex even though it is sending the ID token. Naming the function anything else will result in an error in the browser console.
+    </Aside>
+    
+3. Connect Convex backend auth by adding a `auth.config.ts` file:
+
+    ```bash
+    touch convex/auth.config.ts
+    ```
+
+    ```typescript
+    // convex/auth.config.ts
+    import { AuthConfig } from "convex/server";
+
+    // domain must match the ID token's "iss"; applicationID must match the ID token's "aud".
+    // Decode your ID token at jwt.io to confirm (use getIdToken() and paste the string).
+    export default {
+      providers: [
+        {
+          domain: "https://your_kinde_business.kinde.com",
+          applicationID: "your_kinde_client_id",
+        },
+      ],
+    } satisfies AuthConfig;
+    ```
+    
+    Learn more about adding custom OIDC providers to Convex in the [Convex documentation](https://docs.convex.dev/auth/advanced/custom-auth).
+
+### Add Convex auth utilities to your component
+
+You can now start using the Convex auth utilities such as `Authenticated` and `Unauthenticated` components to conditionally render content based on the user's authentication status:
+
+    ```tsx
+    // src/App.tsx
+    import "./App.css";
+    import {
+      LoginLink,
+      LogoutLink,
+      RegisterLink,
+    } from "@kinde-oss/kinde-auth-react/components";
+    import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+    import { Authenticated, Unauthenticated, useConvexAuth } from "convex/react";
+
+    function App() {
+      const { user } = useKindeAuth();
+      const { isLoading } = useConvexAuth();
+
+      if (isLoading) {
+        return <div>Loading...</div>;
+      }
+
+      return (
+        <>
+          <Authenticated>
+            <div>
+              Hello {user?.givenName} {user?.familyName}
+              <br />
+              Logged in | <LogoutLink>Sign out</LogoutLink>
+            </div>
+          </Authenticated>
+          <Unauthenticated>
+            <div>
+              <LoginLink>Sign in</LoginLink>
+              <RegisterLink>Sign up</RegisterLink>
+            </div>
+          </Unauthenticated>
+        </>
+      );
+    }
+
+    export default App;
+    ```
+
+## Sync Kinde users to Convex database
+
+When using Kinde’s ID token with Convex, the signed-in user’s claims are available in the token payload. Convex receives the Kinde ID in the `subject` claim, along with profile details such as `givenName`, `familyName`, `email`, etc. To use this data when the user is not logged in, store it in Convex. The steps below add a `users` table and a mutation that syncs the current user on sign-in.
+
+1. Create and save the following Convex schema:
+
+    ```bash
+    touch convex/schema.ts
+    ```
+
+    ```typescript
+    // convex/schema.ts
+    import { defineSchema, defineTable } from "convex/server";
+    import { v } from "convex/values";
+
+    export default defineSchema({
+      users: defineTable({
+        kindeId: v.string(),
+        givenName: v.optional(v.string()),
+        familyName: v.optional(v.string()),
+        email: v.optional(v.string()),
+      }).index("by_kinde_id", ["kindeId"]),
+    });
+    ```
+2. Create the `users` file and add the contents:
+
+    ```bash
+    touch convex/users.ts
+    ```
+
+    ```typescript
+    // convex/users.ts
+    import { v } from "convex/values";
+    import { internalMutation, mutation, query } from "./_generated/server";
+
+    export const store = mutation({
+      args: {
+        givenName: v.optional(v.string()),
+        familyName: v.optional(v.string()),
+        email: v.optional(v.string()),
+      },
+      handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+
+        if (!identity) {
+          throw new Error("Called storeUser without authentication present");
+        }
+
+        // Prefer Kinde user object (passed from client); fall back to JWT identity claims.
+        const kindeProfile: Record<string, string> = {};
+        const givenName = args.givenName ?? identity.givenName;
+        const familyName = args.familyName ?? identity.familyName;
+        const email = args.email ?? identity.email;
+        if (givenName !== undefined) kindeProfile.givenName = givenName;
+        if (familyName !== undefined) kindeProfile.familyName = familyName;
+        if (email !== undefined) kindeProfile.email = email;
+
+        // Check if we've already stored this identity before.
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_kinde_id", (q) => q.eq("kindeId", identity.subject))
+          .unique();
+
+        if (user !== null) {
+          if (Object.keys(kindeProfile).length > 0) {
+            await ctx.db.patch(user._id, kindeProfile);
+          }
+          return user._id;
+        }
+        return await ctx.db.insert("users", {
+          kindeId: identity.subject,
+          ...kindeProfile,
+        });
+      },
+    });
+    ```
+
+3. Update your `App.tsx` file with the contents:
+
+    ```tsx
+    // src/App.tsx
+    import "./App.css";
+    import {
+      LoginLink,
+      LogoutLink,
+      RegisterLink,
+    } from "@kinde-oss/kinde-auth-react/components";
+    import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+    import {
+      Authenticated,
+      Unauthenticated,
+      useConvexAuth,
+      useMutation,
+    } from "convex/react";
+    import { useEffect, useRef } from "react";
+    import { api } from "../convex/_generated/api";
+
+    function App() {
+      const { user } = useKindeAuth();
+      const { isLoading, isAuthenticated } = useConvexAuth();
+      const storeUser = useMutation(api.users.store);
+      const hasUpserted = useRef(false);
+
+      useEffect(() => {
+      // Only reset when clearly logged out (both sources agree). Avoids resetting when
+      // Convex and Kinde resolve at different times and prevents upsert loops.
+      if (!isAuthenticated && !user) {
+        hasUpserted.current = false;
+      }
+      if (!isAuthenticated || !user) {
+        return;
+      }
+      if (hasUpserted.current) return;
+      storeUser({
+        givenName: user.givenName,
+        familyName: user.familyName,
+        email: user.email,
+      })
+        .then(() => {
+          hasUpserted.current = true;
+        })
+        .catch((error) => {
+          console.error("Failed to store user:", error);
+        });
+      }, [isAuthenticated, user, storeUser]);
+
+      if (isLoading) {
+        return <div>Loading...</div>;
+      }
+
+      return (
+        <>
+          <Authenticated>
+            <div>
+              Hello {user?.givenName} {user?.familyName}
+              <br />
+              Logged in | <LogoutLink>Sign out</LogoutLink>
+            </div>
+          </Authenticated>
+          <Unauthenticated>
+            <div>
+              <LoginLink>Sign in</LoginLink>
+              <RegisterLink>Sign up</RegisterLink>
+            </div>
+          </Unauthenticated>
+        </>
+      );
+    }
+
+    export default App;
+
+    ```
+
+    The code will store the user data in the Convex database under the `users` table when the user signs in. 
+
+    ![convex users database](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d59004b6-fe09-4529-a441-83cfebae8d00/socialsharingimage)
+
+    You can now query the user data in the Convex database using the `useQuery` hook.
+
+    Learn more about using the `useQuery` hook in the [Convex React quickstart](https://docs.convex.dev/quickstart/react).
+
+## Advanced user sync with Kinde webhooks
+
+Right now, user data is written to Convex only when someone signs in. Changes made in Kinde elsewhere—for example in the Kinde dashboard, another app, or via the API—never reach Convex, so your database can go out of date. Use Kinde webhooks so that when a user is updated or deleted in Kinde, Convex is updated too. This section walks you through adding a webhook endpoint in your Convex backend and connecting it to Kinde.
+
+<Aside type="upgrade">
+The Kinde free plan includes one webhook, which is enough for this integration—you’ll use a single endpoint for user updates and deletions. If you need more webhooks later (e.g., for other apps or events), upgrade to a paid plan. [View plans](https://kinde.com/pricing/).
+</Aside>
+
+### Step 1: Configure Convex backend
+
+1. In your Convex project, install the Kinde webhook library to validate the incoming webhook requests:
+
+    <PackageManagers pkg='@kinde/webhooks' />
+
+2. Update the `users.ts` file: ensure `internalMutation` is in your import from the Convex server (it already is from the earlier step), then add the following two functions after your existing `store` mutation:
+
+    ```typescript
+    // convex/users.ts
+    // Keep your existing imports (v, internalMutation, mutation, query) and store mutation above, then add:
+
+    /** Called from Kinde webhook on user.updated – look up by kindeId and patch schema fields. */
+    export const updateUser = internalMutation({
+      args: {
+        data: v.any(),
+      },
+      handler: async (ctx, { data }) => {
+        if (!data || typeof data.id !== "string") {
+          throw new Error("updateUser: missing or invalid data.id (kinde user id)");
+        }
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_kinde_id", (q) => q.eq("kindeId", data.id))
+          .unique();
+        if (!user) return;
+        const patch: Record<string, string> = {};
+        if (typeof data.first_name === "string") patch.givenName = data.first_name;
+        if (typeof data.last_name === "string") patch.familyName = data.last_name;
+        if (typeof data.email === "string") patch.email = data.email;
+        if (Object.keys(patch).length > 0) {
+          await ctx.db.patch(user._id, patch);
+        }
+      },
+    });
+
+    /** Called from Kinde webhook on user.deleted – delete local user by kindeId. */
+    export const deleteUser = internalMutation({
+      args: {
+        kindeId: v.string(),
+      },
+      handler: async (ctx, { kindeId }) => {
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_kinde_id", (q) => q.eq("kindeId", kindeId))
+          .unique();
+        if (!user) return;
+        await ctx.db.delete(user._id);
+      },
+    });
+
+    ```
+
+3. Create a new `webhook.ts` file and add the following contents:
+
+    ```bash
+    touch convex/webhook.ts
+    ```
+
+    ```typescript
+    // convex/webhook.ts
+    import { internal } from "./_generated/api";
+    import { httpAction } from "./_generated/server";
+    import { decodeWebhook } from "@kinde/webhooks";
+
+    // Defining the webhook handler
+    export const handleKindeWebhook = httpAction(async (ctx, request) => {
+      try {
+        const jwt = await request.text();
+
+        const decoded = await decodeWebhook(jwt, process.env.KINDE_DOMAIN); // https://<your_kinde_business>.kinde.com
+
+        if (!decoded) return new Response("Not a valid token", { status: 400 });
+
+        const { data, type } = decoded;
+
+        switch (type) {
+          case "user.updated": {
+            if (!data?.user) {
+              return new Response("Missing user in webhook payload", {
+                status: 400,
+              });
+            }
+            await ctx.runMutation(internal.users.updateUser, {
+              data: data.user,
+            });
+            break;
+          }
+
+          case "user.deleted": {
+            if (!data?.user?.id) {
+              return new Response("Missing user id in webhook payload", {
+                status: 400,
+              });
+            }
+            await ctx.runMutation(internal.users.deleteUser, {
+              kindeId: data.user.id,
+            });
+            break;
+          }
+
+          default: {
+            console.log("ignored Kinde webhook event", type);
+            break;
+          }
+        }
+
+        return new Response(null, { status: 200 });
+      } catch (error) {
+        console.error("Kinde webhook error:", error);
+        return new Response("Internal server error", { status: 500 });
+      }
+    });
+
+    ```
+
+4. Create a new `http.ts` file and add the contents to handle the route:
+
+    ```bash
+    touch convex/http.ts
+    ```
+
+    ```typescript
+    // convex/http.ts
+    import { httpRouter } from "convex/server"
+    import { handleKindeWebhook } from "./webhook"
+
+    const http = httpRouter()
+
+    // Configuring the webhook route
+    http.route({
+      path: "/kinde-users-webhook",
+      method: "POST",
+      handler: handleKindeWebhook,
+    })
+
+    export default http
+    ```
+
+    This will create a new backend route for your app under the `/kinde-users-webhook` path that will be listening for an incoming `POST` request from Kinde.
+
+5. Go to your **Convex dashboard > Project > Settings > General > HTTP Actions URL** and copy the URL.
+6. Combine the HTTP Actions URL with the `/kinde-users-webhook` path to get the full endpoint URL (e.g., `https://<http_actions_url>/kinde-users-webhook`). Copy this URL for the next step.
+7. Go to your Convex project > **Settings** > **Environment Variables** and add the following environment variable:
+    - `KINDE_DOMAIN`: The domain of your Kinde instance, you can find it in your Kinde application's **Details** page under **App keys** (e.g., `https://<your_kinde_business>.kinde.com`)
+    
+### Step 2: Set up a Kinde webhook
+
+1. In your Kinde dashboard, go to **Settings > Webhooks** 
+2. Select **Add webhook**
+3. Enter the webhook **Name** and description
+4. Add the **Endpoint URL.** (copied from earlier step) 
+5. Scroll down and select **Add event**
+6. Check the `user.updated`, and `user.deleted` events and select **Save** 
+7. Select **Save** on the webhook creation page to finish creating the webhook
+8. Go to **Users** and update a user's details or delete a user
+9. Go to the **Convex dashboard** > **Data** > **Users** and verify that the user details are updated or the user is deleted in the database

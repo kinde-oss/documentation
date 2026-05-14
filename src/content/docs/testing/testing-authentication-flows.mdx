@@ -1,0 +1,268 @@
+---
+page_id: c1b1ea81-35f9-467e-8079-042d6a786e55
+title: Testing authentication flows
+description: "Overview of testing sign-up, sign-in, and sign-out flows with Kinde."
+sidebar:
+  order: 3
+relatedArticles:
+  - 4882de7b-07f3-4cc8-ac01-b096e17dcc35
+  - f38ed786-7234-44d1-a564-f7269ce536c5
+  - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+tableOfContents:
+  maxHeadingLevel: 3
+topics:
+  - developer-tools
+  - testing
+  - ui-testing
+  - e2e-testing
+  - authentication
+sdk: []
+languages: []
+audience: developers
+complexity: beginner
+keywords:
+  - UI testing
+  - authentication flows
+  - sign-up testing
+  - sign-in testing
+  - sign-out testing
+  - Playwright
+  - Cypress
+  - AWS CloudWatch
+  - puppeteer
+  - browser automation
+updated: 2026-01-20
+featured: false
+deprecated: false
+ai_summary: Guide to testing authentication flows (sign-up, sign-in, sign-out) using browser automation tools including Playwright, Cypress, and AWS CloudWatch Synthetic Canaries.
+---
+
+You can test Kinde authentication flows using browser automation tools like Playwright, Cypress, and AWS CloudWatch Synthetic Canaries.
+
+## Tool comparison
+
+Different browser automation tools offer various trade-offs. Here's a comparison:
+
+| Method | Pros | Cons |
+| --- | --- | --- |
+| **AWS Synthetic Canaries** | Native AWS integration, scheduled runs, built-in metrics | Higher cost per execution |
+| **Playwright (self-hosted)** | Modern API, cross-browser support, free | Requires CI/CD setup |
+| **Cypress Cloud** | Great DX, parallel execution | Subscription cost |
+| **Self-hosted Puppeteer** | Lower cost, full control | Requires infrastructure management |
+
+## Testing sign-up flows
+
+Kinde requires OTP email verification when signing up for a new user. See the [Testing passwordless flows](/testing/testing-passwordless-flows/) guide for details on how to handle OTP verification in your test methods.
+
+### General pattern
+
+The typical sign-up flow involves:
+
+1. Navigate to your application
+2. Select the sign-up button (redirects to Kinde)
+3. Fill in first name, last name, and email, accept the terms, and submit the form
+4. Handle OTP email verification (extract code from email and enter it)
+5. Fill in password and submit the form
+6. Wait for redirect back to your application
+7. Verify the user is authenticated
+
+### Input selectors
+
+- First name input: `input[name="p_first_name"]`
+- Last name input: `input[name="p_last_name"]`
+- Email input: `input[name="p_email"]`
+- Password input: `input[name="p_first_password"]` 
+- Password confirmation: `input[name="p_second_password"]`
+- Terms and conditions checkbox: `input[name="p_has_clickwrap_accepted"]`
+- OTP input: `input[name="p_confirmation_code"]`
+- Submit button: `button[type="submit"]`
+
+### Sign-up flow best practices
+
+1. **Test user doesn't exist**: Use unique email addresses for each test run (e.g., `test-${timestamp}@example.com`)
+2. **Handle email verification**: Use an email testing service to test user sign-up
+3. **Verify redirect**: Check that users are redirected to the correct page after sign-up
+4. **Test error cases**: Test with invalid emails, weak passwords, etc.
+
+## Testing sign-in flows
+
+### General pattern
+
+The typical sign-in flow involves:
+
+1. Navigate to your application
+2. Select the sign-in button (redirects to Kinde)
+3. Enter email and submit
+4. Enter password and submit
+5. Wait for redirect back to your application
+6. Verify the user is authenticated
+
+### Sign-in flow best practices
+
+1. **Use existing test user**: Create a verified test user beforehand
+2. **Test both success and failure**: Test valid credentials and invalid credentials
+3. **Verify session**: Ensure the user is properly authenticated after sign-in
+4. **Test redirects**: Verify redirects to intended pages
+
+### Additional testing
+
+1. Test with invalid credentials
+2. Verify error messages are displayed
+3. Ensure users remain on the login page after errors
+
+## Testing sign-out flows
+
+### General pattern
+
+The typical sign-out flow involves:
+
+1. Authenticate the user first
+2. Select the sign-out button
+3. Verify the user is signed out (sign-in button visible)
+4. Attempt to access protected routes
+5. Verify redirect to sign-in page
+
+### Sign-out flow best practices
+
+1. **Clear session**: Verify the user is no longer authenticated
+2. **Verify redirect**: Ensure the user is redirected to the intended page
+3. **Protect routes**: Confirm protected routes are no longer accessible
+
+
+## Example: AWS CloudWatch Synthetic Canaries
+
+Here's a pattern using AWS CloudWatch Synthetic Canaries with Puppeteer:
+
+```js
+// Synthetic canary script
+const synthetics = require('Synthetics');
+
+const flowStep = async (stepName, action) => {
+  await synthetics.executeStep(stepName, action);
+};
+
+exports.handler = async () => {
+  const page = await synthetics.getPage();
+  
+  // Store testEmail outside flowStep for OTP handling
+  let testEmail;
+
+  // Sign-up flow
+  await flowStep('Open app for sign-up', async () => {
+    await page.goto(process.env.TEST_APP_URL, { 
+      waitUntil: 'networkidle0', 
+      timeout: 30000 
+    });
+  });
+
+  await flowStep('Select sign up', async () => {
+    await page.waitForSelector('[data-testid="sign-up-button"]', { timeout: 10000 });
+    await page.click('[data-testid="sign-up-button"]');
+    // Wait for navigation to Kinde
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
+  });
+
+  await flowStep('Fill sign-up form', async () => {
+    const timestamp = Date.now();
+    testEmail = `test-${timestamp}@testemail.com`;
+    
+    await page.waitForSelector('input[name="p_first_name"]', { timeout: 10000 });
+    await page.type('input[name="p_first_name"]', 'John');
+    await page.type('input[name="p_last_name"]', 'Doe');
+    await page.type('input[name="p_email"]', testEmail);
+    await page.click('input[name="p_has_clickwrap_accepted"]'); // Use click() instead of check()
+    await page.click('button[type="submit"]');
+    // Wait for OTP page
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
+  });
+
+  await flowStep('Handle OTP verification', async () => {
+    // Handle OTP email verification in this step
+    // See Testing Passwordless Flows guide for email service integration
+    // Example: const otpCode = await getOTPFromEmail(testEmail);
+    // await page.type('input[name="p_confirmation_code"]', otpCode);
+    // await page.click('button[type="submit"]');
+    // await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
+  });
+
+  await flowStep('Create password', async () => {
+    await page.waitForSelector('input[name="p_first_password"]', { timeout: 10000 });
+    await page.type('input[name="p_first_password"]', process.env.TEST_USER_PASSWORD);
+    await page.type('input[name="p_second_password"]', process.env.TEST_USER_PASSWORD);
+    await page.click('button[type="submit"]');
+    // Wait for redirect back to app
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
+  });
+
+  await flowStep('Verify signed up', async () => {
+    await page.waitForSelector('[data-testid="user-profile"]', { timeout: 10000 });
+  });
+
+  // Sign-in flow (sign out first to reset state)
+  await flowStep('Sign out before sign-in test', async () => {
+    await page.waitForSelector('[data-testid="sign-out-button"]', { timeout: 10000 });
+    await page.click('[data-testid="sign-out-button"]');
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
+  });
+
+  await flowStep('Select sign in', async () => {
+    await page.waitForSelector('[data-testid="sign-in-button"]', { timeout: 10000 });
+    await page.click('[data-testid="sign-in-button"]');
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
+  });
+
+  await flowStep('Enter email', async () => {
+    await page.waitForSelector('input[name="p_email"]', { timeout: 10000 });
+    await page.type('input[name="p_email"]', process.env.TEST_USER_EMAIL);
+    await page.click('button[type="submit"]');
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
+  });
+
+  await flowStep('Enter password', async () => {
+    await page.waitForSelector('input[name="p_password"]', { timeout: 10000 });
+    await page.type('input[name="p_password"]', process.env.TEST_USER_PASSWORD);
+    await page.click('button[type="submit"]');
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
+  });
+
+  await flowStep('Verify signed in', async () => {
+    await page.waitForSelector('[data-testid="user-profile"]', { timeout: 10000 });
+  });
+
+  // Sign-out flow
+  await flowStep('Sign out', async () => {
+    await page.waitForSelector('[data-testid="sign-out-button"]', { timeout: 10000 });
+    await page.click('[data-testid="sign-out-button"]');
+    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
+  });
+
+  await flowStep('Verify signed out', async () => {
+    await page.waitForSelector('[data-testid="sign-in-button"]', { timeout: 10000 });
+  });
+};
+```
+
+## What's not supported
+
+The following limitations apply to UI authentication flow testing:
+
+- **Social provider flows**: Automated testing of Google, GitHub, or other social sign-in flows is not directly supported due to third-party provider restrictions and authentication challenges
+- **Enterprise SSO flows**: Testing SAML/SSO enterprise connections requires coordination with identity providers
+- **MFA flows**: Testing multi-factor authentication may require manual intervention
+- **Real email delivery**: Testing with real email addresses requires manual code entry (use test email services instead)
+
+## Best practices
+
+1. **Use data-testid attributes**: Add test IDs to your UI elements for reliable selectors
+2. **Handle redirects gracefully**: Add appropriate wait times for Kinde redirects (they can take time)
+3. **Isolate test users**: Use separate test users for each test run when possible
+4. **Clean up test data**: Delete test users or test data after test runs when possible
+5. **Handle flakiness**: Add retry logic for network-related failures
+6. **Use environment variables**: Store test credentials securely, never commit to source control
+
+## Next steps
+
+Test authentication flows with:
+
+- **[Cypress](/testing/cypress/test-auth-flows/)**
+- **[Playwright](/testing/playwright/test-auth-flows/)**

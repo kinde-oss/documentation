@@ -1,0 +1,107 @@
+---
+page_id: 2f8b2b8e-9e2d-4c6a-a2f0-1c9d5e7a3b4c
+title: Rotate API keys
+description: Safely rotate API keys using built-in rotation (same key_id, new secret) or a dual-key rollout with zero downtime.
+sidebar:
+  order: 5
+topics:
+  - api-keys
+  - api-key-setup
+sdk: []
+languages: [javascript]
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - api key rotation
+  - key rollover
+  - deprecation window
+updated: 2025-08-14
+featured: false
+deprecated: false
+ai_summary: How to rotate API keys using built-in rotation (keeps key_id, replaces secret) or a dual-key rollout, with verification checks and migration steps.
+---
+
+Rotating API keys helps reduce risk from accidental exposure and aligns with security best practices. This guide shows two rotation methods for both user‑level and organization‑level API keys.
+
+## When to rotate API keys
+
+- On a regular schedule (e.g., every 60–90 days)
+- After suspected exposure or repository history changes
+- When scope requirements change
+
+## Choosing an approach to API key rotation
+
+- **Built‑in rotation**: When you control client updates and can push new secrets quickly; keeps `key_id` stable
+- **Dual‑key rotation**: When you need a migration window; supports staggered updates across many clients/services
+
+## Approach 1: Built‑in rotation (same key_id, new secret)
+
+Use the Rotate key action to keep the `key_id` the same and replace only the secret. This is the simplest option when you can quickly update clients with the new secret.
+
+Steps:
+
+1. Open the key you want to rotate:
+   - User key: **Users > [User] > API Keys > [Key]**
+   - Organization key: **Organizations > [Organization] > API Keys > [Key]**
+2. Select **Rotate key** and confirm.
+3. Securely distribute the new secret to your clients/services.
+4. Ensure your clients reload configuration or secrets promptly.
+
+Verification behavior:
+
+- `key_id` remains the same
+- `status` remains `active`
+- Only the secret changes; old secret will fail verification
+
+Choose this when you control secret distribution and can update clients near‑immediately.
+
+## Approach 2: Dual‑key rotation (new key_id)
+
+Create a second key, migrate traffic, then revoke the old one. This minimizes risk when you cannot coordinate an immediate secret update.
+
+Steps:
+
+1. Create a new key with the same API and scopes.
+   - User: **Users > [User] > API Keys > Add API key**.
+   - Organization: **Organizations > [Organization] > API Keys > Add API key**.
+   - Or use the Management API to create a new key.
+2. Update your client(s) to use the new key.
+   - Ship configuration changes or secrets to the environments that call your API.
+3. Keep both keys valid during a grace period.
+   - Allow traffic with either key while clients roll over.
+   - Monitor verification results to ensure migration progress.
+4. Revoke the old key.
+   - Once traffic has fully moved to the new key, revoke the old one.
+
+## Verifying during rotation
+
+Use Kinde to verify incoming keys. During a dual‑key grace window, both old and new keys verify as valid. You can optionally check `key_id` to track when clients have switched.
+
+```javascript
+// Example Express handler (after verifying with Kinde)
+if (!verification.is_valid || verification.status !== "active") {
+  return res.status(401).json({error: "Invalid or inactive API key"});
+}
+
+// Optional: observe rollout by key_id (for telemetry/alerts only)
+logger.info("api_key_used", {key_id: verification.key_id});
+
+// Enforce required scopes as usual
+const requiredScopes = ["read:ai_chats"]; // adjust per endpoint
+for (const scope of requiredScopes) {
+  if (!verification.scopes.includes(scope)) {
+    return res.status(403).json({error: `Insufficient scope: ${scope}`});
+  }
+}
+```
+
+## Rotate via self‑serve portal (optional)
+
+If you’ve enabled the self-serve portal, customers can rotate their keys themselves using the built-in **Rotate key** option. You can also deep link to the API Keys page. See [Self-serve API keys](/manage-your-apis/add-manage-api-keys/self-serve-api-keys/).
+## Best practices for API key rotation
+
+- Keep rotations small and frequent rather than rare and large
+- Automate notifications to teams when a rotation window begins or ends
+- Use monitoring to detect lingering use of old `key_id`

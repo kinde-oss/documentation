@@ -9,7 +9,14 @@ export const GET: APIRoute = () => {
         page_id: docs[url].frontmatter.page_id,
         title: docs[url].frontmatter.title,
         url: "https://docs.kinde.com" + url.split("/content/docs")[1].split(".")[0] + "/",
-        app_context: docs[url].frontmatter.app_context
+        app_context: docs[url].frontmatter?.app_context,
+        ai_summary: docs[url].frontmatter?.ai_summary,
+        keywords: docs[url].frontmatter?.keywords,
+        description: docs[url].frontmatter?.description,
+        sdk: docs[url].frontmatter?.sdk,
+        languages: docs[url].frontmatter?.languages,
+        audience: docs[url].frontmatter?.audience,
+        complexity: docs[url].frontmatter?.complexity
       })),
       null,
       2

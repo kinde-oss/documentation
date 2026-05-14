@@ -1,16 +1,41 @@
 ---
 page_id: 9456239e-0d53-4597-83d2-56ab0c1468d3
-title: Use Okta as a SAML identity provider
+title: Okta enterprise connection (SAML)
 sidebar:
   order: 11
 relatedArticles:
   - 17559023-5b50-4690-ba7b-fd1df4b78664
   - fcf28a71-c3a8-4474-9564-ad089d3f2105
-  - e100d77b-530b-4327-8216-93c955657e0c	
+  - e100d77b-530b-4327-8216-93c955657e0c
   - 66b2a627-b24a-4ccf-a792-80a6a9fe35ef
+description: >-
+  Step-by-step guide to integrating Okta as a SAML identity provider with Kinde,
+  including application setup and troubleshooting.
+featured: false
+deprecated: false
+topics:
+  - authenticate
+sdk: []
+languages: []
+audience:
+  - developer
+  - enterprise-admin
+  - security-engineer
+complexity: advanced
+keywords:
+  - Okta
+  - SAML
+  - identity provider
+  - IdP
+  - enterprise auth
+  - SSO
+  - application assignment
+updated: 2025-01-16
 ---
 
 If you use Okta to centralize authentication and authorization in your business, you can integrate Kinde as a service provider for these processes. This gives you the benefits of Kinde’s robust auth capabilities, while keeping the familiar Okta structure.
+
+![okta saml enterprise connection in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c188c68d-26f7-4a8d-a9ea-0cecaa396d00/socialsharingimage)
 
 You need to set up an enterprise connection in Kinde for this, and add an Okta application. See steps below.
 
@@ -43,7 +68,7 @@ Depending on your SAML set up, you may need to include advanced configurations f
 
    ![Okta connection config window](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/a06249d4-d368-43f7-bba1-9df10d80aa00/public)
 
-3. Enter the **IdP metadata URL**. This URL comes from your identity provider.
+3. Enter the **IdP metadata URL**. This URL comes from your identity provider. If you haven't set up your app yet, you can add this later. 
 
    ![optional fields for saml](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4f1851db-5c34-496b-ced1-07c1cd272b00/public)
 
@@ -68,7 +93,13 @@ Depending on your SAML set up, you may need to include advanced configurations f
 
     ![Provisioning configuration for SAML](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/947baea7-bfd4-48b7-de2d-5b041b8c8300/public)
 
-13. (Temporary feature) Select if you want to treat this connection as a trusted provider. A [trusted provider](/authenticate/about-auth/identity-and-verification/) is one that guarantees the email they issue is verified.
+13. Select **Trust email addresses provided by this connection** if you want to treat this connection as a [trusted provider](/authenticate/about-auth/identity-and-verification/#trusting-emails-from-providers).
+
+    <Aside type="warning">
+
+    This option should be disabled unless you understand the impact of having this enabled as some providers do not verify email addresses. We recommend leaving this off for maximum security.
+
+    </Aside>
 14. (Optional) In the **Sign SAML request** section, paste in the **Signed certificate** and **Private key**. You may have got these from your IdP or you may have generated yourself (see procedure above).
 15. Enter any [upstream params](/authenticate/enterprise-connections/advanced-saml-configurations/#upstream-parameters) that you want to pass to the identity provider. Not all providers support this, so check their documentation first.
 16. Select **Save**.
@@ -95,12 +126,12 @@ Depending on your SAML set up, you may need to include advanced configurations f
    3. **Name ID format:** Select **EmailAddress**.
    4. **Application username**: Select **Email**.
    5. Leave all other options to their default value and select **Next**.
-7. In the next screen, select **I'm a software vendor. I'd like to integrate my app with Okta**, then select **Finish**. You will be redirected to the newly created application in Okta.
+7. Select **Finish**. You will be redirected to the newly created application in Okta.
 8. Select the **Sign on** tab and copy the metadata URL.
 
    ![Metadata URL in Okta](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9bdcb215-054e-45c1-11a7-2df2f4be7800/public)
  
-## Step 3: Finish setting up your SAML connection in Kinde
+## Step 4: Finish setting up your SAML connection in Kinde
 
 1. Open the connection in Kinde. Via Organization > Authentication or via Settings > Authentication.
 2. Scroll to the **IdP metadata URL** field and paste the **Metadata URL** you copied from Okta.
@@ -109,3 +140,13 @@ Depending on your SAML set up, you may need to include advanced configurations f
    1. For environment-level connections, scroll down and select the apps that will use the auth method.
    2. For organization-level connections, scroll down and select if you want to switch this on for the org. 
 5. Select **Save**. You can now use Okta as an IdP for the selected applications.
+
+## Troubleshooting the connection
+
+If you get an error in Okta that says **User is not assigned to this application**, it means you need to assign a user or group to your Okta application.
+
+1. Go to the **Applications** section in your Okta Admin Console.
+2. Select the SAML 2.0 app you set up.
+3. Under the **Assignments** tab, click **Assign > Assign to People or Assign to Groups**.
+4. Choose the user or group you want to assign to this application and save your changes.
+

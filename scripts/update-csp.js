@@ -16,7 +16,7 @@ const yamlPath = path.join(__dirname, "../customHttp.yml");
 // Set to store unique hashes
 const scriptSrcHashes = new Set();
 
-const predefinedScriptSrcItems = ["'self'", "widgets.kinde.com", "kinde.com", "https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.23.5/dist/browser/standalone.min.js"];
+const predefinedScriptSrcItems = ["'self'", "widgets.kinde.com", "kinde.com", "https://www.kinde.com", "https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.23.5/dist/browser/standalone.min.js"];
 
 function hashScriptContent(content) {
   return crypto.createHash("sha256").update(content, "utf-8").digest("base64");
@@ -60,7 +60,7 @@ function saveYamlConfig(filePath, config) {
   try {
     const yamlStr = yaml.dump(config);
     fs.writeFileSync(filePath, yamlStr, "utf8");
-    console.log("YAML configuration has been updated.");
+    console.log("YAML configuration has been updated:", filePath);
   } catch (e) {
     console.error("Failed to write YAML file:", e);
   }
@@ -93,5 +93,8 @@ scanDirectory(distPath); // Fill scriptSrcHashes with hashes
 const config = loadYamlConfig(yamlPath); // Load YAML config
 if (config) {
   updateCSP(config); // Update the CSP with new hashes
-  saveYamlConfig(yamlPath, config); // Save the updated config back to file
+  saveYamlConfig(yamlPath, config); // Save back to repo root (source of truth)
+  // Also write to dist/ so the updated headers are in the deployed artifact (e.g. AWS Amplify)
+  const distYamlPath = path.join(distPath, "customHttp.yml");
+  saveYamlConfig(distYamlPath, config);
 }

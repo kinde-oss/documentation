@@ -1,6 +1,7 @@
 ---
 page_id: b5f45f88-93ff-4323-a57f-bfdc0b52878a
 title: Configure token and session expiry
+description: Comprehensive guide for configuring token and session expiry times including security best practices, token lifetime management, and risk mitigation strategies for different token types.
 sidebar:
   order: 1
 relatedArticles:
@@ -8,14 +9,48 @@ relatedArticles:
   - 4ed081b0-7853-49be-b5fd-22a84a86bdad
   - 76e2d2d3-830a-43b0-8b7b-8d0b0316b776
   - 50284476-2442-414c-af20-01ed3ef4ca4e
+tableOfContents:
+  maxHeadingLevel: 3
 app_context:
   - m: application_details
     s: tokens
+topics:
+  - tokens
+  - security
+  - configuration
+sdk: []
+languages: []
+audience: developers
+complexity: intermediate
+keywords:
+  - token expiry
+  - session timeout
+  - token lifetime
+  - security
+  - refresh tokens
+  - access tokens
+  - ID tokens
+updated: 2026-04-03
+featured: false
+deprecated: false
+ai_summary: Comprehensive guide for configuring token and session expiry times including security best practices, token lifetime management, and risk mitigation strategies for different token types.
 ---
 
 Tokens are an essential part of keeping your application secure. They enable the continued verification of users and applications (including APIs), and are a mechanism for detecting unauthorized intruders.
 
 Tokens need to be updated and refreshed to remain secure, which is why you need to set how long a token lasts, for each token type.
+
+## What are the default token lifetimes in Kinde?
+
+Kinde issues three types of tokens, each with a default lifetime that applies out of the box. All values are configurable per application in **Settings > Environment > Applications > [your app] > Tokens**.
+
+| Token | Default lifetime |
+| --- | --- |
+| Refresh token | 15 days (1,296,000 seconds) |
+| Access token | 24 hours (86,400 seconds) |
+| ID token | 1 hour (3,600 seconds) |
+
+The refresh token lifetime must always be set longer than the access token lifetime. For guidance on each token type, see the dedicated pages: [access tokens](/build/tokens/about-access-tokens/), [ID tokens](/build/tokens/about-id-tokens/), and [refresh tokens](/build/tokens/refresh-tokens/).
 
 ## Defining token lifetimes
 
@@ -24,7 +59,7 @@ You can define the lifetime (expiry time) of ID tokens, access tokens, refresh t
 - **ID Tokens**: Contain identity information about a user. These do not need to last long as identity info is only needed at the moment of authentication, and is unrelated to session lifetimes.
 - **Access tokens**: Contain access permissions for a user during authentication. These are the most vulnerable token for attacks, and we do not recommend extending the access token lifetime beyond 1 day.
 - **Refresh tokens**: Are issued at the same time as an access token, and extend a user's session without them having to reauthenticate. If you want a user to stay authenticated without having to sign in daily or more frequently - set a high lifetime for refresh tokens.
-- **Session inactivity timeout**: A user can be requested to re-authenticate if they do not sustain activity in the current session. We recommend setting a fairly short limit  for inactivity - e.g. up to one day. If you extend the session inactivity timeout, a user's data may become vulnerable, for example if they sign in on a public device and forget to sign out. 
+- **Session inactivity timeout**: After a period with no **server-visible** activity on the user’s Kinde SSO session, the user may need to sign in again. Local navigation in your app does not reset the timer on its own; activity usually means **authenticated requests from your app to Kinde** for that user (for example, during token refresh). See [Session management](/authenticate/manage-authentication/session-management/) for a full explanation. We recommend a fairly short limit (for example, up to one day).
 
 Token and session expiry should be approached with priority for system and user security. The aim is to reduce risks such as:
 - Token theft through man-in-the-middle attacks
@@ -32,13 +67,36 @@ Token and session expiry should be approached with priority for system and user 
 - Session hijacking on shared or public devices
 - Data exposure through prolonged inactive sessions
 
-## **Set token lifetimes**
+## Set token lifetimes
 
 1. Go to **Settings** **> Environment > Applications.**
 2. Select **View details** on the application tile.
 3. Select **Tokens** in the side menu.
 4. For each token type, set the expiry time in seconds. 3,600 seconds is one hour; 86,400 seconds is one day.
 5. Select **Save**.
+
+## Refresh token cookies
+
+For applications that support refresh tokens, the Tokens page includes a **Refresh token cookies** fieldset with the following option.
+
+### Use client-specific refresh token cookies
+
+When this toggle is **enabled**, refresh tokens are stored in cookies named with the client ID prefix (for example, `refresh_token_abc123`) instead of the generic `refresh_token` cookie. That allows multiple applications on the same custom domain to keep separate refresh tokens and avoids one app overwriting another's token.
+
+- **Default**: The toggle is disabled by default.
+- **Custom domain required**: The option is only available when a custom domain is configured. If no custom domain exists, a warning banner is shown: **"Client-specific refresh token cookies require a custom domain. Configure a custom domain in Settings > Custom domains."**
+
+## Revoke a token to end a user session
+
+You can use the Kinde Account API to revoke access and refresh tokens after a user signs out of your app. This forces a new session for each login.
+
+To revoke a previously issued token, you need to make a POST request to the `/oauth2/revoke` endpoint with the operation ID `tokenRevocation`. When making the request, you should include the following parameters in the request body:
+- `token` (string): The token that you want to revoke.
+- `client_id` (string): Your client's identifier.
+- `client_secret` (string): The secret associated with your client.
+Ensure to set the Content-Type header to `application/x-www-form-urlencoded`. 
+
+Upon successful revocation, you will receive a 200 status code indicating that the token was successfully revoked. For more information and example code snippets, see [revoke tokens](https://docs.kinde.com/kinde-apis/frontend/#tag/oauth/post/oauth2/revoke).
 
 ## Token security
 
@@ -48,4 +106,5 @@ Refresh tokens can be used to reduce some of this risk as they can be used to ge
 
 To mitigate risk, we recommend using Automatic Reuse Detection and Refresh Token Rotation.
 
-You can revoke access tokens and refresh tokens via the Kinde Management API. [Search the Kinde API docs](/kinde-apis/management/).
+Setting up an automation to revoke tokens after logout can enhance security as it forces re-authentication each sign in.
+

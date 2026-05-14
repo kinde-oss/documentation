@@ -1,13 +1,33 @@
 ---
 page_id: a56552a5-e4eb-4c71-b44a-0070813de59f
 title: Preview custom code
+description: "Guide for previewing custom code designs using preview credentials and auth flow testing for Plus and Scale plan users."
 sidebar:
-  order: 14
+  order: 15
 relatedArticles:
   - 66f83c18-d261-48b8-a517-648ed1b7b064
   - b42663d8-5e2a-42cd-859a-f9737a1495df
   - 743d264d-ef08-4f2e-a42c-2b971152dccf
   - 94a22da4-2013-4253-99dc-d686861cc320
+topics:
+  - design
+  - customize-with-code
+  - preview
+sdk: []
+languages: []
+audience: developers
+complexity: beginner
+keywords:
+  - preview custom code
+  - pages_mode
+  - preview password
+  - Plus plan
+  - Scale plan
+  - auth flow
+updated: 2024-01-15
+featured: false
+deprecated: false
+ai_summary: Guide for previewing custom code designs using preview credentials and auth flow testing for Plus and Scale plan users.
 ---
 
 <Aside type="upgrade">
@@ -16,15 +36,40 @@ You can only preview custom code if you are on a Kinde Plus or Scale plan.
 
 </Aside>
 
-Unlike changes you make in the Kinde UI that impact page layouts and content, your custom designs can’t be viewed in a Kinde-generated preview. 
+Unlike changes you make in the Kinde UI that impact page layouts and content, your custom designs can’t be viewed in a Kinde-generated preview.
 
-Instead, you can test designs using your real auth flow, using preview credentials. 
+Instead, you can test designs using your real auth flow, using preview credentials.
+
+## Connect your repository and enable preview
+
+Before you can preview your custom code, you need to connect your code repository to Kinde and enable the preview feature:
+
+1. In your Kinde dashboard, go to **Settings > Git Repo > Connect Repo** and follow the prompts to connect your repository.
+2. Once the repository is connected, toggle **Enable preview mode** to the "on" position.
 
 ## Preview custom code
 
-1. In your application code, pass the additional auth url parameter `pages_mode=preview`. When the auth flow is initiated a password screen will appear which is required to view the preview.
-2. Enter your preview password. Go to **Design > Custom code > Preview**. 
-2. Copy the **Password** and use it in the authentication request.
+To securely preview your changes, the authentication request must contain a valid Preview Session ID (`psid`). Because of this requirement, you should not manually construct or append parameters to the URL. Instead, you must use a Kinde SDK or library to generate the URL for you.
 
+1. In your application code, pass the appropriate preview mode parameter to your SDK's login function or component to initiate the preview flow.
 
-The preview will show the latest code deployment version.
+    **Example using the Kinde React SDK:**
+
+    ```jsx
+    <LoginLink 
+      className="btn btn-ghost sign-in-btn"
+      pagesMode="preview"
+    >
+      Login
+    </LoginLink>
+    
+    ```
+
+2. The SDK will automatically generate a secure URL with a valid session ID. The resulting URL format will look like this:
+`{kinde_subdomain}/auth/cx/_:nav&m:pages_preview_authorization&psid:{preview_session_ID}`
+3. When you initiate the auth flow via your application, you will be redirected to a password screen.
+4. To access the preview, go to **Design > Custom code > Preview** in your Kinde dashboard.
+5. Copy the **Password** provided there and enter it into the authentication screen.
+
+The preview will now show your latest custom code deployment.
+

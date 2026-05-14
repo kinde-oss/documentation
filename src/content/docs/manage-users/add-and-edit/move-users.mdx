@@ -1,0 +1,314 @@
+---
+page_id: 69a30dc9-de01-4a59-bf88-9d29363d638b
+title: Move users between Kinde environments and businesses
+sidebar:
+  order: 7
+relatedArticles:
+  - 18068c09-bd63-409e-a792-d63528379135
+  - cb91d7a1-7306-4c58-9635-b0fe1b913b38
+  - 855b9b3b-2729-481f-a81b-231e8375fa59
+app_context:
+  - m: users
+description: You can move users between Kinde environments or businesses by exporting and importing them.
+topics:
+  - manage-users
+  - add-and-edit
+sdk: []
+languages:
+  - csv
+  - json
+  - ndjson
+audience:
+  - admins
+  - developers
+complexity: intermediate
+keywords:
+  - transfer users
+  - bulk import
+  - organization assignment
+  - roles and permissions
+  - hashed passwords
+updated: 2025-09-09
+featured: false
+deprecated: false
+ai_summary: You can move users between Kinde environments or businesses by exporting and importing them.
+---
+
+If you need to move users between Kinde environments or Kinde businesses, you can do this using a JSON export and import routine.
+
+## File requirements
+
+- User details and passwords need to be in NDJSON (Newline Delimited JSON) format, with a file size up to 20MB supported.
+- If you’ve got large user sets (over 20MB) or are concerned about file size limits, you might consider importing in batches.
+
+## Data that can be transferred
+
+Using the NDJSON format you can export/import users with the following data:
+
+- First name, last name
+- Permissions
+- Roles
+- Property values
+- Identities
+- Feature flags
+- Scopes
+- Profiles
+- Passwords
+
+## Set up the business or environment
+
+First, set up the business or environment you are moving users to. For example:
+
+- [Enable password authentication](/authenticate/authentication-methods/set-up-user-authentication/) before importing passwords
+- [Create organizations in Kinde](/build/organizations/add-and-manage-organizations/) if relevant
+- Add [roles](/manage-users/roles-and-permissions/user-roles/) and [permissions](/manage-users/roles-and-permissions/user-permissions/) in Kinde, if you intend to import these details with users.
+
+## Export users from Kinde environment
+
+In the business or environment you want to export users from - follow this [export procedure](/manage-your-account/your-data/exporting-data/).
+
+<Aside>
+
+The export includes users, organizations, and access requests. If you only need to move users, you can use just the `users.ndjson` file from the export.
+
+</Aside>
+
+## Import users to a Kinde environment
+
+In the environment you want to import users into - follow this [JSON import procedure](/manage-users/add-and-edit/import-users-in-bulk/).
+
+## About the NDJSON format
+
+NDJSON files are line separated JSON objects, with each JSON object representing a user.
+The following schema can be used for importing NDJSON files, note this schema represents one line within the file.
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "User",
+  "description": "A user object for importing",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "A unique external identifier for the user (e.g., 'your_external_user_id_001')."
+    },
+    "password": {
+      "type": "object",
+      "description": "Password metadata including salt, hash, and algorithm used.",
+      "properties": {
+        "salt": {
+          "type": ["string", "null"],
+          "description": "The salt value used when hashing the password, if applicable."
+        },
+        "salt_format": {
+          "type": ["string", "null"],
+          "enum": ["hex", "string", null],
+          "description": "Format of the salt value. Can be 'hex', 'string', or null if not used."
+        },
+        "salt_position": {
+          "type": ["string", "null"],
+          "enum": ["prefix", "suffix", null],
+          "description": "Position of the salt relative to the password. Can be 'prefix', 'suffix', or null."
+        },
+        "hashed_password": {
+          "type": "string",
+          "description": "The resulting hashed password string."
+        },
+        "hashing_algorithm": {
+          "type": "string",
+          "enum": ["crypt", "bcrypt", "sha256", "md5", "wordpress"],
+          "description": "The algorithm used to hash the password."
+        }
+      }
+    },
+    "first_name": {
+      "type": "string",
+      "description": "The user's first name."
+    },
+    "last_name": {
+      "type": "string",
+      "description": "The user's last name."
+    },
+    "identities": {
+      "type": "array",
+      "description": "A list of identity records such as email, username, or social.",
+      "items": {
+        "type": "object",
+        "description": "An identity record associated with the user.",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "The type of identity.",
+            "enum": [
+              "email",
+              "phone",
+              "username",
+              "oauth2:slack",
+              "oauth2:apple",
+              "oauth2:github",
+              "oauth2:facebook",
+              "oauth2:twitter",
+              "oauth2:twitch",
+              "oauth2:gitlab",
+              "oauth2:xero",
+              "oauth2:linkedin",
+              "oauth2:discord",
+              "oauth2:bitbucket",
+              "oauth2:stripe",
+              "oauth2:microsoft",
+              "oauth2:clever",
+              "oauth2:roblox",
+              "oauth2:google"
+            ]
+          },
+          "identity": {
+            "type": "string",
+            "description": "The actual identifier value (e.g., email address, username, or provider user ID)."
+          },
+          "is_verified": {
+            "type": "boolean",
+            "description": "Whether this identity has been verified."
+          },
+          "provider": {
+            "type": "string",
+            "description": "The name of the provider (e.g., 'google') for OAuth identities."
+          },
+          "profile": {
+            "type": "object",
+            "description": "Optional key/value pairs returned from the provider.",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "properties": {
+      "type": "array",
+      "description": "Custom metadata key-value pairs associated with the user.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The name of the property."
+          },
+          "value": {
+            "type": "string",
+            "description": "The value of the property."
+          }
+        }
+      }
+    },
+    "feature_flags": {
+      "type": "array",
+      "description": "A list of feature flags for the user.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The name of the feature flag."
+          },
+          "value": {
+            "type": "string",
+            "description": "The value of the flag."
+          }
+        }
+      }
+    },
+    "organizations": {
+      "type": "array",
+      "description": "Organizations this user is associated with, including roles, permissions and api scopes.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "external_id": {
+            "type": "string",
+            "description": "An external identifier for the organization (e.g., 'your_external_org_id_001')."
+          },
+          "roles": {
+            "type": "array",
+            "description": "List of roles assigned to the user within the organization.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "description": "List of specific permissions granted to the user within the organization.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scopes": {
+            "type": "array",
+            "description": "API scopes assigned to the user for this organization.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "audience": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "The audience or API this scope applies to (e.g., 'https://your-api.com')."
+                },
+                "scope": {
+                  "type": "string",
+                  "description": "The name of the scope (e.g., 'scope_1')."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Here's an single-line example:
+
+```txt
+
+{"id":"your_external_user_id_001","password":{"salt":null,"salt_format":null,"salt_position":null,"hashed_password":"$2a$10$t8Jz3hJCCTFk/Acja7bw3OpamB3xuLPhpJlRHb31bXIjfzeTfn8rq","hashing_algorithm":"bcrypt"},"last_name":"One","first_name":"User","identities":[{"type":"username","identity":"userone"},{"type":"email","identity":"userone@example.com","is_verified":true},{"type":"oauth2:google","profile":{"custom_provider_fields":"custom key/values from google"},"identity":"123456","provider":"google","is_verified":true}],"properties":[{"key":"property_1","value":"false"}],"feature_flags":[{"key":"feature_flag_1","value":"true"}],"organizations":[{"external_id":"your_external_org_id_001","roles":["admin","member"],"permissions":["read","write"],"scopes":[{"audience":"https://your-api.com","scope":"scope_1"}]}]}
+
+```
+
+Example, but a bit easier to read.
+
+```jsx
+{
+  "id": "your_external_user_id_001",
+  "password": {
+    "salt": null,
+    "salt_format": null,
+    "salt_position": null,
+    "hashed_password": "$2a$10$t8Jz3hJCCTFk/Acja7bw3OpamB3xuLPhpJlRHb31bXIjfzeTfn8rq",
+    "hashing_algorithm": "bcrypt"
+  },
+  "last_name": "One",
+  "first_name": "User",
+  "identities": [
+    { "type": "username", "identity": "userone" },
+    { "type": "email", "identity": "userone@example.com", "is_verified": true },
+    {
+      "type": "oauth2:google",
+      "profile": {
+        "custom_provider_fields": "custom key/values from google"
+      },
+      "identity": "123456",
+      "provider": "google",
+      "is_verified": true
+    }
+  ],
+  "properties": [{ "key": "property_1", "value": "false" }],
+  "feature_flags": [{ "key": "feature_flag_1", "value": "true" }],
+  "organizations": [
+    {
+      "external_id": "your_external_org_id_001",
+      "roles": ["admin", "member"],
+      "permissions": ["read", "write"],
+      "scopes": [{ "audience": "https://your-api.com", "scope": "scope_1" }]
+    }
+  ]
+}
+```

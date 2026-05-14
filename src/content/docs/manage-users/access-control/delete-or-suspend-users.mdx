@@ -2,33 +2,64 @@
 page_id: 855b9b3b-2729-481f-a81b-231e8375fa59
 title: Delete or suspend users
 sidebar:
-  order: 5
+  order: 1
 relatedArticles:
   - cb91d7a1-7306-4c58-9635-b0fe1b913b38
-  - 19438632-444e-44eb-bdb8-e99d2d88bcae
-  - e89d246a-5cdf-4993-9cee-94b31ec27583
+  - 556c9ce6-477b-4a31-9ce1-75f612eb3740
 app_context:
   - m: user
     s: details
-  - m: user
-    s: activity
+description: Guide to deleting or suspending users in Kinde including user deactivation, permanent deletion, and access control management.
+topics:
+  - manage-users
+  - access-control
+sdk: []
+languages: []
+audience:
+  - admins
+  - developers
+complexity: beginner
+keywords:
+  - delete users
+  - suspend users
+  - user suspension
+  - user deletion
+  - access control
+  - user restoration
+  - admin permissions
+  - user management
+  - self sign up
+updated: 2026-03-26
+featured: false
+deprecated: false
+ai_summary: Guide to deleting or suspending users in Kinde including suspension, restoration, and permanent deletion options for access control.
 ---
 
 If you want to prevent access by a user, you can suspend or delete them. You need to be a Kinde Owner or Admin to do this.
 
-## **Suspend a user**
+<Aside title="Suspending a user vs suspending an organization">
+
+**Suspending a user** prevents that specific user from signing in to any organization.
+
+**Suspending an organization** prevents all users from signing in to that specific organization, but does not affect their access to other organizations.
+
+For details on suspending an organization, see [Add and manage organizations](/build/organizations/add-and-manage-organizations/#suspend-an-organization).
+
+</Aside>
+
+## Suspend a user
 
 1. On the Kinde home page, select **Users**.
 2. Find the user you want to suspend.
 3. Select the three dots menu, then select **Suspend user.** A ‘suspended’ badge appears next to their name on the user list. When the user tries to sign in, they will receive an error and will not be able to sign in.
 
-## **Restore a suspended user**
+## Restore a suspended user
 
 1. On the Kinde home page, select **Users**.
 2. Find the suspended user you want to restore.
 3. Select the three dots menu, then select **Restore user**. This reinstates their access. When the user tries to sign in, their access will be restored.
 
-## **Delete a user**
+## Delete a user
 
 1. On the Kinde home page, select **Users**.
 2. Find the user you want to delete.
@@ -37,3 +68,19 @@ If you want to prevent access by a user, you can suspend or delete them. You nee
    1. Select the first option to remove the user’s access and ability to sign in to all organizations, but leave their profile in Kinde.
    2. Select the second option to completely remove the user record from Kinde, including access and all subscriber lists.
 5. Select **Delete user**. When the user tries to sign in, they will be prompted to sign up (if self-sign-up is allowed in your business).
+
+## Can I block users by email, username, or phone number?
+
+Kinde does not have a built-in blocklist for specific email addresses, usernames, or phone numbers. Suspending or deleting a user removes their existing account, but does not prevent someone from signing up again with the same identifier if self-sign-up is enabled.
+
+To block access for accounts created with a specific identifier (after sign-up), use one of these workarounds:
+
+- **Workflows** — Use a [post-authentication workflow](/workflows/example-workflows/workflow-user-post-auth/) to check the authenticating user's email, username, or phone number against a blocklist stored in an environment variable or external data source. If matched, the workflow can deny access using the `deny` action.
+- **Webhooks** — Subscribe to the `user.created` event via [webhooks](/integrate/webhooks/about-webhooks/). When a new user signs up with a blocked identifier, call the [Management API](/kinde-apis/management#tag/users/patch/api/v1/user) to suspend or delete them as soon as the event is processed.
+- **Management API** — React to sign-up events and use the [`PATCH /api/v1/user`](/kinde-apis/management#tag/users/patch/api/v1/user) endpoint to suspend users whose identifiers match your blocklist.
+
+<Aside type="warning">
+
+None of these workarounds prevent the initial sign-up event from completing — they block access after the fact. If preventing sign-up at the point of registration is a hard requirement, contact [Kinde support](https://kinde.com/support/) to discuss options.
+
+</Aside>
