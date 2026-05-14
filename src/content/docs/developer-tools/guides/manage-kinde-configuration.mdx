@@ -1,9 +1,10 @@
 ---
 page_id: 37e847e2-b6c7-4cf1-86d3-7c607b2bffbd
-title: Create Kinde configurations via API
+title: Manage Kinde configuration as code across environments
 description: Learn how to manage Kinde configurations as code across environments using the Kinde Management API and a JavaScript seeding script.
 sidebar:
   order: 8
+  label: Kinde config as code
 tableOfContents:
   maxHeadingLevel: 3
 relatedArticles:
@@ -22,94 +23,45 @@ audience:
   - developers
 complexity: intermediate
 keywords:
-  - management api
-  - seed-script
+  - configuration as code
+  - seed script
+  - kinde management api
   - m2m application
+  - multi-environment setup
+  - environment variables
+  - feature flags
+  - roles and permissions
   - nodejs
   - api authentication
+  - infrastructure as code
 updated: 2026-05-14
 featured: false
 deprecated: false
-ai_summary: Learn how to manage Kinde configurations as code across environments using the Kinde Management API and a JavaScript seeding script.
+ai_summary: "This guide explains how to manage Kinde configuration as code across multiple environments (development, staging, and production) using a JavaScript seeding script and the Kinde Management API. Rather than manually recreating settings in each environment, you define your Kinde setup once in JSON config files — one per environment — and run a Node.js script to apply the configuration automatically. The guide covers setting up the seed script, writing helper functions for each resource type (applications, environment variables, feature flags, APIs and scopes, roles and permissions), creating per-environment JSON config files, and running the script with M2M app credentials. It also shows how to verify the results in the Kinde dashboard, and includes a FAQ covering current limitations such as the absence of cross-environment copying, least-privilege security practices, what resources to include under configuration as code, and how to create additional Kinde environments."
 ---
 
-This guide shows you how to manage your Kinde configuration as code across **dev**, **staging**, and **prod**. Because Kinde environments are isolated and changes don’t auto-promote, we’ll treat your setup like any other piece of infrastructure: versioned, repeatable, and automated through the Kinde Management API.
-
-In this guide we will use a JavaScript seeding script to create configurations using the Kinde Management API.
+Kinde environments are isolated — configuration doesn’t automatically carry over between dev, staging, and production. This guide shows you how to treat your Kinde setup like infrastructure: define it once as JSON, then use a JavaScript seeding script with the Kinde Management API to apply it consistently across environments.
 
 ### What you need
 
 - A [Kinde](/get-started/guides/first-things-first/) account with **Admin** or **Engineer** access (Sign up for free)
-- An M2M application with **Kinde Management API** access - see the [quick start guide](/developer-tools/kinde-api/connect-to-kinde-api/)
+- An M2M application with **Kinde Management API** access — see the [quick start guide](/developer-tools/kinde-api/connect-to-kinde-api/)
 - [Node.js](https://nodejs.org/en) version 20+
 
-## Create the seed script
+## JavaScript seeding script setup
 
-### 1. Create the config files
+### 1. Create the seed script
 
-1. Create the config files for each environment:
-    
-    ```bash
-    mkdir config
-    touch config/dev.json config/prod.json config/staging.json
-    ```
-    
-2. Enter the following seed data into your config files and save changes. Modify the sample data below, according to your needs. See the [Kinde Management API documentation](https://docs.kinde.com/kinde-apis/management/) for more information on the available fields.
-    
-    ```json
-    {
-      "application": {
-        "name": "My Kinde App, Created with Script",
-        "type": "reg",
-        "redirectUrls": ["http://localhost:3000/callback"],
-        "logoutUrls": ["http://localhost:3000/"]
-      },
-      "apis": [
-        {
-          "key": "orders-api",
-          "name": "Orders API",
-          "audience": "orders",
-          "scopes": ["orders:read", "orders:write"]
-        }
-      ],
-      "roles": [
-        {
-          "key": "admin",
-          "name": "Admin",
-          "permissions": [
-            { "key": "orders:read", "name": "Read Orders" },
-            { "key": "orders:write", "name": "Write Orders" }
-          ]
-        }
-      ],
-      "featureFlags": [
-        {
-          "name": "New Checkout",
-          "key": "new_checkout",
-          "type": "bool",
-          "allow_override_level": "env",
-          "default_value": true
-        }
-      ],
-      "envVars": [
-        { "key": "PAYMENTS_GATEWAY", "value": "sandbox", "sensitive": false },
-        { "key": "SECRET_PAYMENTS_GATEWAY", "value": "sandbox", "sensitive": true }
-      ]
-    }
-    ```
-
-### 2. Create the seed script
-
-1. Create the seed script file:
+1. Create the seed script directory and file:
     
     ```bash
     mkdir scripts
     touch scripts/seed-kinde.mjs
     ```
     
-2. Enter the following code into the seed script and save changes. Use the function calls you need for your specific use case.
-    
-    ```jsx
+2. Enter the following code into the seed script and save changes. Include only the function calls relevant to your use case.
+
+    ```javascript
     import fs from "node:fs/promises"
     
     const {
@@ -352,6 +304,63 @@ In this guide we will use a JavaScript seeding script to create configurations u
     console.log("Kinde Seed Complete")
     
     ```
+    <Aside title="scope property is optional">
+    The `scope` property lets you define a subset of scopes for your script. Use it to keep your script scopes minimal, or omit it entirely to use the scopes you defined for your M2M app.
+    </Aside>
+    
+
+### 2. Create the config files
+
+1. Create the config files for each environment:
+    
+    ```bash
+    mkdir config
+    touch config/dev.json config/prod.json config/staging.json
+    ```
+    
+2. Enter the following seed data into your config files and save changes. Modify the sample data below according to your needs. See the [Kinde Management API documentation](https://docs.kinde.com/kinde-apis/management/) for available fields.
+    
+    ```json
+    {
+      "application": {
+        "name": "My Kinde App, Created with Script",
+        "type": "reg",
+        "redirectUrls": ["http://localhost:3000/callback"],
+        "logoutUrls": ["http://localhost:3000/"]
+      },
+      "apis": [
+        {
+          "key": "orders-api",
+          "name": "Orders API",
+          "audience": "orders",
+          "scopes": ["orders:read", "orders:write"]
+        }
+      ],
+      "roles": [
+        {
+          "key": "admin",
+          "name": "Admin",
+          "permissions": [
+            { "key": "orders:read", "name": "Read Orders" },
+            { "key": "orders:write", "name": "Write Orders" }
+          ]
+        }
+      ],
+      "featureFlags": [
+        {
+          "name": "New Checkout",
+          "key": "new_checkout",
+          "type": "bool",
+          "allow_override_level": "env",
+          "default_value": true
+        }
+      ],
+      "envVars": [
+        { "key": "PAYMENTS_GATEWAY", "value": "sandbox", "sensitive": false },
+        { "key": "SECRET_PAYMENTS_GATEWAY", "value": "sandbox", "sensitive": true }
+      ]
+    }
+    ```
 
 ### 3. Run the script
 
@@ -404,11 +413,11 @@ In this guide we will use a JavaScript seeding script to create configurations u
 ## Verify in Kinde dashboard
 
 1. Go to your Kinde dashboard and switch to the correct environment. 
-2. You will see the script created the following:
+2. You will see that the script created the following:
 
 ### Applications
 
-A new application in your dashboard with your designated redirect and logout URLs.
+A new application in your dashboard with the configured redirect and logout URLs.
         
     ![kinde new application](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9cad3f46-1005-4c3c-cf42-256d4af6f800/socialsharingimage)
         
@@ -423,14 +432,14 @@ A new application in your dashboard with your designated redirect and logout URL
 ### APIs and scopes
 
 <Aside type="upgrade">
-Adding APIs and scopes with API requires a paid plan. See [Kinde pricing](https://kinde.com/pricing/).
+Adding APIs and scopes via the API requires a paid plan. See [Kinde pricing](https://kinde.com/pricing/).
 </Aside>
         
     ![apis and scopes](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/1f925a30-e1ef-4449-7b11-6976dc0e3800/socialsharingimage)
         
 ### Roles and permissions
 
-Roles and permissions with permissions added to the role.
+Roles created with permissions assigned.
         
     ![permissions](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4bfbe4dd-abde-432a-7037-1fe680489d00/socialsharingimage)
         
@@ -440,27 +449,27 @@ Run the same script for all of your environments and config presets as required.
 
 ### What are the current limitations?
 
-- **No cross-env copy** today. Replicate settings by seed script. Plan for drift detection by re-running your seed on each deploy.
-- **Access carefully**: Use least privilege scopes on your M2M app that runs automation.
+- **No cross-env copy** today. Replicate settings using the seed script. Plan for drift detection by re-running the seed script on each deploy.
+- **Least privilege**: Use least-privilege scopes on your M2M app that runs automation.
 
-### What to put under `configuration as code`?
+### What should go under `configuration as code`?
 
 - **Applications** and their callbacks.
 - **APIs and scopes** that your apps use.
 - **Roles** and **permissions**, **feature flags**, and **environment variables** with safe defaults for each environment.
 
-### How to create additional Kinde environments?
+### How do I create additional Kinde environments?
 
 1. Select the environment drop-down in the top left of the Kinde home screen, and select **All environments**.
     
     ![add new environment menu in kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/dfafffb1-c119-4d9d-ad15-9147220d0300/socialsharingimage)
     
 2. Select **Add environment**. A dialog opens. 
-    1. Enter a **Name** for the environment (e.g, Development)
-    2. Enter a **Code** for the environment to reference it in code `dev`.
+    1. Enter a **Name** for the environment (e.g., Development)
+    2. Enter a short **Code** to reference this environment in code (e.g., `dev`).
     3. Select **Save**.
         
-3. Create any additional environments you want to create (e.g. Staging, Testing). 
+3. Create any additional environments you need (e.g. Staging, Testing). 
     
     <Aside type="upgrade">
     Kinde’s Free plan allows you to create up to 1 non-production environment. To add more, upgrade to a paid plan. See [Kinde pricing](https://kinde.com/pricing/).
