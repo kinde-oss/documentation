@@ -1,9 +1,11 @@
 ---
 page_id: 02d02820-92da-4721-9a91-222c9b095869
-title: Using Kinde without an SDK
+title: Use Kinde without an SDK
 description: "Comprehensive guide for integrating with Kinde without SDKs using OAuth 2.0 and OpenID Connect standards including authorization flows, token exchange, and request parameters."
 sidebar:
   order: 2
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 684fc526-a338-4a67-9af6-742a39b66aff
   - 5a248c6f-c1ae-480a-95c3-d3c69c81598d
@@ -41,41 +43,80 @@ Kinde is designed to help founders and developers build SaaS products by providi
 
 We support connecting to Kinde through [our SDKs](/developer-tools/about/our-sdks/), but everything we build is also OAuth 2 standard, so you can integrate into any language framework with Kinde without an SDK.
 
-## **Get started**
+### What you need
 
-[Start for free](https://kinde.com/) on Kinde.
+- A [Kinde](/get-started/guides/first-things-first/) account with **Admin** or **Engineer** access (Sign up for free)
+- Knowledge of programming languages and OAuth 2.0
 
-## **OpenID Connect**
+## Quickstart
 
-To connect to Kinde you need to know where the endpoints are for things like authorization, tokens, and user profiles. You’ll also need to know the response types, scopes, and claims that are supported.
+### 1. Create a Kinde application
+
+1. Sign in to your Kinde dashboard and select **Add application**
+2. Enter a name for the application (e.g., “My App”)
+3. Select an application type:
+    - **Back-end web**: for server-rendered or full-stack apps
+    - **Front-end web**: for javascript-based single page applications (SPAs) or mobile apps
+
+4. Select **Other**
+5. Select **Save**.
+
+### 2. Get your app keys
+
+1. In your app settings page select **Details**
+2. Copy your app keys:
+
+    - **Custom domain**: if you have configured a [custom domain](/build/domains/pointing-your-domain/)
+    - **Domain**: your Kinde domain (use it if you don't have a custom domain)
+    - **Client ID**: a unique identifier for your app
+    - **Client secret**: (only for back-end apps)
+    
+    You will need these keys to connect your codebase with Kinde.
+
+### 3. Add a callback URL
+
+1. In your app's **Details** page, scroll down to the **Callback URLs** section
+2. Add the following URLs:
+   - Allowed callback URLs (e.g., `http://localhost:3000/auth/callback`)
+   - Allowed logout redirect URLs (e.g., `http://localhost:3000`)
+
+   You can add more than one callback URL per line.
+3. Select **Save**
+
+### 4. Get the OpenID endpoints
+
+These are the OpenID endpoints for Kinde: 
+
+- Authorization endpoint: `https://<YOUR_DOMAIN>/oauth2/auth`
+- Token endpoint: `https://<YOUR_DOMAIN>/oauth2/token`
+- Userinfo endpoint: `https://<YOUR_DOMAIN>/oauth2/v2/user_profile`
+- Logout endpoint: `https://<YOUR_DOMAIN>/logout`
+
+**Other endpoints:**
+
+- JWKS URI: `https://<YOUR_DOMAIN>/.well-known/jwks`
+- Revocation endpoint: `https://<YOUR_DOMAIN>/oauth2/revoke`
+- Introspection endpoint: `https://<YOUR_DOMAIN>/oauth2/introspect`
+
+    <Aside>
+    Replace `<YOUR_DOMAIN>` with either your custom domain or your Kinde domain (e.g., `https://your_business.kinde.com`)
+    </Aside>
 
 All this data and more can be found in your OpenID configuration file which is located at:
 
-`https://<your_kinde_subdomain>.kinde.com/.well-known/openid-configuration`
+`https://<YOUR_DOMAIN>/.well-known/openid-configuration`
 
-## **Set** **callback URLs in Kinde**
-
-During the auth process your user will authenticate on Kinde and once authenticated will be redirected back to an endpoint in your code. To define this callback url:
-
-1. In Kinde, go to **Settings > Applications > [Your app] > View details**.
-2. Add your callback URLs in the relevant fields. For example:
-   - Allowed callback URLs (also known as redirect URIs) - for example [`http://localhost:3000/api/auth/kinde_callback`](http://localhost:3000/api/auth/kinde_callback)
-   - Allowed logout redirect URLs - for example `http://localhost:3000`
-3. Select **Save**.
-
-You will need to use this redirect URL in the following step.
-
-## **Signing up and signing in**
+### 5. Sign up and sign in
 
 Your users must be redirected from your product to Kinde to sign up or sign in securely. The redirect URL on your product side would look like the following:
 
-```markdown
-https://<your_kinde_subdomain>.kinde.com/oauth2/auth
+```text
+https://<YOUR_DOMAIN>/oauth2/auth
 ?response_type=code
 &client_id=<your_kinde_client_id>
 &redirect_uri=<your_app_redirect_url>
 &scope=openid%20profile%20email
-&state=abc
+&state=abcxyz123
 ```
 
 Note: Never include the client secret in the URL as this is publicly viewable.
@@ -84,11 +125,7 @@ Kinde supports all the standard OAuth 2 request parameters as well as a few addi
 
 Kinde also supports the PKCE extension, in which case the `code_challenge` and `code_challenge_method` parameters are also required. This is recommended for mobile apps and single page applications (SPAs).
 
-## Handling successful auth for desktop and mobile apps
-
-If you offer mobile and desktop apps, as well as access through a browser, you'll need to handle the post-authentication browser state. Rather than leaving a hanging screen, you can show users a success page. To do this, add the `is_use_auth_success_page` parameter to the authorization URL. See the [Request prameters](/developer-tools/about/using-kinde-without-an-sdk/#request-parameters) section below.
-
-## Handling the callback
+### 6. Handle the callback
 
 As mentioned before when a user authenticates through Kinde, we will redirect them to the endpoint you defined in the previous step. As part of this redirect, Kinde provides an authorization `code` as a query parameter in the URL.
 
@@ -120,31 +157,67 @@ Note that the `code_verifier` is also required in PKCE flow. The response body w
 
 Do not include the client secret in frontend / single page applications as this is publicly viewable - instead, use the PKCE extension.
 
-## **Supported grant types for getting access tokens**
+### 7. Get the user profile
 
-### **Authorization Code Flow**
+To get the user profile, you can make a GET request to the Kinde userinfo endpoint `https://<YOUR_DOMAIN>/oauth2/v2/user_profile`.
+
+### 8. Verify the Kinde access token
+
+It’s likely you will be using a library to validate your JWTs and they will require the URL for your public JSON Web Key (also known as a jwks file).
+
+The file can be found here:
+
+`https://<your_kinde_subdomain>.kinde.com/.well-known/jwks`
+
+### 9. Sign out your users
+
+When users sign out, you will want to clear any session or locally stored data in your app and redirect them to your preferred logout URL with the `redirect` parameter. Such as:
+
+```markdown
+https://<your_kinde_subdomain>.kinde.com/logout?redirect=<your_logout_url>
+```
+
+This will end their session on Kinde. A new access token or refresh token needs to be issued for them to sign in again.
+
+To add a logout URL in Kinde, go to **Settings > Applications > View Details**, then add the URLs to the **Allowed logout redirect URLs** field. Users will be redirected back to this URL when they sign out.
+
+### 10. Register a new user
+
+To be added.
+
+## Handling successful auth for desktop and mobile apps
+
+If you offer mobile and desktop apps, as well as access through a browser, you'll need to handle the post-authentication browser state. Rather than leaving a hanging screen, you can show users a success page. To do this, add the `is_use_auth_success_page` parameter to the authorization URL. See the [Request prameters](/developer-tools/about/using-kinde-without-an-sdk/#request-parameters) section below.
+
+## Supported grant types
+
+### Authorization Code Flow
 
 Recommended for regular web applications rendered on the server.
 
-### **Authorization Code Flow with Proof Key for Code Exchange (PKCE)**
+### Authorization Code Flow + PKCE
 
-Kinde supports the PKCE extension, in which case the `code_challenge` and `code_challenge_method` parameters are also required. This is recommended for mobile apps and single page applications (SPAs).
-
-### **Implicit flow (not supported)**
-
-Before PKCE (see above) this was the method used by applications that were unable to store secrets securely. This flow has security implications and Kinde does not support it for this reason.
+Kinde supports the Proof Key for Code Exchange (PKCE) extension, in which case the `code_challenge` and `code_challenge_method` parameters are also required. This is recommended for mobile apps and single page applications (SPAs).
 
 ## OAuth 2.0 scopes
 
 The following scopes can be requested from Kinde.
 
-- `openid` - requests an ID token which contains information about the user
+### `openid`
 
-- `email` - requests a user's email
+Requests an `id_token` which contains information about the user
 
-- `profile` - requests profile details as part of ID token, e.g. name, family name, given name, picture (avatar)
+### `email`
 
-- `offline` - request to act on behalf of the user even if they're offline
+Requests a user's email
+
+### `profile`
+
+Requests profile details as part of ID token, e.g. name, family name, given name, picture (avatar)
+
+### `offline`
+
+Requests a `refresh_token` which can be used to refresh the `access_token` when it expires.
 
     <Aside type="warning" title="Use offline, not offline_access">
 
@@ -156,14 +229,6 @@ The following scopes can be requested from Kinde.
 
 There are a few useful additional parameters that Kinde supports in the authorization URL.
 
-### `audience`
-
-The `audience` claim for the JWT. This can be used to protect your APIs and resource servers.
-
-Type: `string`
-
-Required: No
-
 ### `client_id`
 
 The unique ID of your application in Kinde.
@@ -171,6 +236,28 @@ The unique ID of your application in Kinde.
 Type: `string`
 
 Required: Yes
+
+### `state`
+
+Kinde will return this to your app so you can validate it came from us and prevent CSRF attacks.
+
+Type: `string`
+
+Required: Yes (min 8 characters)
+
+You can also use the `state` parameter to store additional information about the user or the authentication flow.
+
+### `scope`
+
+The scopes to be requested from Kinde. Scopes include `openid`, `profile`, `email`, `offline`.
+
+Type: `string`
+
+Recommended: `openid profile email`
+
+<Aside>
+Kinde uses `offline` to request a refresh token in place of the OIDC specification's `offline_access` scope.
+</Aside>
 
 ### `code_challenge`
 
@@ -187,6 +274,14 @@ Should always be `S256` tells Kinde the method used to hash the code challenge
 Type: `string`
 
 Required: For PKCE
+
+### `audience`
+
+The `audience` claim for the JWT. This can be used to protect your APIs and resource servers.
+
+Type: `string`
+
+Required: No
 
 ### `connection_id`
 
@@ -269,7 +364,7 @@ If you use `none` Kinde will not show authentication screens to the user.
 - If the user has an active SSO session, this will redirect them to the callback URL where the token exchange can occur.
 - If the user does NOT have an active SSO session, this will redirect them to the callback URL with the following error:
 
-  ```jsx
+  ```http
   302 https://YOUR_CALLBACK_URL?
   error=login_required&
   error_description=User+authentication+is+required&
@@ -296,21 +391,8 @@ Type: `string`
 
 Required: Yes
 
-### `scope`
 
-The scopes to be requested from Kinde. Scopes include `openid`, `profile`, `email`, `offline`.
 
-Type: `string`
-
-Required: No
-
-### `state`
-
-Kinde will return this to your app so you can validate it came from us and prevent CSRF attacks.
-
-Type: `string`
-
-Required: No (but recommended)
 
 ### nonce
 
@@ -360,22 +442,8 @@ Type: String
 
 Required: No
 
-## **Verifying the Kinde access token**
+## FAQs
 
-It’s likely you will be using a library to validate your JWTs and they will require the URL for your public JSON Web Key (also known as a jwks file).
+### Does Kinde support the Implicit Flow?
 
-The file can be found here:
-
-`https://<your_kinde_subdomain>.kinde.com/.well-known/jwks`
-
-## **Signing out your users**
-
-When users sign out, you will want to clear any session or locally stored data in your app and redirect them to your preferred logout URL with the `redirect` parameter. Such as:
-
-```markdown
-https://<your_kinde_subdomain>.kinde.com/logout?redirect=<your_logout_url>
-```
-
-This will end their session on Kinde. A new access token or refresh token needs to be issued for them to sign in again.
-
-To add a logout URL in Kinde, go to **Settings > Applications > View Details**, then add the URLs to the **Allowed logout redirect URLs** field. Users will be redirected back to this URL when they sign out.
+No, Kinde does not support the Implicit Flow because
