@@ -34,10 +34,19 @@ keywords:
   - nodejs
   - api authentication
   - infrastructure as code
-updated: 2026-05-14
+  - terraform
+  - terraform provider
+  - kinde community provider
+  - github actions
+  - ci automation
+  - workflow dispatch
+  - local-exec
+  - null_resource
+  - terraform workspaces
+updated: 2026-05-15
 featured: false
 deprecated: false
-ai_summary: "This guide explains how to manage Kinde configuration as code across multiple environments (development, staging, and production) using a JavaScript seeding script and the Kinde Management API. Rather than manually recreating settings in each environment, you define your Kinde setup once in JSON config files — one per environment — and run a Node.js script to apply the configuration automatically. The guide covers setting up the seed script, writing helper functions for each resource type (applications, environment variables, feature flags, APIs and scopes, roles and permissions), creating per-environment JSON config files, and running the script with M2M app credentials. It also shows how to verify the results in the Kinde dashboard, and includes a FAQ covering current limitations such as the absence of cross-environment copying, least-privilege security practices, what resources to include under configuration as code, and how to create additional Kinde environments."
+ai_summary: "This guide explains how to manage Kinde configuration as code across multiple environments — development, staging, and production — so you never have to manually recreate settings. It covers three approaches: a JavaScript seeding script, Terraform Infrastructure as Code, and a GitHub Actions CI workflow. The seed script uses the Kinde Management API with M2M app credentials to create applications with redirect and logout URLs, environment variables, feature flags, APIs and scopes, and roles with permissions — all driven by per-environment JSON config files. For Terraform, the guide covers two options: using a community Kinde Terraform provider to declare resources directly in HCL, or invoking the Node seed script via a null_resource local-exec provisioner using Terraform workspaces. The GitHub Actions section shows how to configure a workflow_dispatch workflow that lets you trigger seeding for any environment using GitHub repository secrets. The guide includes expected terminal output for each approach, screenshots for verifying results in the Kinde dashboard, and FAQs on limitations, what resources to manage as code, and how to create additional Kinde environments."
 ---
 
 Kinde environments are isolated — configuration doesn’t automatically carry over between dev, staging, and production. This guide shows you how to treat your Kinde setup like infrastructure: define it once as JSON, then use a JavaScript seeding script with the Kinde Management API to apply it consistently across environments.
@@ -389,7 +398,7 @@ Kinde environments are isolated — configuration doesn’t automatically carry 
     
     **Output:**
     
-    ```text
+    ```text title="Terminal output"
     Creating application...
     Creating environment variable...
     Creating environment variable...
@@ -407,13 +416,319 @@ Kinde environments are isolated — configuration doesn’t automatically carry 
     Permission created: Write Orders
     Added the permission "Read Orders" to the role Admin
     Added the permission "Write Orders" to the role Admin
-    Kinde Seed complete
+    Kinde Seed Complete
     ```
+
+## Terraform IaC
+
+If you prefer to use Terraform as Infrastructure as Code, there are two options you can consider:
+
+### Option 1: Terraform with Kinde community provider
+
+There is a community [Terraform provider for Kinde](https://registry.terraform.io/providers/axatol/kinde/0.0.1/docs/resources/api). It supports configuring the provider with domain and audience, and you can alias providers per environment. Treat it as community software, pin versions, and verify resource coverage in non-prod first.
+
+1. Enable the following additional scopes to your M2M application:
+    - `read:apis`
+    - `update:apis`
+    - `delete:apis`
+
+2. Create the following files with the bash command:
+    
+    ```bash
+    touch provider.tf versions.tf variables.tf main.tf
+    ```
+    
+3. Enter the following code in `versions.tf` and save changes.
+    
+    ```hcl
+    terraform {
+      required_providers {
+        kinde = {
+          source  = "axatol/kinde"
+          version = "0.0.1"
+        }
+      }
+    }
+    ```
+    
+4. Enter the following code in `provider.tf` and save changes.
+
+    ```hcl
+    provider "kinde" {
+      domain        = var.kinde_domain
+      audience      = var.kinde_audience
+      client_id     = var.kinde_client_id
+      client_secret = var.kinde_client_secret
+    }
+    ```
+
+5. Enter the following code in `variables.tf` and save changes.
+
+    ```hcl
+    variable kinde_domain {}
+    variable kinde_audience {}
+    variable kinde_client_id {}
+    variable kinde_client_secret {}
+    ```
+
+6. Enter the following code in `main.tf` and save changes.
+
+    ```hcl
+    resource "kinde_api" "orders" {
+      name   = "Orders API"
+      audience = "orders"
+    }
+    ```
+
+7. Initiate Terraform.
+    
+    ```bash
+    terraform init
+    ```
+    
+8. Create environment variables with the following bash command.
+    
+    ```bash
+    export TF_VAR_kinde_domain="https://<your_kinde_domain>.kinde.com"
+    export TF_VAR_kinde_client_id="<your_client_id>"
+    export TF_VAR_kinde_client_secret="<your_client_secret>"
+    export TF_VAR_kinde_audience="https://<your_kinde_domain>.kinde.com/api"
+    ```
+    
+9. Run the Terraform project.
+    
+    ```bash
+    terraform apply
+    ```
+    
+
+You will see a success message.
+
+    ```text title="Terminal output"
+    Terraform used the selected providers to generate the following execution plan.
+    Resource actions are indicated with the following symbols:
+      + create
+
+    Terraform will perform the following actions:
+
+      # kinde_api.orders will be created
+      + resource "kinde_api" "orders" {
+          + audience = "orders"
+          + id       = (known after apply)
+          + name     = "Orders API"
+        }
+
+    Plan: 1 to add, 0 to change, 0 to destroy.
+
+    Do you want to perform these actions?
+      Terraform will perform the actions described above.
+      Only 'yes' will be accepted to approve.
+
+      Enter a value: yes
+
+    kinde_api.orders: Creating...
+    kinde_api.orders: Creation complete after 1s [id=the_id]
+    ```
+
+This will create an Orders API in your Kinde environment.
+
+From here, add the resources that the provider currently supports and split values by workspace or `tfvars` files. Use Terraform workspaces or separate states to keep environments isolated.
+
+If you pass providers down to modules, remember provider alias rules in Terraform.
+
+### Option 2: Terraform with seed script
+
+If the provider’s resource coverage is not yet enough, you can still keep everything in Terraform by invoking the Node seed in `local-exec`. This preserves a single IaC entry point.
+
+1. Inside your original scripts directory, initialize Terraform with the command.
+    
+    ```bash
+    terraform init
+    ```
+    
+2. Create a new workspace for one of your environments (e.g. Staging).
+    
+    ```bash
+    terraform workspace new staging
+    ```
+    
+3. Create new Terraform files.
+    
+    ```
+    touch main.tf variables.tf
+    ```
+    
+4. Open `variables.tf` with your favorite code editor, enter the following code and save changes.
+    
+    ```hcl
+    variable kinde_domain {}
+    variable kinde_audience {}
+    variable kinde_client_id {}
+    variable kinde_client_secret {}
+    variable kinde_scopes {}
+    ```
+    
+5. Open `main.tf` and enter the following code and save changes.
+    
+    ```hcl
+    locals {
+      cfg_path = "./config/${terraform.workspace}.json"
+    }
+    
+    resource "null_resource" "seed_kinde" {
+      triggers = {
+        cfg_sha = filesha256(local.cfg_path)
+      }
+    
+      provisioner "local-exec" {
+        command = "node ./scripts/seed-kinde.mjs"
+        environment = {
+          KINDE_ENV          = terraform.workspace
+          KINDE_DOMAIN       = var.kinde_domain
+          KINDE_AUDIENCE     = var.kinde_audience
+          KINDE_CLIENT_ID    = var.kinde_client_id
+          KINDE_CLIENT_SECRET= var.kinde_client_secret
+          KINDE_SCOPES       = var.kinde_scopes
+          CONFIG_PATH        = local.cfg_path
+        }
+      }
+    }
+    
+    ```
+    
+6. Create environment variables with the following bash command.
+    
+    ```bash
+    export TF_VAR_kinde_domain="<your_kinde_domain>.kinde.com"
+    export TF_VAR_kinde_client_id="<your_client_id>"
+    export TF_VAR_kinde_client_secret="<your_client_secret>"
+    export TF_VAR_kinde_audience="https://<your_kinde_domain>.kinde.com/api"
+    export TF_VAR_kinde_scopes="create:applications create:application_redirect_uris create:application_logout_uris create:environment_variables create:feature_flags create:apis create:api_scopes create:roles create:permissions update:role_permissions"
+    ```
+    
+7. Run the Terraform project:
+    
+    ```bash
+    terraform apply
+    ```
+    
+You will see the following success output:
+
+    ```text title="Terminal output"
+    null_resource.seed_kinde: Creating...
+    null_resource.seed_kinde: Provisioning with 'local-exec'...
+    null_resource.seed_kinde (local-exec): Executing: ["/bin/sh" "-c" "node ./scripts/seed-kinde.mjs"]
+    null_resource.seed_kinde (local-exec): Creating application...
+    null_resource.seed_kinde (local-exec): Creating environment variable...
+    null_resource.seed_kinde (local-exec): Creating environment variable...
+    null_resource.seed_kinde (local-exec): Creating API and Scopes...
+    null_resource.seed_kinde (local-exec): Creating roles and permissions...
+    null_resource.seed_kinde (local-exec): Creating auth redirect URLs...
+    null_resource.seed_kinde (local-exec): Created API: Orders API
+    null_resource.seed_kinde (local-exec): Created environment variable SECRET_PAYMENTS_GATEWAY
+    null_resource.seed_kinde (local-exec): Created environment variable PAYMENTS_GATEWAY
+    null_resource.seed_kinde (local-exec): Created feature flag: New UI
+    null_resource.seed_kinde (local-exec): Creating auth logout URLs...
+    null_resource.seed_kinde (local-exec): Created role: Admin
+    null_resource.seed_kinde (local-exec): Created a Kinde application with id ***************
+    null_resource.seed_kinde (local-exec): Permission created: Read Orders
+    null_resource.seed_kinde (local-exec): Permission created: Write Orders
+    null_resource.seed_kinde (local-exec): Added the permission "Read Orders" to the role Admin
+    null_resource.seed_kinde (local-exec): Added the permission "Write Orders" to the role Admin
+    null_resource.seed_kinde (local-exec): Kinde Seed Complete
+    null_resource.seed_kinde: Creation complete after 3s [id=4289077431837605208]
+    ```
+
+Go to your Kinde dashboard to verify the changes.
+
+## GitHub workflow for CI automation
+
+### 1. Create the workflow file
+
+1. Create a GitHub workflow directory and a workflow file `seed-kinde.yml` with the following bash command:
+    
+    ```
+    mkdir -p .github/workflows
+    touch .github/workflows/seed-kinde.yml
+    ```
+    
+2. Open `seed-kinde.yml` in your preferred code editor, add the following code, and save changes.
+    
+    ```yaml
+    name: Kinde Seed Automation
+    on:
+      workflow_dispatch:
+        inputs:
+          environment:
+            description: "Which Kinde env to seed"
+            required: true
+            type: choice
+            options: [dev, staging, prod]
+    
+    jobs:
+      seed:
+        runs-on: ubuntu-latest
+        environment: ${{ inputs.environment }}
+        steps:
+          - uses: actions/checkout@v4
+          - uses: actions/setup-node@v4
+            with:
+              node-version: "20"
+          - run: node ./scripts/seed-kinde.mjs
+            env:
+              KINDE_ENV: ${{ inputs.environment }}
+              KINDE_DOMAIN: ${{ secrets.KINDE_DOMAIN }} # e.g. subdomain.region.kinde.com
+              KINDE_CLIENT_ID: ${{ secrets.KINDE_CLIENT_ID }}
+              KINDE_CLIENT_SECRET: ${{ secrets.KINDE_CLIENT_SECRET }}
+              KINDE_AUDIENCE: ${{ secrets.KINDE_AUDIENCE }} # management API audience
+              # Keep scopes least-privilege. Add only what you need.
+              KINDE_SCOPES: >-
+                create:applications 
+                create:application_redirect_uris 
+                create:application_logout_uris 
+                create:environment_variables 
+                create:feature_flags 
+                create:apis create:api_scopes 
+                create:roles create:permissions 
+                update:role_permissions
+              CONFIG_PATH: ./config/${{ inputs.environment }}.json
+    
+    ```
+    
+3. Push the changes to GitHub.
+
+    ```bash
+    git add .
+    git commit -m "Add Kinde Seed Automation workflow"
+    git push
+    ```
+
+### 2. Create environment variables in GitHub
+
+1. Open your GitHub repository and go to **Settings > Secrets and variables > Actions > Repository secrets >** select **New repository secret**.
+    
+2. Add all the following environment variable values and select **Add secret**.
+    
+    ```
+    KINDE_DOMAIN
+    KINDE_CLIENT_ID
+    KINDE_CLIENT_SECRET
+    KINDE_AUDIENCE
+    ```
+    
+3. Go to **Actions > Kinde Seed Automation >** select **Run workflow.** 
+4. In the drop-down menu:
+    1. Select the Kinde environment to seed (e.g., staging), select **Run workflow**.
+    2. Wait for the workflow to complete.
+5. Select the workflow after it finishes running.
+6. Go to **seed >** select **Run node ./scripts/seed-kinde.mjs** to expand the logs. You will see the seed output logs.
+    
+Now you can automate the Kinde seed script with your CI pipeline.
     
 ## Verify in Kinde dashboard
 
 1. Go to your Kinde dashboard and switch to the correct environment. 
-2. You will see that the script created the following:
+2. You will see that your automations created the following:
 
 ### Applications
 
