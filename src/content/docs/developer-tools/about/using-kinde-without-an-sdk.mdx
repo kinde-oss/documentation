@@ -33,7 +33,7 @@ keywords:
   - access tokens
   - scopes
   - request parameters
-updated: 2026-03-19
+updated: 2026-05-16
 featured: false
 deprecated: false
 ai_summary: Comprehensive guide for integrating with Kinde without SDKs using OAuth 2.0 and OpenID Connect standards including authorization flows, token exchange, and request parameters.
@@ -81,6 +81,10 @@ We support connecting to Kinde through [our SDKs](/developer-tools/about/our-sd
    - Allowed logout redirect URLs (e.g., `http://localhost:3000`)
 
    You can add more than one callback URL per line.
+
+   <Aside title="About callback URLs">
+   Authorization servers require the callback URL to be registered with them ahead of time to prevent abuse. So whatever path you use for your callback URL, it must be registered with Kinde. The logout redirect URL is when Kinde will redirect users after they sign out (your homepage URL)
+   </Aside>
 3. Select **Save**
 
 ### 4. Get the OpenID endpoints
@@ -106,88 +110,204 @@ All this data and more can be found in your OpenID configuration file which is l
 
 `https://<YOUR_DOMAIN>/.well-known/openid-configuration`
 
-### 5. Sign up and sign in
+### 5A. Sign up and sign in (backend application)
 
-Your users must be redirected from your product to Kinde to sign up or sign in securely. The redirect URL on your product side would look like the following:
+1. Your user clicks a button to sign in or sign up on your app.
+2. In your app, generate a random `state` value and store it in memory.
+3. Redirect the user to Kinde with the `state` value included in the authorization URL:
 
-```text
-https://<YOUR_DOMAIN>/oauth2/auth
-?response_type=code
-&client_id=<your_kinde_client_id>
-&redirect_uri=<your_app_redirect_url>
-&scope=openid%20profile%20email
-&state=abcxyz123
+    ```http
+    GET https://<YOUR_DOMAIN>/oauth2/auth
+    ?response_type=code
+    &client_id=<your_kinde_client_id>
+    &redirect_uri=<your_app_redirect_url>
+    &scope=openid%20profile%20email
+    &state=<your_random_state_value_min_8_characters>
+    ```
+
+    <Aside>
+    The `redirect_uri` is your app's callback URL and must be registered with Kinde.
+    </Aside>
+
+4. The user is redirected to the Kinde sign in page and authenticates with their credentials (email/password, social login, SSO, etc.).
+5. Kinde redirects the user back to your `redirect_uri` with an authorization `code` and the original `state` value as query parameters:
+
+    ```text
+    https://your-app.com/auth/callback
+    ?code=<AUTHORIZATION_CODE>
+    &state=<your_random_state_value_min_8_characters>
+    ```
+
+6. Validate that the returned `state` matches the one you generated in step 2 to prevent CSRF attacks.
+7. Exchange the authorization `code` for tokens by making a POST request to the Kinde token endpoint:
+
+    ```http
+    POST https://<YOUR_DOMAIN>/oauth2/token
+    Content-Type: application/x-www-form-urlencoded
+
+    client_id=<your_kinde_client_id>
+    &client_secret=<your_kinde_client_secret>
+    &grant_type=authorization_code
+    &redirect_uri=<your_app_redirect_url>
+    &code=<AUTHORIZATION_CODE>
+    ```
+
+    <Aside type="warning">
+    Never include `client_secret` in a frontend or single-page application — it is publicly visible. Use the [PKCE extension](#authorization-code-flow--pkce) instead, replacing `client_secret` with `code_verifier`.
+    </Aside>
+
+After the authentication flow is complete, jump to the next section on how to display user information.
+
+### 5B. Sign in and sign up (SPAs and mobile apps)
+
+SPAs and mobile apps cannot store a `client_secret` securely, so they use the PKCE (Proof Key for Code Exchange) extension instead. PKCE replaces the client secret with a one-time `code_verifier` that your app generates and holds locally. Here is how the process works:
+
+1. Your user clicks a button to sign in or sign up on your app.
+2. In your app, generate a random `state` value, a `code_verifier`, and derive a `code_challenge` from it:
+
+    ```js
+    // 64 random bytes, base64url-encoded = 86-char code_verifier
+    const codeVerifier = crypto.randomBytes(64).toString('base64url');
+
+    // SHA-256 hash of the verifier, base64url-encoded = code_challenge
+    const codeChallenge = crypto
+      .createHash('sha256')
+      .update(codeVerifier)
+      .digest('base64url');
+    ```
+
+    Store `state` and `code_verifier` in `sessionStorage` — you will need them when the user returns to the callback URL.
+
+3. Send the user to Kinde's authorization endpoint with the PKCE parameters included:
+
+    ```http
+    GET https://<YOUR_DOMAIN>/oauth2/auth
+    ?response_type=code
+    &client_id=<your_kinde_client_id>
+    &redirect_uri=<your_app_redirect_url>
+    &scope=openid%20profile%20email
+    &state=<your_random_state_value_min_8_characters>
+    &code_challenge=<code_challenge>
+    &code_challenge_method=S256
+    ```
+
+    <Aside>
+    The `redirect_uri` must be registered with Kinde as an allowed callback URL.
+    </Aside>
+
+4. The user is redirected to Kinde's sign in page and authenticates with their credentials (email/password, social login, SSO, etc.).
+5. Kinde redirects the user back to your `redirect_uri` with an authorization `code` and the original `state` value as query parameters:
+
+    ```text
+    https://your-app.com/auth/callback
+    ?code=<AUTHORIZATION_CODE>
+    &state=<your_random_state_value_min_8_characters>
+    ```
+
+6. Validate that the returned `state` matches the one you generated in step 2 to prevent CSRF attacks.
+7. Exchange the authorization `code` for tokens using the `code_verifier` — no `client_secret` needed:
+
+    ```http
+    POST https://<YOUR_DOMAIN>/oauth2/token
+    Content-Type: application/x-www-form-urlencoded
+
+    client_id=<your_kinde_client_id>
+    &grant_type=authorization_code
+    &redirect_uri=<your_app_redirect_url>
+    &code=<AUTHORIZATION_CODE>
+    &code_verifier=<code_verifier>
+    ```
+
+    Kinde hashes the `code_verifier` and checks it against the `code_challenge` sent in step 3. If they match, it issues the tokens.
+
+### 7. Display user information
+
+After the authentication flow is complete, Kinde returns an `access_token` and `id_token` (and a `refresh_token` if the `offline` scope was requested). Your application now has the tokens it needs to authenticate requests and identify the user.
+
+You have two options to read the authenticated user's details.
+
+**Option A: Decode the `id_token`**
+
+The `id_token` is a JWT. Decode it with any standard JWT library such as the [Kinde JavaScript library](/build/tokens/decode-jwts/) — no additional network request needed — to get the user's identity claims:
+
+```json
+{
+  "sub": "kp_7a4b2c...",
+  "given_name": "Jane",
+  "family_name": "Doe",
+  "email": "jane@example.com",
+  "picture": "https://gravatar.com/...",
+  "iat": 1716800000,
+  "exp": 1716886400
+}
 ```
 
-Note: Never include the client secret in the URL as this is publicly viewable.
+The `sub` claim is the user's unique ID in Kinde. Use it to identify the user in your own database.
 
-Kinde supports all the standard OAuth 2 request parameters as well as a few additional Kinde-specific parameters to improve the end user experience. Full details can be found in the **Request parameters** table below.
+**Option B: Call the userinfo endpoint**
 
-Kinde also supports the PKCE extension, in which case the `code_challenge` and `code_challenge_method` parameters are also required. This is recommended for mobile apps and single page applications (SPAs).
+Make a GET request to the userinfo endpoint, passing the `access_token` as a Bearer token:
 
-### 6. Handle the callback
-
-As mentioned before when a user authenticates through Kinde, we will redirect them to the endpoint you defined in the previous step. As part of this redirect, Kinde provides an authorization `code` as a query parameter in the URL.
-
-Using the localhost example from before the URL would look something like:
-
-```jsx
-http://localhost:3000/api/auth/kinde_callback
+```http
+GET https://<YOUR_DOMAIN>/oauth2/v2/user_profile
+Authorization: Bearer <access_token>
 ```
 
-You need to extract this authorization `code` parameter from the URL and exchange it for an access token by making a POST request to the Kinde token endpoint `https://<your_kinde_subdomain>.kinde.com/oauth2/token`.
+The response returns the same profile fields as the `id_token` claims above.
 
-As well as the `code` you have received, this request should also include parameters such as the `client_id`,  `client_secret` \*\*,  `redirect_uri`, and `grant_type` (which should be set to `authorization_code`).
 
-Make a POST request with the following payload:
 
-```markdown
-client_id=<your_kinde_client_id>
-&client_secret=<your_kinde_client_secret>
-&grant_type=authorization_code
-&redirect_uri=<your_app_redirect_url>
-&code=<CALLBACK_AUTHORIZATION_CODE>
-```
+### 10. Test user registration
 
-Make sure you replace the `<values>` with your own credentials.
+Complete the user registration process from your app and verify that you are able to log into your app's protected page (e.g., Dashboard).
 
-This url can now be used to return the access token which can be stored and later used to make authenticated requests on behalf of the user.
+1. Go to your Kinde dashboard and select **Users**
+2. You should be able to see the new user details in the list.
 
-Note that the `code_verifier` is also required in PKCE flow. The response body will then contain a token that you can decode.
+## Authentication
 
-Do not include the client secret in frontend / single page applications as this is publicly viewable - instead, use the PKCE extension.
-
-### 7. Get the user profile
-
-To get the user profile, you can make a GET request to the Kinde userinfo endpoint `https://<YOUR_DOMAIN>/oauth2/v2/user_profile`.
-
-### 8. Verify the Kinde access token
-
-It’s likely you will be using a library to validate your JWTs and they will require the URL for your public JSON Web Key (also known as a jwks file).
-
-The file can be found here:
-
-`https://<your_kinde_subdomain>.kinde.com/.well-known/jwks`
-
-### 9. Sign out your users
-
-When users sign out, you will want to clear any session or locally stored data in your app and redirect them to your preferred logout URL with the `redirect` parameter. Such as:
-
-```markdown
-https://<your_kinde_subdomain>.kinde.com/logout?redirect=<your_logout_url>
-```
-
-This will end their session on Kinde. A new access token or refresh token needs to be issued for them to sign in again.
-
-To add a logout URL in Kinde, go to **Settings > Applications > View Details**, then add the URLs to the **Allowed logout redirect URLs** field. Users will be redirected back to this URL when they sign out.
-
-### 10. Register a new user
-
-To be added.
-
-## Handling successful auth for desktop and mobile apps
+### Handle successful auth for desktop and mobile apps
 
 If you offer mobile and desktop apps, as well as access through a browser, you'll need to handle the post-authentication browser state. Rather than leaving a hanging screen, you can show users a success page. To do this, add the `is_use_auth_success_page` parameter to the authorization URL. See the [Request prameters](/developer-tools/about/using-kinde-without-an-sdk/#request-parameters) section below.
+
+### Protect private pages with auth
+
+to be added.
+
+### Validate the access token
+
+Always verify the `access_token` signature on your server before trusting any request. Kinde signs tokens with RS256 and publishes its public keys at the JWKS endpoint:
+
+```text
+https://<YOUR_DOMAIN>/.well-known/jwks
+```
+
+Most JWT libraries accept a JWKS URL directly — point your library at this URL and it will fetch and cache the correct public key automatically.
+
+As part of verification, validate the following claims:
+
+| Claim | Expected value |
+| --- | --- |
+| `iss` | `https://<YOUR_DOMAIN>` |
+| `aud` | Your `client_id` (or your API audience if configured) |
+| `exp` | Must be in the future |
+| `iat` | Must be in the past |
+
+Reject any token that fails signature verification or has an unexpected claim value.
+
+### Sign out your users
+
+To sign a user out, clear any session or token storage in your app, then redirect them to the Kinde logout endpoint with your logout URL:
+
+```text
+https://<YOUR_DOMAIN>/logout?redirect=<your_logout_url>
+```
+
+This ends their Kinde session. They will need to authenticate again to receive new tokens.
+
+To register a logout URL, go to **Settings > Applications > [Your app] > View details**, then add it to the **Allowed logout redirect URLs** field.
+
+
 
 ## Supported grant types
 
