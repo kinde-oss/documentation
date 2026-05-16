@@ -87,9 +87,21 @@ We support connecting to Kinde through [our SDKs](/developer-tools/about/our-sd
    </Aside>
 3. Select **Save**
 
-### 4. Get the OpenID endpoints
+### 4. Set authentication methods
 
-These are the OpenID endpoints for Kinde: 
+1. In your app's settings page, go to **Authentication**
+2. Enable the authentication methods you want your users to sign in with (e.g., Google, Apple, SSO, etc.)
+3. Select **Save**
+
+### 5. Get the OpenID endpoints
+
+These are the OpenID endpoints for Kinde, found at:
+
+`https://<YOUR_DOMAIN>/.well-known/openid-configuration`
+
+<Aside>
+Replace `<YOUR_DOMAIN>` with either your custom domain or your Kinde domain (e.g., `https://your_business.kinde.com`)
+</Aside>
 
 - Authorization endpoint: `https://<YOUR_DOMAIN>/oauth2/auth`
 - Token endpoint: `https://<YOUR_DOMAIN>/oauth2/token`
@@ -102,29 +114,64 @@ These are the OpenID endpoints for Kinde:
 - Revocation endpoint: `https://<YOUR_DOMAIN>/oauth2/revoke`
 - Introspection endpoint: `https://<YOUR_DOMAIN>/oauth2/introspect`
 
-    <Aside>
-    Replace `<YOUR_DOMAIN>` with either your custom domain or your Kinde domain (e.g., `https://your_business.kinde.com`)
-    </Aside>
-
-All this data and more can be found in your OpenID configuration file which is located at:
-
-`https://<YOUR_DOMAIN>/.well-known/openid-configuration`
-
-### 5A. Sign up and sign in (backend application)
+### 6. Complete the authorization flow
 
 1. Your user clicks a button to sign in or sign up on your app.
-2. In your app, generate a random `state` value and store it in memory.
-3. Redirect the user to Kinde with the `state` value included in the authorization URL:
 
-    ```http
-    GET https://<YOUR_DOMAIN>/oauth2/auth
-    ?response_type=code
-    &client_id=<your_kinde_client_id>
-    &redirect_uri=<your_app_redirect_url>
-    &scope=openid%20profile%20email
-    &state=<your_random_state_value_min_8_characters>
-    ```
 
+<Tabs syncKey="auth-flow">
+  <TabItem label="Backend application">
+    2. In your app, generate a random `state` value:
+
+        ```js title="JavaScript example"
+        const state = crypto.randomBytes(32).toString('hex');
+        ```
+
+        Store `state` in `sessionStorage` — you will need it when the user returns to the callback URL.
+
+    3. Send the user to Kinde's authorization endpoint with the state parameter included in the URL:
+
+        ```http
+        GET https://<YOUR_DOMAIN>/oauth2/auth
+        ?response_type=code
+        &client_id=<your_kinde_client_id>
+        &redirect_uri=<your_app_redirect_url>
+        &scope=openid%20profile%20email
+        &state=<your_random_state_value_min_8_characters>
+        ```
+  </TabItem>
+  <TabItem label="SPAs and mobile apps">
+    2. In your app, generate a random `state` value, a `code_verifier`, and derive a `code_challenge` from it:
+
+        ```js title="JavaScript example"
+        const state = crypto.randomBytes(32).toString('hex');
+        
+        // 64 random bytes, base64url-encoded = 86-char code_verifier
+        const codeVerifier = crypto.randomBytes(64).toString('base64url');
+
+        // SHA-256 hash of the verifier, base64url-encoded = code_challenge
+        const codeChallenge = crypto
+          .createHash('sha256')
+          .update(codeVerifier)
+          .digest('base64url');
+        ```
+
+        Store `state` and `code_verifier` in `sessionStorage` — you will need them when the user returns to the callback URL.
+
+    3. Send the user to Kinde's authorization endpoint with the state and PKCE parameters included in the URL:
+
+        ```http
+        GET https://<YOUR_DOMAIN>/oauth2/auth
+        ?response_type=code
+        &client_id=<your_kinde_client_id>
+        &redirect_uri=<your_app_redirect_url>
+        &scope=openid%20profile%20email
+        &state=<your_random_state_value_min_8_characters>
+        &code_challenge=<code_challenge>
+        &code_challenge_method=S256
+        ```
+  </TabItem>
+</Tabs>
     <Aside>
     The `redirect_uri` is your app's callback URL and must be registered with Kinde.
     </Aside>
@@ -139,125 +186,61 @@ All this data and more can be found in your OpenID configuration file which is l
     ```
 
 6. Validate that the returned `state` matches the one you generated in step 2 to prevent CSRF attacks.
-7. Exchange the authorization `code` for tokens by making a POST request to the Kinde token endpoint:
 
-    ```http
-    POST https://<YOUR_DOMAIN>/oauth2/token
-    Content-Type: application/x-www-form-urlencoded
+<Tabs syncKey="auth-flow">
+  <TabItem label="Backend application">
+      7. Exchange the authorization `code` for tokens by making a POST request to the Kinde token endpoint:
 
-    client_id=<your_kinde_client_id>
-    &client_secret=<your_kinde_client_secret>
-    &grant_type=authorization_code
-    &redirect_uri=<your_app_redirect_url>
-    &code=<AUTHORIZATION_CODE>
-    ```
+          ```http
+          POST https://<YOUR_DOMAIN>/oauth2/token
+          Content-Type: application/x-www-form-urlencoded
 
-    <Aside type="warning">
-    Never include `client_secret` in a frontend or single-page application — it is publicly visible. Use the [PKCE extension](#authorization-code-flow--pkce) instead, replacing `client_secret` with `code_verifier`.
-    </Aside>
+          grant_type=authorization_code
+          &code=<AUTHORIZATION_CODE>
+          &redirect_uri=<your_app_redirect_url>
+          &client_id=<your_kinde_client_id>
+          &client_secret=<your_kinde_client_secret>
+          ```
+  </TabItem>
+  <TabItem label="SPAs and mobile apps">
+      7. Exchange the authorization `code` for tokens using the `code_verifier` — no `client_secret` needed:
 
-After the authentication flow is complete, jump to the next section on how to display user information.
+          ```http
+          POST https://<YOUR_DOMAIN>/oauth2/token
+          Content-Type: application/x-www-form-urlencoded
 
-### 5B. Sign in and sign up (SPAs and mobile apps)
+          grant_type=authorization_code
+          &code=<AUTHORIZATION_CODE>
+          &redirect_uri=<your_app_redirect_url>
+          &client_id=<your_kinde_client_id>
+          &code_verifier=<code_verifier>
+          ```
+  </TabItem>
+</Tabs>
 
-SPAs and mobile apps cannot store a `client_secret` securely, so they use the PKCE (Proof Key for Code Exchange) extension instead. PKCE replaces the client secret with a one-time `code_verifier` that your app generates and holds locally. Here is how the process works:
-
-1. Your user clicks a button to sign in or sign up on your app.
-2. In your app, generate a random `state` value, a `code_verifier`, and derive a `code_challenge` from it:
-
-    ```js
-    // 64 random bytes, base64url-encoded = 86-char code_verifier
-    const codeVerifier = crypto.randomBytes(64).toString('base64url');
-
-    // SHA-256 hash of the verifier, base64url-encoded = code_challenge
-    const codeChallenge = crypto
-      .createHash('sha256')
-      .update(codeVerifier)
-      .digest('base64url');
-    ```
-
-    Store `state` and `code_verifier` in `sessionStorage` — you will need them when the user returns to the callback URL.
-
-3. Send the user to Kinde's authorization endpoint with the PKCE parameters included:
-
-    ```http
-    GET https://<YOUR_DOMAIN>/oauth2/auth
-    ?response_type=code
-    &client_id=<your_kinde_client_id>
-    &redirect_uri=<your_app_redirect_url>
-    &scope=openid%20profile%20email
-    &state=<your_random_state_value_min_8_characters>
-    &code_challenge=<code_challenge>
-    &code_challenge_method=S256
-    ```
-
-    <Aside>
-    The `redirect_uri` must be registered with Kinde as an allowed callback URL.
-    </Aside>
-
-4. The user is redirected to Kinde's sign in page and authenticates with their credentials (email/password, social login, SSO, etc.).
-5. Kinde redirects the user back to your `redirect_uri` with an authorization `code` and the original `state` value as query parameters:
-
-    ```text
-    https://your-app.com/auth/callback
-    ?code=<AUTHORIZATION_CODE>
-    &state=<your_random_state_value_min_8_characters>
-    ```
-
-6. Validate that the returned `state` matches the one you generated in step 2 to prevent CSRF attacks.
-7. Exchange the authorization `code` for tokens using the `code_verifier` — no `client_secret` needed:
-
-    ```http
-    POST https://<YOUR_DOMAIN>/oauth2/token
-    Content-Type: application/x-www-form-urlencoded
-
-    client_id=<your_kinde_client_id>
-    &grant_type=authorization_code
-    &redirect_uri=<your_app_redirect_url>
-    &code=<AUTHORIZATION_CODE>
-    &code_verifier=<code_verifier>
-    ```
-
-    Kinde hashes the `code_verifier` and checks it against the `code_challenge` sent in step 3. If they match, it issues the tokens.
+After the authentication flow is complete, you will receive an `access_token` and `id_token` (and a `refresh_token` if the `offline` scope was requested).
 
 ### 7. Display user information
 
-After the authentication flow is complete, Kinde returns an `access_token` and `id_token` (and a `refresh_token` if the `offline` scope was requested). Your application now has the tokens it needs to authenticate requests and identify the user.
+1. Redirect the user to a protected page in your app
+2. Decode the `id_token` with any standard [JWT library](https://www.jwt.io/libraries) or if you are using JavaScript, use the [Kinde JavaScript library](/build/tokens/decode-jwts/)
+3. Use the decoded claims to display on your app:
 
-You have two options to read the authenticated user's details.
+    ```json
+    {
+      "sub": "kp_7a4b2c...",
+      "given_name": "Jane",
+      "family_name": "Doe",
+      "email": "jane@example.com",
+      "picture": "https://gravatar.com/...",
+      "iat": 1716800000,
+      "exp": 1716886400
+    }
+    ```
 
-**Option A: Decode the `id_token`**
+Alternatively, you can call the userinfo endpoint, passing the `access_token` as a Bearer token. This will always return an updated version of the user's profile. See [When should I use the userinfo endpoint instead of decoding the `id_token`?](#when-should-i-use-the-userinfo-endpoint-instead-of-decoding-the-id_token) for more details.
 
-The `id_token` is a JWT. Decode it with any standard JWT library such as the [Kinde JavaScript library](/build/tokens/decode-jwts/) — no additional network request needed — to get the user's identity claims:
-
-```json
-{
-  "sub": "kp_7a4b2c...",
-  "given_name": "Jane",
-  "family_name": "Doe",
-  "email": "jane@example.com",
-  "picture": "https://gravatar.com/...",
-  "iat": 1716800000,
-  "exp": 1716886400
-}
-```
-
-The `sub` claim is the user's unique ID in Kinde. Use it to identify the user in your own database.
-
-**Option B: Call the userinfo endpoint**
-
-Make a GET request to the userinfo endpoint, passing the `access_token` as a Bearer token:
-
-```http
-GET https://<YOUR_DOMAIN>/oauth2/v2/user_profile
-Authorization: Bearer <access_token>
-```
-
-The response returns the same profile fields as the `id_token` claims above.
-
-
-
-### 10. Test user registration
+### 8. Test user registration
 
 Complete the user registration process from your app and verify that you are able to log into your app's protected page (e.g., Dashboard).
 
@@ -270,9 +253,89 @@ Complete the user registration process from your app and verify that you are abl
 
 If you offer mobile and desktop apps, as well as access through a browser, you'll need to handle the post-authentication browser state. Rather than leaving a hanging screen, you can show users a success page. To do this, add the `is_use_auth_success_page` parameter to the authorization URL. See the [Request prameters](/developer-tools/about/using-kinde-without-an-sdk/#request-parameters) section below.
 
-### Protect private pages with auth
+### Protect a route with auth
 
-to be added.
+Route protection works at two layers. Both are required — the frontend layer is UX, the backend layer is the real security gate.
+
+**Layer 1: Frontend — redirect unauthenticated users**
+
+Before rendering a protected page/screen, check that you have a valid, non-expired access token. If not, redirect to the Kinde authorization endpoint:
+
+```js
+function isTokenExpired(token) {
+  const { exp } = JSON.parse(atob(token.split('.')[1]));
+  return Date.now() >= exp * 1000;
+}
+
+// Run this check on every protected page load
+if (!accessToken || isTokenExpired(accessToken)) {
+  window.location.href =
+    'https://<YOUR_DOMAIN>/oauth2/auth?response_type=code&client_id=<CLIENT_ID>&...';
+}
+```
+
+<Aside type="warning">
+Never rely on the frontend check alone. A user can bypass client-side redirects and call your API directly. The backend must always verify the token independently.
+</Aside>
+
+**Layer 2: Backend — verify the token on every request**
+
+Your server must validate the access token on every call to a protected endpoint. Send the token in the `Authorization` header:
+
+```http
+GET /api/protected-resource
+Authorization: Bearer <access_token>
+```
+
+On the server, verify the token before returning any data:
+
+```js
+// Pseudocode — pattern is the same in Node, Python, Go, etc.
+function protectedRoute(req, res, next) {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const payload = verifyJWT(token, {
+      jwksUri: 'https://<YOUR_DOMAIN>/.well-known/jwks',
+      issuer: 'https://<YOUR_DOMAIN>',
+    });
+    req.user = payload; // access sub, org_code, scp, permissions
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+```
+
+See [Validate the access token](#validate-the-access-token) below for the full list of claims to check.
+
+**Using claims for authorization**
+
+Once the token is verified, use the claims inside it to make access decisions:
+
+| Claim | Use for |
+| --- | --- |
+| `sub` | Identify the user — link to your own database records |
+| `scp` | Check the user has the required OAuth scopes |
+| `permissions` | Fine-grained access control (e.g. `read:reports`) |
+| `org_code` | Multi-tenant apps — confirm the user belongs to the right organization |
+
+**Handling token expiry**
+
+Access tokens expire after 24 hours. If you requested the `offline` scope, use the refresh token to get a new access token silently — without sending the user through the login flow again:
+
+```http
+POST https://<YOUR_DOMAIN>/oauth2/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=refresh_token
+&client_id=<CLIENT_ID>
+&client_secret=<CLIENT_SECRET>
+&refresh_token=<REFRESH_TOKEN>
+```
+
+If no refresh token is available (i.e. `offline` scope was not requested), redirect the user to sign in again.
 
 ### Validate the access token
 
@@ -297,17 +360,18 @@ Reject any token that fails signature verification or has an unexpected claim va
 
 ### Sign out your users
 
-To sign a user out, clear any session or token storage in your app, then redirect them to the Kinde logout endpoint with your logout URL:
+To sign a user out:
 
-```text
-https://<YOUR_DOMAIN>/logout?redirect=<your_logout_url>
-```
+1. Clear any session or token storage in your app
+2. Redirect them to the Kinde logout endpoint with your logout URL:
 
-This ends their Kinde session. They will need to authenticate again to receive new tokens.
+    ```text
+    https://<YOUR_DOMAIN>/logout?redirect=<your_logout_url>
+    ```
+
+    This ends their Kinde session. They will need to authenticate again to receive new tokens.
 
 To register a logout URL, go to **Settings > Applications > [Your app] > View details**, then add it to the **Allowed logout redirect URLs** field.
-
-
 
 ## Supported grant types
 
@@ -329,7 +393,7 @@ Requests an `id_token` which contains information about the user
 
 ### `email`
 
-Requests a user's email
+Requests a user's `email` and `email_verified` claim in the `id_token`
 
 ### `profile`
 
@@ -372,6 +436,8 @@ You can also use the `state` parameter to store additional information about the
 The scopes to be requested from Kinde. Scopes include `openid`, `profile`, `email`, `offline`.
 
 Type: `string`
+
+Required: No
 
 Recommended: `openid profile email`
 
@@ -567,3 +633,36 @@ Required: No
 ### Does Kinde support the Implicit Flow?
 
 No, Kinde does not support the Implicit Flow because
+
+### When should I use the userinfo endpoint instead of decoding the `id_token`?
+
+Decoding the `id_token` is usually the fastest approach — it requires no extra network request. However, there are three situations where calling the userinfo endpoint is the right choice:
+
+- **You need up-to-date profile data.** The `id_token` is a snapshot frozen at login time. If the user updates their name, email, or avatar in Kinde after they've authenticated, the `id_token` stays stale until they get a new one. The userinfo endpoint queries Kinde live and always returns current data.
+- **Your backend only has the `access_token`.** The `id_token` is typically held by the frontend. If your server needs to look up the authenticated user's profile, it can call the userinfo endpoint using the `access_token` from the request header — without needing the frontend to forward the `id_token` separately.
+- **You didn't request the `openid` scope.** Without `openid`, no `id_token` is issued. The userinfo endpoint still works as long as you hold a valid `access_token`.
+
+In all other cases, prefer decoding the `id_token` — it's faster and requires no round trip to Kinde.
+
+To call the userinfo endpoint, pass the `access_token` as a Bearer token:
+
+```http
+GET https://<YOUR_DOMAIN>/oauth2/v2/user_profile
+Authorization: Bearer <access_token>
+```
+
+The response returns the user's current profile fields:
+
+```json
+{
+  "sub": "kp_7a4b2c...",
+  "given_name": "Jane",
+  "family_name": "Doe",
+  "email": "jane@example.com",
+  "picture": "https://gravatar.com/..."
+}
+```
+
+<Aside>
+The fields returned depend on the scopes that were granted. `email` and `email_verified` require the `email` scope. `given_name`, `family_name`, and `picture` require the `profile` scope.
+</Aside>
