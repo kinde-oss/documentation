@@ -65,21 +65,23 @@ import {PortalLink} from "@kinde-oss/kinde-auth-nextjs/components";
 <PortalLink subNav="user_api_keys">Manage API keys</PortalLink>;
 ```
 
-### Without an SDK (server-side)
+### Without an SDK (Account API)
 
-If you generate portal links using an API on your server, include a `sub_nav` field to deep link to API Keys.
+If you're not using a Kinde SDK, call the Account API endpoint and pass `subnav` to deep link to API Keys.
 
-```json
-{
-  "user_id": "kp_abc123", // or organization_code for org-level links
-  "return_url": "https://yourapp.com/account",
-  "sub_nav": "api_keys"
-}
+```js
+const response = await fetch("/account_api/v1/portal_link?subnav=api_keys", {
+  headers: {
+    Authorization: `Bearer ${userAccessToken}`
+  }
+});
+const data = await response.json();
+window.location = data.url;
 ```
 
 ### Tips for setting up
 
-- Use `subNav` (camelCase) in SDK helpers and `sub_nav` (snake_case) in API payloads.
+- Use `subNav` (camelCase) in SDK helpers and `subnav` (lowercase) in Account API requests.
 - For organization-level experiences, pass organization context according to your integration pattern.
 
 ## Customer portal experience
