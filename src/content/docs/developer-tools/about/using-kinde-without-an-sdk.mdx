@@ -18,6 +18,9 @@ topics:
   - developer-tools
   - oauth
   - openid-connect
+  - authentication
+  - tokens
+  - security
 sdk: []
 languages:
   - javascript
@@ -27,23 +30,46 @@ complexity: advanced
 keywords:
   - OAuth 2.0
   - OpenID Connect
-  - callback URLs
-  - authorization code
+  - Authorization Code Flow
   - PKCE
-  - access tokens
+  - Proof Key for Code Exchange
+  - access token
+  - id_token
+  - refresh token
+  - token exchange
+  - JWKS
+  - JWT verification
   - scopes
-  - request parameters
-updated: 2026-05-16
+  - openid
+  - offline
+  - callback URL
+  - redirect_uri
+  - state parameter
+  - CSRF protection
+  - nonce
+  - prompt
+  - login_hint
+  - org_code
+  - multi-tenant
+  - userinfo endpoint
+  - route protection
+  - sign in
+  - sign up
+  - logout
+  - custom domain
+  - no SDK
+  - framework agnostic
+updated: 2026-05-23
 featured: false
 deprecated: false
-ai_summary: Comprehensive guide for integrating with Kinde without SDKs using OAuth 2.0 and OpenID Connect standards including authorization flows, token exchange, and request parameters.
+ai_summary: "This guide explains how to integrate Kinde authentication into any language or framework without using an official SDK, relying entirely on OAuth 2.0 and OpenID Connect standards. A 9-step quickstart covers both the Authorization Code Flow for server-rendered back-end applications and the Authorization Code Flow with PKCE for single-page apps and mobile clients — including generating a PKCE code verifier and challenge, building the authorization URL, handling the callback (with state validation to prevent CSRF attacks), exchanging the authorization code for tokens, and decoding the id_token to display user information. The guide details how to protect routes at two layers: a frontend token expiry check and backend RS256 JWT verification against the JWKS endpoint. It also covers silently refreshing access tokens with a refresh token and signing users out via the Kinde logout endpoint. A full reference covers all 24 supported request parameters — including prompt, login_hint, org_code, nonce, and audience — ordered by importance. FAQs address why the Implicit Flow is not supported and when to use the userinfo endpoint instead of decoding the id_token directly."
 ---
 
 Kinde is designed to help founders and developers build SaaS products by providing software infrastructure like authentication, feature flags, user management, and more.
 
-We support connecting to Kinde through [our SDKs](/developer-tools/about/our-sdks/), but everything we build is also OAuth 2 standard, so you can integrate into any language framework with Kinde without an SDK.
+We support connecting to Kinde through [our SDKs](/developer-tools/about/our-sdks/), but everything we build follows the OAuth 2.0 standard, so you can integrate Kinde into any language or framework without an SDK.
 
-### What you need
+## What you need
 
 - A [Kinde](/get-started/guides/first-things-first/) account with **Admin** or **Engineer** access (Sign up for free)
 - Knowledge of programming languages and OAuth 2.0
@@ -56,14 +82,14 @@ We support connecting to Kinde through [our SDKs](/developer-tools/about/our-sd
 2. Enter a name for the application (e.g., “My App”)
 3. Select an application type:
     - **Back-end web**: for server-rendered or full-stack apps
-    - **Front-end web**: for javascript-based single page applications (SPAs) or mobile apps
+    - **Front-end web**: for JavaScript-based single-page applications (SPAs) or mobile apps
 
 4. Select **Other**
 5. Select **Save**.
 
 ### 2. Get your app keys
 
-1. In your app settings page select **Details**
+1. In your app settings page, select **Details**
 2. Copy your app keys:
 
     - **Custom domain**: if you have configured a [custom domain](/build/domains/pointing-your-domain/)
@@ -83,7 +109,7 @@ We support connecting to Kinde through [our SDKs](/developer-tools/about/our-sd
    You can add more than one callback URL per line.
 
    <Aside title="About callback URLs">
-   Authorization servers require the callback URL to be registered with them ahead of time to prevent abuse. So whatever path you use for your callback URL, it must be registered with Kinde. The logout redirect URL is when Kinde will redirect users after they sign out (your homepage URL)
+   Authorization servers require the callback URL to be registered ahead of time to prevent abuse. Whatever path you use for your callback URL, it must be registered with Kinde. The logout redirect URL is where Kinde redirects users after they sign out — typically your app's homepage.
    </Aside>
 3. Select **Save**
 
@@ -114,9 +140,9 @@ Replace `<YOUR_DOMAIN>` with either your custom domain or your Kinde domain (e.g
 - Revocation endpoint: `https://<YOUR_DOMAIN>/oauth2/revoke`
 - Introspection endpoint: `https://<YOUR_DOMAIN>/oauth2/introspect`
 
-### 6. Complete the authorization flow
+### 6. Create the authorization request
 
-1. Your user clicks a button to sign in or sign up on your app.
+1. Your user clicks a button to sign in or sign up in your app.
 
 
 <Tabs syncKey="auth-flow">
@@ -127,7 +153,7 @@ Replace `<YOUR_DOMAIN>` with either your custom domain or your Kinde domain (e.g
         const state = crypto.randomBytes(32).toString('hex');
         ```
 
-        Store `state` in `sessionStorage` — you will need it when the user returns to the callback URL.
+        Store `state` in your server-side session — you will need it when the user returns to the callback URL.
 
     3. Send the user to Kinde's authorization endpoint with the state parameter included in the URL:
 
@@ -177,7 +203,10 @@ Replace `<YOUR_DOMAIN>` with either your custom domain or your Kinde domain (e.g
     </Aside>
 
 4. The user is redirected to the Kinde sign in page and authenticates with their credentials (email/password, social login, SSO, etc.).
-5. Kinde redirects the user back to your `redirect_uri` with an authorization `code` and the original `state` value as query parameters:
+
+### 7. Handle the callback
+
+1. Kinde redirects the user back to your `redirect_uri` with an authorization `code` and the original `state` value as query parameters:
 
     ```text
     https://your-app.com/auth/callback
@@ -185,11 +214,11 @@ Replace `<YOUR_DOMAIN>` with either your custom domain or your Kinde domain (e.g
     &state=<your_random_state_value_min_8_characters>
     ```
 
-6. Validate that the returned `state` matches the one you generated in step 2 to prevent CSRF attacks.
+2. Validate that the returned `state` matches the one you generated in the previous step to prevent CSRF attacks.
 
 <Tabs syncKey="auth-flow">
   <TabItem label="Backend application">
-      7. Exchange the authorization `code` for tokens by making a POST request to the Kinde token endpoint:
+      3. Exchange the authorization `code` for tokens by making a POST request to the Kinde token endpoint:
 
           ```http
           POST https://<YOUR_DOMAIN>/oauth2/token
@@ -203,7 +232,7 @@ Replace `<YOUR_DOMAIN>` with either your custom domain or your Kinde domain (e.g
           ```
   </TabItem>
   <TabItem label="SPAs and mobile apps">
-      7. Exchange the authorization `code` for tokens using the `code_verifier` — no `client_secret` needed:
+      3. Exchange the authorization `code` for tokens by making a POST request to the Kinde token endpoint with the `code_verifier` — no `client_secret` needed:
 
           ```http
           POST https://<YOUR_DOMAIN>/oauth2/token
@@ -218,13 +247,21 @@ Replace `<YOUR_DOMAIN>` with either your custom domain or your Kinde domain (e.g
   </TabItem>
 </Tabs>
 
-After the authentication flow is complete, you will receive an `access_token` and `id_token` (and a `refresh_token` if the `offline` scope was requested).
+4. Kinde returns the tokens in the response body (same for both flows):
 
-### 7. Display user information
+    ```jsonc
+    {
+      "access_token": "...",
+      "id_token": "...",
+      "refresh_token": "..." // only if the "offline" scope was requested
+    }
+    ```
+
+### 8. Display user information
 
 1. Redirect the user to a protected page in your app
-2. Decode the `id_token` with any standard [JWT library](https://www.jwt.io/libraries) or if you are using JavaScript, use the [Kinde JavaScript library](/build/tokens/decode-jwts/)
-3. Use the decoded claims to display on your app:
+2. Decode the `id_token` with any standard [JWT library](https://www.jwt.io/libraries), or if you are using JavaScript, use the [Kinde JavaScript library](/build/tokens/decode-jwts/)
+3. Use the decoded claims to display in your app:
 
     ```json
     {
@@ -238,20 +275,45 @@ After the authentication flow is complete, you will receive an `access_token` an
     }
     ```
 
-Alternatively, you can call the userinfo endpoint, passing the `access_token` as a Bearer token. This will always return an updated version of the user's profile. See [When should I use the userinfo endpoint instead of decoding the `id_token`?](#when-should-i-use-the-userinfo-endpoint-instead-of-decoding-the-id_token) for more details.
+Alternatively, you can call the userinfo endpoint, passing the `access_token` as a Bearer token. This always returns an up-to-date version of the user's profile. See [When should I use the userinfo endpoint instead of decoding the `id_token`?](#when-should-i-use-the-userinfo-endpoint-instead-of-decoding-the-id_token) for more details.
 
-### 8. Test user registration
+### 9. Test user registration
 
-Complete the user registration process from your app and verify that you are able to log into your app's protected page (e.g., Dashboard).
+Complete the registration flow in your app and verify that you can sign in to a protected page (e.g., a dashboard).
 
 1. Go to your Kinde dashboard and select **Users**
-2. You should be able to see the new user details in the list.
+2. You should see the new user's details in the list.
 
 ## Authentication
 
+### Create a sign in or sign up link
+
+The following link redirects the user to the Kinde sign-in page by default:
+
+    ```http
+    GET https://<YOUR_DOMAIN>/oauth2/auth
+    ?response_type=code
+    &client_id=<your_kinde_client_id>
+    &redirect_uri=<your_app_redirect_url>
+    &scope=openid%20profile%20email
+    &state=<your_random_state_value_min_8_characters>
+    ```
+
+To send the user to the sign-up page instead, add `prompt=create` to the URL:
+
+    ```http
+    GET https://<YOUR_DOMAIN>/oauth2/auth
+    ?response_type=code
+    &client_id=<your_kinde_client_id>
+    &redirect_uri=<your_app_redirect_url>
+    &scope=openid%20profile%20email
+    &state=<your_random_state_value_min_8_characters>
+    &prompt=create
+    ```
+
 ### Handle successful auth for desktop and mobile apps
 
-If you offer mobile and desktop apps, as well as access through a browser, you'll need to handle the post-authentication browser state. Rather than leaving a hanging screen, you can show users a success page. To do this, add the `is_use_auth_success_page` parameter to the authorization URL. See the [Request prameters](/developer-tools/about/using-kinde-without-an-sdk/#request-parameters) section below.
+If you offer mobile and desktop apps alongside a browser-based version, you'll need to handle the post-authentication browser state. Rather than leaving a hanging screen, you can show users a success page. To do this, add the `is_use_auth_success_page` parameter to the authorization URL. See the [Request parameters](/developer-tools/about/using-kinde-without-an-sdk/#request-parameters) section below.
 
 ### Protect a route with auth
 
@@ -259,11 +321,14 @@ Route protection works at two layers. Both are required — the frontend layer i
 
 **Layer 1: Frontend — redirect unauthenticated users**
 
-Before rendering a protected page/screen, check that you have a valid, non-expired access token. If not, redirect to the Kinde authorization endpoint:
+Before rendering a protected page or screen, check that you have a valid, non-expired access token. If not, redirect to the Kinde authorization endpoint:
 
 ```js
 function isTokenExpired(token) {
-  const { exp } = JSON.parse(atob(token.split('.')[1]));
+  // JWT payloads are base64url-encoded; convert to standard base64 before decoding
+  const base64Url = token.split('.')[1];
+  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+  const { exp } = JSON.parse(atob(base64));
   return Date.now() >= exp * 1000;
 }
 
@@ -325,15 +390,29 @@ Once the token is verified, use the claims inside it to make access decisions:
 
 Access tokens expire after 24 hours. If you requested the `offline` scope, use the refresh token to get a new access token silently — without sending the user through the login flow again:
 
-```http
-POST https://<YOUR_DOMAIN>/oauth2/token
-Content-Type: application/x-www-form-urlencoded
+<Tabs syncKey="auth-flow">
+  <TabItem label="Backend application">
+    ```http
+    POST https://<YOUR_DOMAIN>/oauth2/token
+    Content-Type: application/x-www-form-urlencoded
 
-grant_type=refresh_token
-&client_id=<CLIENT_ID>
-&client_secret=<CLIENT_SECRET>
-&refresh_token=<REFRESH_TOKEN>
-```
+    grant_type=refresh_token
+    &client_id=<CLIENT_ID>
+    &client_secret=<CLIENT_SECRET>
+    &refresh_token=<REFRESH_TOKEN>
+    ```
+  </TabItem>
+  <TabItem label="SPAs and mobile apps">
+    ```http
+    POST https://<YOUR_DOMAIN>/oauth2/token
+    Content-Type: application/x-www-form-urlencoded
+
+    grant_type=refresh_token
+    &client_id=<CLIENT_ID>
+    &refresh_token=<REFRESH_TOKEN>
+    ```
+  </TabItem>
+</Tabs>
 
 If no refresh token is available (i.e. `offline` scope was not requested), redirect the user to sign in again.
 
@@ -377,11 +456,11 @@ To register a logout URL, go to **Settings > Applications > [Your app] > View de
 
 ### Authorization Code Flow
 
-Recommended for regular web applications rendered on the server.
+Recommended for server-rendered web applications.
 
 ### Authorization Code Flow + PKCE
 
-Kinde supports the Proof Key for Code Exchange (PKCE) extension, in which case the `code_challenge` and `code_challenge_method` parameters are also required. This is recommended for mobile apps and single page applications (SPAs).
+Kinde supports the Proof Key for Code Exchange (PKCE) extension. When using PKCE, include the `code_challenge` and `code_challenge_method` parameters in the authorization request. This flow is recommended for mobile apps and single-page applications (SPAs).
 
 ## OAuth 2.0 scopes
 
@@ -389,19 +468,19 @@ The following scopes can be requested from Kinde.
 
 ### `openid`
 
-Requests an `id_token` which contains information about the user
+Requests an `id_token` that contains information about the authenticated user.
 
 ### `email`
 
-Requests a user's `email` and `email_verified` claim in the `id_token`
+Requests the `email` and `email_verified` claims in the `id_token`.
 
 ### `profile`
 
-Requests profile details as part of ID token, e.g. name, family name, given name, picture (avatar)
+Requests profile details as part of the `id_token`, including given name, family name, and picture.
 
 ### `offline`
 
-Requests a `refresh_token` which can be used to refresh the `access_token` when it expires.
+Requests a `refresh_token` that can be used to silently refresh the `access_token` when it expires.
 
     <Aside type="warning" title="Use offline, not offline_access">
 
@@ -413,6 +492,14 @@ Requests a `refresh_token` which can be used to refresh the `access_token` when 
 
 There are a few useful additional parameters that Kinde supports in the authorization URL.
 
+### `response_type`
+
+Should always be `code`. Kinde does not support the Implicit Flow — see [Does Kinde support the Implicit Flow?](#does-kinde-support-the-implicit-flow) for details.
+
+Type: `string`
+
+Required: Yes
+
 ### `client_id`
 
 The unique ID of your application in Kinde.
@@ -421,15 +508,13 @@ Type: `string`
 
 Required: Yes
 
-### `state`
+### `redirect_uri`
 
-Kinde will return this to your app so you can validate it came from us and prevent CSRF attacks.
+The URL that the user will be returned to after authentication.
 
 Type: `string`
 
-Required: Yes (min 8 characters)
-
-You can also use the `state` parameter to store additional information about the user or the authentication flow.
+Required: Yes
 
 ### `scope`
 
@@ -445,9 +530,27 @@ Recommended: `openid profile email`
 Kinde uses `offline` to request a refresh token in place of the OIDC specification's `offline_access` scope.
 </Aside>
 
+### `state`
+
+Kinde will return this to your app so you can validate it came from us and prevent CSRF attacks.
+
+Type: `string`
+
+Required: Yes (min 8 characters)
+
+You can also use the `state` parameter to store additional information about the user or the authentication flow.
+
+### `nonce`
+
+A single-use value included in the signed `id_token` to prevent replay attacks.
+
+Type: `string`
+
+Required: No (but recommended)
+
 ### `code_challenge`
 
-A base64 encoded string of a SHA256 hash of a code verifier.
+A base64url-encoded SHA-256 hash of the code verifier.
 
 Type: `string`
 
@@ -455,97 +558,17 @@ Required: For PKCE
 
 ### `code_challenge_method`
 
-Should always be `S256` tells Kinde the method used to hash the code challenge above
+Should always be `S256`. This tells Kinde that the code challenge was generated using SHA-256.
 
 Type: `string`
 
 Required: For PKCE
 
-### `audience`
-
-The `audience` claim for the JWT. This can be used to protect your APIs and resource servers.
-
-Type: `string`
-
-Required: No
-
-### `connection_id`
-
-Connection ID for authentication method when using [Custom sign-up and sign-in pages](/authenticate/custom-configurations/custom-authentication-pages/)
-
-Type: `string`
-
-Required: When using custom sign up and sign in pages
-
-### `is_create_org`
-
-If an organization should be created along with the user.
-
-Type: `boolean`
-
-Required: No
-
-### `is_use_auth_success_page`
-
-Displays a sign-in success page following authentication. Recommended for browser authentication.
-
-Type: `boolean`
-
-Required: No
-
-### `has_success_page`
-
-Show a success page at the end of the auth flow, this is useful when the callback URL is not a web page
-
-Type: `boolean`
-
-Required: No
-
-### `lang`
-
-For selecting the UI language.
-
-Type: `string`
-
-Required: No
-
-### `login_hint`
-
-When your project knows which user it is trying to authenticate, it can provide their email in this parameter as a hint to Kinde. Passing this hint pre-fills the email box on the sign up and sign-in screens.
-
-Type: `string`
-
-Required: No
-
-### `org_code`
-
-For multi-tenant or platform apps, tell Kinde which organization a user is trying to sign in or sign up to.
-
-Type: `string`
-
-Required: No
-
-### `org_name`
-
-If `is_create_org` is passed then you can optionally include the name of the organization you would like to create.
-
-Type: `string`
-
-Required: No
-
-### `start_page` (deprecated)
-
-Accepts `login` or `registration`, but we recommend using `prompt` as per below instead.
-
-Type: `string`
-
-Required: No
-
 ### `prompt`
 
-Accepts `login` or `create` so you can determine if your user should land on the sign up or sign in page. By default, users will land on the sign in page. You can also use `none`.
+Accepts `login`, `create`, or `none` to control which page users land on. By default, users are directed to the sign-in page.
 
-If you use `none` Kinde will not show authentication screens to the user.
+If you use `none`, Kinde will not show authentication screens to the user.
 
 - If the user has an active SSO session, this will redirect them to the callback URL where the token exchange can occur.
 - If the user does NOT have an active SSO session, this will redirect them to the callback URL with the following error:
@@ -561,70 +584,123 @@ Type: `string`
 
 Required: No
 
-### `redirect_uri`
+### `login_hint`
 
-The URL that the user will be returned to after authentication.
-
-Type: `string`
-
-Required: Yes
-
-### `response_type`
-
-Should always be `code`. Kinde does not support the implicit flow as it has shown to be unsecure.
+When your project knows which user it is trying to authenticate, it can provide their email in this parameter as a hint to Kinde. Passing this hint pre-fills the email box on the sign-up and sign-in screens.
 
 Type: `string`
 
-Required: Yes
+Required: No
 
+### `org_code`
 
-
-
-### nonce
-
-Single use code to prevent replay attacks, this will be included in the signed id token 
+For multi-tenant or platform apps, tell Kinde which organization a user is trying to sign in or sign up to.
 
 Type: `string`
 
-Required: No (but recommended)
+Required: No
 
-### workflow_deployment_id
+### `is_create_org`
 
-workflow deployment to test, password will be requested on login
+Set to `true` to create a new organization for the user during sign-up.
 
-Type: string
+Type: `boolean`
 
 Required: No
 
-### supports_reauth
+### `org_name`
 
-When this is set to true, users state will be stored encrypted and returned back to application when accessing an expired link.
+If `is_create_org` is `true`, you can optionally include the name of the organization to create.
 
-Type: boolean
-
-Required: false
-
-### reauth_state
-
-The `supports_reauth` is true, state will be returned with error, pass this back to the auth flow to restart flow.
-
-Type: string
+Type: `string`
 
 Required: No
 
-### plan_interest
+### `audience`
 
-Indicates which plan the user has expressed interest in to be signed up to.
+The `audience` claim for the JWT. This can be used to protect your APIs and resource servers.
 
-Type: String
+Type: `string`
 
 Required: No
 
-### pricing_table_key
+### `is_use_auth_success_page`
 
-Defines which pricing table to show in billing flow
+Displays a sign-in success page following authentication. Recommended for browser authentication.
 
-Type: String
+Type: `boolean`
+
+Required: No
+
+### `has_success_page`
+
+Shows a success page at the end of the authentication flow. Useful when the callback URL opens a native app rather than a web page.
+
+Type: `boolean`
+
+Required: No
+
+### `lang`
+
+Sets the UI language for the authentication screens.
+
+Type: `string`
+
+Required: No
+
+### `connection_id`
+
+The connection ID for the authentication method, used when implementing [custom sign-up and sign-in pages](/authenticate/custom-configurations/custom-authentication-pages/).
+
+Type: `string`
+
+Required: When using custom sign-up and sign-in pages
+
+### `supports_reauth`
+
+When set to `true`, the user's state is encrypted and returned to the application when they access an expired link.
+
+Type: `boolean`
+
+Required: No
+
+### `reauth_state`
+
+When `supports_reauth` is `true` and authentication fails, the user's state is returned alongside the error. Pass this value back to the authorization flow to resume where the user left off.
+
+Type: `string`
+
+Required: No
+
+### `workflow_deployment_id`
+
+The ID of a workflow deployment to test. When set, a password will be requested on login.
+
+Type: `string`
+
+Required: No
+
+### `plan_interest`
+
+Indicates the plan the user has expressed interest in.
+
+Type: `string`
+
+Required: No
+
+### `pricing_table_key`
+
+Defines which pricing table to display in the billing flow.
+
+Type: `string`
+
+Required: No
+
+### `start_page` (deprecated)
+
+Accepts `login` or `registration`. Use `prompt` instead.
+
+Type: `string`
 
 Required: No
 
@@ -632,7 +708,13 @@ Required: No
 
 ### Does Kinde support the Implicit Flow?
 
-No, Kinde does not support the Implicit Flow because
+No. Kinde does not support the OAuth 2.0 Implicit Flow, and this is by design.
+
+The Implicit Flow was originally created for browser-based apps that couldn't keep a secret — it returned the `access_token` directly in the URL fragment after login. That convenience came at a serious cost: tokens in URL fragments can leak through browser history, referrer headers, and server logs. The OAuth 2.0 Security Best Current Practice ([RFC 9700](https://datatracker.ietf.org/doc/html/rfc9700#name-implicit-grant)) now explicitly recommends against using the Implicit Flow for any new application.
+
+**What to use instead:** The Authorization Code Flow with PKCE is the correct choice for all public clients — including single-page apps and mobile apps — regardless of whether they can store a client secret. PKCE (Proof Key for Code Exchange) solves the same problem the Implicit Flow was trying to address, without the token-in-URL security exposure.
+
+If you are migrating an existing app from the Implicit Flow, replace the flow type with `code` and add the `code_challenge` and `code_challenge_method` parameters to your authorization request. No client secret is required.
 
 ### When should I use the userinfo endpoint instead of decoding the `id_token`?
 
