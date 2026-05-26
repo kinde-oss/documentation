@@ -1,0 +1,659 @@
+---
+page_id: 581f4641-f7c7-4f9a-9438-5eb2bb7f6596
+title: Go SDK
+description: "Complete guide for the Kinde Go SDK including installation, OAuth 2.0 flows (authorization code, device, and client credentials), JWT parsing and validation, the Management API, and framework middleware for Go applications."
+sidebar:
+  order: 8.5
+tableOfContents:
+  maxHeadingLevel: 3
+topics:
+  - developer-tools
+  - sdks
+  - go
+  - backend
+sdk:
+  - go
+languages:
+  - go
+  - bash
+audience: developers
+complexity: intermediate
+keywords:
+  - Go SDK
+  - golang
+  - OAuth flows
+  - authorization code
+  - device authorization
+  - client credentials
+  - PKCE
+  - JWT
+  - JWKS
+  - management api
+  - gin
+  - middleware
+updated: 2026-05-26
+featured: false
+deprecated: false
+ai_summary: Complete guide for the Kinde Go SDK including installation, OAuth 2.0 flows (authorization code, device, and client credentials), JWT parsing and validation, the Management API, and framework middleware for Go applications.
+---
+
+{/* @case-police-ignore Api */}
+{/* @case-police-ignore Sdk */}
+
+The Kinde Go SDK allows developers to connect their Go applications to Kinde. It provides OAuth 2.0 flow implementations, JWT parsing and validation, helpers for working with permissions, roles, feature flags and entitlements, and a client for the Kinde Management API.
+
+You can also view the [Go SDK source](https://github.com/kinde-oss/kinde-go) on GitHub.
+
+## What you need
+
+- A [Kinde](/get-started/guides/first-things-first/) account with **Admin** or **Engineer** permissions (Sign up for free)
+- [Golang](https://go.dev/dl/) version 1.24 or higher
+
+## Quickstart
+
+### 1. Create a Kinde app and set callback URLs
+
+1. Go to your Kinde dashboard, select **Add new application**
+2. Select the application type as
+    - **Back-end web > Go** for a backend application
+    - **Machine to machine** for a CLI or M2M applications
+3. Go to **Details** and copy the **Domain** (or custom domain), **Client ID** and **Client secret** values.
+4. Add callback URLs, for example:
+    - Allowed callback URLs (also known as redirect URIs) — `http://localhost:8080/callback`
+    - Allowed logout redirect URLs — `http://localhost:8080`
+    
+    For production, add the same paths using your real domain.
+5. Select **Save**.
+
+### 2. Install the Kinde Go SDK
+
+1. Add the SDK to your project using the following terminal command:
+
+    ```bash
+    go get github.com/kinde-oss/kinde-go
+    ```
+
+2. Then import the packages you need:
+
+    ```go
+    import (
+        "github.com/kinde-oss/kinde-go/oauth2/authorization_code" // browser / device auth flows
+        "github.com/kinde-oss/kinde-go/oauth2/client_credentials" // machine-to-machine flow
+        "github.com/kinde-oss/kinde-go/jwt"                       // JWT parsing and validation
+        "github.com/kinde-oss/kinde-go/kinde"                     // Management API client
+    )
+    ```
+
+### 3. Add environment variables
+
+1. Add your Kinde credentials to a `.env` file (or your environment config):
+
+    ```env
+    KINDE_DOMAIN=https://your-tenant.kinde.com
+    KINDE_CLIENT_ID=your_client_id_here
+    KINDE_CLIENT_SECRET=your_client_secret_here
+    KINDE_REDIRECT_URI=http://localhost:8080/callback
+    ```
+
+2. Load them at startup with a package like [`godotenv`](https://github.com/joho/godotenv), or read them directly with `os.Getenv`. Replace the placeholder values with the credentials you copied from the **Details** page in step 1.
+
+### 4. Create the authorization code flow
+
+The flow requires a `WithSessionHooks(...)` implementation to store and retrieve tokens between requests. You need to satisfy the `ISessionHooks` interface, which has these eight methods:
+
+```go
+GetRawToken() (*oauth2.Token, error)
+SetRawToken(token *oauth2.Token) error
+GetState() (string, error)
+SetState(state string) error
+GetCodeVerifier() (string, error)
+SetCodeVerifier(codeVerifier string) error
+GetPostAuthRedirect() (string, error)
+SetPostAuthRedirect(redirect string) error
+```
+
+For a reference implementation using Gin sessions, see the [`SessionStorage` example in the SDK repo](https://github.com/kinde-oss/kinde-go/blob/main/frameworks/gin_kinde/gin_kinde.go). For production web apps, back your implementation with cookies, a database, or Redis — see [Session management](#session-management) for guidance.
+
+Once you have a session hooks implementation, create the flow:
+
+    ```go
+    kindeAuthFlow, err := authorization_code.NewAuthorizationCodeFlow(
+        os.Getenv("KINDE_DOMAIN"),
+        os.Getenv("KINDE_CLIENT_ID"),
+        os.Getenv("KINDE_CLIENT_SECRET"),
+        os.Getenv("KINDE_REDIRECT_URI"),
+        authorization_code.WithSessionHooks(sessionHooks),     // your ISessionHooks implementation
+        authorization_code.WithOffline(),                      // adds offline scope and manages refresh tokens
+        authorization_code.WithAudience("<your API audience>"),
+        authorization_code.WithTokenValidation(
+            true,                                              // validate signature via JWKS
+            jwt.WillValidateAlgorithm(),                       // validate alg is RS256
+            jwt.WillValidateAudience("<your API audience>"),
+        ),
+    )
+    ```
+
+`WithAudience` and `WillValidateAudience` are only needed if you're protecting your own API — omit them otherwise.
+
+### 5. Handle the callback
+
+1. Register a `/callback` route that handles the OAuth 2.0 callback:
+
+    ```go
+    http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+        kindeAuthFlow.AuthorizationCodeReceivedHandler(w, r)
+    })
+    ```
+
+    Or call `ExchangeCode` yourself:
+
+    ```go
+    err := kindeAuthFlow.ExchangeCode(ctx, code, receivedState)
+    ```
+
+### 6. Sign in and sign up
+
+1. Register a `/login` route that redirects the user to Kinde's hosted login page:
+
+    ```go
+    http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+        http.Redirect(w, r, kindeAuthFlow.GetAuthURL(), http.StatusFound)
+    })
+    ```
+
+    `GetAuthURL()` generates the full authorization URL including a CSRF-safe `state` parameter.
+
+2. By default, the user will be redirected to the login screen. To send users directly to the registration screen instead of the login screen, create a second flow instance with `WithPrompt("create")` and register a `/register` route:
+
+    ```go
+    kindeRegisterFlow, err := authorization_code.NewAuthorizationCodeFlow(
+        os.Getenv("KINDE_DOMAIN"),
+        os.Getenv("KINDE_CLIENT_ID"),
+        os.Getenv("KINDE_CLIENT_SECRET"),
+        os.Getenv("KINDE_REDIRECT_URI"),
+        authorization_code.WithSessionHooks(sessionHooks),
+        authorization_code.WithOffline(),
+        authorization_code.WithPrompt("create"),
+    )
+
+    http.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
+        http.Redirect(w, r, kindeRegisterFlow.GetAuthURL(), http.StatusFound)
+    })
+    ```
+
+3. After the user authenticates, Kinde redirects them to your callback URL.
+
+### 8. Logout
+
+1. Register a `/logout` route:
+
+    ```go
+    http.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+        kindeAuthFlow.Logout()
+        http.Redirect(w, r, os.Getenv("KINDE_LOGOUT_REDIRECT_URI"), http.StatusFound)
+    })
+    ```
+
+    `Logout()` clears the locally stored tokens. The redirect to `KINDE_LOGOUT_REDIRECT_URI` completes sign out on Kinde's side. 
+
+2. Add this variable to your `.env`:
+
+    ```bash
+    KINDE_LOGOUT_REDIRECT_URI=http://localhost:8080
+    ```
+
+### 9. Test the auth flow
+
+1. Start your server and go to `http://localhost:8080/login`. You should be redirected to the Kinde-hosted login page.
+
+2. Sign up with a test user account. After authenticating, Kinde redirects back to your callback URL, exchanges the code for tokens, and stores them in your session.
+
+3. You should land back on your app. Go to your Kinde dashboard > **Users** to confirm the test user was created.
+
+## OAuth 2.0 flows
+
+The SDK implements three OAuth 2.0 flows. Choose the package that matches your application type:
+
+| Flow | Package | Use case |
+| --- | --- | --- |
+| Authorization Code | `oauth2/authorization_code` | Server-rendered web apps with user interaction. |
+| Device Authorization | `oauth2/authorization_code` | CLIs, TVs, and other devices with limited input. |
+| Client Credentials | `oauth2/client_credentials` | Machine-to-machine and Management API access (no user). |
+
+## Authorization Code flow
+
+The authorization code flow is a backend flow that requires a client secret. Tokens are never exposed to the browser - manage user sessions by other means, such as session cookies.
+
+```go
+kindeAuthFlow, err := authorization_code.NewAuthorizationCodeFlow(
+    "https://your-tenant.kinde.com",                       // issuer URL - your Kinde domain
+    "<client_id>",
+    "<client_secret>",
+    "http://localhost:8080/callback",                      // callback URL
+    authorization_code.WithSessionHooks(sessionHooks),     // your ISessionHooks implementation
+    authorization_code.WithOffline(),                      // adds offline scope and manages refresh tokens
+    authorization_code.WithAudience("<your API audience>"),
+    authorization_code.WithTokenValidation(
+        true,                                              // validate signature via JWKS
+        jwt.WillValidateAlgorithm(),                       // validate alg is RS256
+        jwt.WillValidateAudience("<your API audience>"),
+    ),
+)
+```
+
+### Available methods
+
+| Method | Description |
+| --- | --- |
+| `GetAuthURL() string` | Returns the URL to redirect the user to in order to start authentication. |
+| `ExchangeCode(ctx, code, receivedState) error` | Exchanges the authorization code for a token and establishes the Kinde context. |
+| `GetClient(ctx) (*http.Client, error)` | Returns an HTTP client for calling external services, refreshing tokens automatically if offline is requested. |
+| `IsAuthenticated(ctx) (bool, error)` | Checks if the user is authenticated. |
+| `Logout() error` | Clears local tokens and logs the user out. |
+| `AuthorizationCodeReceivedHandler(w, r)` | Built-in HTTP handler for the OAuth 2.0 callback. |
+
+### Log in and registration
+
+Redirect the user to the URL returned by `GetAuthURL()` to start sign in. To send the user straight to registration, add the prompt option when creating the flow:
+
+```go
+authorization_code.WithPrompt("create")
+```
+
+### Handle the callback
+
+When the user returns from Kinde they hit your callback URL. Use the built-in handler, which extracts the code and state, validates the state, exchanges the code for tokens, and stores them with your session hooks:
+
+```go
+http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+    kindeAuthFlow.AuthorizationCodeReceivedHandler(w, r)
+})
+```
+
+Or call `ExchangeCode` yourself:
+
+```go
+err := kindeAuthFlow.ExchangeCode(ctx, code, receivedState)
+```
+
+### PKCE
+
+Enable PKCE for public clients that can’t securely store a secret:
+
+```go
+authorization_code.WithPKCE()                          // SHA256 (S256) challenge method
+authorization_code.WithPKCEChallengeMethod("plain")    // custom challenge method
+```
+
+For public clients, pass an empty string as the client secret and add `WithPKCE()`.
+
+## Device Authorization flow
+
+For CLIs, TVs, and IoT devices.
+
+```go
+deviceFlow, err := authorization_code.NewDeviceAuthorizationFlow(
+    "https://your-tenant.kinde.com",
+    authorization_code.WithClientID("<your-client-id>"),
+    authorization_code.WithClientSecret("<your-client-secret>"), // optional, for confidential clients
+    authorization_code.WithSessionHooks(sessionHooks),
+    authorization_code.WithOffline(),                            // optional - maintain refresh tokens
+    authorization_code.WithTokenValidation(
+        true,
+        jwt.WillValidateAlgorithm(),
+    ),
+)
+```
+
+### Available methods
+
+| Method | Description |
+| --- | --- |
+| `StartDeviceAuth(ctx) (*oauth2.DeviceAuthResponse, error)` | Starts the device flow and returns the device authorization response (with the user code and verification URL). |
+| `ExchangeDeviceAccessToken(ctx, da, opts...) error` | Polls for and exchanges the device code for an access token. |
+| `GetClient(ctx) (*http.Client, error)` | Returns an HTTP client that refreshes tokens automatically if offline is requested. |
+| `IsAuthenticated(ctx) (bool, error)` | Checks if the user is authenticated. |
+| `Logout() error` | Clears local tokens and logs the user out. |
+| `GetToken(ctx) (*jwt.Token, error)` | Returns the token for the current session. |
+| `InjectTokenMiddleware(next) http.Handler` | Middleware that injects the auth token into the request context. |
+
+## Client Credentials flow
+
+The client credentials flow is for machine-to-machine communication with no user interaction. It requires a Kinde M2M application and is the flow used for Management API access.
+
+```go
+kindeClient, err := client_credentials.NewClientCredentialsFlow(
+    "https://your-tenant.kinde.com",
+    "<client_id>",
+    "<client_secret>",
+    client_credentials.WithAudience("<your API audience>"),                       // optional API audience
+    client_credentials.WithKindeManagementAPI("https://your-tenant.kinde.com"),   // adds the Management API audience
+    client_credentials.WithSessionHooks(sessionHooks),                            // secure token storage
+    client_credentials.WithTokenValidation(
+        true,
+        jwt.WillValidateAlgorithm(),
+        jwt.WillValidateAudience("<your API audience>"),
+    ),
+)
+```
+
+### Available methods
+
+| Method | Description |
+| --- | --- |
+| `GetClient(ctx) (*http.Client, error)` | Returns an HTTP client that uses the received token and manages its refresh/lifetime. |
+| `GetToken(ctx) (*jwt.Token, error)` | Returns the `*jwt.Token`; reads from session storage if present and refreshes when expired. |
+
+### Call an authorized endpoint
+
+The client manages tokens in the background, reading and persisting them to the provided session storage.
+
+```go
+client, err := kindeClient.GetClient(context.Background())
+if err != nil {
+    log.Fatalf("failed to init client: %v", err)
+}
+
+// The client caches the token and re-fetches a new one as it expires.
+response, err := client.Get("<an authorized URL>")
+```
+
+## Session management
+
+Both the authorization code and client credentials flows use session hooks to store and retrieve tokens. Provide an implementation of the SDK’s session hooks interface with `WithSessionHooks(...)`. If none is provided, the client credentials flow defaults to an in-memory session (tokens are lost when the process terminates) - useful for testing and short-lived processes.
+
+### CLI session storage
+
+For command-line tools and desktop apps, the SDK provides a pre-built session that stores tokens in the operating system’s secure keychain (Keychain on macOS, Credential Manager on Windows, Secret Service on Linux). It handles token chunking for large tokens automatically.
+
+```go
+import "github.com/kinde-oss/kinde-go/frameworks/cli"
+
+cliSession, err := cli.NewCliSession("your-app-name")
+if err != nil {
+    // keychain / secret service not available
+    log.Fatalf("failed to init CLI session: %v", err)
+}
+
+kindeClient, err := client_credentials.NewClientCredentialsFlow(
+    "https://your-tenant.kinde.com",
+    "<client_id>",
+    "<client_secret>",
+    client_credentials.WithKindeManagementAPI("https://your-tenant.kinde.com"),
+    client_credentials.WithSessionHooks(cliSession),
+)
+```
+
+### Custom session storage
+
+For production web apps, implement your own session storage backed by a database, Redis, encrypted files, or your existing session system.
+
+## JWT package
+
+The `jwt` package parses and validates JWTs and provides convenient access to claims. Validation options are applied **once during parsing** and the results are cached on the token - subsequent reads (`GetSubject()`, `GetAudience()`, etc.) do not re-validate. When used inside the OAuth 2.0 flows, tokens are re-validated each time they are retrieved from the token source.
+
+### Parse a token
+
+```go
+token, err := jwt.ParseFromString(
+    "your.jwt.token.here",
+    jwt.WillValidateWithJWKSUrl("https://your-tenant.kinde.com/.well-known/jwks.json"),
+    jwt.WillValidateAlgorithm("RS256"),
+    jwt.WillValidateAudience("your-api-audience"),
+)
+if err != nil {
+    // handle error
+}
+
+if token.IsValid() {
+    subject := token.GetSubject()
+    issuer := token.GetIssuer()
+}
+```
+
+Parsing helpers:
+
+| Method | Source |
+| --- | --- |
+| `ParseFromString` | A raw token string. |
+| `ParseFromAuthorizationHeader` | An HTTP `Authorization: Bearer <token>` header. |
+| `ParseFromSessionStorage` | A JSON-serialized `oauth2.Token` from session storage. |
+| `ParseOAuth2Token` | An existing `*oauth2.Token`. |
+
+### Validation options
+
+| Option | Purpose |
+| --- | --- |
+| `WillValidateWithJWKSUrl(url)` | Validate the signature against a JWKS endpoint. |
+| `WillValidateWithPublicKey(fn)` | Validate the signature with a specific RSA public key. |
+| `WillValidateWithKeyFunc(fn)` | Provide a custom key function. |
+| `WillValidateAlgorithm(...algs)` | Restrict signing algorithms (defaults to RS256). |
+| `WillValidateAudience(aud)` | Require a specific audience. |
+| `WillValidateIssuer(iss)` | Require a specific issuer. |
+| `WillValidateClaims(fn)` | Run custom claim validation. |
+| `WillValidateWithClockSkew(d)` | Allow clock skew between servers. |
+| `WillValidateWithTimeFunc(fn)` | Supply a custom time function (useful for testing). |
+
+### Access token information
+
+```go
+isValid := token.IsValid()
+subject := token.GetSubject()
+issuer := token.GetIssuer()
+audience := token.GetAudience()
+orgCode := token.GetOrganizationCode()
+claims := token.GetClaims()
+
+accessToken, ok := token.GetAccessToken()
+idToken, ok := token.GetIdToken()
+refreshToken, ok := token.GetRefreshToken()
+
+profile := token.GetUserProfile()
+errs := token.GetValidationErrors()
+```
+
+### Protect an API endpoint
+
+```go
+func protectedHandler(w http.ResponseWriter, r *http.Request) {
+    token, err := jwt.ParseFromAuthorizationHeader(
+        r,
+        jwt.WillValidateWithJWKSUrl("https://your-tenant.kinde.com/.well-known/jwks.json"),
+        jwt.WillValidateAlgorithm("RS256"),
+        jwt.WillValidateAudience("your-api-audience"),
+    )
+    if err != nil || !token.IsValid() {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return
+    }
+
+    // token is valid
+    subject := token.GetSubject()
+    _ = subject
+}
+```
+
+## Permissions
+
+Read permissions directly from the token (see [Define user permissions](/manage-users/roles-and-permissions/user-permissions/) for how they’re defined):
+
+```go
+permissions := token.GetPermissions()
+```
+
+The token also exposes API-aware helpers that fall back to the Kinde Account API when a value isn’t present in the token. These take a `*account_api.Client` (see [Account API](#account-api)):
+
+```go
+access, err := token.GetPermission(ctx, accountClient, "create:todos", jwt.GetPermissionOptions{})
+ok, err := token.HasPermissions(ctx, accountClient, []string{"create:todos", "read:todos"}, jwt.HasPermissionsOptions{})
+```
+
+## Roles
+
+```go
+roles := token.GetRoles()
+hasRoles := token.HasRoles("admin", "editor")
+
+// API-aware variants
+roles, err := token.GetRolesWithAPI(ctx, accountClient, false)
+ok, err := token.HasRolesWithAPI(ctx, accountClient, []string{"admin"}, jwt.HasRolesOptions{})
+```
+
+## Feature flags
+
+Read feature flags from the token, with type-specific accessors:
+
+```go
+flags := token.GetFeatureFlags()
+
+flag, ok := token.GetFeatureFlag("theme")
+boolVal, ok := token.GetFeatureFlagBool("is_dark_mode")
+strVal, ok := token.GetFeatureFlagString("theme")
+intVal, ok := token.GetFeatureFlagInt("competitions_limit")
+
+// API-aware variants
+flagValue, err := token.GetFlag(ctx, accountClient, "theme", false)
+hasFlags, err := token.HasFeatureFlags(ctx, accountClient, []string{"theme"}, jwt.HasFeatureFlagsOptions{})
+```
+
+## Entitlements
+
+Entitlements describe what a customer is allowed to use based on their billing plan. These helpers read from the Kinde Account API:
+
+```go
+result, err := token.GetEntitlements(ctx, accountClient)
+entitlement, err := token.GetEntitlement(ctx, accountClient, "seats")
+ok, err := token.HasBillingEntitlements(ctx, accountClient, []string{"pro_plan"}, jwt.HasBillingEntitlementsOptions{})
+```
+
+## Account API
+
+The `account_api` client backs the API-aware token helpers above. Construct it with a base URL and a function that returns a current access token - for example, one sourced from a flow’s `GetToken`:
+
+```go
+import "github.com/kinde-oss/kinde-go/kinde/account_api"
+
+accountClient, err := account_api.NewClient(
+    "https://your-tenant.kinde.com",
+    func(ctx context.Context) (string, error) {
+        token, err := kindeClient.GetToken(ctx)
+        if err != nil {
+            return "", err
+        }
+        accessToken, _ := token.GetAccessToken()
+        return accessToken, nil
+    },
+)
+```
+
+## Management API
+
+The Management API lets you programmatically manage your Kinde tenant - applications, users, organizations, APIs, permissions, and settings. It uses the client credentials flow with the `WithKindeManagementAPI(...)` option enabled.
+
+Create the Management API client from a configured client credentials flow:
+
+```go
+import "github.com/kinde-oss/kinde-go/kinde"
+
+managementApi, err := kinde.NewManagementAPI(ctx, "https://your-tenant.kinde.com", kindeClient)
+if err != nil {
+    // handle error
+}
+```
+
+### Example: create an application
+
+```go
+res, err := managementApi.CreateApplication(ctx, &management_api.CreateApplicationReq{
+    Name: "Backend app",
+    Type: management_api.CreateApplicationReqTypeReg,
+})
+if err != nil {
+    // handle error
+}
+```
+
+### Handle responses
+
+Management API methods return an interface that may be one of several response types. Switch on the response to handle each case:
+
+```go
+switch response := res.(type) {
+case management_api.CreateApplicationBadRequest:
+    fmt.Printf("Bad request: %v\n", response)
+case management_api.CreateApplicationForbidden:
+    fmt.Printf("Forbidden (usually a missing scope): %v\n", response)
+case management_api.CreateApplicationTooManyRequests:
+    fmt.Printf("Rate limited: %v\n", response)
+case management_api.CreateApplicationResponse:
+    fmt.Printf("Application created: %v\n", response)
+default:
+    fmt.Printf("Unexpected response type: %T\n", response)
+}
+```
+
+For the full set of operations, see the [Kinde Management API specification](/kinde-apis/management/).
+
+## Framework middleware
+
+### Gin
+
+The `gin_kinde` package provides a complete middleware that protects route groups, handles the callback automatically, and redirects unauthenticated users to sign in.
+
+```go
+import "github.com/kinde-oss/kinde-go/frameworks/gin_kinde"
+
+func main() {
+    router := gin.Default()
+
+    // Set up session middleware (e.g. gin-contrib/sessions)
+    privateGroup := router.Group("/")
+
+    gin_kinde.UseKindeAuth(privateGroup,
+        "https://your-tenant.kinde.com", // Kinde domain
+        "your-client-id",
+        "your-client-secret",
+        "http://localhost:8080",          // base redirect URL
+        authorization_code.WithPrompt("login"),
+        authorization_code.WithOffline(),
+    )
+
+    privateGroup.GET("/profile", func(c *gin.Context) {
+        c.JSON(200, gin.H{"message": "Authenticated!"})
+    })
+
+    router.Run(":8080")
+}
+```
+
+`UseKindeAuth` accepts the same options as `NewAuthorizationCodeFlow`, so you can add `WithAudience(...)`, `WithPKCE()`, `WithTokenValidation(...)`, and others.
+
+### Custom middleware
+
+For the standard library or other frameworks, check authentication and redirect as needed:
+
+```go
+func AuthMiddleware(flow *authorization_code.AuthorizationCodeFlow) func(http.Handler) http.Handler {
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            ok, err := flow.IsAuthenticated(r.Context())
+            if err != nil || !ok {
+                http.Redirect(w, r, flow.GetAuthURL(), http.StatusFound)
+                return
+            }
+            next.ServeHTTP(w, r)
+        })
+    }
+}
+```
+
+
+
+## Examples
+
+The [repository](https://github.com/kinde-oss/kinde-go) includes runnable examples:
+
+- **CLI example** (`examples/cli`) - device authorization flow with secure keychain token storage.
+- **Gin chat example** (`examples/gin-chat`) - authorization code flow integrated with a Gin web application.
+
+If you need help getting Kinde connected, contact us at [support@kinde.com](mailto:support@kinde.com).
