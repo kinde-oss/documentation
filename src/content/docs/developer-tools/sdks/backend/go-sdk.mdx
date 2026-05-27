@@ -245,6 +245,11 @@ if err != nil {
     return
 }
 resp, err := client.Get(os.Getenv("KINDE_DOMAIN") + "/oauth2/v2/user_profile")
+if err != nil {
+    http.Error(w, "request failed", http.StatusInternalServerError)
+    return
+}
+defer resp.Body.Close()
 ```
 
 ### 7. Protect a route
@@ -298,7 +303,7 @@ resp, err := client.Get(os.Getenv("KINDE_DOMAIN") + "/oauth2/v2/user_profile")
     ```
 
     - `Logout()` clears the locally stored tokens. 
-    - The redirect to `KINDE_LOGOUT_REDIRECT_URI` completes sign out on Kinde's side. 
+    - The redirect to `KINDE_LOGOUT_REDIRECT_URI` completes sign-out on Kinde's side. 
 
 2. Add this variable to your `.env`:
 
@@ -423,14 +428,14 @@ Use the device authorization flow for CLIs, TVs, and other devices with limited 
 
 1. Call `StartDeviceAuth` to start the flow and get the code to display to the user:
 
-```go
-da, err := deviceFlow.StartDeviceAuth(context.Background())
-if err != nil {
-    log.Fatalf("failed to start device auth: %v", err)
-}
+    ```go
+    da, err := deviceFlow.StartDeviceAuth(context.Background())
+    if err != nil {
+        log.Fatalf("failed to start device auth: %v", err)
+    }
 
-fmt.Printf("Go to %s and enter code: %s\n", da.VerificationURI, da.UserCode)
-```
+    fmt.Printf("Go to %s and enter code: %s\n", da.VerificationURI, da.UserCode)
+    ```
 
 2. Instruct the user to go to the `VerificationURI` and enter the `UserCode`.
 
@@ -472,6 +477,10 @@ fmt.Printf("Go to %s and enter code: %s\n", da.VerificationURI, da.UserCode)
     }
 
     resp, err := client.Get("https://your-api.com/protected-resource")
+    if err != nil {
+        log.Fatalf("request failed: %v", err)
+    }
+    defer resp.Body.Close()
     ```
 3. Display the user information and grant users protected resources.
 
@@ -1073,7 +1082,7 @@ resp, err := client.Get("https://api.example.com/data")
 
 ### Logout
 
-Clears the locally stored tokens from session storage. Does not end the session on Kinde's side — redirect the user to your allowed logout redirect URL to complete sign out fully.
+Clears the locally stored tokens from session storage. Does not end the session on Kinde's side — redirect the user to your allowed logout redirect URL to complete sign-out fully.
 
 **Params:**
 
