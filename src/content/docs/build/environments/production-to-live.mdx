@@ -1,7 +1,7 @@
 ---
 page_id: 6018b610-bb9d-48b4-a226-f88f7fc68296
 title: Prepare your production environment to go live
-description: Comprehensive checklist for preparing production environment to go live including authentication setup, domain configuration, security measures, and analytics integration.
+description: "Checklist for preparing your Kinde production environment before marking it as Live, including required setup, security controls, branding, and analytics."
 sidebar:
   order: 2
   label: Go live checklist
@@ -19,6 +19,7 @@ topics:
   - environments
   - production
   - go-live
+  - security
 sdk: []
 languages: []
 audience: developers
@@ -30,29 +31,42 @@ keywords:
   - third-party authentication
   - custom domain
   - multi-factor authentication
-  - Google analytics
-updated: 2024-01-15
+  - terms of use and privacy policy
+  - default roles
+  - twilio sms authentication
+  - custom email sender
+  - google analytics
+updated: 2026-05-27
 featured: false
 deprecated: false
-ai_summary: Comprehensive checklist for preparing production environment to go live including authentication setup, domain configuration, security measures, and analytics integration.
+ai_summary: "This guide helps you prepare a Kinde production environment before marking it as Live. It covers required setup for third-party authentication credentials and Twilio SMS configuration, then walks through recommended business readiness steps in priority order. These include adding terms and privacy policy URLs, enabling multi-factor authentication, setting default roles, connecting a custom domain, configuring a branded email sender, adding tracking scripts, and creating additional development environments. The page also clarifies that the Live switch is a status indicator only and does not publish or change app behavior."
 ---
 
-As you build your business on Kinde and configure connections and features, you will eventually want to set your production environment to be ‘live’. This indicates the status of the environment to anyone making changes. 
+Use this checklist to prepare your Kinde production environment before you mark it as `Live`.
 
 ![kinde production environment to live](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/128c203f-79bc-4cce-8d62-55dfbe95e900/socialsharingimage)
 
-Follow the checklist below before you switch your environment to show as 'Live'.
+Completing these steps helps reduce launch risk and gives your team a clear signal that the environment is production-ready.
 
-<Aside title="The live button is not actually live">
+<Aside title="The Live switch does not publish your app">
 
-The 'Live' switch is for indicating the environment is live. It does not actually change or do anything in relation to your app. Your app can be live on Kinde without the switch being on.
+The `Live` switch indicates that the environment is live. It does not change your app behavior. Your app can be live on Kinde without this switch being on.
 
 </Aside>
 
 ## Required steps to go live
 
-### Set third-party app credentials
-Enter a `Client ID` and `Client secret` in all your [third-party authentication](/authenticate/authentication-methods/set-up-user-authentication/) connections (such as social connections or enterprise connections). 
+### Set up third-party app credentials
+
+Enter a `Client ID` and `Client secret` in all your third-party authentication connections (such as social connections or enterprise connections). Here are the general steps to update your credentials:
+
+1. Create or register an app with your third-party provider and get the app keys.
+2. In Kinde, go to **Settings > Environment > Authentication**.
+3. Select **Configure** for the connection you want to update (e.g., Google, Facebook, etc.).
+4. Enter the `Client ID` and `Client secret` values.
+5. Select **Save**.
+
+Check out the specific connection page for steps for each provider in the [third-party authentication](/authenticate/authentication-methods/set-up-user-authentication/) section.
 
 <Aside type="warning">
 If you leave these fields blank at setup, Kinde’s credentials are used and rate limits will apply.
@@ -60,28 +74,64 @@ If you leave these fields blank at setup, Kinde’s credentials are used and rat
 
 ### Add Twilio details
 
-If you have enabled [phone or SMS authentication](/authenticate/authentication-methods/phone-authentication/) then make sure to add your Twilio details.
+If you are using phone or SMS authentication, configure your Twilio details. Kinde provides 10 SMS messages per month for free to test this feature. To use the full feature set, enter your Twilio credentials:
+
+1. Go to **Settings > Environment > Messaging > SMS**.
+2. Select the **Default country** that you want to show on the authentication screen when users sign in.
+3. Enter the Twilio details from your Twilio account in the relevant fields.
+4. Select **Save**.
+
+Learn more about [phone or SMS authentication](/authenticate/authentication-methods/phone-authentication/).
 
 ## Recommended steps
 
-### Add terms and policies URL
+### Add terms and policy URLs
 
-Add [policies and terms](/manage-your-account/business-information/policies-terms/) so that users can access and agree to these on sign up.
+Add your terms and policy URLs so users can access and agree to them during sign-up.
 
-### Connect your own domain
+1. Go to **Settings > Business > Details**.
 
-Connect your own domain to give your users a branded experience.
+    You can also find this menu item under the bottom left corner of the screen by selecting your avatar.
+2. Scroll down to the **Terms of use and privacy** section.
+3. Enter the relevant URL(s) for your policies. You can add the **Terms of use URL**, the **Privacy policy URL**, or both.
+4. Select **Save**.
+
+Learn more about [adding policies, terms, and explicit acceptance](/manage-your-account/business-information/policies-terms/).
+
+### Set up multi-factor authentication
+
+Set up multi-factor authentication (MFA) to add an extra layer of security for user sign-in.
+
+1. Go to **Settings > Environment > Multi-factor auth**.
+2. Toggle the switch to either **Yes** or **Optional**.
+3. Select the authentication methods you want to use (for example, SMS or Email).
+4. Select **Save**.
+
+Learn more about [multi-factor authentication](/authenticate/multi-factor-auth/enable-multi-factor-authentication/).
+
+### Set up default roles
+
+Set up default roles so new users get the right access level when they sign up.
+
+1. Go to **Settings > User management > Roles**.
+2. Add your roles (for example, User or Admin).
+
+Learn more about [default roles](/manage-users/roles-and-permissions/default-user-roles/).
+
+### Connect your custom domain
+
+Connect your custom domain to provide a branded sign-in experience.
 
 1. Go to **Settings > Environment > Custom domain**.
 2. Select **Add custom domain**.
 3. In the dialog, enter your custom domain.
 4. Select **Save**.
 
-Learn more about [using a custom domain](/build/domains/pointing-your-domain/) and [customizing the sign in screens](/design/brand/global-brand-defaults/).
+Learn more about [using a custom domain](/build/domains/pointing-your-domain/) and [customizing sign-in screens](/design/brand/global-brand-defaults/).
 
-### Configure custom email details
+### Configure custom email sender details
 
-Configure a custom email sender so you give your users a branded experience.
+Configure a custom email sender to give your users a branded email experience.
 
 1. Go to **Settings > Environment > Messaging > Email Sender**.
 2. Enter a **Sender name**.
@@ -89,48 +139,36 @@ Configure a custom email sender so you give your users a branded experience.
 
 To control the full email experience, learn how to [configure a custom SMTP provider with Kinde](/get-started/connect/customize-email-sender/).
 
-### Add a development environment
-
-You can add additional Kinde environments to aid in your development workflow. Learn more about creating [environments](/build/environments/environments/).
-
-### Set up default roles
-
-Set up default roles for assigning to new users when they sign up.
-
-1. Go to **Settings > User management > Roles**
-2. Add your roles (e.g., User, Admin, etc.)
-
-Learn more about [default roles](/manage-users/roles-and-permissions/default-user-roles/) 
-
-### Set up multi-factor authentication
-
-Set up multi-factor authentication to add extra layers of security for user sign in.
-
-1. Go to **Settings > Environment > Multi-factor auth**
-2. Toggle the switch to either **Yes** or **Optional**.
-3. Select the authentication methods you want to use (e.g., SMS, Email, etc.).
-4. Select **Save**.
-
-Learn more about [multi-factor authentication](/authenticate/multi-factor-auth/enable-multi-factor-authentication/) 
-
 ### Add tracking scripts
 
 Add tracking scripts like [Google Analytics](/manage-users/view-activity/track-user-sign-in-with-google-analytics/), [Hotjar](/manage-users/view-activity/hotjar/), or [Contentsquare](/manage-users/view-activity/contentsquare/) to track user activity and behavior.
 
-1. Go to **Settings > Environment > Environment details**
-2. Scroll down to the **Third-party analytics** section
+1. Go to **Settings > Environment > Environment details**.
+2. Scroll down to the **Third-party analytics** section.
 3. Add your tracking ID(s).
 4. Select **Save**.
 
+### Add a development environment
+
+Add additional Kinde environments to support a safer development workflow.
+
+1. From the environment drop-down, select All environments.
+2. In the **Environments** page, select **Add environment**.
+3. Enter a name for the environment (e.g., Development).
+4. Enter a dev-friendly code for the environment (e.g., dev).
+5. Select **Save**.
+
+Learn more about [creating and managing environments](/build/environments/environments/).
+
 ## Switch production environment to appear live
 
-When you are ready, turn the 'Live' indicator switch on.
+When you are ready, turn on the `Live` indicator.
 
 1. Switch to your production environment.
-2. Go to **Settings > Environment > Environment details.**
-3. Scroll to the **Environment status** section and toggle the switch to **Live**. 
-4. Select **Save**. 
+2. Go to **Settings > Environment > Environment details**.
+3. Scroll to the **Environment status** section and toggle the switch to **Live**.
+4. Select **Save**.
 
-    If there are any issues, an error message will appear. Where there are no errors, your Kinde production environment should now show as 'Live.
+    If there are any issues, an error message will appear. If there are no errors, your Kinde production environment will now show as `Live`.
 
 ![Status of production environment in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ac1aa617-bcb6-4a7f-02d3-b51aa7bcc600/public)
