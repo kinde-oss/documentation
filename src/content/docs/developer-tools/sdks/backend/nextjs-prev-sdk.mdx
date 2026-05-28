@@ -4,6 +4,8 @@ title: Next.js Pages Router SDK
 description: "Legacy guide for Next.js Pages Router SDK including authentication setup, route handlers, and migration from previous versions."
 sidebar:
   order: 10.1
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 821fc536-d92e-4323-bda2-64e36f2e634a
 head:
@@ -38,108 +40,210 @@ deprecated: true
 ai_summary: Legacy guide for Next.js Pages Router SDK including authentication setup, route handlers, and migration from previous versions.
 ---
 
-This SDK is for Next.js version 13 and later and uses Server Side Components and Pages Router.
+<Aside>
+You are viewing the docs for Next.js **Pages Router**. If you are using the latest App router, please refer to the [Next.js App Router](/developer-tools/sdks/backend/nextjs-sdk/) docs instead.
+</Aside>
 
-## Next.js 13 and later App Router support
+**Other document versions:**
+
+- If you are already using the Next.js Pages Router (Next.js 13 or earlier), refer to the earlier version [Next.js Pages Router v1](/developer-tools/sdks/backend/nextjs-prev-sdkv1/).
+
+## What you need
+
+- A [Kinde](/get-started/guides/first-things-first/) account with **Admin** or **Engineer** permissions (Sign up for free)
+- [Node.js](https://nodejs.org) version 20+
+- [Next.js](https://nextjs.org/) version 13+
+
+## Quickstart
+
+### 1. Create a new Next.js pages router project
+
+If you want to create a fresh Next.js pages router project use the command, otherwise skip to the next step.
+
+    <PackageManagers type="dlx" pkg="create-next-app@latest" args="kinde-nextjs-pages-router-app --no-app" />
+
+### 2. Create a Kinde app
+
+1. Go to your Kinde dashboard, select **Add new application**
+2. Set a name for your application, select **Back-end web > Next.js** and select **Save**.
+3. Go to **Details** page and copy the **Domain** (or [custom domain](/build/domains/pointing-your-domain/)), **Client ID** and **Client secret** values.
+4. Add callback URLs:
+   - **Allowed callback URLs** — `http://localhost:3000/api/auth/kinde_callback`
+   - **Allowed logout redirect URLs** — `http://localhost:3000` 
+  
+    For production, add the same paths using your real domain.
+5. Select **Save**.
+6. Go to **Authentication** and enable the auth methods you want your users to sign in (e.g., Google, Facebook, etc.).
+7. Select **Save**.
+
+### 3. Install the Kinde SDK
+
+1. Open your project in the terminal and use the command below:
+
+    <PackageManagers pkg="@kinde-oss/kinde-auth-nextjs" />
+
+### 4. Add environment variables
+
+1. Create or update a `.env` or `.env.local` file in the project root, and add it to your `.gitignore` file:
+
+    ```bash
+    touch .env
+    echo ".env" >> .gitignore
+    ```
+
+2. Add the following variables below. You can find these values on the **Details** page in your Kinde application.
+
+    ```env
+    KINDE_CLIENT_ID=<your_kinde_client_id>
+    KINDE_CLIENT_SECRET=<your_kinde_client_secret>
+    KINDE_ISSUER_URL=https://<your_kinde_subdomain>.kinde.com
+    KINDE_SITE_URL=http://localhost:3000
+    KINDE_POST_LOGOUT_REDIRECT_URL=http://localhost:3000
+    KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000/dashboard
+    ```
+
+### 5. Add the Kinde auth route handler
+
+1. Create `pages/api/auth/[...kindeAuth].ts`:
+
+    ```bash
+    mkdir pages/api/auth
+    touch "pages/api/auth/[...kindeAuth].ts"
+    ```
+
+2. Add the following code:
+
+    ```typescript
+    // pages/api/auth/[...kindeAuth].ts
+    import {handleAuth} from "@kinde-oss/kinde-auth-nextjs/server";
+    export default handleAuth();
+    ```
+
+### 6. Wrap the root route with `KindeProvider`
+
+Kinde uses a React Context Provider to maintain its internal state in your application.
+
+1. In app/layout.tsx, import the `KindeProvider` component and wrap your application in it.
+
+    ```tsx
+    // app/layout.tsx
+    "use client";
+    import { KindeProvider } from "@kinde-oss/kinde-auth-nextjs";
+
+    export default function RootLayout({
+      children,
+    }: {
+      children: React.ReactNode;
+    }) {
+      return (
+        <KindeProvider>
+          <html lang="en">
+            <body>
+              {children}
+            </body>
+          </html>
+        </KindeProvider>
+      );
+    }
+    ```
+
+### 7. Add auth UI components
+
+1. Use the `useKindeAuth` hook and link components from the package:
+
+    ```tsx
+    // src/components/auth-ui.tsx
+    "use client";
+    import {
+      LoginLink,
+      LogoutLink,
+      RegisterLink,
+    } from "@kinde-oss/kinde-auth-nextjs/components"
+    import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
+
+    function AuthButtons() {
+      const { isAuthenticated, isLoading, user } = useKindeAuth()
+
+      if (isLoading) {
+        return <div>Loading...</div>
+      }
+
+      return isAuthenticated ? (
+        <div>
+          <p>Welcome, {user?.givenName ?? "friend"}.</p>
+          <LogoutLink>Sign out</LogoutLink>
+        </div>
+      ) : (
+        <div>
+          <LoginLink>Sign in</LoginLink>
+          <RegisterLink>Create account</RegisterLink>
+        </div>
+      )
+    }
+    ```
+
+### 8. Display logged-in user information
+
+1. Use the `useKindeAuth` hook to display logged-in user information:
+
+    ```tsx
+    // src/components/dashboard.tsx
+    "use client";
+    import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
+
+    function Dashboard() {
+      const { user, isAuthenticated } = useKindeAuth()
+
+      if (!isAuthenticated) {
+        return <div>Not authenticated</div>
+      }
+
+      return <div>Welcome, {user?.givenName}, {user?.email}!</div>
+    }
+    ```
+
+Other claims you can access:
+
+```json
+{
+  "givenName": "John",
+  "familyName": "Doe",
+  "email": "john.doe@example.com",
+  "picture": "https://lh3.googleusercontent.com/a/ACgxxx",
+  "sub": "kp_1234567890",
+  "updated_at": 1234567890,
+  "user_properties": {
+    "user_city": {}
+  }
+  "org_codes": ["org_123"],
+  "organizations": [
+    {
+      "id": "org_123",
+      "name": "Default Organization"
+    }
+  ],
+}
+```
+
+### 9. Test the auth flow
+
+1. Start the development server:
+
+    ```bash
+    npm run dev
+    ```
+
+2. Navigate to `http://localhost:3000` and select **Create account**. You will be redirected to the Kinde hosted sign up page. 
+
+3. Sign up with a test user and you should be redirected to your application's dashboard page.
+
+4. Go to your Kinde dashboard > **Users** to find the test user you created.
+
+## Migration guide
 
 We highly recommend using our dedicated [Next.js SDK](/developer-tools/sdks/backend/nextjs-sdk/) with App Router instead of this one.
 
 Whilst technically this SDK is compatible with Next.js 13, it isn’t optimal. It leverages the `use client;` escape hatch, which we don’t love. It also requires a single API file to be stored in the legacy `pages` directory.
-
-## Other document versions
-
-- If you have not already installed the Next.js SDK, we recommend you use [Next.js App Router v2](/developer-tools/sdks/backend/nextjs-sdk/).
-- If you are already using the Next.js Pages Router, refer to the earlier version [Next.js Pages Router v1](/developer-tools/sdks/backend/nextjs-prev-sdkv1/).
-
-## Register for Kinde
-
-If you haven’t already got a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). This will give you a Kinde domain, which you need to get started, e.g. `yourapp.kinde.com`.
-
-## Get started with a new project
-
-The easiest way to get started is to use the [Next.js starter kit](https://github.com/kinde-starter-kits/kinde-nextjs-app-router-starter-kit). You can try out a live demo at
-
-## **Install for existing project**
-
-<PackageManagers pkg="@kinde-oss/kinde-auth-nextjs" />
-
-## **Set callback URLs**
-
-1. In Kinde, go to **Settings > Applications > [Your app] > View details**.
-2. Add your callback URLs in the relevant fields. For example:
-   - Allowed callback URLs (also known as redirect URIs) - for example `http://localhost:3000/api/auth/kinde_callback`
-   - Allowed logout redirect URLs - for example `http://localhost:3000`
-3. Select **Save**.
-
-## **Configure environment variables**
-
-Put these variables in a `.env.local` file in the root of your Next.js app. You can find these variables on your Kinde **Settings > Applications > [Your app] > View details** page.
-
-- `KINDE_CLIENT_ID` - Your business’s unique ID on Kinde
-- `KINDE_CLIENT_SECRET` - Your business’s secret key (do not share)
-- `KINDE_ISSUER_URL` - your kinde domain
-- `KINDE_SITE_URL` - where your app is running
-- `KINDE_POST_LOGOUT_REDIRECT_URL` - where you want users to be redirected to after logging out. Make sure this URL is under your allowed logout redirect URLs.
-- `KINDE_POST_LOGIN_REDIRECT_URL` - where you want users to be redirected to after authenticating.
-
-Replace the information in the example below with your own information. You might also set different URLs depending where your project is running. They need to be the same as the callback URLs you entered in Kinde, above.
-
-```shell
-KINDE_CLIENT_ID=<your_kinde_client_id>
-KINDE_CLIENT_SECRET=<your_kinde_client_secret>
-KINDE_ISSUER_URL=https://<your_kinde_subdomain>.kinde.com
-KINDE_SITE_URL=http://localhost:3000
-KINDE_POST_LOGOUT_REDIRECT_URL=http://localhost:3000
-KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000/dashboard
-```
-
-## Set up KindeProvider
-
-Kinde uses a React Context Provider to maintain its internal state in your application.
-
-Import the `KindeProvider` component and wrap your application in it.
-
-```jsx
-// app/layout.tsx
-
-"use client";
-import { KindeProvider } from "@kinde-oss/kinde-auth-nextjs";
-import Auth from "./auth";
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <KindeProvider>
-      <html lang="en">
-        <body>
-          <Auth>{children}</Auth>
-        </body>
-      </html>
-    </KindeProvider>
-  );
-}
-```
-
-##
-
-**Set up Kinde Auth Route Handlers**
-
-Create the following file `/pages/api/auth/[...kindeAuth].js` inside your Next.js project. Inside the file `[...kindeAuth].js` put this code:
-
-```jsx
-import {handleAuth} from "@kinde-oss/kinde-auth-nextjs/server";
-
-export default handleAuth();
-```
-
-This will handle Kinde Auth endpoints in your Next.js app.
-
-**Important:** Our SDK relies on this file existing in this location specified above.
-
-## Migration guide
 
 Updates since last version.
 
