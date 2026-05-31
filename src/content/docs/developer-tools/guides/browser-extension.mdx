@@ -1,0 +1,1173 @@
+---
+page_id: 9913b80b-bbfb-4acb-94ff-2a7356286d7a
+title: Add Kinde auth to a Chrome browser extension
+description: "Step-by-step guide for integrating Kinde authentication into a Chrome browser extension using the Plasmo framework, PKCE flow via chrome.identity, background service worker token exchange, ChromeStore session management, and a full-page dashboard tab with user profile display."
+sidebar:
+  order: 6
+  label: "Kinde auth to a Chrome extension"
+tableOfContents:
+  maxHeadingLevel: 3
+topics:
+  - developer-tools
+  - guides
+  - browser-extension
+  - chrome-extension
+  - oauth
+  - authentication
+  - pkce
+sdk:
+  - "@kinde/js-utils"
+languages:
+  - typescript
+  - javascript
+  - bash
+  - json
+  - css
+  - tsx
+audience: developers
+complexity: intermediate
+keywords:
+  - browser extension
+  - Chrome extension
+  - Plasmo
+  - PKCE
+  - chrome.identity
+  - service worker
+  - background worker
+  - OAuth
+  - authentication
+  - authorization
+  - ChromeStore
+  - token exchange
+  - access token
+  - id token
+  - login
+  - logout
+  - popup
+  - dashboard tab
+  - Manifest V3
+  - MV3
+  - Tailwind CSS
+updated: 2026-05-31
+featured: false
+deprecated: false
+ai_summary: "Guide for building a Chrome browser extension with Kinde authentication using the Plasmo framework. Covers project scaffolding with Plasmo and Tailwind CSS, installing @kinde/js-utils, configuring TypeScript and PostCSS, setting up environment variables, and implementing a full PKCE OAuth flow via chrome.identity with no client secret required. Includes complete source files for a background MV3 service worker that handles token exchange cross-origin, a popup with login and logout, a full-page dashboard tab displaying user profile and access token, shared JWT utilities, a ChromeStore session module, and a global CSS design system. Also covers Kinde application setup, registering the chrome.identity redirect URL as a callback URL, loading the unpacked extension in Chrome, and security best practices including sender validation, token expiry checks, and sandboxed chrome.storage.local."
+---
+
+A Chrome extension built with [Plasmo](https://docs.plasmo.com) that adds Kinde authentication via PKCE — no client secret required. The extension popup triggers Kinde hosted login via `chrome.identity`, a background service worker exchanges the auth code for tokens, then opens a full-page dashboard tab with the user's profile.
+
+### What you need
+
+- A [Kinde](https://app.kinde.com) account (sign up for free)
+- [Node.js](https://nodejs.org/) 18 or higher
+- Google Chrome with Developer mode enabled
+
+## Quickstart
+
+### 1. Create a Kinde application
+
+1. Go to your Kinde dashboard and select **Add application**.
+2. Set a Name, and select **Front-end and mobile** as the application type; select **Save**.
+3. Go to **Details** and copy the **Domain** (or [Custom domain](/build/domains/pointing-your-domain/)) and **Client ID** values.
+4. Go to **Authentication** and select the authentication method you want to use for your extension (e.g., Google, Facebook, etc.).
+5. Select **Save**.
+
+### 2. Scaffold a Plasmo project
+
+[Plasmo](https://docs.plasmo.com/introduction/getting-started) is a framework for building Chrome extensions with modern workflows. If you want to start fresh, follow the steps:
+
+1. Create a Plasmo project with the following command:
+
+```bash
+npm create plasmo@latest kinde-browser-extension -- --with-tailwindcss
+```
+
+2. Change into the project directory:
+
+```bash
+cd kinde-browser-extension
+```
+
+### 3. Install Kinde dependency
+
+<PackageManagers pkg="@kinde/js-utils@0.30.1" />
+
+### 7. Update `package.json`
+
+TODO: Review this section.
+
+Add the manifest config (permissions + `host_permissions`) and the postinstall script:
+
+```json
+{
+  "scripts": {
+    "postinstall": "node scripts/patch-expo-stub.mjs",
+    "dev": "plasmo dev",
+    "build": "plasmo build",
+    "package": "plasmo package"
+  },
+  "manifest": {
+    "permissions": ["identity", "storage"],
+    "host_permissions": [
+      "https://*.kinde.com/*",
+      "https://*.au.kinde.com/*"
+    ]
+  }
+}
+```
+
+The `host_permissions` are required so the background service worker can make cross-origin requests to Kinde's token endpoint without being blocked by CORS.
+
+### 8. Update environment variables
+
+1. Create a `.env` file at the project root and add your Kinde credentials the **Details** page:
+
+    ```bash
+    touch .env
+    ```
+
+    ```env
+    # .env
+    PLASMO_PUBLIC_KINDE_DOMAIN=https://your-subdomain.kinde.com
+    PLASMO_PUBLIC_KINDE_CLIENT_ID=your_client_id_here
+    ```
+
+## Create the source files
+
+Create each of the following files in the project root:
+
+```bash
+mkdir -p lib scripts tabs
+touch popup.tsx background.ts tabs/dashboard.tsx lib/jwt.ts lib/kinde.ts lib/session.ts style.css scripts/patch-expo-stub.mjs
+```
+
+### `popup.tsx`
+
+The extension popup. Shows a sign-in button when unauthenticated, or a compact profile card with "Open dashboard" and "Sign out" buttons when authenticated.
+
+```tsx
+import { useEffect, useState } from "react"
+
+import { getAuthState, login, logout } from "~lib/kinde"
+import type { AuthState } from "~lib/kinde"
+
+import "~style.css"
+
+type Status = "loading" | "idle" | "signing-in" | "signing-out" | "error"
+
+function openDashboard() {
+  chrome.tabs.create({ url: chrome.runtime.getURL("tabs/dashboard.html") })
+  window.close()
+}
+
+function IndexPopup() {
+  const [auth, setAuth] = useState<AuthState>({
+    isAuthenticated: false,
+    accessToken: null,
+    idToken: null,
+    user: null,
+  })
+  const [status, setStatus] = useState<Status>("loading")
+  const [errorMessage, setErrorMessage] = useState<string>("")
+
+  useEffect(() => {
+    getAuthState()
+      .then((state) => {
+        setAuth(state)
+        setStatus("idle")
+      })
+      .catch(() => setStatus("idle"))
+  }, [])
+
+  async function handleLogin() {
+    setStatus("signing-in")
+    setErrorMessage("")
+    try {
+      await login()
+      openDashboard()
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : "Authentication failed")
+      setStatus("error")
+    }
+  }
+
+  async function handleSignOut() {
+    setStatus("signing-out")
+    await logout()
+    const state = await getAuthState()
+    setAuth(state)
+    setStatus("idle")
+  }
+
+  const user = auth.user
+  const initials = user?.name
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : user?.email?.[0]?.toUpperCase() ?? "?"
+
+  return (
+    <div style={{ width: 320, fontFamily: "var(--g-font-family)", background: "var(--g-color-white)" }}>
+
+      {/* Nav */}
+      <nav className="nav" style={{ padding: "1rem 1.25rem" }}>
+        <span className="text-heading-1">KindeAuth</span>
+        {auth.isAuthenticated && status !== "loading" && (
+          <div className="avatar" style={{ width: 36, height: 36, fontSize: "0.8rem", borderRadius: 8 }}>
+            {user?.picture
+              ? <img src={user.picture} alt="" style={{ width: "100%", height: "100%", borderRadius: 8, objectFit: "cover" }} />
+              : initials}
+          </div>
+        )}
+      </nav>
+
+      {/* Body */}
+      <div style={{ padding: "1.5rem 1.25rem" }}>
+        {status === "loading" ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: "2rem 0" }}>
+            <svg style={{ animation: "spin .8s linear infinite", width: 28, height: 28 }} viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="#f1f2f4" strokeWidth="3" />
+              <path d="M4 12a8 8 0 018-8" stroke="#121417" strokeWidth="3" strokeLinecap="round" />
+            </svg>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+          </div>
+        ) : auth.isAuthenticated && user ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+
+            {/* Profile blob */}
+            <div className="profile-blob">
+              <div className="avatar" style={{ width: 48, height: 48, fontSize: "1rem", borderRadius: 10 }}>
+                {user.picture
+                  ? <img src={user.picture} alt="" style={{ width: "100%", height: "100%", borderRadius: 10, objectFit: "cover" }} />
+                  : initials}
+              </div>
+              <div>
+                {user.name && <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--g-color-grey-900)" }}>{user.name}</p>}
+                {user.email && <p className="text-subtle" style={{ marginTop: 2 }}>{user.email}</p>}
+                <div className="badge" style={{ marginTop: 6 }}>
+                  <span className="badge-dot" />
+                  Signed in
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <button type="button" onClick={openDashboard} className="btn btn-dark btn-full">
+                Open dashboard →
+              </button>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={status === "signing-out"}
+                className="btn btn-light btn-full">
+                {status === "signing-out" ? "Signing out…" : "Sign out"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <div>
+              <h2 className="text-display-3" style={{ marginBottom: "0.375rem" }}>Welcome</h2>
+              <p className="text-subtle">Sign in to continue to your dashboard.</p>
+            </div>
+
+            {status === "error" && errorMessage && (
+              <div style={{ background: "#fff5f5", border: "1px solid #fecaca", borderRadius: "var(--g-border-radius-small)", padding: "0.75rem", fontSize: "var(--g-font-size-x-small)", color: "#c0392b" }}>
+                {errorMessage}
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <button
+                type="button"
+                onClick={handleLogin}
+                disabled={status === "signing-in"}
+                className="btn btn-dark btn-full">
+                {status === "signing-in" ? "Signing in…" : "Sign in with Kinde"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="footer" style={{ padding: "0.75rem 1.25rem" }}>
+        Secured by <strong>KindeAuth</strong>
+      </div>
+    </div>
+  )
+}
+
+export default IndexPopup
+```
+
+### `background.ts`
+
+The MV3 service worker. Handles the `KINDE_EXCHANGE_CODE` message from the popup and performs the token exchange against Kinde's `/oauth2/token` endpoint. Service workers bypass CORS for declared `host_permissions`, which is why the network call lives here rather than in the popup.
+
+```ts
+import {
+  ChromeStore,
+  exchangeAuthCode,
+  setActiveStorage,
+  StorageKeys,
+} from "@kinde/js-utils"
+
+const KINDE_DOMAIN = process.env.PLASMO_PUBLIC_KINDE_DOMAIN ?? ""
+const KINDE_CLIENT_ID = process.env.PLASMO_PUBLIC_KINDE_CLIENT_ID ?? ""
+
+// Background service workers can make cross-origin requests freely.
+// Set ChromeStore as active storage so exchangeAuthCode can read back
+// the codeVerifier and state that generateAuthUrl saved in the popup.
+const sessionManager = new ChromeStore()
+setActiveStorage(sessionManager)
+
+chrome.runtime.onInstalled.addListener(() => {
+  console.log("[Kinde BG] Extension installed")
+})
+
+export type ExchangeCodeMessage = {
+  type: "KINDE_EXCHANGE_CODE"
+  redirectUri: string
+  redirectURL: string
+}
+
+export type ExchangeCodeResponse =
+  | { success: true }
+  | { success: false; error: string }
+
+chrome.runtime.onMessage.addListener(
+  (message: ExchangeCodeMessage, sender, sendResponse) => {
+    if (message.type !== "KINDE_EXCHANGE_CODE") return false
+
+    // Only accept messages from within this extension itself.
+    // Reject any message from a web page or a different extension.
+    if (sender.id !== chrome.runtime.id || sender.tab !== undefined) {
+      console.warn("[Kinde BG] Rejected message from untrusted sender:", sender.id)
+      sendResponse({ success: false, error: "Unauthorized sender" })
+      return false
+    }
+
+    const { redirectUri, redirectURL } = message
+    const urlParams = new URLSearchParams(new URL(redirectUri).search)
+
+    exchangeAuthCode({
+      urlParams,
+      domain: KINDE_DOMAIN,
+      clientId: KINDE_CLIENT_ID,
+      redirectURL,
+    })
+      .then(async (result) => {
+        if (!result.success) {
+          console.error("[Kinde BG] Token exchange failed:", result.error)
+          sendResponse({ success: false, error: result.error ?? "Token exchange failed" })
+          return
+        }
+
+        await Promise.all([
+          sessionManager.setSessionItem(
+            StorageKeys.accessToken,
+            result[StorageKeys.accessToken] ?? "",
+          ),
+          sessionManager.setSessionItem(
+            StorageKeys.idToken,
+            result[StorageKeys.idToken] ?? "",
+          ),
+        ])
+
+        // Clean up ephemeral PKCE values now that the exchange is complete.
+        await Promise.all([
+          sessionManager.removeSessionItem(StorageKeys.codeVerifier),
+          sessionManager.removeSessionItem(StorageKeys.state),
+          sessionManager.removeSessionItem(StorageKeys.nonce),
+        ])
+
+        sendResponse({ success: true })
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error("[Kinde BG] Unexpected error during token exchange:", msg)
+        sendResponse({ success: false, error: msg })
+      })
+
+    // Return true to keep the message channel open for the async response.
+    return true
+  },
+)
+```
+
+### `tabs/dashboard.tsx`
+
+A full-page tab opened automatically after login. Displays the user's profile, access token, and a sign out button. Plasmo detects any `.tsx` file in the `tabs/` directory and builds it as a standalone HTML page.
+
+```tsx
+import { useEffect, useState } from "react"
+
+import { getSession, signOut } from "~lib/session"
+import type { AuthState } from "~lib/session"
+
+import "~style.css"
+
+const KINDE_DOMAIN = process.env.PLASMO_PUBLIC_KINDE_DOMAIN ?? ""
+
+type Status = "loading" | "idle" | "signing-out"
+
+function Dashboard() {
+  const [auth, setAuth] = useState<AuthState>({
+    isAuthenticated: false,
+    accessToken: null,
+    idToken: null,
+    user: null,
+  })
+  const [status, setStatus] = useState<Status>("loading")
+  const [copied, setCopied] = useState(false)
+  const [showToken, setShowToken] = useState(false)
+
+  useEffect(() => {
+    getSession()
+      .then((state) => {
+        setAuth(state)
+        setStatus("idle")
+      })
+      .catch(() => setStatus("idle"))
+  }, [])
+
+  async function handleSignOut() {
+    setStatus("signing-out")
+    try {
+      await signOut(KINDE_DOMAIN)
+    } catch {
+      // clear local session even if server call fails
+    }
+    window.close()
+  }
+
+  async function copyToken() {
+    if (!auth.accessToken) return
+    await navigator.clipboard.writeText(auth.accessToken)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const user = auth.user
+  const initials = user?.name
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : user?.email?.[0]?.toUpperCase() ?? "?"
+
+  /* ── Loading ── */
+  if (status === "loading") {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--g-font-family)" }}>
+        <svg style={{ animation: "spin .8s linear infinite", width: 32, height: 32 }} viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="#f1f2f4" strokeWidth="3" />
+          <path d="M4 12a8 8 0 018-8" stroke="#121417" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    )
+  }
+
+  /* ── Not authenticated ── */
+  if (!auth.isAuthenticated) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", fontFamily: "var(--g-font-family)" }}>
+        <p className="text-body-3">You are not signed in.</p>
+        <button type="button" className="btn btn-dark" onClick={() => window.close()}>Close tab</button>
+      </div>
+    )
+  }
+
+  /* ── Authenticated ── */
+  return (
+    <div style={{ minHeight: "100vh", background: "var(--g-color-white)", fontFamily: "var(--g-font-family)" }}>
+
+      {/* Nav */}
+      <nav className="nav">
+        <span className="text-heading-1">KindeAuth</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <div className="profile-blob">
+            <div className="avatar">
+              {user?.picture
+                ? <img src={user.picture} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "var(--g-border-radius-base)" }} />
+                : initials}
+            </div>
+            <div>
+              {user?.name && <p style={{ fontWeight: 600, fontSize: "0.875rem" }}>{user.name}</p>}
+              {user?.email && <p className="text-subtle">{user.email}</p>}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            disabled={status === "signing-out"}
+            className="btn btn-ghost">
+            {status === "signing-out" ? "Signing out…" : "Log out"}
+          </button>
+        </div>
+      </nav>
+
+      {/* Main */}
+      <main className="container" style={{ paddingTop: "var(--g-spacing-3x-large)", paddingBottom: "var(--g-spacing-3x-large)" }}>
+
+        <div style={{ marginBottom: "var(--g-spacing-2x-large)" }}>
+          <h1 className="text-display-2" style={{ marginBottom: "0.5rem" }}>
+            {user?.name ? `Welcome, ${user.name.split(" ")[0]}` : "Welcome"}
+          </h1>
+          <p className="text-subtle">Your authentication is all sorted. Build the important stuff.</p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "var(--g-spacing-large)", alignItems: "start" }}>
+
+          {/* Profile card — dark */}
+          <div className="card" style={{ display: "flex", flexDirection: "column", gap: "var(--g-spacing-base)" }}>
+            <div className="avatar avatar-lg" style={{ background: "rgba(255,255,255,0.12)", color: "var(--g-color-white)", borderRadius: "var(--g-border-radius-base)" }}>
+              {user?.picture
+                ? <img src={user.picture} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "var(--g-border-radius-base)" }} />
+                : initials}
+            </div>
+            {user?.name && <p style={{ fontWeight: "var(--g-font-weight-bold)", fontSize: "var(--g-font-size-large)" }}>{user.name}</p>}
+            {user?.email && <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "var(--g-font-size-small)" }}>{user.email}</p>}
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", background: "rgba(255,255,255,0.1)", borderRadius: 9999, padding: "0.25rem 0.625rem", fontSize: "var(--g-font-size-x-small)", fontWeight: "var(--g-font-weight-bold)" }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80" }} />
+              Authenticated
+            </div>
+            {user?.sub && (
+              <div style={{ marginTop: "auto", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "var(--g-spacing-base)" }}>
+                <p style={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "rgba(255,255,255,0.4)", marginBottom: "0.25rem" }}>User ID</p>
+                <p style={{ fontSize: "0.7rem", fontFamily: "monospace", color: "rgba(255,255,255,0.7)", wordBreak: "break-all" }}>{user.sub}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Right column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--g-spacing-base)" }}>
+
+            <div className="card-light">
+              <p className="section-label">Profile information</p>
+              {[
+                { label: "Full name",     value: user?.name },
+                { label: "Email address", value: user?.email },
+                { label: "User ID",       value: user?.sub },
+              ].map(({ label, value }) =>
+                value ? (
+                  <div key={label} className="info-row">
+                    <span className="info-label">{label}</span>
+                    <span className="info-value">{value}</span>
+                  </div>
+                ) : null,
+              )}
+            </div>
+
+            {auth.accessToken && (
+              <div className="card-light">
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--g-spacing-base)" }}>
+                  <p className="section-label" style={{ marginBottom: 0 }}>Access token</p>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button type="button" className="btn btn-light" style={{ padding: "0.25rem 0.625rem", fontSize: "0.7rem" }} onClick={() => setShowToken((v) => !v)}>
+                      {showToken ? "Hide" : "Reveal"}
+                    </button>
+                    <button type="button" className="btn btn-dark" style={{ padding: "0.25rem 0.625rem", fontSize: "0.7rem" }} onClick={copyToken}>
+                      {copied ? "✓ Copied" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+                <div className="token-block">
+                  {showToken ? auth.accessToken : `${auth.accessToken.slice(0, 64)}…`}
+                </div>
+                <p className="text-subtle" style={{ marginTop: "0.5rem" }}>
+                  Pass as <code style={{ fontFamily: "monospace" }}>Bearer &lt;token&gt;</code> to authenticate API calls.
+                </p>
+              </div>
+            )}
+
+            <div className="card-light">
+              <p className="section-label">Session</p>
+              <p className="text-body-3" style={{ marginBottom: "var(--g-spacing-base)", color: "var(--g-color-grey-600)" }}>
+                Signing out ends your Kinde session and closes this tab.
+              </p>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={status === "signing-out"}
+                className="btn btn-danger">
+                {status === "signing-out" ? "Signing out…" : "Sign out"}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </main>
+
+      <footer className="footer">
+        <p>KindeAuth · <a href="https://kinde.com" target="_blank" rel="noreferrer" style={{ textDecoration: "underline", textUnderlineOffset: "0.2rem" }}>kinde.com</a></p>
+        <p style={{ marginTop: "0.25rem" }}>© {new Date().getFullYear()} KindeAuth, Inc. All rights reserved.</p>
+      </footer>
+    </div>
+  )
+}
+
+export default Dashboard
+```
+
+### `lib/jwt.ts`
+
+Shared JWT utilities used by both `lib/kinde.ts` and `lib/session.ts`.
+
+```ts
+export function decodeJwt(token: string): Record<string, unknown> {
+  try {
+    const base64Url = token.split(".")[1]
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/")
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(""),
+    )
+    return JSON.parse(jsonPayload)
+  } catch {
+    return {}
+  }
+}
+
+/** Returns true if the token's `exp` claim is in the past (or missing). */
+export function isTokenExpired(token: string): boolean {
+  const payload = decodeJwt(token)
+  const exp = payload.exp
+  if (typeof exp !== "number") return true
+  // 30-second buffer so the UI doesn't briefly flash "authenticated"
+  // while a network request is about to fail with 401.
+  return Date.now() / 1000 > exp - 30
+}
+```
+
+### `lib/kinde.ts`
+
+Core auth helpers used by the popup and background worker. Handles login, logout, and reading the current auth state.
+
+```ts
+import {
+  ChromeStore,
+  generateAuthUrl,
+  IssuerRouteTypes,
+  setActiveStorage,
+  StorageKeys,
+} from "@kinde/js-utils"
+
+import type { ExchangeCodeMessage, ExchangeCodeResponse } from "~background"
+import { decodeJwt, isTokenExpired } from "~lib/jwt"
+
+export const KINDE_DOMAIN = process.env.PLASMO_PUBLIC_KINDE_DOMAIN ?? ""
+export const KINDE_CLIENT_ID = process.env.PLASMO_PUBLIC_KINDE_CLIENT_ID ?? ""
+
+if (!KINDE_DOMAIN || !KINDE_CLIENT_ID) {
+  console.error(
+    "[Kinde] Missing required environment variables. " +
+    "Set PLASMO_PUBLIC_KINDE_DOMAIN and PLASMO_PUBLIC_KINDE_CLIENT_ID in .env",
+  )
+}
+
+export const sessionManager = new ChromeStore()
+
+// Set active storage so generateAuthUrl can persist the PKCE codeVerifier
+// and state into Chrome local storage (shared with the background worker).
+setActiveStorage(sessionManager)
+
+export interface UserInfo {
+  email?: string
+  name?: string
+  picture?: string
+  sub?: string
+}
+
+export interface AuthState {
+  isAuthenticated: boolean
+  accessToken: string | null
+  idToken: string | null
+  user: UserInfo | null
+}
+
+export async function login(): Promise<void> {
+  if (!KINDE_DOMAIN || !KINDE_CLIENT_ID) {
+    throw new Error("Kinde is not configured. Check your .env file.")
+  }
+
+  // Must match EXACTLY what is registered in Kinde → Application → Allowed callback URLs.
+  const redirectURL = chrome.identity.getRedirectURL()
+
+  const generatedAuthURL = await generateAuthUrl(
+    KINDE_DOMAIN,
+    IssuerRouteTypes.login,
+    {
+      clientId: KINDE_CLIENT_ID,
+      redirectURL,
+      responseType: "code",
+    },
+    { disableUrlSanitization: true },
+  )
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("[Kinde] Redirect URL:", redirectURL)
+  }
+
+  return new Promise((resolve, reject) => {
+    chrome.identity.launchWebAuthFlow(
+      { url: generatedAuthURL.url.toString(), interactive: true },
+      async (redirectUri) => {
+        if (chrome.runtime.lastError || !redirectUri) {
+          reject(new Error(chrome.runtime.lastError?.message ?? "Auth cancelled or popup closed"))
+          return
+        }
+
+        const parsedUrl = new URL(redirectUri)
+        if (parsedUrl.searchParams.get("error")) {
+          const errDesc =
+            parsedUrl.searchParams.get("error_description") ??
+            parsedUrl.searchParams.get("error") ??
+            "Unknown error"
+          reject(new Error(errDesc))
+          return
+        }
+
+        // Delegate token exchange to background service worker to avoid CORS.
+        const message: ExchangeCodeMessage = {
+          type: "KINDE_EXCHANGE_CODE",
+          redirectUri,
+          redirectURL,
+        }
+
+        let response: ExchangeCodeResponse
+        try {
+          response = await chrome.runtime.sendMessage<ExchangeCodeMessage, ExchangeCodeResponse>(message)
+        } catch (err) {
+          reject(new Error(err instanceof Error ? err.message : "Failed to reach background worker"))
+          return
+        }
+
+        if (!response?.success) {
+          reject(new Error(response?.error ?? "Token exchange failed"))
+          return
+        }
+
+        resolve()
+      },
+    )
+  })
+}
+
+export async function logout(): Promise<void> {
+  const redirectURL = chrome.identity.getRedirectURL()
+  const logoutUrl = new URL(`${KINDE_DOMAIN}/logout`)
+  logoutUrl.searchParams.set("redirect", redirectURL)
+
+  // Silently open Kinde's logout endpoint to destroy the server-side session.
+  await new Promise<void>((resolve) => {
+    chrome.identity.launchWebAuthFlow(
+      { url: logoutUrl.toString(), interactive: false },
+      () => resolve(),
+    )
+  })
+
+  // Clear all locally stored auth data regardless of server result.
+  await Promise.all([
+    sessionManager.removeSessionItem(StorageKeys.accessToken),
+    sessionManager.removeSessionItem(StorageKeys.idToken),
+    sessionManager.removeSessionItem(StorageKeys.refreshToken),
+    sessionManager.removeSessionItem(StorageKeys.codeVerifier),
+    sessionManager.removeSessionItem(StorageKeys.state),
+    sessionManager.removeSessionItem(StorageKeys.nonce),
+  ])
+}
+
+export async function getAuthState(): Promise<AuthState> {
+  const accessToken = (await sessionManager.getSessionItem(StorageKeys.accessToken)) as string | null
+  const idToken = (await sessionManager.getSessionItem(StorageKeys.idToken)) as string | null
+
+  if (!accessToken || isTokenExpired(accessToken)) {
+    return { isAuthenticated: false, accessToken: null, idToken: null, user: null }
+  }
+
+  let user: UserInfo | null = null
+  if (idToken) {
+    const payload = decodeJwt(idToken)
+    user = {
+      email: payload.email as string | undefined,
+      name: (payload.given_name
+        ? `${payload.given_name} ${payload.family_name ?? ""}`.trim()
+        : (payload.name as string | undefined)) ?? undefined,
+      picture: payload.picture as string | undefined,
+      sub: payload.sub as string | undefined,
+    }
+  }
+
+  return { isAuthenticated: true, accessToken, idToken, user }
+}
+```
+
+### `lib/session.ts`
+
+A lightweight session module used only by the dashboard tab. Kept separate from `lib/kinde.ts` to avoid importing `chrome.identity` into the tab bundle.
+
+```ts
+/**
+ * Lightweight session helpers used by the dashboard tab page.
+ * Keeps the dashboard bundle free of chrome.identity and background imports.
+ */
+import {
+  ChromeStore,
+  setActiveStorage,
+  StorageKeys,
+} from "@kinde/js-utils"
+
+import { decodeJwt, isTokenExpired } from "~lib/jwt"
+
+const store = new ChromeStore()
+setActiveStorage(store)
+
+export interface UserInfo {
+  email?: string
+  name?: string
+  picture?: string
+  sub?: string
+}
+
+export interface AuthState {
+  isAuthenticated: boolean
+  accessToken: string | null
+  idToken: string | null
+  user: UserInfo | null
+}
+
+export async function getSession(): Promise<AuthState> {
+  const accessToken = (await store.getSessionItem(StorageKeys.accessToken)) as string | null
+  const idToken = (await store.getSessionItem(StorageKeys.idToken)) as string | null
+
+  if (!accessToken || isTokenExpired(accessToken)) {
+    return { isAuthenticated: false, accessToken: null, idToken: null, user: null }
+  }
+
+  let user: UserInfo | null = null
+  if (idToken) {
+    const payload = decodeJwt(idToken)
+    user = {
+      email: payload.email as string | undefined,
+      name: (payload.given_name
+        ? `${payload.given_name} ${payload.family_name ?? ""}`.trim()
+        : (payload.name as string | undefined)) ?? undefined,
+      picture: payload.picture as string | undefined,
+      sub: payload.sub as string | undefined,
+    }
+  }
+
+  return { isAuthenticated: true, accessToken, idToken, user }
+}
+
+export async function signOut(kindeDomain: string): Promise<void> {
+  const redirectURL = chrome.identity.getRedirectURL()
+  const logoutUrl = new URL(`${kindeDomain}/logout`)
+  logoutUrl.searchParams.set("redirect", redirectURL)
+
+  await new Promise<void>((resolve) => {
+    chrome.identity.launchWebAuthFlow(
+      { url: logoutUrl.toString(), interactive: false },
+      () => resolve(),
+    )
+  })
+
+  await Promise.all([
+    store.removeSessionItem(StorageKeys.accessToken),
+    store.removeSessionItem(StorageKeys.idToken),
+    store.removeSessionItem(StorageKeys.refreshToken),
+    store.removeSessionItem(StorageKeys.codeVerifier),
+    store.removeSessionItem(StorageKeys.state),
+    store.removeSessionItem(StorageKeys.nonce),
+  ])
+}
+```
+
+### `style.css`
+
+Global stylesheet with Kinde's design system tokens (CSS variables) and reusable component classes. This file is imported by both `popup.tsx` and `tabs/dashboard.tsx`.
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Kinde design system ──────────────────────────────────────────────── */
+:root {
+  --g-color-black: #000;
+  --g-color-white: #fff;
+  --g-color-grey-100: #f1f2f4;
+  --g-color-grey-600: #5d636f;
+  --g-color-grey-700: #434851;
+  --g-color-grey-900: #121417;
+
+  --g-box-shadow: 0px 6px 12px rgba(18,20,23,.06), 0px 15px 24px rgba(18,20,23,.07), 0px -4px 12px rgba(18,20,23,.05);
+
+  --g-font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --g-font-size-x-small:  0.75rem;
+  --g-font-size-small:    0.875rem;
+  --g-font-size-base:     1rem;
+  --g-font-size-large:    1.25rem;
+  --g-font-size-x-large:  1.5rem;
+  --g-font-size-2x-large: 2rem;
+
+  --g-font-weight-base:      400;
+  --g-font-weight-semi-bold: 500;
+  --g-font-weight-bold:      600;
+  --g-font-weight-black:     700;
+
+  --g-border-radius-small: 0.5rem;
+  --g-border-radius-base:  1rem;
+  --g-border-radius-large: 1.5rem;
+
+  --g-spacing-small:    0.5rem;
+  --g-spacing-base:     1rem;
+  --g-spacing-large:    1.5rem;
+  --g-spacing-x-large:  2rem;
+  --g-spacing-2x-large: 2.5rem;
+  --g-spacing-3x-large: 3rem;
+  --g-spacing-6x-large: 6rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: var(--g-font-family);
+  color: var(--g-color-grey-900);
+  background: var(--g-color-white);
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* Typography */
+.text-subtle    { color: var(--g-color-grey-600); font-size: var(--g-font-size-x-small); }
+.text-body-3    { color: var(--g-color-grey-900); font-size: var(--g-font-size-small); }
+.text-heading-1 { font-size: var(--g-font-size-large);  font-weight: var(--g-font-weight-semi-bold); }
+.text-heading-2 { font-size: var(--g-font-size-base);   font-weight: var(--g-font-weight-semi-bold); }
+.text-display-2 { font-size: var(--g-font-size-2x-large); font-weight: var(--g-font-weight-black); line-height: 1.4; }
+.text-display-3 { font-size: var(--g-font-size-x-large);  font-weight: var(--g-font-weight-black); }
+
+/* Layout */
+.container { padding: 0 var(--g-spacing-x-large); margin: auto; max-width: 960px; }
+
+.nav {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: var(--g-spacing-x-large) var(--g-spacing-x-large);
+  border-bottom: 1px solid var(--g-color-grey-100);
+}
+
+/* Buttons */
+.btn {
+  border-radius: var(--g-border-radius-small);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: var(--g-font-weight-bold);
+  font-size: var(--g-font-size-small);
+  font-family: var(--g-font-family);
+  padding: 0.625rem var(--g-spacing-base);
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, background 0.15s;
+  text-decoration: none;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-dark  { background: var(--g-color-black); color: var(--g-color-white); }
+.btn-dark:hover:not(:disabled)  { opacity: 0.85; }
+.btn-light { background: var(--g-color-white); color: var(--g-color-black); border: 1px solid var(--g-color-grey-100); }
+.btn-light:hover:not(:disabled) { background: var(--g-color-grey-100); }
+.btn-ghost { background: transparent; color: var(--g-color-grey-700); }
+.btn-ghost:hover:not(:disabled) { background: var(--g-color-grey-100); }
+.btn-danger { background: transparent; color: #c0392b; border: 1px solid #fecaca; }
+.btn-danger:hover:not(:disabled) { background: #fff5f5; }
+.btn-full { width: 100%; justify-content: center; padding: 0.75rem var(--g-spacing-base); }
+
+/* Card */
+.card {
+  background: var(--g-color-black);
+  border-radius: var(--g-border-radius-large);
+  box-shadow: var(--g-box-shadow);
+  color: var(--g-color-white);
+  padding: var(--g-spacing-x-large);
+}
+.card-light {
+  background: var(--g-color-white);
+  border-radius: var(--g-border-radius-large);
+  box-shadow: var(--g-box-shadow);
+  color: var(--g-color-grey-900);
+  padding: var(--g-spacing-x-large);
+}
+
+/* Avatar */
+.avatar {
+  align-items: center;
+  background-color: var(--g-color-grey-100);
+  border-radius: var(--g-border-radius-base);
+  display: flex;
+  height: var(--g-spacing-3x-large);
+  justify-content: center;
+  text-align: center;
+  width: var(--g-spacing-3x-large);
+  font-weight: var(--g-font-weight-bold);
+  font-size: var(--g-font-size-base);
+  flex-shrink: 0;
+}
+.avatar-lg {
+  height: 5rem;
+  width: 5rem;
+  border-radius: var(--g-border-radius-base);
+  font-size: var(--g-font-size-x-large);
+}
+
+/* Profile blob */
+.profile-blob {
+  align-items: center;
+  display: grid;
+  gap: var(--g-spacing-base);
+  grid-template-columns: auto 1fr;
+}
+
+/* Footer */
+.footer {
+  padding: var(--g-spacing-x-large);
+  border-top: 1px solid var(--g-color-grey-100);
+  color: var(--g-color-grey-600);
+  font-size: var(--g-font-size-x-small);
+  text-align: center;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+  border-radius: 9999px;
+  font-size: var(--g-font-size-x-small);
+  font-weight: var(--g-font-weight-bold);
+  padding: 0.25rem 0.625rem;
+}
+.badge-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: #22c55e;
+}
+
+/* Token block */
+.token-block {
+  background: var(--g-color-grey-100);
+  border-radius: var(--g-border-radius-small);
+  padding: var(--g-spacing-base);
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.7rem;
+  color: var(--g-color-grey-700);
+  word-break: break-all;
+  line-height: 1.6;
+}
+
+/* Section label */
+.section-label {
+  font-size: var(--g-font-size-x-small);
+  font-weight: var(--g-font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--g-color-grey-600);
+  margin-bottom: var(--g-spacing-small);
+}
+
+/* Info row */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--g-color-grey-100);
+}
+.info-row:last-child { border-bottom: none; }
+.info-label { font-size: var(--g-font-size-x-small); color: var(--g-color-grey-600); flex-shrink: 0; width: 8rem; }
+.info-value { font-size: var(--g-font-size-small); color: var(--g-color-grey-900); font-weight: var(--g-font-weight-semi-bold); text-align: right; word-break: break-all; }
+```
+
+### `scripts/patch-expo-stub.mjs`
+
+`@kinde/js-utils` declares `expo-secure-store` as a peer dependency, but it is only used in the React Native storage adapter — never in `ChromeStore`. Parcel will fail to resolve it unless a stub exists.
+
+```js
+/**
+ * Creates a stub for expo-secure-store so Parcel can resolve it.
+ * @kinde/js-utils uses it only in the ExpoSecureStore class (not ChromeStore),
+ * and it's lazily imported inside a try/catch — so a no-op stub is safe.
+ */
+
+import { mkdirSync, writeFileSync } from "fs"
+import { join } from "path"
+
+const dir = join(process.cwd(), "node_modules", "expo-secure-store")
+
+mkdirSync(dir, { recursive: true })
+
+writeFileSync(
+  join(dir, "index.js"),
+  "// Stub: expo-secure-store is not used in Chrome extensions\nmodule.exports = {}\n",
+)
+
+writeFileSync(
+  join(dir, "package.json"),
+  JSON.stringify({ name: "expo-secure-store", version: "11.0.0", main: "index.js" }, null, 2) + "\n",
+)
+
+console.log("✓ expo-secure-store stub created")
+```
+
+Then run `npm install` once to trigger the postinstall script.
+
+## Test the auth flow
+
+### 1. Start the dev server
+
+```bash
+npm run dev
+```
+
+### 2. Load the extension in Chrome
+
+1. Open `chrome://extensions` in your browser.
+2. Enable **Developer mode** (top-right toggle).
+3. Select **Load unpacked** and choose `build/chrome-mv3-dev/`.
+
+### 3. Register the callback URL in Kinde
+
+The redirect URL is tied to your extension's unique Chrome ID. Get it by running this in the extension popup's DevTools console:
+
+1. Select the extension icon in Chrome's toolbar, the popup should open.
+2. Right click on the popup and select **Inspect**, the devtools open.
+3. Go to **Console** tab and run the following code:
+
+    ```js
+    chrome.identity.getRedirectURL()
+    ```
+
+    The output will be something like:
+
+    ```text
+    https://<extension-id>.chromiumapp.org/
+    ```
+4. Copy the exact URL (including the trailing slash)
+5. Go to your Kinde dashboard > **Settings > Environment > Applications** > select your app
+6. Scroll to the **Callback URLs** section and add the URL you copied from the previous step.
+7. Select **Save**.
+
+### 4. Sign-in with the extension
+
+1. Select the extension icon in Chrome's toolbar and select **Sign in**.
+2. Complete sign-in in the Chrome-managed auth window.
+3. The popup closes automatically and the dashboard tab opens with your user profile.
+4. Go to your Kinde dashboard > **Users** to verify the test user was created.
