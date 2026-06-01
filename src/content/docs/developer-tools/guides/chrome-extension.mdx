@@ -1,10 +1,10 @@
 ---
 page_id: 9913b80b-bbfb-4acb-94ff-2a7356286d7a
-title: Add Kinde auth to a Chrome browser extension
+title: Add Kinde auth to Chrome extension
 description: "Step-by-step guide for integrating Kinde authentication into a Chrome browser extension using the Plasmo framework, PKCE flow via chrome.identity, background service worker token exchange, ChromeStore session management, and a full-page dashboard tab with user profile display."
 sidebar:
   order: 6
-  label: "Kinde auth to a Chrome extension"
+  label: Chrome extension
 tableOfContents:
   maxHeadingLevel: 3
 topics:
@@ -56,21 +56,22 @@ ai_summary: "Guide for building a Chrome browser extension with Kinde authentica
 
 A Chrome extension built with [Plasmo](https://docs.plasmo.com) that adds Kinde authentication via PKCE — no client secret required. The extension popup triggers Kinde hosted login via `chrome.identity`, a background service worker exchanges the auth code for tokens, then opens a full-page dashboard tab with the user's profile.
 
-### What you need
+## What you need
 
-- A [Kinde](https://app.kinde.com) account (sign up for free)
+- A [Kinde](/get-started/guides/first-things-first/) account with **Admin** or **Engineer** permissions (sign up for free)
 - [Node.js](https://nodejs.org/) 18 or higher
-- Google Chrome with Developer mode enabled
+- [Google Chrome](https://www.google.com/chrome/) with Developer mode enabled
 
-## Quickstart
+## Project setup
 
 ### 1. Create a Kinde application
 
 1. Go to your Kinde dashboard and select **Add application**.
 2. Set a Name, and select **Front-end and mobile** as the application type; select **Save**.
-3. Go to **Details** and copy the **Domain** (or [Custom domain](/build/domains/pointing-your-domain/)) and **Client ID** values.
-4. Go to **Authentication** and select the authentication method you want to use for your extension (e.g., Google, Facebook, etc.).
-5. Select **Save**.
+3. Select **Other front end** as the SDK, and select **Save**.
+4. Go to **Details** and copy the **Domain** (or [Custom domain](/build/domains/pointing-your-domain/)) and **Client ID** values.
+5. Go to **Authentication** and select the authentication method you want to use for your extension (e.g., Google, Facebook, etc.).
+6. Select **Save**.
 
 ### 2. Scaffold a Plasmo project
 
@@ -78,49 +79,47 @@ A Chrome extension built with [Plasmo](https://docs.plasmo.com) that adds Kinde 
 
 1. Create a Plasmo project with the following command:
 
-```bash
-npm create plasmo@latest kinde-browser-extension -- --with-tailwindcss
-```
+    ```bash
+    npm create plasmo@latest kinde-browser-extension -- --with-tailwindcss
+    ```
 
 2. Change into the project directory:
 
-```bash
-cd kinde-browser-extension
-```
+    ```bash
+    cd kinde-browser-extension
+    ```
 
 ### 3. Install Kinde dependency
 
 <PackageManagers pkg="@kinde/js-utils@0.30.1" />
 
-### 7. Update `package.json`
+### 4. Update `package.json`
 
-TODO: Review this section.
+1. Update `package.json` to add the manifest config (permissions + `host_permissions`) and the postinstall script:
 
-Add the manifest config (permissions + `host_permissions`) and the postinstall script:
-
-```json
-{
-  "scripts": {
-    "postinstall": "node scripts/patch-expo-stub.mjs",
-    "dev": "plasmo dev",
-    "build": "plasmo build",
-    "package": "plasmo package"
-  },
-  "manifest": {
-    "permissions": ["identity", "storage"],
-    "host_permissions": [
-      "https://*.kinde.com/*",
-      "https://*.au.kinde.com/*"
-    ]
-  }
-}
-```
+    ```json
+    {
+      "scripts": {
+        "postinstall": "node scripts/patch-expo-stub.mjs",
+        "dev": "plasmo dev",
+        "build": "plasmo build",
+        "package": "plasmo package"
+      },
+      "manifest": {
+        "permissions": ["identity", "storage"],
+        "host_permissions": [
+          "https://*.kinde.com/*",
+          "https://*.au.kinde.com/*"
+        ]
+      }
+    }
+    ```
 
 The `host_permissions` are required so the background service worker can make cross-origin requests to Kinde's token endpoint without being blocked by CORS.
 
-### 8. Update environment variables
+### 5. Update environment variables
 
-1. Create a `.env` file at the project root and add your Kinde credentials the **Details** page:
+1. Create a `.env` file at the project root and add your Kinde credentials from the **Details** page:
 
     ```bash
     touch .env
@@ -143,7 +142,7 @@ touch popup.tsx background.ts tabs/dashboard.tsx lib/jwt.ts lib/kinde.ts lib/ses
 
 ### `popup.tsx`
 
-The extension popup. Shows a sign-in button when unauthenticated, or a compact profile card with "Open dashboard" and "Sign out" buttons when authenticated.
+The extension popup. Shows a sign-in button when unauthenticated, or a compact profile card with "Open dashboard" and "Sign out" buttons when authenticated. On sign-in, the popup delegates the entire OAuth flow to the background service worker (which also opens the dashboard tab), then closes itself.
 
 ```tsx
 import { useEffect, useState } from "react"
@@ -155,8 +154,8 @@ import "~style.css"
 
 type Status = "loading" | "idle" | "signing-in" | "signing-out" | "error"
 
-function openDashboard() {
-  chrome.tabs.create({ url: chrome.runtime.getURL("tabs/dashboard.html") })
+async function openDashboard() {
+  await chrome.tabs.create({ url: chrome.runtime.getURL("tabs/dashboard.html") })
   window.close()
 }
 
@@ -171,12 +170,16 @@ function IndexPopup() {
   const [errorMessage, setErrorMessage] = useState<string>("")
 
   useEffect(() => {
-    getAuthState()
-      .then((state) => {
+    async function loadAuth() {
+      try {
+        const state = await getAuthState()
         setAuth(state)
         setStatus("idle")
-      })
-      .catch(() => setStatus("idle"))
+      } catch {
+        setStatus("idle")
+      }
+    }
+    loadAuth()
   }, [])
 
   async function handleLogin() {
@@ -184,7 +187,9 @@ function IndexPopup() {
     setErrorMessage("")
     try {
       await login()
-      openDashboard()
+      // Background has opened the dashboard tab and handled everything.
+      // If the popup is still alive at this point, close it.
+      window.close()
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Authentication failed")
       setStatus("error")
@@ -193,10 +198,15 @@ function IndexPopup() {
 
   async function handleSignOut() {
     setStatus("signing-out")
-    await logout()
-    const state = await getAuthState()
-    setAuth(state)
-    setStatus("idle")
+    try {
+      await logout()
+    } catch {
+      // Clear local session even if the server-side logout fails.
+    } finally {
+      const state = await getAuthState()
+      setAuth(state)
+      setStatus("idle")
+    }
   }
 
   const user = auth.user
@@ -270,7 +280,7 @@ function IndexPopup() {
               <p className="text-subtle">Sign in to continue to your dashboard.</p>
             </div>
 
-            {status === "error" && errorMessage && (
+            {(status === "error") && errorMessage && (
               <div style={{ background: "#fff5f5", border: "1px solid #fecaca", borderRadius: "var(--g-border-radius-small)", padding: "0.75rem", fontSize: "var(--g-font-size-x-small)", color: "#c0392b" }}>
                 {errorMessage}
               </div>
@@ -302,12 +312,14 @@ export default IndexPopup
 
 ### `background.ts`
 
-The MV3 service worker. Handles the `KINDE_EXCHANGE_CODE` message from the popup and performs the token exchange against Kinde's `/oauth2/token` endpoint. Service workers bypass CORS for declared `host_permissions`, which is why the network call lives here rather than in the popup.
+The MV3 service worker. Handles the entire PKCE login flow triggered by a `KINDE_LOGIN` message from the popup. Running `generateAuthUrl`, `launchWebAuthFlow`, token exchange, and dashboard tab creation here prevents macOS Chrome from closing the popup when the OAuth window opens. Service workers also bypass CORS for declared `host_permissions`, which is why the token network call lives here rather than in the popup.
 
 ```ts
 import {
   ChromeStore,
   exchangeAuthCode,
+  generateAuthUrl,
+  IssuerRouteTypes,
   setActiveStorage,
   StorageKeys,
 } from "@kinde/js-utils"
@@ -315,9 +327,6 @@ import {
 const KINDE_DOMAIN = process.env.PLASMO_PUBLIC_KINDE_DOMAIN ?? ""
 const KINDE_CLIENT_ID = process.env.PLASMO_PUBLIC_KINDE_CLIENT_ID ?? ""
 
-// Background service workers can make cross-origin requests freely.
-// Set ChromeStore as active storage so exchangeAuthCode can read back
-// the codeVerifier and state that generateAuthUrl saved in the popup.
 const sessionManager = new ChromeStore()
 setActiveStorage(sessionManager)
 
@@ -325,19 +334,17 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log("[Kinde BG] Extension installed")
 })
 
-export type ExchangeCodeMessage = {
-  type: "KINDE_EXCHANGE_CODE"
-  redirectUri: string
-  redirectURL: string
+export type LoginMessage = {
+  type: "KINDE_LOGIN"
 }
 
-export type ExchangeCodeResponse =
+export type LoginResponse =
   | { success: true }
   | { success: false; error: string }
 
 chrome.runtime.onMessage.addListener(
-  (message: ExchangeCodeMessage, sender, sendResponse) => {
-    if (message.type !== "KINDE_EXCHANGE_CODE") return false
+  (message: LoginMessage, sender, sendResponse) => {
+    if (message.type !== "KINDE_LOGIN") return false
 
     // Only accept messages from within this extension itself.
     // Reject any message from a web page or a different extension.
@@ -347,45 +354,95 @@ chrome.runtime.onMessage.addListener(
       return false
     }
 
-    const { redirectUri, redirectURL } = message
-    const urlParams = new URLSearchParams(new URL(redirectUri).search)
+    const redirectURL = chrome.identity.getRedirectURL()
 
-    exchangeAuthCode({
-      urlParams,
-      domain: KINDE_DOMAIN,
-      clientId: KINDE_CLIENT_ID,
-      redirectURL,
-    })
-      .then(async (result) => {
-        if (!result.success) {
-          console.error("[Kinde BG] Token exchange failed:", result.error)
-          sendResponse({ success: false, error: result.error ?? "Token exchange failed" })
-          return
-        }
+    generateAuthUrl(
+      KINDE_DOMAIN,
+      IssuerRouteTypes.login,
+      {
+        clientId: KINDE_CLIENT_ID,
+        redirectURL,
+        responseType: "code",
+      },
+      { disableUrlSanitization: true },
+    )
+      .then((generatedAuthURL) => {
+        chrome.identity.launchWebAuthFlow(
+          { url: generatedAuthURL.url.toString(), interactive: true },
+          async (redirectUri) => {
+            if (chrome.runtime.lastError || !redirectUri) {
+              const msg = chrome.runtime.lastError?.message ?? "Auth cancelled"
+              console.error("[Kinde BG] Auth flow failed:", msg)
+              sendResponse({ success: false, error: msg })
+              return
+            }
 
-        await Promise.all([
-          sessionManager.setSessionItem(
-            StorageKeys.accessToken,
-            result[StorageKeys.accessToken] ?? "",
-          ),
-          sessionManager.setSessionItem(
-            StorageKeys.idToken,
-            result[StorageKeys.idToken] ?? "",
-          ),
-        ])
+            const parsedUrl = new URL(redirectUri)
+            const errorParam = parsedUrl.searchParams.get("error")
+            if (errorParam) {
+              const errDesc = parsedUrl.searchParams.get("error_description") ?? errorParam
+              sendResponse({ success: false, error: errDesc })
+              return
+            }
 
-        // Clean up ephemeral PKCE values now that the exchange is complete.
-        await Promise.all([
-          sessionManager.removeSessionItem(StorageKeys.codeVerifier),
-          sessionManager.removeSessionItem(StorageKeys.state),
-          sessionManager.removeSessionItem(StorageKeys.nonce),
-        ])
+            try {
+              const urlParams = new URLSearchParams(parsedUrl.search)
+              const result = await exchangeAuthCode({
+                urlParams,
+                domain: KINDE_DOMAIN,
+                clientId: KINDE_CLIENT_ID,
+                redirectURL,
+              })
 
-        sendResponse({ success: true })
+              if (!result.success) {
+                console.error("[Kinde BG] Token exchange failed:", result.error)
+                sendResponse({ success: false, error: result.error ?? "Token exchange failed" })
+                return
+              }
+
+              const tokenWrites: Promise<void>[] = [
+                sessionManager.setSessionItem(
+                  StorageKeys.accessToken,
+                  result[StorageKeys.accessToken] ?? "",
+                ),
+                sessionManager.setSessionItem(
+                  StorageKeys.idToken,
+                  result[StorageKeys.idToken] ?? "",
+                ),
+              ]
+              if (result[StorageKeys.refreshToken]) {
+                tokenWrites.push(
+                  sessionManager.setSessionItem(
+                    StorageKeys.refreshToken,
+                    result[StorageKeys.refreshToken] ?? "",
+                  ),
+                )
+              }
+              await Promise.all(tokenWrites)
+
+              // Clean up ephemeral PKCE values now that the exchange is complete.
+              await Promise.all([
+                sessionManager.removeSessionItem(StorageKeys.codeVerifier),
+                sessionManager.removeSessionItem(StorageKeys.state),
+                sessionManager.removeSessionItem(StorageKeys.nonce),
+              ])
+
+              await chrome.tabs.create({
+                url: chrome.runtime.getURL("tabs/dashboard.html"),
+              })
+
+              sendResponse({ success: true })
+            } catch (err: unknown) {
+              const msg = err instanceof Error ? err.message : String(err)
+              console.error("[Kinde BG] Unexpected error during token exchange:", msg)
+              sendResponse({ success: false, error: msg })
+            }
+          },
+        )
       })
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err)
-        console.error("[Kinde BG] Unexpected error during token exchange:", msg)
+        console.error("[Kinde BG] Failed to generate auth URL:", msg)
         sendResponse({ success: false, error: msg })
       })
 
@@ -423,12 +480,16 @@ function Dashboard() {
   const [showToken, setShowToken] = useState(false)
 
   useEffect(() => {
-    getSession()
-      .then((state) => {
+    async function loadSession() {
+      try {
+        const state = await getSession()
         setAuth(state)
         setStatus("idle")
-      })
-      .catch(() => setStatus("idle"))
+      } catch {
+        setStatus("idle")
+      }
+    }
+    loadSession()
   }, [])
 
   async function handleSignOut() {
@@ -443,9 +504,13 @@ function Dashboard() {
 
   async function copyToken() {
     if (!auth.accessToken) return
-    await navigator.clipboard.writeText(auth.accessToken)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(auth.accessToken)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard write can fail if permissions are denied or the context is not secure.
+    }
   }
 
   const user = auth.user
@@ -508,6 +573,7 @@ function Dashboard() {
       {/* Main */}
       <main className="container" style={{ paddingTop: "var(--g-spacing-3x-large)", paddingBottom: "var(--g-spacing-3x-large)" }}>
 
+        {/* Hero greeting */}
         <div style={{ marginBottom: "var(--g-spacing-2x-large)" }}>
           <h1 className="text-display-2" style={{ marginBottom: "0.5rem" }}>
             {user?.name ? `Welcome, ${user.name.split(" ")[0]}` : "Welcome"}
@@ -515,6 +581,7 @@ function Dashboard() {
           <p className="text-subtle">Your authentication is all sorted. Build the important stuff.</p>
         </div>
 
+        {/* Two-column grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "var(--g-spacing-large)", alignItems: "start" }}>
 
           {/* Profile card — dark */}
@@ -541,6 +608,7 @@ function Dashboard() {
           {/* Right column */}
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--g-spacing-base)" }}>
 
+            {/* Profile info card */}
             <div className="card-light">
               <p className="section-label">Profile information</p>
               {[
@@ -557,6 +625,7 @@ function Dashboard() {
               )}
             </div>
 
+            {/* Access token card */}
             {auth.accessToken && (
               <div className="card-light">
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--g-spacing-base)" }}>
@@ -579,6 +648,7 @@ function Dashboard() {
               </div>
             )}
 
+            {/* Session card */}
             <div className="card-light">
               <p className="section-label">Session</p>
               <p className="text-body-3" style={{ marginBottom: "var(--g-spacing-base)", color: "var(--g-color-grey-600)" }}>
@@ -597,6 +667,7 @@ function Dashboard() {
         </div>
       </main>
 
+      {/* Footer */}
       <footer className="footer">
         <p>KindeAuth · <a href="https://kinde.com" target="_blank" rel="noreferrer" style={{ textDecoration: "underline", textUnderlineOffset: "0.2rem" }}>kinde.com</a></p>
         <p style={{ marginTop: "0.25rem" }}>© {new Date().getFullYear()} KindeAuth, Inc. All rights reserved.</p>
@@ -642,18 +713,16 @@ export function isTokenExpired(token: string): boolean {
 
 ### `lib/kinde.ts`
 
-Core auth helpers used by the popup and background worker. Handles login, logout, and reading the current auth state.
+Core auth helpers used by the popup. `login()` delegates the entire OAuth flow to the background service worker via a `KINDE_LOGIN` message — the background runs `generateAuthUrl`, `launchWebAuthFlow`, and token exchange, then opens the dashboard tab. Also handles logout and reading the current auth state from `chrome.storage.local`.
 
 ```ts
 import {
   ChromeStore,
-  generateAuthUrl,
-  IssuerRouteTypes,
   setActiveStorage,
   StorageKeys,
 } from "@kinde/js-utils"
 
-import type { ExchangeCodeMessage, ExchangeCodeResponse } from "~background"
+import type { LoginMessage, LoginResponse } from "~background"
 import { decodeJwt, isTokenExpired } from "~lib/jwt"
 
 export const KINDE_DOMAIN = process.env.PLASMO_PUBLIC_KINDE_DOMAIN ?? ""
@@ -667,9 +736,6 @@ if (!KINDE_DOMAIN || !KINDE_CLIENT_ID) {
 }
 
 export const sessionManager = new ChromeStore()
-
-// Set active storage so generateAuthUrl can persist the PKCE codeVerifier
-// and state into Chrome local storage (shared with the background worker).
 setActiveStorage(sessionManager)
 
 export interface UserInfo {
@@ -691,67 +757,19 @@ export async function login(): Promise<void> {
     throw new Error("Kinde is not configured. Check your .env file.")
   }
 
-  // Must match EXACTLY what is registered in Kinde → Application → Allowed callback URLs.
-  const redirectURL = chrome.identity.getRedirectURL()
-
-  const generatedAuthURL = await generateAuthUrl(
-    KINDE_DOMAIN,
-    IssuerRouteTypes.login,
-    {
-      clientId: KINDE_CLIENT_ID,
-      redirectURL,
-      responseType: "code",
-    },
-    { disableUrlSanitization: true },
-  )
-
-  if (process.env.NODE_ENV === "development") {
-    console.log("[Kinde] Redirect URL:", redirectURL)
+  let response: LoginResponse
+  try {
+    response = await chrome.runtime.sendMessage<LoginMessage, LoginResponse>({
+      type: "KINDE_LOGIN",
+    })
+  } catch {
+    // Popup closed before background responded (expected on macOS).
+    return
   }
 
-  return new Promise((resolve, reject) => {
-    chrome.identity.launchWebAuthFlow(
-      { url: generatedAuthURL.url.toString(), interactive: true },
-      async (redirectUri) => {
-        if (chrome.runtime.lastError || !redirectUri) {
-          reject(new Error(chrome.runtime.lastError?.message ?? "Auth cancelled or popup closed"))
-          return
-        }
-
-        const parsedUrl = new URL(redirectUri)
-        if (parsedUrl.searchParams.get("error")) {
-          const errDesc =
-            parsedUrl.searchParams.get("error_description") ??
-            parsedUrl.searchParams.get("error") ??
-            "Unknown error"
-          reject(new Error(errDesc))
-          return
-        }
-
-        // Delegate token exchange to background service worker to avoid CORS.
-        const message: ExchangeCodeMessage = {
-          type: "KINDE_EXCHANGE_CODE",
-          redirectUri,
-          redirectURL,
-        }
-
-        let response: ExchangeCodeResponse
-        try {
-          response = await chrome.runtime.sendMessage<ExchangeCodeMessage, ExchangeCodeResponse>(message)
-        } catch (err) {
-          reject(new Error(err instanceof Error ? err.message : "Failed to reach background worker"))
-          return
-        }
-
-        if (!response?.success) {
-          reject(new Error(response?.error ?? "Token exchange failed"))
-          return
-        }
-
-        resolve()
-      },
-    )
-  })
+  if (!response?.success) {
+    throw new Error(response?.error ?? "Login failed")
+  }
 }
 
 export async function logout(): Promise<void> {
@@ -810,7 +828,8 @@ A lightweight session module used only by the dashboard tab. Kept separate from 
 ```ts
 /**
  * Lightweight session helpers used by the dashboard tab page.
- * Keeps the dashboard bundle free of chrome.identity and background imports.
+ * Kept separate from lib/kinde.ts to avoid pulling background message types
+ * into the tab bundle.
  */
 import {
   ChromeStore,
@@ -1133,15 +1152,19 @@ Then run `npm install` once to trigger the postinstall script.
 
 ### 1. Start the dev server
 
-```bash
-npm run dev
-```
+1. Use the following command in your terminal:
+
+    ```bash
+    npm run dev
+    ```
+
+This will generate a development build of the extension in the `build/chrome-mv3-dev/` directory.
 
 ### 2. Load the extension in Chrome
 
 1. Open `chrome://extensions` in your browser.
 2. Enable **Developer mode** (top-right toggle).
-3. Select **Load unpacked** and choose `build/chrome-mv3-dev/`.
+3. Select **Load unpacked** and choose `build/chrome-mv3-dev/` from your project directory.
 
 ### 3. Register the callback URL in Kinde
 
@@ -1149,7 +1172,7 @@ The redirect URL is tied to your extension's unique Chrome ID. Get it by running
 
 1. Select the extension icon in Chrome's toolbar, the popup should open.
 2. Right click on the popup and select **Inspect**, the devtools open.
-3. Go to **Console** tab and run the following code:
+3. In the devltools, go to **Console** tab and run the following code:
 
     ```js
     chrome.identity.getRedirectURL()
@@ -1161,9 +1184,10 @@ The redirect URL is tied to your extension's unique Chrome ID. Get it by running
     https://<extension-id>.chromiumapp.org/
     ```
 4. Copy the exact URL (including the trailing slash)
-5. Go to your Kinde dashboard > **Settings > Environment > Applications** > select your app
-6. Scroll to the **Callback URLs** section and add the URL you copied from the previous step.
-7. Select **Save**.
+5. Go to your Kinde dashboard > **Settings > Environment > Applications** > select **View details** on your app
+6. Go to the **Details** page, scroll to the **Callback URLs** section
+7. Add the callback URL to the **Allowed callback URLs** field
+8. Select **Save**.
 
 ### 4. Sign-in with the extension
 
@@ -1171,3 +1195,523 @@ The redirect URL is tied to your extension's unique Chrome ID. Get it by running
 2. Complete sign-in in the Chrome-managed auth window.
 3. The popup closes automatically and the dashboard tab opens with your user profile.
 4. Go to your Kinde dashboard > **Users** to verify the test user was created.
+
+## Add Kinde features
+
+Your extension now has working authentication. The sections below show how to layer in additional Kinde features — roles, permissions, multi-org login, token refresh, and protected API calls.
+
+### Roles and permissions
+
+Kinde embeds `roles` and `permissions` claims directly in the access token. No extra API call is needed — you can read them from the JWT you already have stored.
+
+#### 1. Enable roles and permissions in Kinde
+
+1. Go to **Settings > Roles** in your Kinde dashboard and create the roles your extension needs (e.g. `admin`, `viewer`).
+2. Go to **Settings > Permissions** and create permission keys (e.g. `read:data`, `write:data`).
+3. Assign roles and permissions to users via **Users**, or programmatically via the [Kinde Management API](/build/user-management/roles-and-permissions/).
+4. Go to **Settings > APIs**, select your API, open the **Tokens** tab, and enable **Include roles in token** and **Include permissions in token**.
+
+#### 2. Add helpers to `lib/jwt.ts`
+
+Add the following types and helper functions to `lib/jwt.ts`:
+
+```ts
+export interface KindeRole {
+  id: string
+  key: string
+  name: string
+}
+
+/** Returns the roles array embedded in an access token. */
+export function getRoles(token: string): KindeRole[] {
+  const payload = decodeJwt(token)
+  const raw = payload.roles
+  if (!Array.isArray(raw)) return []
+  return raw as KindeRole[]
+}
+
+/** Returns the permissions array embedded in an access token. */
+export function getPermissions(token: string): string[] {
+  const payload = decodeJwt(token)
+  const raw = payload.permissions
+  if (!Array.isArray(raw)) return []
+  return raw.filter((p): p is string => typeof p === "string")
+}
+
+/** Returns true if the token carries the given permission key. */
+export function hasPermission(token: string, permission: string): boolean {
+  return getPermissions(token).includes(permission)
+}
+
+/** Returns true if the token carries a role matching the given key. */
+export function hasRole(token: string, roleKey: string): boolean {
+  return getRoles(token).some((r) => r.key === roleKey)
+}
+```
+
+#### 3. Use roles and permissions in the dashboard
+
+In `tabs/dashboard.tsx`, import the helpers and read roles from the stored access token:
+
+```tsx
+import { getRoles, getPermissions, hasPermission } from "~lib/jwt"
+
+// Inside Dashboard(), after auth state is loaded:
+const roles = auth.accessToken ? getRoles(auth.accessToken) : []
+const permissions = auth.accessToken ? getPermissions(auth.accessToken) : []
+const canWriteData = auth.accessToken ? hasPermission(auth.accessToken, "write:data") : false
+```
+
+Render them in the dashboard alongside the profile info card:
+
+```tsx
+{roles.length > 0 && (
+  <div className="card-light">
+    <p className="section-label">Roles</p>
+    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "var(--g-spacing-base)" }}>
+      {roles.map((role) => (
+        <span key={role.key} className="badge">{role.name}</span>
+      ))}
+    </div>
+    <p className="section-label" style={{ marginTop: "var(--g-spacing-base)" }}>Permissions</p>
+    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+      {permissions.map((perm) => (
+        <span key={perm} className="badge">{perm}</span>
+      ))}
+    </div>
+  </div>
+)}
+```
+
+You can also gate UI features inline:
+
+```tsx
+{canWriteData && (
+  <button type="button" className="btn btn-dark">Write data</button>
+)}
+```
+
+### Organizations
+
+If your Kinde account has multiple organizations, you can direct users straight to a specific org at login time by passing `org_code` to the auth URL.
+
+#### 1. Update `LoginMessage` in `background.ts`
+
+Add an optional `orgCode` field to the `LoginMessage` type:
+
+```ts
+export type LoginMessage = {
+  type: "KINDE_LOGIN"
+  orgCode?: string
+}
+```
+
+#### 2. Pass `org_code` to `generateAuthUrl`
+
+In the `onMessage` handler in `background.ts`, spread `orgCode` into the `generateAuthUrl` options object:
+
+```ts
+generateAuthUrl(
+  KINDE_DOMAIN,
+  IssuerRouteTypes.login,
+  {
+    clientId: KINDE_CLIENT_ID,
+    redirectURL,
+    responseType: "code",
+    ...(message.orgCode ? { orgCode: message.orgCode } : {}),
+  },
+  { disableUrlSanitization: true },
+)
+```
+
+#### 3. Pass `orgCode` from the popup
+
+Update `login()` in `lib/kinde.ts` to accept an optional org code:
+
+```ts
+export async function login(orgCode?: string): Promise<void> {
+  if (!KINDE_DOMAIN || !KINDE_CLIENT_ID) {
+    throw new Error("Kinde is not configured. Check your .env file.")
+  }
+
+  let response: LoginResponse
+  try {
+    response = await chrome.runtime.sendMessage<LoginMessage, LoginResponse>({
+      type: "KINDE_LOGIN",
+      ...(orgCode ? { orgCode } : {}),
+    })
+  } catch {
+    return
+  }
+
+  if (!response?.success) {
+    throw new Error(response?.error ?? "Login failed")
+  }
+}
+```
+
+Then call it from `popup.tsx` with the org code you want:
+
+```ts
+await login("your_org_code")
+```
+
+#### 4. Read the org from the token
+
+Once authenticated, the access token includes `org_code` and `org_name` claims:
+
+```ts
+import { decodeJwt } from "~lib/jwt"
+
+const payload = decodeJwt(auth.accessToken!)
+const orgCode = payload.org_code as string | undefined
+const orgName = payload.org_name as string | undefined
+```
+
+Add these as additional rows in the profile info card in `tabs/dashboard.tsx`.
+
+### Token refresh
+
+Access tokens expire (Kinde's default is 1 hour). When a token is expired, silently re-authenticate using the stored refresh token — no user interaction required.
+
+#### 1. Add a `KINDE_REFRESH` message handler to `background.ts`
+
+Add the new message and response types to `background.ts`:
+
+```ts
+export type RefreshMessage = { type: "KINDE_REFRESH" }
+export type RefreshResponse =
+  | { success: true }
+  | { success: false; error: string }
+```
+
+Add a second `onMessage` listener for the refresh flow. Keep it separate from the login handler so each remains focused:
+
+```ts
+chrome.runtime.onMessage.addListener(
+  (message: RefreshMessage, sender, sendResponse) => {
+    if (message.type !== "KINDE_REFRESH") return false
+
+    if (sender.id !== chrome.runtime.id || sender.tab !== undefined) {
+      sendResponse({ success: false, error: "Unauthorized sender" })
+      return false
+    }
+
+    sessionManager
+      .getSessionItem(StorageKeys.refreshToken)
+      .then(async (stored) => {
+        const refreshToken = typeof stored === "string" ? stored : null
+        if (!refreshToken) {
+          sendResponse({ success: false, error: "No refresh token stored" })
+          return
+        }
+
+        const res = await fetch(`${KINDE_DOMAIN}/oauth2/token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            grant_type: "refresh_token",
+            client_id: KINDE_CLIENT_ID,
+            refresh_token: refreshToken,
+          }).toString(),
+        })
+
+        if (!res.ok) {
+          sendResponse({ success: false, error: `Refresh failed: ${res.status}` })
+          return
+        }
+
+        const data = await res.json() as Record<string, string>
+        const writes: Promise<void>[] = [
+          sessionManager.setSessionItem(StorageKeys.accessToken, data.access_token ?? ""),
+          sessionManager.setSessionItem(StorageKeys.idToken, data.id_token ?? ""),
+        ]
+        if (data.refresh_token) {
+          writes.push(sessionManager.setSessionItem(StorageKeys.refreshToken, data.refresh_token))
+        }
+        await Promise.all(writes)
+        sendResponse({ success: true })
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err)
+        sendResponse({ success: false, error: msg })
+      })
+
+    return true
+  },
+)
+```
+
+#### 2. Add `refreshSession()` to `lib/kinde.ts`
+
+```ts
+import type { RefreshMessage, RefreshResponse } from "~background"
+
+export async function refreshSession(): Promise<boolean> {
+  try {
+    const response = await chrome.runtime.sendMessage<RefreshMessage, RefreshResponse>({
+      type: "KINDE_REFRESH",
+    })
+    return response?.success ?? false
+  } catch {
+    return false
+  }
+}
+```
+
+#### 3. Update `getAuthState()` to attempt a silent refresh
+
+Update `getAuthState()` in `lib/kinde.ts` to try a refresh before returning unauthenticated. The `retry` flag prevents infinite recursion:
+
+```ts
+export async function getAuthState(retry = true): Promise<AuthState> {
+  const accessToken = (await sessionManager.getSessionItem(StorageKeys.accessToken)) as string | null
+  const idToken = (await sessionManager.getSessionItem(StorageKeys.idToken)) as string | null
+
+  if (!accessToken || isTokenExpired(accessToken)) {
+    if (retry) {
+      const refreshed = await refreshSession()
+      if (refreshed) return getAuthState(false)
+    }
+    return { isAuthenticated: false, accessToken: null, idToken: null, user: null }
+  }
+
+  let user: UserInfo | null = null
+  if (idToken) {
+    const payload = decodeJwt(idToken)
+    user = {
+      email: payload.email as string | undefined,
+      name: (payload.given_name
+        ? `${payload.given_name} ${payload.family_name ?? ""}`.trim()
+        : (payload.name as string | undefined)) ?? undefined,
+      picture: payload.picture as string | undefined,
+      sub: payload.sub as string | undefined,
+    }
+  }
+
+  return { isAuthenticated: true, accessToken, idToken, user }
+}
+```
+
+Apply the same pattern to `getSession()` in `lib/session.ts` if you want the dashboard tab to also auto-refresh.
+
+### Call a protected API
+
+Use the stored access token as a `Bearer` token to authenticate requests to your backend.
+
+#### Add a `fetchWithAuth` utility to `lib/kinde.ts`
+
+```ts
+export async function fetchWithAuth(
+  url: string,
+  options: RequestInit = {},
+): Promise<Response> {
+  const state = await getAuthState()
+  if (!state.isAuthenticated || !state.accessToken) {
+    throw new Error("Not authenticated")
+  }
+
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      Authorization: `Bearer ${state.accessToken}`,
+    },
+  })
+}
+```
+
+Use it anywhere in the extension — popup, dashboard, or content scripts that import from `lib/kinde.ts`:
+
+```ts
+const res = await fetchWithAuth("https://your-api.com/me")
+const data = await res.json()
+```
+
+#### Validate the token server-side
+
+On your backend, validate the incoming token against Kinde's JWKS endpoint:
+
+```
+https://<your-subdomain>.kinde.com/.well-known/jwks
+```
+
+Kinde publishes rotating public keys at this URL. Use a JWT library that supports JWKS (e.g. `jose` for Node.js) to verify the signature, expiry, and audience before trusting any claims.
+
+### Custom claims
+
+You can attach arbitrary data to the access or ID token using Kinde's token customization. Common uses include a subscription tier, internal user ID, or feature flags.
+
+#### 1. Create a custom claim in Kinde
+
+1. Go to **Settings > Token customization** in your Kinde dashboard.
+2. Select the token type (**Access token** or **ID token**).
+3. Add a new claim with a key (e.g. `subscription_tier`) and a source (a user property, org property, or static value).
+4. Select **Save**.
+
+#### 2. Read the claim from the token
+
+Custom claims appear in the decoded JWT payload under the key you set:
+
+```ts
+import { decodeJwt } from "~lib/jwt"
+
+const payload = decodeJwt(auth.accessToken!)
+const tier = payload.subscription_tier as string | undefined
+
+if (tier === "pro") {
+  // unlock pro features
+}
+```
+
+Because `decodeJwt` returns `Record<string, unknown>`, always cast and guard the value before use.
+
+## Production
+
+### Build and package
+
+1. Run a production build:
+
+    ```bash
+    npm run build
+    ```
+
+    Output goes to `build/chrome-mv3-prod/`.
+
+2. Create a ZIP for the Chrome Web Store:
+
+    ```bash
+    npm run package
+    ```
+
+    This produces a `.zip` in the `build/` directory, ready to upload to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole).
+
+### Extension ID and callback URLs
+
+Chrome assigns a **different extension ID** in the Web Store vs. during development. The `chrome.identity` redirect URL is derived from the extension ID, so the production callback URL will be different from your dev one.
+
+After uploading your extension:
+
+1. Copy the **Item ID** from the Chrome Web Store Developer Dashboard.
+2. Derive your production redirect URL:
+
+    ```
+    https://<production-item-id>.chromiumapp.org/
+    ```
+
+3. Go to your Kinde dashboard > **Settings > Applications** > select your app > **Details**.
+4. Add the production URL to **Allowed callback URLs** alongside your dev URL.
+5. Select **Save**.
+
+### Use a key file for a consistent extension ID
+
+Plasmo supports a `key` field in the manifest to pin the extension ID across environments. This means your dev and production redirect URLs will match, so you only need to register one callback URL in Kinde.
+
+1. Generate a 2048-bit RSA private key and extract the base64-encoded public key Chrome expects:
+
+    ```bash
+    openssl genrsa 2048 | openssl pkcs8 -topk8 -nocrypt -out key.pem
+    openssl rsa -in key.pem -pubout -outform DER | openssl base64 -A
+    ```
+
+    The second command prints a long base64 string — copy it.
+
+2. Add `key.pem` to `.gitignore` — treat it like a secret.
+
+3. Store the base64 public key in your `.env` file:
+
+    ```env
+    PLASMO_PUBLIC_EXTENSION_KEY=MIIBIjAN...your base64 public key here...AQAB
+    ```
+
+4. Reference it in `package.json` under the Plasmo manifest `key` field using Plasmo's env var interpolation syntax:
+
+    ```json
+    "manifest": {
+      "key": "$PLASMO_PUBLIC_EXTENSION_KEY",
+      "permissions": ["identity", "storage"],
+      "host_permissions": [
+        "https://*.kinde.com/*",
+        "https://*.au.kinde.com/*"
+      ]
+    }
+    ```
+
+    Plasmo substitutes `$PLASMO_PUBLIC_EXTENSION_KEY` at build time so Chrome derives a stable extension ID from it.
+
+5. Register the single redirect URL in Kinde once and it will work for all builds.
+
+### Separate environments with `.env` files
+
+Use a separate Kinde application (or at minimum a separate environment) for production to keep user data isolated:
+
+```env
+# .env.production
+PLASMO_PUBLIC_KINDE_DOMAIN=https://your-subdomain.kinde.com
+PLASMO_PUBLIC_KINDE_CLIENT_ID=your_production_client_id
+```
+
+Plasmo automatically loads `.env.production` when running `npm run build` and `.env` for `npm run dev`. You do not need to change any code between environments.
+
+## Troubleshooting
+
+### "Auth cancelled" or the auth window closes immediately
+
+`chrome.identity.launchWebAuthFlow` returns this error when the user dismisses the window, or when the redirect URL is not registered in Kinde. Check:
+
+- The callback URL in Kinde **exactly** matches the output of `chrome.identity.getRedirectURL()` (copy-paste it, including the trailing slash).
+- You are loading the extension from the correct `build/chrome-mv3-dev/` directory.
+- Developer mode is enabled in `chrome://extensions`.
+
+### Extension ID changes after reloading
+
+Chrome only preserves extension IDs for packed extensions. When loading unpacked, the ID may change if you remove and re-add the extension. Use the **reload button** (↺) on `chrome://extensions` instead of removing and re-adding. Better still, use a key file (see [Use a key file for a consistent extension ID](#use-a-key-file-for-a-consistent-extension-id)) to lock the ID permanently.
+
+### CORS error when exchanging tokens
+
+The background service worker must declare `host_permissions` covering your Kinde domain. Check `package.json`:
+
+```json
+"host_permissions": [
+  "https://*.kinde.com/*",
+  "https://*.au.kinde.com/*"
+]
+```
+
+If you use a [custom Kinde domain](/build/domains/pointing-your-domain/), add it explicitly:
+
+```json
+"host_permissions": [
+  "https://*.kinde.com/*",
+  "https://auth.yourdomain.com/*"
+]
+```
+
+Changes to `host_permissions` require you to reload the unpacked extension.
+
+### Roles and permissions are missing from the token
+
+Two things are required:
+
+1. **Enable token inclusion** — go to **Settings > APIs** in Kinde, select your API, open **Tokens**, and enable **Include roles in token** and **Include permissions in token**.
+2. **Assign roles/permissions to the user** — assignments made after login don't take effect until the user signs out and back in to get a fresh token.
+
+### `Cannot read properties of undefined` when decoding claims
+
+`decodeJwt` returns `{}` on any parse failure. Always guard before accessing claims:
+
+```ts
+const payload = decodeJwt(token)
+const roles = Array.isArray(payload.roles) ? payload.roles : []
+const orgCode = typeof payload.org_code === "string" ? payload.org_code : undefined
+```
+
+### `expo-secure-store` not found during install
+
+Run `npm install` once to trigger the `postinstall` script. If the error persists, run the script directly:
+
+```bash
+node scripts/patch-expo-stub.mjs
+```
+
+Then restart your dev server with `npm run dev`.
