@@ -4,7 +4,7 @@ title: Use Kinde auth in an Electron desktop app
 description: "Integrate Kinde authentication into an Electron desktop app. Covers OAuth 2.0 with PKCE, safeStorage token encryption, JWT verification, and production packaging."
 sidebar:
   order: 5
-  label: Kinde and Electron
+  label: Kinde in Electron desktop app
 tableOfContents:
   maxHeadingLevel: 3
 relatedArticles:
@@ -17,6 +17,12 @@ topics:
   - desktop-app
   - oauth
   - authentication
+  - authorization
+  - roles
+  - permissions
+  - feature-flags
+  - organizations
+  - properties
 sdk:
   - Node.js
   - express.js
@@ -42,6 +48,7 @@ keywords:
   - token management
   - access token
   - refresh token
+  - offline scope
   - user profile
   - login
   - logout
@@ -51,14 +58,23 @@ keywords:
   - jose
   - JWT verification
   - JWKS
+  - audience verification
   - electron-builder
   - production build
   - contextBridge
   - IPC
-updated: 2026-05-31
+  - roles
+  - permissions
+  - feature flags
+  - organizations
+  - properties
+  - token claims
+  - management api
+  - Kinde features
+updated: 2026-06-02
 featured: false
 deprecated: false
-ai_summary: "Guide for building an Electron desktop application with Kinde authentication. Covers project initialization, a bundled kinde.config.js file for developer credentials, OAuth 2.0 with PKCE via a local Express callback server, OS-native encrypted token storage using Electron safeStorage, JWT signature verification using the jose library against Kinde JWKS endpoint, user profile display, login, registration with prompt=create, and logout. Implements post_logout_redirect_uri via a temporary local Express server on /logout-complete that serves a signed-out confirmation page — the URL must be registered under Allowed logout redirect URLs in the Kinde dashboard. Also covers session restoration on startup, silent token refresh, login timeout handling, and concurrent login prevention. Includes complete code for the main process, renderer process, preload bridge using contextBridge, and frontend UI. Concludes with production packaging using electron-builder with platform-specific targets for macOS dmg, Windows NSIS installer, and Linux AppImage, plus notes on safeStorage keychain naming, kinde.config.js bundling, and app icon placement."
+ai_summary: "Guide for building an Electron desktop application with Kinde authentication. Covers project setup, a bundled kinde.config.js for credentials, OAuth 2.0 with PKCE via a local Express callback server, OS-native encrypted token storage using Electron safeStorage, and JWT signature and audience verification using the jose library against the Kinde JWKS endpoint. Includes login, registration with prompt=create, silent token refresh using the offline scope (not offline_access), login timeout handling, concurrent login prevention, and session restoration on startup. Features a detailed Kinde features section covering roles, permissions, feature flags, organizations, and properties — each with dashboard setup steps and Electron IPC code snippets showing how to read claims from the verified access token. Also covers the Kinde Management API for server-side user management. Concludes with production packaging using electron-builder for macOS dmg, Windows NSIS installer, and Linux AppImage, plus notes on safeStorage keychain naming, kinde.config.js bundling, and app icon placement."
 ---
 
 This guide shows you how to integrate Kinde authentication into a desktop app built with Electron. You'll set up a basic Electron project, configure Kinde application, and implement login, registration, logout, and user profile access.
@@ -151,6 +167,8 @@ This guide shows you how to integrate Kinde authentication into a desktop app bu
     }
     ```
     
+    The `offline` scope requests a refresh token so the app can silently renew the access token without prompting the user to log in again. Note that Kinde uses `offline` — not `offline_access` as the OIDC spec defines — so using the standard name will not work.
+
     A bundled config file is the idiomatic approach for desktop apps. Unlike `.env` files — which are a server-side convention — this file travels with the app. Since this guide uses PKCE (no client secret), these values are not sensitive.
 
     If you plan to open-source the project, add `kinde.config.js` to `.gitignore` to avoid committing your specific Kinde domain and client ID.
@@ -206,7 +224,7 @@ This guide shows you how to integrate Kinde authentication into a desktop app bu
     
     // jose v5+ is ESM-only and cannot be require()'d in a CommonJS Electron app.
     // Dynamic import() works from CJS — joseCache stores the Promise so the module loads once.
-    function createTokenVerifier(issuer) {
+    function createTokenVerifier(issuer, audience) {
       let joseCache = null
       let JWKS = null
 
@@ -214,10 +232,9 @@ This guide shows you how to integrate Kinde authentication into a desktop app bu
         if (!joseCache) joseCache = import("jose")
         const { createRemoteJWKSet, jwtVerify } = await joseCache
         if (!JWKS) JWKS = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`))
-        const { payload } = await jwtVerify(token, JWKS, {
-          issuer,
-          algorithms: ["RS256"],
-        })
+        const options = { issuer, algorithms: ["RS256"] }
+        if (audience) options.audience = audience
+        const { payload } = await jwtVerify(token, JWKS, options)
         return payload
       }
     }
@@ -272,7 +289,7 @@ This guide shows you how to integrate Kinde authentication into a desktop app bu
     }
     
     // ---------- Token verifier (JWKS-backed, initialized once at startup) ----------
-    const verifyToken = createTokenVerifier(ISSUER)
+    const verifyToken = createTokenVerifier(ISSUER, AUDIENCE || undefined)
     
     // ---------- Token storage (safeStorage + OS-encrypted file) ----------
     function getStorePath() {
@@ -1162,6 +1179,307 @@ This guide shows you how to integrate Kinde authentication into a desktop app bu
 
 3. Go to your Kinde dashboard > **Users** to find the test user you created. 
 
+## Kinde features
+
+Once a user is authenticated, you can layer in Kinde's authorization features to control what they can see and do. All of these are embedded in the verified access token payload — you're reading claims you've already verified, so no extra API calls are needed.
+
+The pattern for each feature is the same: set it up in the Kinde dashboard, add an IPC handler to `main.js`, expose it via `preload.js`, and consume it in the renderer.
+
+### Roles
+
+Roles let you group users and gate access to features or entire areas of your app. A user can have one or more roles, and you assign them in the Kinde dashboard. When a user logs in, their roles travel in the access token `roles` claim — no extra API call needed.
+
+#### Set up roles in Kinde
+
+1. Go to your Kinde dashboard and select **Settings > User management > Roles**.
+2. Select **Add role**.
+3. Enter a **Name** (e.g. `Admin`) and a **Key** (e.g. `admin`). The key is what you check in code.
+4. Select **Save**.
+5. To assign the role to a user, go to **Users**, select a user, open their **Roles** tab, and assign the role.
+
+#### Use roles in your Electron app
+
+Add an IPC handler to `main.js`:
+
+```js
+// main.js
+ipcMain.handle("auth:getRoles", async () => {
+  try {
+    const token = await getValidAccessToken()
+    if (!token) return { ok: true, roles: [] }
+    const payload = await verifyToken(token)
+    return { ok: true, roles: payload.roles ?? [] }
+  } catch (e) {
+    return { ok: false, error: String(e) }
+  }
+})
+```
+
+Expose it in `preload.js`:
+
+```js
+// preload.js — add to the contextBridge.exposeInMainWorld call
+getRoles: () => ipcRenderer.invoke("auth:getRoles"),
+```
+
+Check a role in the renderer:
+
+```js
+// renderer/renderer.js
+const { ok, roles } = await window.kindeAuth.getRoles()
+if (ok) {
+  const isAdmin = roles.some((r) => r.key === "admin")
+  // show/hide admin UI based on isAdmin
+}
+```
+
+Roles in the token payload look like:
+
+```json
+[
+  { "id": "...", "key": "admin", "name": "Admin" }
+]
+```
+
+Learn more about [roles](/manage-users/roles-and-permissions/user-roles/)
+
+### Permissions
+
+Permissions are fine-grained access controls you define and assign to users, either directly or inherited through roles. They're ideal for controlling specific actions — like exporting data or deleting records — independently of a user's broader role. They appear in the access token `permissions` claim as a flat array of strings.
+
+#### Set up permissions in Kinde
+
+1. Go to your Kinde dashboard and select **Settings > User management > Permissions**.
+2. Select **Add permission**.
+3. Enter a **Name** (e.g. `Export data`) and a **Key** (e.g. `export:data`). The key is what you check in code.
+4. Select **Save**.
+5. To attach the permission to a role, go to **Settings** > **Roles**, select a role, open its **Permissions** tab, and add the permission. Users assigned that role will inherit it automatically.
+
+#### Use permissions in your Electron app
+
+Add an IPC handler to `main.js`:
+
+```js
+// main.js
+ipcMain.handle("auth:getPermissions", async () => {
+  try {
+    const token = await getValidAccessToken()
+    if (!token) return { ok: true, permissions: [] }
+    const payload = await verifyToken(token)
+    return { ok: true, permissions: payload.permissions ?? [] }
+  } catch (e) {
+    return { ok: false, error: String(e) }
+  }
+})
+```
+
+Expose it in `preload.js`:
+
+```js
+// preload.js
+getPermissions: () => ipcRenderer.invoke("auth:getPermissions"),
+```
+
+Check a specific permission in the renderer:
+
+```js
+// renderer/renderer.js
+const { ok, permissions } = await window.kindeAuth.getPermissions()
+if (ok) {
+  const canExport = permissions.includes("export:data")
+  // enable/disable the export button based on canExport
+}
+```
+
+Learn more about [permissions](/manage-users/roles-and-permissions/user-permissions/)
+
+### Feature flags
+
+Feature flags let you toggle functionality for specific users or organizations without a code deploy or app update — useful for gradual rollouts, A/B tests, or per-customer configuration. They're included in the access token as a `feature_flags` object, where each key maps to a type and a value.
+
+#### Set up feature flags in Kinde
+
+1. Go to your Kinde dashboard and select **Releases** > **Feature flags**.
+2. Select **Add feature flag**.
+3. Enter a **Name**, a **Key** (e.g. `dark_mode`), and choose a **Type**: boolean, string, or integer.
+4. Set the **Default value** — this applies to all users unless overridden.
+5. Select **Save**.
+6. To set a value for a specific user, go to **Users**, select a user, open their **Feature flags** tab, and add an override.
+
+#### Use feature flags in your Electron app
+
+Add an IPC handler to `main.js`:
+
+```js
+// main.js
+ipcMain.handle("auth:getFeatureFlags", async () => {
+  try {
+    const token = await getValidAccessToken()
+    if (!token) return { ok: true, featureFlags: {} }
+    const payload = await verifyToken(token)
+    return { ok: true, featureFlags: payload.feature_flags ?? {} }
+  } catch (e) {
+    return { ok: false, error: String(e) }
+  }
+})
+```
+
+Expose it in `preload.js`:
+
+```js
+// preload.js
+getFeatureFlags: () => ipcRenderer.invoke("auth:getFeatureFlags"),
+```
+
+Read flags in the renderer:
+
+```js
+// renderer/renderer.js
+const { ok, featureFlags } = await window.kindeAuth.getFeatureFlags()
+if (ok) {
+  const darkModeEnabled = featureFlags["dark_mode"]?.v === true
+  const theme = featureFlags["theme"]?.v ?? "default"
+  const maxItems = featureFlags["max_items"]?.v ?? 50
+}
+```
+
+Feature flags in the payload look like:
+
+```json
+{
+  "dark_mode": { "t": "b", "v": true },
+  "theme":     { "t": "s", "v": "dark" },
+  "max_items": { "t": "i", "v": 10 }
+}
+```
+
+Where `t` is the type (`b` = boolean, `s` = string, `i` = integer) and `v` is the value.
+
+Learn more about [feature flags](/releases/feature-flags/add-feature-flag/)
+
+### Organizations
+
+Organizations are how Kinde models multi-tenancy. Each organization is an isolated group of users with its own roles, permissions, and feature flag overrides — perfect for SaaS apps where each customer is a separate tenant. The user's active organization is included in the access token as `org_code`.
+
+#### Set up organizations in Kinde
+
+1. Go to your Kinde dashboard and select **Organizations**.
+2. Select **Add organization**.
+3. Enter a **Name** for the organization and select **Save**. Kinde generates a unique `org_code` automatically.
+4. To add users to the organization, go to **Users**, select a user, open their **Organizations** tab, and add the organization.
+
+#### Use organizations in your Electron app
+
+Add an IPC handler to `main.js`:
+
+```js
+// main.js
+ipcMain.handle("auth:getOrganization", async () => {
+  try {
+    const token = await getValidAccessToken()
+    if (!token) return { ok: true, org: null }
+    const payload = await verifyToken(token)
+    const org = payload.org_code ? { code: payload.org_code } : null
+    return { ok: true, org }
+  } catch (e) {
+    return { ok: false, error: String(e) }
+  }
+})
+```
+
+Expose it in `preload.js`:
+
+```js
+// preload.js
+getOrganization: () => ipcRenderer.invoke("auth:getOrganization"),
+```
+
+Use it in the renderer:
+
+```js
+// renderer/renderer.js
+const { ok, org } = await window.kindeAuth.getOrganization()
+if (ok && org) {
+  console.log("Current org:", org.code)
+  // scope API requests or UI state to org.code
+}
+```
+
+To log a user in under a specific organization, pass the `organization` parameter in the auth URL. In `startLogin()` in `main.js`, add:
+
+```js
+// main.js — inside startLogin(), before shell.openExternal()
+if (orgCode) auth.searchParams.set("organization", orgCode)
+```
+
+Learn more about [organizations](/build/organizations/add-and-manage-organizations/)
+
+### Properties
+
+Properties let you attach custom data to users, organizations, or applications, and surface that data as claims directly in the access token. This is the right tool when you need app-specific context on every request — things like `subscription_tier`, `preferred_region`, or `account_type` — without building a separate profile API call.
+
+#### Set up properties in Kinde
+
+1. Go to your Kinde dashboard and select **Settings > Data management > Properties**.
+2. Select **Add property**.
+3. Choose the **context** (User, Organization, or Application), enter a **Name** and **Key** (e.g. `subscription_tier`), and select a **Data type** (string, integer, or boolean).
+4. Set the property **visibility** to **Public** — only public properties can be included in tokens.
+5. Select **Save**.
+6. To include the property in your app's access token, go to **Settings** > **Applications**, open your application, and select **Tokens**. Under **Token customization**, select **Customize** on the **Access token**, tick the property, and select **Save**.
+7. To set a value for a user, go to **Users**, select the user, open their **Properties** tab, and set the value.
+
+#### Use properties in your Electron app
+
+Once a property is included in the access token, it appears in the verified payload under the property key. Add an IPC handler to `main.js`:
+
+```js
+// main.js
+ipcMain.handle("auth:getProperties", async () => {
+  try {
+    const token = await getValidAccessToken()
+    if (!token) return { ok: true, properties: {} }
+    const payload = await verifyToken(token)
+    // Custom properties appear as top-level claims in the payload.
+    // Replace the keys below with the property keys you defined in Kinde.
+    const properties = {
+      subscriptionTier: payload["subscription_tier"] ?? null,
+      preferredRegion: payload["preferred_region"] ?? null,
+    }
+    return { ok: true, properties }
+  } catch (e) {
+    return { ok: false, error: String(e) }
+  }
+})
+```
+
+Expose it in `preload.js`:
+
+```js
+// preload.js
+getProperties: () => ipcRenderer.invoke("auth:getProperties"),
+```
+
+Use it in the renderer:
+
+```js
+// renderer/renderer.js
+const { ok, properties } = await window.kindeAuth.getProperties()
+if (ok) {
+  const tier = properties.subscriptionTier // e.g. "pro"
+  // show/hide features based on tier
+}
+```
+
+Learn more about [properties](/properties/work-with-properties/manage-properties/)
+
+### Management API
+
+The Kinde Management API is a server-side REST API that lets you manage your Kinde data programmatically — create and update users, assign or revoke roles, manage organization membership, update user properties, and more. It authenticates using OAuth 2.0 client credentials (an M2M app with a client secret), so it should only ever run in a backend you control, not inside the Electron app itself.
+
+Use it when you need to perform admin-level operations in response to events in your app — for example, upgrading a user's role when they complete a purchase, or adding them to an organization when they accept a team invite.
+
+Learn more about [the Kinde Management API](/developer-tools/kinde-api/connect-to-kinde-api/)
+
 ## Build for production
 
 [electron-builder](https://www.electron.build) is the standard tool for packaging Electron apps into distributable formats — a `.dmg` on macOS, an NSIS `.exe` installer on Windows, and an `.AppImage` on Linux.
@@ -1251,22 +1569,12 @@ Place your icon files in a `build/` folder at the project root before running th
 - `build/icon.ico` — Windows
 - `build/icon.png` — Linux (512×512 recommended)
 
-### Further reading
-
-**Electron distribution**
+### Electron distribution
 
 - [Code signing and notarization](https://www.electronjs.org/docs/latest/tutorial/code-signing) — required for macOS Gatekeeper and Windows SmartScreen
 - [Application distribution](https://www.electronjs.org/docs/latest/tutorial/application-distribution) — customizing builds, packaging options, and release channels
 - [Auto updates](https://www.electronjs.org/docs/latest/tutorial/updates) — `electron-builder` includes `electron-updater` support out of the box
 - [electron-builder full reference](https://www.electron.build/configuration) — all targets, signing options, and publish providers
-
-**Building on top of Kinde auth**
-
-Once auth is working, Kinde gives you additional features you can layer in:
-
-- **Permissions and roles** — check what a signed-in user is allowed to do. The access token contains a `permissions` claim you can inspect, or use Kinde's [roles and permissions](/authorization/roles/create-and-manage-roles/) system to control access within your app.
-- **User profile** — for fresh or extended user data beyond the ID token claims, call the Kinde [userinfo endpoint](/developer-tools/your-apis/get-user-profile/) with the access token returned from `auth:getAccessToken`.
-- **Organizations** — if you're building a multi-tenant app, Kinde's [organizations](/build/organizations/create-manage-orgs/) let you scope users and permissions per tenant.
 
 ### Finished!
 
