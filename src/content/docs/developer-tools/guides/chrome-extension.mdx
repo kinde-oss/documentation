@@ -1,10 +1,10 @@
 ---
 page_id: 9913b80b-bbfb-4acb-94ff-2a7356286d7a
 title: Add Kinde auth to Chrome extension
-description: "Step-by-step guide for integrating Kinde authentication into a Chrome browser extension using the Plasmo framework, PKCE flow via chrome.identity, background service worker token exchange, ChromeStore session management, and a full-page dashboard tab with user profile display."
+description: "Step-by-step guide for integrating Kinde authentication into a Chrome browser extension using the Plasmo framework, PKCE flow via chrome.identity, background service worker token exchange, ChromeStore session management, silent token renewal, and a full-page dashboard tab with roles, permissions, feature flags, and user properties."
 sidebar:
   order: 6
-  label: Chrome extension
+  label: Kinde in Chrome extension
 tableOfContents:
   maxHeadingLevel: 3
 topics:
@@ -15,6 +15,9 @@ topics:
   - oauth
   - authentication
   - pkce
+  - roles-and-permissions
+  - feature-flags
+  - organizations
 sdk:
   - "@kinde/js-utils"
 languages:
@@ -41,6 +44,20 @@ keywords:
   - token exchange
   - access token
   - id token
+  - silent refresh
+  - silent authentication
+  - token renewal
+  - roles
+  - permissions
+  - organizations
+  - org_code
+  - feature flags
+  - user properties
+  - Management API
+  - JWT
+  - JWKS
+  - fetchWithAuth
+  - protected API
   - login
   - logout
   - popup
@@ -48,10 +65,13 @@ keywords:
   - Manifest V3
   - MV3
   - Tailwind CSS
-updated: 2026-05-31
+  - Chrome Web Store
+  - extension key file
+  - expo-secure-store
+updated: 2026-06-02
 featured: false
 deprecated: false
-ai_summary: "Guide for building a Chrome browser extension with Kinde authentication using the Plasmo framework. Covers project scaffolding with Plasmo and Tailwind CSS, installing @kinde/js-utils, configuring TypeScript and PostCSS, setting up environment variables, and implementing a full PKCE OAuth flow via chrome.identity with no client secret required. Includes complete source files for a background MV3 service worker that handles token exchange cross-origin, a popup with login and logout, a full-page dashboard tab displaying user profile and access token, shared JWT utilities, a ChromeStore session module, and a global CSS design system. Also covers Kinde application setup, registering the chrome.identity redirect URL as a callback URL, loading the unpacked extension in Chrome, and security best practices including sender validation, token expiry checks, and sandboxed chrome.storage.local."
+ai_summary: "Step-by-step guide for building a Chrome extension with Kinde authentication using the Plasmo framework and @kinde/js-utils. Covers project scaffolding, environment variables, and a full PKCE OAuth flow via chrome.identity with no client secret. The background MV3 service worker handles both interactive login (KINDE_LOGIN) and silent token renewal (KINDE_SILENT_AUTH) through a shared runAuthFlow helper, automatically refreshing expired tokens against the existing Kinde browser session. Includes complete source files for the service worker, popup, full-page dashboard tab, shared JWT utilities, ChromeStore session module, and Tailwind CSS design system. Covers adding Kinde features including roles and permissions read from JWT claims, organizations with org_code routing at login, a fetchWithAuth utility for protected API calls with server-side JWKS validation, feature flags via getFeatureFlags and getFlag helpers, user properties surfaced through token customization, and Management API usage from a trusted backend only. Also covers production deployment with extension key files for stable IDs across environments, Chrome Web Store packaging, and troubleshooting for CORS errors, expo-secure-store stub fragility, and missing token claims."
 ---
 
 A Chrome extension built with [Plasmo](https://docs.plasmo.com) that adds Kinde authentication via PKCE — no client secret required. The extension popup triggers Kinde hosted login via `chrome.identity`, a background service worker exchanges the auth code for tokens, then opens a full-page dashboard tab with the user's profile.
@@ -312,7 +332,7 @@ export default IndexPopup
 
 ### `background.ts`
 
-The MV3 service worker. Handles the entire PKCE login flow triggered by a `KINDE_LOGIN` message from the popup. Running `generateAuthUrl`, `launchWebAuthFlow`, token exchange, and dashboard tab creation here prevents macOS Chrome from closing the popup when the OAuth window opens. Service workers also bypass CORS for declared `host_permissions`, which is why the token network call lives here rather than in the popup.
+The MV3 service worker. Handles both the interactive PKCE login flow (`KINDE_LOGIN`) and silent token renewal (`KINDE_SILENT_AUTH`) via a shared `runAuthFlow` helper. Running these flows in the service worker prevents macOS Chrome from closing the popup when the OAuth window opens, and bypasses CORS for declared `host_permissions` so the token exchange network call can happen here.
 
 ```ts
 import {
@@ -334,29 +354,29 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log("[Kinde BG] Extension installed")
 })
 
-export type LoginMessage = {
-  type: "KINDE_LOGIN"
-}
-
+export type LoginMessage = { type: "KINDE_LOGIN" }
 export type LoginResponse =
   | { success: true }
   | { success: false; error: string }
 
-chrome.runtime.onMessage.addListener(
-  (message: LoginMessage, sender, sendResponse) => {
-    if (message.type !== "KINDE_LOGIN") return false
+export type SilentAuthMessage = { type: "KINDE_SILENT_AUTH" }
+export type SilentAuthResponse =
+  | { success: true }
+  | { success: false; error: string }
 
-    // Only accept messages from within this extension itself.
-    // Reject any message from a web page or a different extension.
-    if (sender.id !== chrome.runtime.id || sender.tab !== undefined) {
-      console.warn("[Kinde BG] Rejected message from untrusted sender:", sender.id)
-      sendResponse({ success: false, error: "Unauthorized sender" })
-      return false
-    }
+type AnyMessage = LoginMessage | SilentAuthMessage
+type AnyResponse = LoginResponse | SilentAuthResponse
 
-    const redirectURL = chrome.identity.getRedirectURL()
+async function runAuthFlow(
+  interactive: boolean,
+  openDashboard: boolean,
+  sendResponse: (r: AnyResponse) => void,
+) {
+  const redirectURL = chrome.identity.getRedirectURL()
 
-    generateAuthUrl(
+  let generatedAuthURL: { url: URL }
+  try {
+    generatedAuthURL = await generateAuthUrl(
       KINDE_DOMAIN,
       IssuerRouteTypes.login,
       {
@@ -366,85 +386,104 @@ chrome.runtime.onMessage.addListener(
       },
       { disableUrlSanitization: true },
     )
-      .then((generatedAuthURL) => {
-        chrome.identity.launchWebAuthFlow(
-          { url: generatedAuthURL.url.toString(), interactive: true },
-          async (redirectUri) => {
-            if (chrome.runtime.lastError || !redirectUri) {
-              const msg = chrome.runtime.lastError?.message ?? "Auth cancelled"
-              console.error("[Kinde BG] Auth flow failed:", msg)
-              sendResponse({ success: false, error: msg })
-              return
-            }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error("[Kinde BG] Failed to generate auth URL:", msg)
+    sendResponse({ success: false, error: msg })
+    return
+  }
 
-            const parsedUrl = new URL(redirectUri)
-            const errorParam = parsedUrl.searchParams.get("error")
-            if (errorParam) {
-              const errDesc = parsedUrl.searchParams.get("error_description") ?? errorParam
-              sendResponse({ success: false, error: errDesc })
-              return
-            }
-
-            try {
-              const urlParams = new URLSearchParams(parsedUrl.search)
-              const result = await exchangeAuthCode({
-                urlParams,
-                domain: KINDE_DOMAIN,
-                clientId: KINDE_CLIENT_ID,
-                redirectURL,
-              })
-
-              if (!result.success) {
-                console.error("[Kinde BG] Token exchange failed:", result.error)
-                sendResponse({ success: false, error: result.error ?? "Token exchange failed" })
-                return
-              }
-
-              const tokenWrites: Promise<void>[] = [
-                sessionManager.setSessionItem(
-                  StorageKeys.accessToken,
-                  result[StorageKeys.accessToken] ?? "",
-                ),
-                sessionManager.setSessionItem(
-                  StorageKeys.idToken,
-                  result[StorageKeys.idToken] ?? "",
-                ),
-              ]
-              if (result[StorageKeys.refreshToken]) {
-                tokenWrites.push(
-                  sessionManager.setSessionItem(
-                    StorageKeys.refreshToken,
-                    result[StorageKeys.refreshToken] ?? "",
-                  ),
-                )
-              }
-              await Promise.all(tokenWrites)
-
-              // Clean up ephemeral PKCE values now that the exchange is complete.
-              await Promise.all([
-                sessionManager.removeSessionItem(StorageKeys.codeVerifier),
-                sessionManager.removeSessionItem(StorageKeys.state),
-                sessionManager.removeSessionItem(StorageKeys.nonce),
-              ])
-
-              await chrome.tabs.create({
-                url: chrome.runtime.getURL("tabs/dashboard.html"),
-              })
-
-              sendResponse({ success: true })
-            } catch (err: unknown) {
-              const msg = err instanceof Error ? err.message : String(err)
-              console.error("[Kinde BG] Unexpected error during token exchange:", msg)
-              sendResponse({ success: false, error: msg })
-            }
-          },
-        )
-      })
-      .catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err)
-        console.error("[Kinde BG] Failed to generate auth URL:", msg)
+  chrome.identity.launchWebAuthFlow(
+    { url: generatedAuthURL.url.toString(), interactive },
+    async (redirectUri) => {
+      if (chrome.runtime.lastError || !redirectUri) {
+        const msg = chrome.runtime.lastError?.message ?? "Auth cancelled"
+        // Only log as error for interactive flows — a silent failure is expected when the session has expired.
+        if (interactive) console.error("[Kinde BG] Auth flow failed:", msg)
         sendResponse({ success: false, error: msg })
-      })
+        return
+      }
+
+      const parsedUrl = new URL(redirectUri)
+      const errorParam = parsedUrl.searchParams.get("error")
+      if (errorParam) {
+        const errDesc = parsedUrl.searchParams.get("error_description") ?? errorParam
+        sendResponse({ success: false, error: errDesc })
+        return
+      }
+
+      try {
+        const urlParams = new URLSearchParams(parsedUrl.search)
+        const result = await exchangeAuthCode({
+          urlParams,
+          domain: KINDE_DOMAIN,
+          clientId: KINDE_CLIENT_ID,
+          redirectURL,
+        })
+
+        if (!result.success) {
+          console.error("[Kinde BG] Token exchange failed:", result.error)
+          sendResponse({ success: false, error: result.error ?? "Token exchange failed" })
+          return
+        }
+
+        const tokenWrites: Promise<void>[] = [
+          sessionManager.setSessionItem(
+            StorageKeys.accessToken,
+            result[StorageKeys.accessToken] ?? "",
+          ),
+          sessionManager.setSessionItem(
+            StorageKeys.idToken,
+            result[StorageKeys.idToken] ?? "",
+          ),
+        ]
+        if (result[StorageKeys.refreshToken]) {
+          tokenWrites.push(
+            sessionManager.setSessionItem(
+              StorageKeys.refreshToken,
+              result[StorageKeys.refreshToken] ?? "",
+            ),
+          )
+        }
+        await Promise.all(tokenWrites)
+
+        // Clean up ephemeral PKCE values now that the exchange is complete.
+        await Promise.all([
+          sessionManager.removeSessionItem(StorageKeys.codeVerifier),
+          sessionManager.removeSessionItem(StorageKeys.state),
+          sessionManager.removeSessionItem(StorageKeys.nonce),
+        ])
+
+        if (openDashboard) {
+          await chrome.tabs.create({
+            url: chrome.runtime.getURL("tabs/dashboard.html"),
+          })
+        }
+
+        sendResponse({ success: true })
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error("[Kinde BG] Unexpected error during token exchange:", msg)
+        sendResponse({ success: false, error: msg })
+      }
+    },
+  )
+}
+
+chrome.runtime.onMessage.addListener(
+  (message: AnyMessage, sender, sendResponse) => {
+    if (message.type !== "KINDE_LOGIN" && message.type !== "KINDE_SILENT_AUTH") return false
+
+    // Only accept messages from within this extension itself.
+    // Reject any message from a web page or a different extension.
+    if (sender.id !== chrome.runtime.id || sender.tab !== undefined) {
+      console.warn("[Kinde BG] Rejected message from untrusted sender:", sender.id)
+      sendResponse({ success: false, error: "Unauthorized sender" })
+      return false
+    }
+
+    const interactive = message.type === "KINDE_LOGIN"
+    runAuthFlow(interactive, interactive, sendResponse)
 
     // Return true to keep the message channel open for the async response.
     return true
@@ -713,7 +752,7 @@ export function isTokenExpired(token: string): boolean {
 
 ### `lib/kinde.ts`
 
-Core auth helpers used by the popup. `login()` delegates the entire OAuth flow to the background service worker via a `KINDE_LOGIN` message — the background runs `generateAuthUrl`, `launchWebAuthFlow`, and token exchange, then opens the dashboard tab. Also handles logout and reading the current auth state from `chrome.storage.local`.
+Core auth helpers used by the popup. `login()` delegates the interactive OAuth flow to the background via `KINDE_LOGIN`. `getAuthState()` automatically attempts a silent re-authentication via `KINDE_SILENT_AUTH` when the stored token is expired — if the user's Kinde browser session is still alive, fresh tokens are returned with no user prompt. If the session has also expired, the user is prompted to sign in again.
 
 ```ts
 import {
@@ -722,7 +761,7 @@ import {
   StorageKeys,
 } from "@kinde/js-utils"
 
-import type { LoginMessage, LoginResponse } from "~background"
+import type { LoginMessage, LoginResponse, SilentAuthMessage, SilentAuthResponse } from "~background"
 import { decodeJwt, isTokenExpired } from "~lib/jwt"
 
 export const KINDE_DOMAIN = process.env.PLASMO_PUBLIC_KINDE_DOMAIN ?? ""
@@ -772,6 +811,19 @@ export async function login(): Promise<void> {
   }
 }
 
+// Silently re-authenticates using the existing Kinde browser session.
+// Returns true if fresh tokens were obtained, false if the session has also expired.
+async function silentRefresh(): Promise<boolean> {
+  try {
+    const response = await chrome.runtime.sendMessage<SilentAuthMessage, SilentAuthResponse>({
+      type: "KINDE_SILENT_AUTH",
+    })
+    return response?.success ?? false
+  } catch {
+    return false
+  }
+}
+
 export async function logout(): Promise<void> {
   const redirectURL = chrome.identity.getRedirectURL()
   const logoutUrl = new URL(`${KINDE_DOMAIN}/logout`)
@@ -796,11 +848,16 @@ export async function logout(): Promise<void> {
   ])
 }
 
-export async function getAuthState(): Promise<AuthState> {
+// The retry flag prevents infinite recursion if the silent refresh itself returns a bad token.
+export async function getAuthState(retry = true): Promise<AuthState> {
   const accessToken = (await sessionManager.getSessionItem(StorageKeys.accessToken)) as string | null
   const idToken = (await sessionManager.getSessionItem(StorageKeys.idToken)) as string | null
 
   if (!accessToken || isTokenExpired(accessToken)) {
+    if (retry) {
+      const refreshed = await silentRefresh()
+      if (refreshed) return getAuthState(false)
+    }
     return { isAuthenticated: false, accessToken: null, idToken: null, user: null }
   }
 
@@ -823,7 +880,7 @@ export async function getAuthState(): Promise<AuthState> {
 
 ### `lib/session.ts`
 
-A lightweight session module used only by the dashboard tab. Kept separate from `lib/kinde.ts` to avoid importing `chrome.identity` into the tab bundle.
+A lightweight session module used only by the dashboard tab. Kept separate from `lib/kinde.ts` to avoid pulling the background message types (`LoginMessage`, `SilentAuthMessage`, etc.) into the tab bundle.
 
 ```ts
 /**
@@ -1117,15 +1174,16 @@ a { color: inherit; text-decoration: none; }
 
 ### `scripts/patch-expo-stub.mjs`
 
-`@kinde/js-utils` declares `expo-secure-store` as a peer dependency, but it is only used in the React Native storage adapter — never in `ChromeStore`. Parcel will fail to resolve it unless a stub exists.
+`@kinde/js-utils` declares `expo-secure-store` as a peer dependency. It is only consumed inside `ExpoSecureStore`, via a lazy `await import("expo-secure-store")` inside `loadExpoStore()` that is wrapped in a try/catch. Without a stub, Parcel fails at **bundle time** because it cannot resolve the specifier statically — even though the import is dynamic.
+
+The stub satisfies Parcel's resolver and writes version `11.0.0`, which covers the declared peer range (`>=11.0.0`).
+
+Two caveats to keep in mind:
+
+- **The try/catch is not exercised.** Normally, if `expo-secure-store` is absent, the dynamic import throws and `loadExpoStore` catches it gracefully. With the stub in place the import *succeeds* and returns an empty `{}` object — no error is thrown. This is safe as long as you only use `ChromeStore` and never instantiate `ExpoSecureStore`. If `ExpoSecureStore` is used, it will call methods on `{}` and throw a runtime error rather than failing gracefully.
+- **The stub lives in `node_modules/` and is not committed.** It must be recreated after any clean install (`npm ci`, a `node_modules` wipe, or CI tooling that resets dependencies). The `postinstall` entry in `package.json` runs this script automatically on every `npm install`, which covers most cases.
 
 ```js
-/**
- * Creates a stub for expo-secure-store so Parcel can resolve it.
- * @kinde/js-utils uses it only in the ExpoSecureStore class (not ChromeStore),
- * and it's lazily imported inside a try/catch — so a no-op stub is safe.
- */
-
 import { mkdirSync, writeFileSync } from "fs"
 import { join } from "path"
 
@@ -1172,7 +1230,7 @@ The redirect URL is tied to your extension's unique Chrome ID. Get it by running
 
 1. Select the extension icon in Chrome's toolbar, the popup should open.
 2. Right click on the popup and select **Inspect**, the devtools open.
-3. In the devltools, go to **Console** tab and run the following code:
+3. In the DevTools, go to **Console** tab and run the following code:
 
     ```js
     chrome.identity.getRedirectURL()
@@ -1198,7 +1256,7 @@ The redirect URL is tied to your extension's unique Chrome ID. Get it by running
 
 ## Add Kinde features
 
-Your extension now has working authentication. The sections below show how to layer in additional Kinde features — roles, permissions, multi-org login, token refresh, and protected API calls.
+Your extension now has working authentication with automatic silent token renewal built in. The sections below show how to layer in additional Kinde features — roles, permissions, organizations, feature flags, user properties, and protected API calls.
 
 ### Roles and permissions
 
@@ -1206,9 +1264,9 @@ Kinde embeds `roles` and `permissions` claims directly in the access token. No e
 
 #### 1. Enable roles and permissions in Kinde
 
-1. Go to **Settings > Roles** in your Kinde dashboard and create the roles your extension needs (e.g. `admin`, `viewer`).
-2. Go to **Settings > Permissions** and create permission keys (e.g. `read:data`, `write:data`).
-3. Assign roles and permissions to users via **Users**, or programmatically via the [Kinde Management API](/build/user-management/roles-and-permissions/).
+1. Go to **Settings > User management > Roles** in your Kinde dashboard and create the roles your extension needs (e.g. `admin`, `viewer`).
+2. Go to **Settings > User management > Permissions** and create permission keys (e.g. `read:data`, `write:data`).
+3. Assign roles and permissions to users via **Users**, or programmatically via the [Kinde Management API](/developer-tools/kinde-api/connect-to-kinde-api/).
 4. Go to **Settings > APIs**, select your API, open the **Tokens** tab, and enable **Include roles in token** and **Include permissions in token**.
 
 #### 2. Add helpers to `lib/jwt.ts`
@@ -1306,22 +1364,39 @@ export type LoginMessage = {
 }
 ```
 
-#### 2. Pass `org_code` to `generateAuthUrl`
+#### 2. Thread `orgCode` through `runAuthFlow`
 
-In the `onMessage` handler in `background.ts`, spread `orgCode` into the `generateAuthUrl` options object:
+`generateAuthUrl` is called inside `runAuthFlow`, so add `orgCode` as an optional fourth parameter and spread it into the options:
 
 ```ts
-generateAuthUrl(
-  KINDE_DOMAIN,
-  IssuerRouteTypes.login,
-  {
-    clientId: KINDE_CLIENT_ID,
-    redirectURL,
-    responseType: "code",
-    ...(message.orgCode ? { orgCode: message.orgCode } : {}),
-  },
-  { disableUrlSanitization: true },
-)
+async function runAuthFlow(
+  interactive: boolean,
+  openDashboard: boolean,
+  sendResponse: (r: AnyResponse) => void,
+  orgCode?: string,
+) {
+  // ...
+  generatedAuthURL = await generateAuthUrl(
+    KINDE_DOMAIN,
+    IssuerRouteTypes.login,
+    {
+      clientId: KINDE_CLIENT_ID,
+      redirectURL,
+      responseType: "code",
+      ...(orgCode ? { orgCode } : {}),
+    },
+    { disableUrlSanitization: true },
+  )
+  // ...
+}
+```
+
+Then update the `onMessage` handler to read `orgCode` from the login message and pass it through:
+
+```ts
+const interactive = message.type === "KINDE_LOGIN"
+const orgCode = interactive ? (message as LoginMessage).orgCode : undefined
+runAuthFlow(interactive, interactive, sendResponse, orgCode)
 ```
 
 #### 3. Pass `orgCode` from the popup
@@ -1370,131 +1445,6 @@ const orgName = payload.org_name as string | undefined
 
 Add these as additional rows in the profile info card in `tabs/dashboard.tsx`.
 
-### Token refresh
-
-Access tokens expire (Kinde's default is 1 hour). When a token is expired, silently re-authenticate using the stored refresh token — no user interaction required.
-
-#### 1. Add a `KINDE_REFRESH` message handler to `background.ts`
-
-Add the new message and response types to `background.ts`:
-
-```ts
-export type RefreshMessage = { type: "KINDE_REFRESH" }
-export type RefreshResponse =
-  | { success: true }
-  | { success: false; error: string }
-```
-
-Add a second `onMessage` listener for the refresh flow. Keep it separate from the login handler so each remains focused:
-
-```ts
-chrome.runtime.onMessage.addListener(
-  (message: RefreshMessage, sender, sendResponse) => {
-    if (message.type !== "KINDE_REFRESH") return false
-
-    if (sender.id !== chrome.runtime.id || sender.tab !== undefined) {
-      sendResponse({ success: false, error: "Unauthorized sender" })
-      return false
-    }
-
-    sessionManager
-      .getSessionItem(StorageKeys.refreshToken)
-      .then(async (stored) => {
-        const refreshToken = typeof stored === "string" ? stored : null
-        if (!refreshToken) {
-          sendResponse({ success: false, error: "No refresh token stored" })
-          return
-        }
-
-        const res = await fetch(`${KINDE_DOMAIN}/oauth2/token`, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            grant_type: "refresh_token",
-            client_id: KINDE_CLIENT_ID,
-            refresh_token: refreshToken,
-          }).toString(),
-        })
-
-        if (!res.ok) {
-          sendResponse({ success: false, error: `Refresh failed: ${res.status}` })
-          return
-        }
-
-        const data = await res.json() as Record<string, string>
-        const writes: Promise<void>[] = [
-          sessionManager.setSessionItem(StorageKeys.accessToken, data.access_token ?? ""),
-          sessionManager.setSessionItem(StorageKeys.idToken, data.id_token ?? ""),
-        ]
-        if (data.refresh_token) {
-          writes.push(sessionManager.setSessionItem(StorageKeys.refreshToken, data.refresh_token))
-        }
-        await Promise.all(writes)
-        sendResponse({ success: true })
-      })
-      .catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err)
-        sendResponse({ success: false, error: msg })
-      })
-
-    return true
-  },
-)
-```
-
-#### 2. Add `refreshSession()` to `lib/kinde.ts`
-
-```ts
-import type { RefreshMessage, RefreshResponse } from "~background"
-
-export async function refreshSession(): Promise<boolean> {
-  try {
-    const response = await chrome.runtime.sendMessage<RefreshMessage, RefreshResponse>({
-      type: "KINDE_REFRESH",
-    })
-    return response?.success ?? false
-  } catch {
-    return false
-  }
-}
-```
-
-#### 3. Update `getAuthState()` to attempt a silent refresh
-
-Update `getAuthState()` in `lib/kinde.ts` to try a refresh before returning unauthenticated. The `retry` flag prevents infinite recursion:
-
-```ts
-export async function getAuthState(retry = true): Promise<AuthState> {
-  const accessToken = (await sessionManager.getSessionItem(StorageKeys.accessToken)) as string | null
-  const idToken = (await sessionManager.getSessionItem(StorageKeys.idToken)) as string | null
-
-  if (!accessToken || isTokenExpired(accessToken)) {
-    if (retry) {
-      const refreshed = await refreshSession()
-      if (refreshed) return getAuthState(false)
-    }
-    return { isAuthenticated: false, accessToken: null, idToken: null, user: null }
-  }
-
-  let user: UserInfo | null = null
-  if (idToken) {
-    const payload = decodeJwt(idToken)
-    user = {
-      email: payload.email as string | undefined,
-      name: (payload.given_name
-        ? `${payload.given_name} ${payload.family_name ?? ""}`.trim()
-        : (payload.name as string | undefined)) ?? undefined,
-      picture: payload.picture as string | undefined,
-      sub: payload.sub as string | undefined,
-    }
-  }
-
-  return { isAuthenticated: true, accessToken, idToken, user }
-}
-```
-
-Apply the same pattern to `getSession()` in `lib/session.ts` if you want the dashboard tab to also auto-refresh.
-
 ### Call a protected API
 
 Use the stored access token as a `Bearer` token to authenticate requests to your backend.
@@ -1538,33 +1488,149 @@ https://<your-subdomain>.kinde.com/.well-known/jwks
 
 Kinde publishes rotating public keys at this URL. Use a JWT library that supports JWKS (e.g. `jose` for Node.js) to verify the signature, expiry, and audience before trusting any claims.
 
-### Custom claims
+### Feature flags
 
-You can attach arbitrary data to the access or ID token using Kinde's token customization. Common uses include a subscription tier, internal user ID, or feature flags.
+Feature flags let you toggle functionality on or off for users from the Kinde dashboard — no code deploy required. Kinde embeds the flag values directly in the access token as a `feature_flags` object, so your extension can read them client-side the moment the user signs in or refreshes their token. This is useful for rolling out new UI panels, beta features, or A/B tests to specific users without shipping a new extension build.
 
-#### 1. Create a custom claim in Kinde
+#### 1. Create feature flags in Kinde
 
-1. Go to **Settings > Token customization** in your Kinde dashboard.
-2. Select the token type (**Access token** or **ID token**).
-3. Add a new claim with a key (e.g. `subscription_tier`) and a source (a user property, org property, or static value).
+1. Go to **Releases > Feature flags** in your Kinde dashboard.
+2. Select **Add feature flag**.
+3. Set a **Name**, **Key** (e.g. `dark_mode`, `beta_panel`), **Type** (boolean, string, or integer), and **Default value**.
 4. Select **Save**.
+5. Go to **Settings > APIs**, select your API, open the **Tokens** tab, and enable **Include feature flags in token**.
 
-#### 2. Read the claim from the token
+#### 2. Add a helper to `lib/jwt.ts`
 
-Custom claims appear in the decoded JWT payload under the key you set:
+Add the following types and helper to `lib/jwt.ts`:
+
+```ts
+export type FeatureFlagValue = boolean | string | number
+
+export interface FeatureFlag {
+  t: "b" | "s" | "i"  // type: boolean, string, integer
+  v: FeatureFlagValue
+}
+
+/** Returns the feature flags object embedded in an access token. */
+export function getFeatureFlags(token: string): Record<string, FeatureFlag> {
+  const payload = decodeJwt(token)
+  const flags = payload.feature_flags
+  if (!flags || typeof flags !== "object" || Array.isArray(flags)) return {}
+  return flags as Record<string, FeatureFlag>
+}
+
+/** Returns the value of a specific feature flag, or the fallback if not set. */
+export function getFlag<T extends FeatureFlagValue>(
+  token: string,
+  key: string,
+  fallback: T,
+): T {
+  const flags = getFeatureFlags(token)
+  return (flags[key]?.v as T) ?? fallback
+}
+```
+
+#### 3. Read flags in the dashboard
+
+In `tabs/dashboard.tsx`, import the helpers and gate features based on flag values:
+
+```tsx
+import { getFeatureFlags, getFlag } from "~lib/jwt"
+
+// Inside Dashboard(), after auth state is loaded:
+const flags = auth.accessToken ? getFeatureFlags(auth.accessToken) : {}
+const showBetaPanel = auth.accessToken ? getFlag(auth.accessToken, "beta_panel", false) : false
+```
+
+Render all flags in a card for inspection during development:
+
+```tsx
+{Object.keys(flags).length > 0 && (
+  <div className="card-light">
+    <p className="section-label">Feature flags</p>
+    {Object.entries(flags).map(([key, flag]) => (
+      <div key={key} className="info-row">
+        <span className="info-label">{key}</span>
+        <span className="info-value">{String(flag.v)}</span>
+      </div>
+    ))}
+  </div>
+)}
+```
+
+Gate a UI feature inline:
+
+```tsx
+{showBetaPanel && (
+  <div className="card-light">
+    <p className="section-label">Beta panel</p>
+    <p className="text-body-3">This panel is only visible to beta users.</p>
+  </div>
+)}
+```
+
+Learn more at [Feature flags](/releases/feature-flags/manage-feature-flags/).
+
+### User properties
+
+User properties let you store custom typed data against a user — things like an internal account ID, onboarding state, or subscription metadata. They're defined in the Kinde dashboard as structured fields, and can be included in the access or ID token so your extension reads them without any extra API call. This is useful when you need to personalize the extension UI or gate features based on data that lives in your own system but is managed through Kinde.
+
+#### 1. Create user properties in Kinde
+
+1. Go to **Settings > Data management > Properties** in your Kinde dashboard.
+2. Select **Add property**.
+3. Set a **Name**, **Key** (e.g. `account_tier`, `internal_id`), and **Type**.
+4. Select **Save**.
+5. Go to **Settings > Token customization**, select the **Access token** or **ID token** tab, and add a claim that maps to the property you created.
+6. Assign values to users via **Users** > select a user > **Properties**, or via the Management API.
+
+#### 2. Read properties from the token
+
+Custom property claims appear in the decoded JWT payload under the key you configured in **Token customization**:
 
 ```ts
 import { decodeJwt } from "~lib/jwt"
 
 const payload = decodeJwt(auth.accessToken!)
-const tier = payload.subscription_tier as string | undefined
-
-if (tier === "pro") {
-  // unlock pro features
-}
+const accountTier = payload.account_tier as string | undefined
+const internalId  = payload.internal_id  as string | undefined
 ```
 
-Because `decodeJwt` returns `Record<string, unknown>`, always cast and guard the value before use.
+Render them in the dashboard profile card alongside the standard profile fields:
+
+```tsx
+{accountTier && (
+  <div className="info-row">
+    <span className="info-label">Account tier</span>
+    <span className="info-value">{accountTier}</span>
+  </div>
+)}
+```
+
+Always cast and guard values from `decodeJwt` before use — it returns `Record<string, unknown>` and will return `{}` on any parse failure.
+
+Learn more at [User properties](/properties/about-properties/).
+
+### Management API
+
+The Kinde Management API gives you full programmatic, server-side control over your Kinde environment. From a trusted backend you can:
+
+- Create, update, and delete users
+- Manage organizations and their members
+- Assign and remove roles and permissions
+- Create and update user and organization properties
+- Rotate feature flags and token customizations
+- Retrieve audit logs
+
+Because the Management API requires a **client secret**, it must only be called from a server you control — never from extension code that ships to end users. Putting a client secret in extension code exposes it to anyone who inspects the bundle.
+
+The recommended pattern is:
+
+1. Your Chrome extension calls your own backend, authenticated with the user's `Bearer` access token (see [Call a protected API](#call-a-protected-api)).
+2. Your backend validates the token, then makes signed Management API calls to Kinde on the user's behalf.
+
+Learn more at [Management API](/developer-tools/kinde-api/connect-to-kinde-api/).
 
 ## Production
 
