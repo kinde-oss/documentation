@@ -473,7 +473,7 @@ This guide shows you how to integrate Kinde authentication into a desktop app bu
     }
     
     // ---------- Login flow ----------
-    async function startLogin({ register = false } = {}) {
+    async function startLogin({ register = false, orgCode } = {}) {
       const codeVerifier = generateVerifier()
       const codeChallenge = challengeFromVerifier(codeVerifier)
       const state = randomState()
@@ -490,6 +490,7 @@ This guide shows you how to integrate Kinde authentication into a desktop app bu
       auth.searchParams.set("state", state)
       if (AUDIENCE) auth.searchParams.set("audience", AUDIENCE)
       if (register) auth.searchParams.set("prompt", "create")
+      if (orgCode) auth.searchParams.set("organization", orgCode)
     
       await shell.openExternal(auth.toString())
     
@@ -547,18 +548,18 @@ This guide shows you how to integrate Kinde authentication into a desktop app bu
     })
     
     // ---------- IPC ----------
-    ipcMain.handle("auth:login", async () => {
+    ipcMain.handle("auth:login", async (_e, { orgCode } = {}) => {
       try {
-        const { claims } = await startLogin()
+        const { claims } = await startLogin({ orgCode })
         return { ok: true, claims }
       } catch (e) {
         return { ok: false, error: String(e) }
       }
     })
     
-    ipcMain.handle("auth:register", async () => {
+    ipcMain.handle("auth:register", async (_e, { orgCode } = {}) => {
       try {
-        const { claims } = await startLogin({ register: true })
+        const { claims } = await startLogin({ register: true, orgCode })
         return { ok: true, claims }
       } catch (e) {
         return { ok: false, error: String(e) }
@@ -618,8 +619,8 @@ This guide shows you how to integrate Kinde authentication into a desktop app bu
     const { contextBridge, ipcRenderer } = require("electron")
     
     contextBridge.exposeInMainWorld("kindeAuth", {
-      login: () => ipcRenderer.invoke("auth:login"),
-      register: () => ipcRenderer.invoke("auth:register"),
+      login: (orgCode) => ipcRenderer.invoke("auth:login", { orgCode }),
+      register: (orgCode) => ipcRenderer.invoke("auth:register", { orgCode }),
       getAccessToken: () => ipcRenderer.invoke("auth:getAccessToken"),
       logout: () => ipcRenderer.invoke("auth:logout"),
       getSession: () => ipcRenderer.invoke("auth:getSession"),
@@ -1405,12 +1406,16 @@ if (ok && org) {
 }
 ```
 
-To log a user in under a specific organization, pass the `organization` parameter in the auth URL. In `startLogin()` in `main.js`, add:
+To log a user in under a specific organization, pass the org code when calling `login` or `register` from the renderer. It travels through the preload bridge and IPC handler into `startLogin()`, which appends it to the auth URL automatically:
 
 ```js
-// main.js — inside startLogin(), before shell.openExternal()
-if (orgCode) auth.searchParams.set("organization", orgCode)
+// renderer/renderer.js
+await window.kindeAuth.login("org_abc123")
+// or for registration into a specific org
+await window.kindeAuth.register("org_abc123")
 ```
+
+Omitting the argument (or passing `undefined`) leaves the org code unset and Kinde uses its default behavior.
 
 Learn more about [organizations](/build/organizations/add-and-manage-organizations/)
 
