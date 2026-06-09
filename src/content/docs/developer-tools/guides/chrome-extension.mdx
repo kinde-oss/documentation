@@ -165,6 +165,7 @@ touch popup.tsx background.ts tabs/dashboard.tsx lib/jwt.ts lib/kinde.ts lib/ses
 The extension popup. Shows a sign-in button when unauthenticated, or a compact profile card with "Open dashboard" and "Sign out" buttons when authenticated. On sign-in, the popup delegates the entire OAuth flow to the background service worker (which also opens the dashboard tab), then closes itself.
 
 ```tsx
+// popup.tsx
 import { useEffect, useState } from "react"
 
 import { getAuthState, login, logout } from "~lib/kinde"
@@ -335,6 +336,7 @@ export default IndexPopup
 The MV3 service worker. Handles both the interactive PKCE login flow (`KINDE_LOGIN`) and silent token renewal (`KINDE_SILENT_AUTH`) via a shared `runAuthFlow` helper. Running these flows in the service worker prevents macOS Chrome from closing the popup when the OAuth window opens, and bypasses CORS for declared `host_permissions` so the token exchange network call can happen here.
 
 ```ts
+// background.ts
 import {
   ChromeStore,
   exchangeAuthCode,
@@ -496,6 +498,7 @@ chrome.runtime.onMessage.addListener(
 A full-page tab opened automatically after login. Displays the user's profile, access token, and a sign out button. Plasmo detects any `.tsx` file in the `tabs/` directory and builds it as a standalone HTML page.
 
 ```tsx
+// tabs/dashboard.tsx
 import { useEffect, useState } from "react"
 
 import { getSession, signOut } from "~lib/session"
@@ -723,6 +726,7 @@ export default Dashboard
 Shared JWT utilities used by both `lib/kinde.ts` and `lib/session.ts`.
 
 ```ts
+// lib/jwt.ts
 export function decodeJwt(token: string): Record<string, unknown> {
   try {
     const base64Url = token.split(".")[1]
@@ -755,6 +759,7 @@ export function isTokenExpired(token: string): boolean {
 Core auth helpers used by the popup. `login()` delegates the interactive OAuth flow to the background via `KINDE_LOGIN`. `getAuthState()` automatically attempts a silent re-authentication via `KINDE_SILENT_AUTH` when the stored token is expired — if the user's Kinde browser session is still alive, fresh tokens are returned with no user prompt. If the session has also expired, the user is prompted to sign in again.
 
 ```ts
+// lib/kinde.ts
 import {
   ChromeStore,
   setActiveStorage,
@@ -883,6 +888,7 @@ export async function getAuthState(retry = true): Promise<AuthState> {
 A lightweight session module used only by the dashboard tab. Kept separate from `lib/kinde.ts` to avoid pulling the background message types (`LoginMessage`, `SilentAuthMessage`, etc.) into the tab bundle.
 
 ```ts
+// lib/session.ts
 /**
  * Lightweight session helpers used by the dashboard tab page.
  * Kept separate from lib/kinde.ts to avoid pulling background message types
@@ -965,6 +971,7 @@ export async function signOut(kindeDomain: string): Promise<void> {
 Global stylesheet with Kinde's design system tokens (CSS variables) and reusable component classes. This file is imported by both `popup.tsx` and `tabs/dashboard.tsx`.
 
 ```css
+/* style.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -1184,6 +1191,7 @@ Two caveats to keep in mind:
 - **The stub lives in `node_modules/` and is not committed.** It must be recreated after any clean install (`npm ci`, a `node_modules` wipe, or CI tooling that resets dependencies). The `postinstall` entry in `package.json` runs this script automatically on every `npm install`, which covers most cases.
 
 ```js
+// scripts/patch-expo-stub.mjs
 import { mkdirSync, writeFileSync } from "fs"
 import { join } from "path"
 
@@ -1230,6 +1238,9 @@ The redirect URL is tied to your extension's unique Chrome ID. Get it by running
 
 1. Select the extension icon in Chrome's toolbar, the popup should open.
 2. Right click on the popup and select **Inspect**, the devtools open.
+
+    ![chrome extension inspect element](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/e3d41b99-195a-4519-cd90-db70185b8c00/socialsharingimage)
+
 3. In the DevTools, go to **Console** tab and run the following code:
 
     ```js
@@ -1251,6 +1262,7 @@ The redirect URL is tied to your extension's unique Chrome ID. Get it by running
 
 1. Select the extension icon in Chrome's toolbar and select **Sign in**.
 2. Complete sign-in in the Chrome-managed auth window.
+    ![chrome extension popup](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/53481bad-e892-458d-3a02-7039cb87e600/socialsharingimage)
 3. The popup closes automatically and the dashboard tab opens with your user profile.
 4. Go to your Kinde dashboard > **Users** to verify the test user was created.
 
