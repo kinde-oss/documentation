@@ -1,9 +1,10 @@
 ---
 page_id: 4a46eba1-598a-4804-b669-dc96f31d2205
-title: Applications in Kinde
+title: About applications in Kinde
 description: Comprehensive overview of Kinde applications including backend, frontend, and machine-to-machine applications with OAuth 2.0 flows and security considerations.
 sidebar:
   order: 1
+  label: About applications
 tableOfContents:
   maxHeadingLevel: 3
 relatedArticles:
@@ -14,6 +15,7 @@ topics:
   - applications
   - oauth
   - authentication
+  - authorization
 sdk: []
 languages: []
 audience: developers
@@ -21,27 +23,29 @@ complexity: intermediate
 keywords:
   - applications
   - OAuth 2.0
-  - authorization flows
-  - backend apps
-  - frontend apps
-  - M2M apps
+  - authorization code flow
+  - PKCE
   - client credentials
-updated: 2024-01-15
+  - machine to machine
+  - device authorization flow
+  - back-end web apps
+  - front-end apps
+  - mobile apps
+  - IoT applications
+updated: 2026-06-10
 featured: false
 deprecated: false
-ai_summary: Comprehensive overview of Kinde applications including backend, frontend, and machine-to-machine applications with OAuth 2.0 flows and security considerations.
+ai_summary: "This page explains what Kinde applications are and how they connect products and services to Kinde for authentication and authorization. It covers four application types: Back-end web apps using the Authorization Code Flow with a client secret for server-rendered applications; Front-end and mobile apps using Authorization Code Flow with PKCE for SPAs, web browsers, and native mobile clients in untrusted environments; Machine to machine (M2M) apps using the Client Credentials grant for backend services, APIs, CLIs, and the Kinde Management API with scope-based access; and Device and IoT apps using the OAuth 2.0 Device Authorization Grant (RFC 8628) for input-limited devices like smart TVs and gaming consoles. The page lists compatible SDKs for each type, notes that Kinde does not support the Implicit Flow, and explains M2M token properties and device flow polling, audiences, and default app settings. It also walks through adding, configuring, and deleting applications in the Kinde dashboard, including app keys, callback URLs, authentication methods, tokens, sessions, and permanent deletion requirements."
 ---
 
-Applications in Kinde facilitate the receipt of access tokens in your application’s code. Kinde applications use OAuth 2.0 flows to securely pass tokens.
+In Kinde, an application represents a product or service that connects to Kinde for authentication and authorization—such as a website, mobile app, or backend API. Each application type uses OAuth 2.0 flows to securely obtain access tokens (and, where applicable, ID tokens) that your code can use to identify users or call protected APIs.
 
-See [Section 4 of the OAuth 2.0 Authorization Framework](https://datatracker.ietf.org/doc/html/rfc6749#section-4) for details on Authorization flows.
-
-We support the following applications and flows:
+Kinde supports the following application types:
 
 1. **Back-end web**: For server-rendered web applications
-2. **Front-end and mobile**: For client-side, javascript-based single page applications (SPAs)
-3. **Machine to machine (M2M)**: For trusted back-end services, APIs, and other systems
-4. **Device and IoT**: For TVs, native and IoT applications
+2. **Front-end and mobile**: For client-side web and native mobile applications, including JavaScript-based single page applications (SPAs)
+3. **Machine to machine (M2M)**: For trusted back-end services, APIs, and other systems that act on their own behalf
+4. **Device and IoT**: For devices with limited input capabilities, such as smart TVs, gaming consoles, and IoT applications
 
     ![kinde application types](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/297a6959-eefe-496d-463a-6da163997300/socialsharingimage)
 
@@ -49,53 +53,57 @@ We support the following applications and flows:
 
 ### Back-end web
 
-Use for server-rendered web applications. Suitable for confidential applications (such as Regular Web Applications) because the application's authentication methods are included in the exchange and must be kept secure.
+Use for server-rendered web applications. Suitable for confidential applications (such as Regular Web Applications) because credentials like the client secret can be stored securely on the server.
 
-**Secured with Authorization Code Flow**
+#### Secured with Authorization Code Flow
 
 This application uses the Authorization Code Flow to exchange an authorization code for a token.
 
-For security, a client secret is required to request an access token. The client secret is known only to the application and the authorization server. So when the application makes a request for an access token, it includes the client secret as a form of authentication. This ensures that the authorization server can verify the identity of the client application.
+For security, a client secret is required to request an access token. The client secret is known only to the application and the authorization server. When the application makes a request for an access token, it includes the client secret as a form of authentication. This ensures that the authorization server can verify the identity of the client application.
 
 The use of client secrets protects sensitive data from being accessed by unauthorized users and systems.
 
 <Aside>
 
-If the Client secret field is empty in your Kinde app it’s because client secrets are only available for back-end/server-side apps. You may have created a front-end/client-server app (that has no client secret) by mistake.
+If the Client secret field is unavailable in your Kinde app this means you may have created a front-end/client-side app (that has no client secret) by mistake.
 
 </Aside>
 
-#### SDKs and compatible frameworks
+#### Compatible back-end SDKs
 
-Apollo GraphQL, Elixir, ExpressJS, Express GraphQL, Java, .NET, Next.js, NodeJS, Nuxt, PHP, Python, Ruby, TypeScript.
+- [NextJS App Router](/developer-tools/sdks/backend/nextjs-sdk/) and [NextJS Pages Router](/developer-tools/sdks/backend/nextjs-prev-sdk/)
+- [TanStack Start React](/developer-tools/sdks/backend/tsr-sdk/)
+- [Go SDK](/developer-tools/sdks/backend/go-sdk/)
+- [Python SDK](/developer-tools/sdks/backend/python-sdk/)
 
-[View Kinde SDKs](/developer-tools/about/our-sdks/)
+See the full list of [Kinde back-end SDKs](/developer-tools/about/our-sdks/#back-end).
 
 ### Front-end and mobile
 
-Use for client-side web applications, single page web applications, and mobile applications. Authentication methods are different for these apps because they run in unsecured systems, such as web browsers.
+Use for client-side web applications, single page web applications, and mobile applications. Authentication methods are different for these apps because they run in untrusted environments, such as web browsers and mobile devices.
 
 #### Secured with Authorization Code Flow and PKCE
 
 This application uses the Authorization Code Flow with Proof Key for Code Exchange (PKCE).
 
-Client-side applications, such as single-page web apps, are typically unable to securely store a client secret due to the inherent exposure of client-side code. That’s why OAuth 2.0 recommends the Implicit Flow or PKCE (Proof Key for Code Exchange) to provide security without relying on a client secret.
+Client-side applications, such as single-page web apps, are typically unable to securely store a client secret due to the inherent exposure of client-side code. That’s why OAuth 2.0 recommends the Authorization Code Flow with PKCE (Proof Key for Code Exchange) for public clients that cannot use a client secret.
 
-<Aside>
-
-**Kinde does not support the Implicit Flow** method for front-end apps as it has some security vulnerabilities. We support Authorization Code Flow with PKCE instead.
-
+<Aside type="warning" title="About Implicit Flows">
+Kinde does not support the Implicit Flow method for front-end apps as it has some security vulnerabilities. We support Authorization Code Flow with PKCE instead.
 </Aside>
 
-#### SDKs and compatible frameworks
+#### Compatible front-end SDKs
 
-JavaScript, React, TypeScript, Android, iOS, React Native, Expo, Flutter, Node/Apollo GraphQL, Node/Express GraphQL.
+- [React SDK](/developer-tools/sdks/frontend/react-sdk/)
+- [Android SDK](/developer-tools/sdks/native/android-sdk/)
+- [iOS SDK](/developer-tools/sdks/native/ios-sdk/)
+- [Flutter SDK](/developer-tools/sdks/native/flutter-sdk/)
 
-[View Kinde SDKs](/developer-tools/about/our-sdks/)
+See the full list of [Kinde front-end and native SDKs](/developer-tools/about/our-sdks/#front-end).
 
 ### Machine to machine (M2M)
 
-Use for your backend services that require access to an API. This includes accessing the Kinde management API. Other use cases include CLIs, daemons and IoT devices. You can create as many M2M apps as you require. See [Add a machine to machine application for API access](/developer-tools/kinde-api/connect-to-kinde-api/).
+Use for your backend services that require access to an API. This includes accessing the Kinde management API. Other use cases include CLIs and background daemons. You can create as many M2M apps as you require. See [Add a machine to machine application for API access](/developer-tools/kinde-api/connect-to-kinde-api/).
 
 #### Secured with Client Credentials
 
@@ -113,7 +121,30 @@ If you want, you can [add custom properties to an M2M application](/properties/w
 
 ### Device and IoT
 
-To be added.
+Use for devices with limited input capabilities, such as smart TVs, gaming consoles, and IoT devices. Users authenticate on a secondary device (like a phone or computer) while the primary device receives the access token.
+
+#### Secured with Device Authorization Flow
+
+This application uses the OAuth 2.0 Device Authorization Grant ([RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628)). The flow works as follows:
+
+1. The device requests a device code and user code from Kinde.
+2. The user visits a verification URI on another device and enters the user code, or scans the QR code included in the response.
+3. The device polls the token endpoint at the interval returned in the response until authorization is complete.
+4. The device receives an access token and can call protected APIs.
+
+Device and IoT applications do not use a client secret. They are identified by Client ID only.
+
+The device must poll the token endpoint at regular intervals until the user completes authentication. Use the `interval` value from the device authorization response (typically 5 seconds). If you receive a `slow_down` error, increase the polling interval by 5 seconds. Stop polling after the `expires_in` time (typically 30 minutes).
+
+#### Audiences and scopes
+
+If you specify an `audience` in the device authorization request, the access token includes the audience in the `aud` claim. Any scopes belonging to that audience that are granted to the user by their role are shown on the consent screen and included in the access token when the user consents. The API must be authorized for the device authorization application.
+
+#### Default app for device flows
+
+You can set a Device and IoT application as the default for device flows. If no Client ID is specified in a device authorization request, Kinde uses the default application.
+
+See [About the device authorization flow](/authenticate/device-authorization-flow/overview/) and the [quick start guide](/authenticate/device-authorization-flow/quick-start/) to implement this flow in your application.
 
 ## Manage applications
 
@@ -123,15 +154,15 @@ To be added.
 2. Alternatively, go to **Settings > Environment > Applications**. Select **Add application**.
 3. Enter a **Name** and select the **Type** of application (e.g., Back-end web). Select **Save**.
 4. Select the SDK (e.g., NextJS), select **Save**.
-5. Configure the application by selecting **View details** on the application tile, see below for more details.
+5. Configure the application by selecting **View details** on the application tile. See below for more details.
 
 ### Configure an application
 
 **Get application keys**:
 
-You will need the application keys to connect your codebase to Kinde. 
+You will need the application keys to connect your codebase to Kinde.
 1. Go to your application > **Details > App keys**.
-2. Copy the **Domain** (or [Custom domain](/build/domains/pointing-your-domain/)), **Client ID**, and **Client secret** (if applicable)
+2. Copy the **Domain** (or [Custom domain](/build/domains/pointing-your-domain/)), **Client ID**, and **Client secret** (if applicable).
 
     Learn more about [application keys](/get-started/connect/getting-app-keys/).
 
@@ -154,7 +185,7 @@ Configure how your users authenticate to your application (e.g., email, phone, u
     Learn more about [authentication methods](/authenticate/authentication-methods/set-up-user-authentication/).
 
     <Aside>
-    For production application, enter the credentials provided by third-party providers in Kinde. [Learn more here](/authenticate/social-sign-in/add-social-sign-in/). 
+    For production applications, enter the credentials provided by third-party providers in Kinde. [Learn more here](/authenticate/social-sign-in/add-social-sign-in/).
     </Aside>
 
 **Configure tokens and sessions**:
@@ -181,3 +212,29 @@ To delete an application:
 1. Go to **Settings > Environment > Applications**.
 2. Select the three dots next to the application you want to delete and select **Delete application**.
 3. Follow the prompts in the window and select **Delete application**.
+
+## Application FAQs
+
+Common questions about creating and managing applications in Kinde.
+
+### How many applications can I create in Kinde?
+
+You can create as many applications as you need within an environment. Each application gets its own Client ID and, where applicable, its own client secret.
+
+Users who sign in through any application in the same environment share the same user pool—they are not duplicated per application. If you need fully separate user bases, use separate [environments](/build/environments/environments/) or [businesses](/build/set-up-options/run-multiple-businesses/).
+
+Learn more about [application keys](/get-started/connect/getting-app-keys/).
+
+### Why do I need to create multiple applications?
+
+Most products need more than one application. Common reasons include:
+
+- **Different platforms or architectures** — for example, a Back-end web app for a server-rendered site, a Front-end and mobile app for an SPA or native client, and an M2M app for API access.
+- **Different authentication methods** — configure sign-in options per application, such as Google for Android and Apple for iOS. See [Change authentication for an application](/authenticate/manage-authentication/manage-authentication-applications/).
+- **Separate callback URLs, tokens, and sessions** — each application has its own redirect URLs, token lifetimes, and session settings.
+- **Organization routing for multi-tenancy** — direct users to a specific organization at sign-in by passing an `org_code` in the auth request. See [About organizations](/build/organizations/multi-tenancy-using-organizations/).
+- **Different audiences** — use separate applications for production users and internal testers, each with its own auth methods and configuration.
+
+## Resources
+
+- [Section 4 of the OAuth 2.0 Authorization Framework](https://datatracker.ietf.org/doc/html/rfc6749#section-4).
