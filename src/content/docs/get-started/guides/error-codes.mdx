@@ -23,7 +23,7 @@ keywords:
   - oauth errors
   - verification codes
   - token errors
-updated: 2026-03-26
+updated: 2026-05-29
 featured: false
 deprecated: false
 ai_summary: Comprehensive troubleshooting guide for common Kinde error codes including authentication, SAML, OAuth, and verification issues.
@@ -146,6 +146,17 @@ Troubleshooting
 - If you need to unblock users while investigating, change the policy setting from `stop` to `warn` or `allow`
 - If the workflow was recently modified, restore the previous version using the version history in the workflow settings
 
+## Error code 1794
+
+Description
+- The `state` value returned on the social sign-in (OAuth 2.0) callback could not be decrypted or validated
+- This usually means the state was tampered with, truncated, expired, or came from a different environment or domain
+
+Troubleshooting
+- Start the sign-in flow again from the sign-in or log-in button, rather than from a bookmarked or partially completed auth URL
+- Make sure the domain or region you are using matches your Kinde environment exactly — see the [State not found](#state-not-found) section for related mismatch causes
+- Retry in a fresh browser session
+
 ## Error code 1829
 
 Description
@@ -180,6 +191,55 @@ Description
 
 Description
 - OAuth 2.0 response failed because token is invalid and redirect ID is null
+
+## Error code 4030
+
+Description
+- Social sign-in (OAuth 2.0 callback) was stopped at the identity provider before a token could be issued
+- The provider returned `access_denied` — typically the user cancelled the sign-in, or an organization/provider policy (such as Microsoft Entra Conditional Access) blocked it
+
+Troubleshooting
+- This is often expected (the user closed or declined the provider's consent screen). Ask the user to try signing in again.
+- If it affects all users on a connection, review the social connection's app and consent configuration at the provider, and any organization policies that may be blocking access.
+
+## Error code 4031
+
+Description
+- Social sign-in could not complete because the identity provider requires further interaction
+- The provider returned `interaction_required`, `login_required`, `consent_required`, or `account_selection_required`
+
+Troubleshooting
+- Ask the user to start the sign-in again and complete any prompts (login, consent, or account selection) shown by the provider.
+- This commonly occurs on silent or SSO attempts where the provider needs an interactive session.
+
+## Error code 4032
+
+Description
+- The identity provider was temporarily unavailable during the social sign-in callback
+- The provider returned `temporarily_unavailable` or `server_error`
+
+Troubleshooting
+- Wait a moment and try signing in again.
+- If it continues, check the identity provider's status page for an outage.
+
+## Error code 4033
+
+Description
+- The identity provider returned an unrecognized error during the social sign-in (OAuth 2.0) callback
+
+Troubleshooting
+- Retry the sign-in.
+- If it persists, review the social connection configuration and contact Kinde support with the error code and the provider's `error`/`error_description` from your logs.
+
+## Error code 4034
+
+Description
+- The social sign-in (OAuth 2.0) callback arrived with neither an authorization code nor an error
+- The cross-site form post lost its body in transit on some clients, so there was nothing to exchange
+
+Troubleshooting
+- Ask the user to start the sign-in again.
+- This is more likely on browsers or privacy settings that strip cross-site POST bodies — ensure cross-site requests and cookies required for the auth flow are not being blocked.
 
 ## Error code 4179
 
@@ -239,6 +299,15 @@ Troubleshooting
 - Start the auth flow again from the sign in or log in button
 - The user is trying to start a session in a new tab, browser, or device when there's already a partially completed session in progress
 - The user may have bookmarked the auth page when it's partially completed, instead of bookmarking the initial sign in or log in page
+
+## Error code 8998
+
+Description
+- During the social sign-in (OAuth 2.0) callback, Kinde could not complete the organization or environment transfer redirect
+
+Troubleshooting
+- Retry the sign-in
+- If it persists, contact Kinde support with the error code and the `psid` value from the URL
 
 ## Error code 9055
 
