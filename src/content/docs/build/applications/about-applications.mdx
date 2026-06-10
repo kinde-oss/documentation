@@ -4,6 +4,8 @@ title: Applications in Kinde
 description: Comprehensive overview of Kinde applications including backend, frontend, and machine-to-machine applications with OAuth 2.0 flows and security considerations.
 sidebar:
   order: 1
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 6c70b7ae-1b1b-43bb-bea1-9b3ec88dd082
   - 38d2394f-f064-47a1-89d0-078597b78412
@@ -34,13 +36,22 @@ Applications in Kinde facilitate the receipt of access tokens in your applicatio
 
 See [Section 4 of the OAuth 2.0 Authorization Framework](https://datatracker.ietf.org/doc/html/rfc6749#section-4) for details on Authorization flows.
 
-We support the following applications and flows.
+We support the following applications and flows:
 
-## Back-end / server-side apps
+1. **Back-end web**: For server-rendered web applications
+2. **Front-end and mobile**: For client-side, javascript-based single page applications (SPAs)
+3. **Machine to machine (M2M)**: For trusted back-end services, APIs, and other systems
+4. **Device and IoT**: For TVs, native and IoT applications
+
+    ![kinde application types](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/297a6959-eefe-496d-463a-6da163997300/socialsharingimage)
+
+## Supported app types
+
+### Back-end web
 
 Use for server-rendered web applications. Suitable for confidential applications (such as Regular Web Applications) because the application's authentication methods are included in the exchange and must be kept secure.
 
-### Secured with Authorization Code Flow
+**Secured with Authorization Code Flow**
 
 This application uses the Authorization Code Flow to exchange an authorization code for a token.
 
@@ -54,17 +65,17 @@ If the Client secret field is empty in your Kinde app it’s because client secr
 
 </Aside>
 
-### SDKs and compatible frameworks
+#### SDKs and compatible frameworks
 
 Apollo GraphQL, Elixir, ExpressJS, Express GraphQL, Java, .NET, Next.js, NodeJS, Nuxt, PHP, Python, Ruby, TypeScript.
 
 [View Kinde SDKs](/developer-tools/about/our-sdks/)
 
-## Front-end / client-side apps
+### Front-end and mobile
 
 Use for client-side web applications, single page web applications, and mobile applications. Authentication methods are different for these apps because they run in unsecured systems, such as web browsers.
 
-### Secured with Authorization Code Flow and PKCE
+#### Secured with Authorization Code Flow and PKCE
 
 This application uses the Authorization Code Flow with Proof Key for Code Exchange (PKCE).
 
@@ -76,26 +87,64 @@ Client-side applications, such as single-page web apps, are typically unable to 
 
 </Aside>
 
-### SDKs and compatible frameworks
+#### SDKs and compatible frameworks
 
 JavaScript, React, TypeScript, Android, iOS, React Native, Expo, Flutter, Node/Apollo GraphQL, Node/Express GraphQL.
 
 [View Kinde SDKs](/developer-tools/about/our-sdks/)
 
-## Machine to machine (M2M) apps
+### Machine to machine (M2M)
 
 Use for your backend services that require access to an API. This includes accessing the Kinde management API. Other use cases include CLIs, daemons and IoT devices. You can create as many M2M apps as you require. See [Add a machine to machine application for API access](/developer-tools/kinde-api/connect-to-kinde-api/).
 
-### Secured with Client Credentials
+#### Secured with Client Credentials
 
 M2M applications are secured through an initial exchange of each application’s Client ID and Client Secret. This identifies each application as authorized for token exchange.
 
 Each access token request must include the `Client Credentials` grant type. Typically, a request includes scopes, which define the type of information that can be requested in the exchange.
 
-### Access to Kinde's Management API is managed via scopes
+#### Access to Kinde's Management API is managed via scopes
 
 When you set up an M2M application that you will use with Kinde's Management API, you need to select the scopes that your application will need to access. For example, you'll select `read`, `create`, `update`, and `delete` actions.
 
-### Add properties to M2M tokens
+#### Add properties to M2M tokens
 
 If you want, you can [add custom properties to an M2M application](/properties/work-with-properties/manage-properties/) and then [include these properties in M2M tokens](/properties/work-with-properties/properties-in-tokens/). This is helpful if you want to include special information when you pass M2M tokens between systems.
+
+### Device and IoT
+
+To be added.
+
+## Manage applications
+
+### Add an application
+
+1. Sign in to your Kinde dashboard, and select **Add application**.
+2. Alternatively, go to **Settings > Environment > Applications**. Select **Add application**.
+3. Enter a **Name** and select the **Type** of application (e.g., Back-end web). Select **Save**.
+4. Select the SDK (e.g., NextJS), select **Save**.
+5. Configure the application by selecting **View details** on the application tile, see below for more details.
+
+### Configure an application
+
+- [Get application keys](/get-started/connect/getting-app-keys/) to connect your apps
+- Set callback URLs using the [relevant SDK](/developer-tools/about/our-sdks/)
+- [Set up authentication](/authenticate/authentication-methods/set-up-user-authentication/)
+- [Configure tokens](/build/tokens/configure-tokens/)
+
+### Delete an application
+
+<Aside type="danger" title="Deleting an application is permanent">
+Deleting an application is a destructive action which cannot be reversed. All application-related authentication settings, token settings, session information, and API links are also deleted. We recommend backing up all configuration before deleting an application. See [Manage Kinde configuration as code](/developer-tools/guides/manage-kinde-configuration/) for more information.
+</Aside>
+
+<Aside title="Notes on deleting an application">
+- You need **Owner** or **Admin** permissions to delete an application.
+- Deleting an application doesn't delete the users in the business.
+</Aside>
+
+To delete an application:
+
+1. Go to **Settings > Environment > Applications**.
+2. Select the three dots next to the application you want to delete and select **Delete application**.
+3. Follow the prompts in the window and select **Delete application**.
