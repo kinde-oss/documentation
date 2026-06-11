@@ -1,0 +1,178 @@
+---
+page_id: f6eaf29b-d8d9-4caf-bc1d-5319b6fb8ffc
+title: Bulk import users to Kinde
+sidebar:
+  order: 8
+  label: Bulk import
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - c4bc277a-5ec7-418c-ba1c-4d58c9ddfd7d
+  - 98a6a913-a9ba-474c-8b01-6db706d08b4c
+  - f3dc6458-7d1e-407e-bc4c-62ac0ee4c075
+  - e89d246a-5cdf-4993-9cee-94b31ec27583
+description: Import users from a CSV or JSON file into Kinde, including hashed passwords, roles, and organizations.
+topics:
+  - get-started
+  - switch-to-kinde
+sdk: []
+languages:
+  - csv
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - bulk import
+  - csv import
+  - user migration
+  - password migration
+  - hashed passwords
+  - import users
+  - migrate users
+  - bulk user migration
+  - password hash migration
+  - NDJSON import
+updated: 2026-05-07
+featured: false
+deprecated: false
+ai_summary: "This guide explains how to bulk import users into Kinde using a CSV file (up to 5MB) or NDJSON for Auth0 exports (up to 20MB). It covers the full migration workflow: configuring your Kinde business with matching auth strategies, exporting users from providers like Auth0, Clerk, Supabase, Firebase, AWS Cognito, or Azure B2C, preparing a properly formatted file, and running the import via the Kinde dashboard. The guide details required and optional CSV columns including email, name, email verification status, organization IDs, roles, and permissions. It also covers migrating hashed passwords, with support for bcrypt, MD5, SHA256, crypt, and WordPress hashing methods, including salt configuration. Post-import guidance addresses handling new registrations and password changes during the migration window, recommending re-imports, forced password resets, or parallel API usage. The guide also notes that Kinde does not notify users on import, advising teams to plan their own communication strategy, and lists edge cases such as password changes mid-migration and how newly added authentication methods affect returning users."
+---
+
+Export your users from your existing auth system, prepare a CSV, and import them into Kinde. Users with migrated password hashes can sign in immediately with no password reset required.
+
+If you need to catch new registrations or password changes during the migration window, combine this with the [API approach](/get-started/switch-to-kinde/create-users-with-api/) or run a second import after the cutover.
+
+## Example CSV
+
+```text
+# users.csv
+email,first_name,last_name,email_verified,hashed_password,hashing_method,external_organization_id
+bills@company.com,Bill,Smith,TRUE,$2a$10$examplehash,bcrypt,abc001
+carlosg@company.com,Carlos,Garcia,TRUE,$2a$10$examplehash,bcrypt,abc001
+lliu@company.com,Lee,Liu,FALSE,,, xyz002
+```
+
+## Setup guide
+
+### 1. Prepare your Kinde business
+
+Configure your Kinde business with the same auth strategies as your existing provider. See [before you migrate](/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/#before-you-migrate).
+
+### 2. Export users from your provider
+
+Export instructions vary by provider. Select yours:
+
+- [Auth0 →](/get-started/switch-to-kinde/auth0-to-kinde/)
+- [Clerk →](/get-started/switch-to-kinde/clerk-to-kinde/)
+- [Supabase →](/get-started/switch-to-kinde/supabase-to-kinde/)
+- [Firebase →](/get-started/switch-to-kinde/firebase-to-kinde/)
+- [AWS Cognito →](/get-started/switch-to-kinde/aws-cognito-to-kinde/)
+- [Azure B2C →](/get-started/switch-to-kinde/azure-b2c-to-kinde/)
+
+If you are migrating from your own system, prepare the data to match the format described below.
+
+### 3. Prepare your CSV
+
+Kinde imports users from a CSV file (up to 5MB; Auth0 imports accept NDJSON up to 20MB). Format your export with the following columns.
+
+**Required column:**
+
+| Column | Notes |
+|--------|-------|
+| `email` | Minimum required field |
+
+**Recommended columns:**
+
+| Column | Notes |
+|--------|-------|
+| `first_name`, `last_name` | User's name |
+| `email_verified` | `TRUE` or `FALSE` |
+| `id` | Your provider's user ID — helps match records during re-imports |
+| `phone` | International format, e.g. `+61555111555` |
+| `external_organization_id` | Organization ID to import the user into. Comma-separate multiple values |
+| `role_key` | Role key(s) to assign. Comma-separate multiple values |
+| `permission_key` | Permission key(s) to assign. Comma-separate multiple values |
+
+<Aside>
+
+`external_organization_id` is NOT the same as the **Organization code** in Kinde (which is Kinde-assigned). Use the ID from your own system.
+
+</Aside>
+
+**Password columns:**
+
+Include these if you're migrating hashed passwords:
+
+| Column | Notes |
+|--------|-------|
+| `hashed_password` | The hashed password string |
+| `hashing_method` | See supported methods below |
+| `salt` | Optional — extra characters added to strengthen the hash |
+| `salt_position` | `prefix` or `suffix` — required if salt is included |
+| `salt_format` | Format of the salt, e.g. `hex` or `string` |
+
+**Supported hashing methods:**
+
+| Method | Salt | Salt position |
+|--------|------|---------------|
+| `bcrypt` | — | — |
+| `md5` | Optional | Required if salt included |
+| `sha256` | Optional | Required if salt included |
+| `crypt` | Optional | — |
+| `wordpress` | Optional | — |
+
+<Aside title="bcrypt $2b variant">
+
+Kinde substitutes `$2b` with `$2a` on import. These are interchangeable unless the hashes were generated on OpenBSD.
+
+</Aside>
+
+<Aside title="sha256">
+
+Provide the hash in hex format. For `salt_format`, specify `hex` for a hex-encoded salt (e.g. `68656c6c6f` for `hello`). By default, the salt is treated as a plain string.
+
+</Aside>
+
+**Check for errors before importing:**
+
+Review the CSV for missing or duplicate values. Kinde will report errors after import. Records that have already been imported without changes are skipped on re-import.
+
+### 4. Import users into Kinde
+
+1. In Kinde, go to **Users**, then select **Import users**.
+2. Select your import type:
+   - **Auth0** — for NDJSON files exported from Auth0
+   - **Custom CSV** — for all other providers
+
+   ![Import from Kinde tool screen shot](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/06ceef1a-0236-4f42-6598-c60dd511a400/socialsharingimage)
+
+3. Follow the on-screen prompts to upload your file.
+4. Review any errors reported after import. Fix the CSV and re-import to resolve them.
+
+For full instructions, see [Import or update users in bulk](/manage-users/add-and-edit/import-users-in-bulk/).
+
+## After the import
+
+### Handling new registrations during the migration window
+
+If users can still register or change their password while you migrate, you'll miss them. Options:
+
+- **Re-import** — run the export and import again after cutover to catch new registrations. Users who registered after your first export will be unable to sign in until this second import completes.
+- **Force a password reset** — for users who changed their password during the window, use the [API to set `is_password_reset_requested`](/kinde-apis/management/#tag/Users/operation/updateUser).
+- **Use the API in parallel** — push new sign-ups directly to Kinde via API during the migration window. See [Create users with the API](/get-started/switch-to-kinde/create-users-with-api/).
+
+### Communicating with users
+
+Kinde does not notify users when they are imported. Plan your own communication, especially if you're changing their sign-in experience (e.g. adding MFA or moving to passwordless).
+
+### Edge cases to watch
+
+- If a user changes their password after your export and before the migration completes, they will need to reset it.
+- If you add a new authentication method (e.g. passwordless), users will be prompted to use it on next sign-in.
+- Kinde does not check password strength on import — enforce your own policies for users.
+- Adding or removing roles and permissions may change what users can access in your app.
+
+## Get support
+
+If you need help with your migration, contact [Kinde support.](https://kinde.com/support)

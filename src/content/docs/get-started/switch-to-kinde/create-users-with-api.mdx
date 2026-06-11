@@ -1,0 +1,169 @@
+---
+page_id: 98a6a913-a9ba-474c-8b01-6db706d08b4c
+title: Create users with the Kinde API during migration
+description: Use the Kinde Management API to create users programmatically during a migration — catching new sign-ups and password changes in real time.
+sidebar:
+  order: 9
+  label: Create users with API
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - c4bc277a-5ec7-418c-ba1c-4d58c9ddfd7d
+  - f6eaf29b-d8d9-4caf-bc1d-5319b6fb8ffc
+  - f3dc6458-7d1e-407e-bc4c-62ac0ee4c075
+  - e89d246a-5cdf-4993-9cee-94b31ec27583
+topics:
+  - get-started
+  - switch-to-kinde
+  - developer-tools
+sdk: []
+languages:
+  - json
+  - bash
+audience:
+  - developers
+complexity: advanced
+keywords:
+  - api migration
+  - create users api
+  - user migration
+  - migration window
+  - programmatic migration
+  - management api
+  - user provisioning
+  - password hash migration
+  - bcrypt migration
+  - machine to machine
+  - M2M application
+  - real-time user sync
+  - set password api
+  - identity migration
+updated: 2026-05-05
+featured: false
+deprecated: false
+ai_summary: "This guide explains how to use the Kinde Management API to create and provision users programmatically during a migration. It covers three primary use cases — acting as a real-time safety net during a migration window to capture new sign-ups and password changes, integrating with custom auth systems where the developer controls the login form, and syncing passwords when users authenticate against a legacy system. The guide walks through four core API steps: checking whether a user already exists to avoid duplicates (GET /api/v1/users?email=), creating a new user with profile and identity data (POST /api/v1/user), setting a password using either a hashed value with a supported hashing method (bcrypt, md5, sha256, crypt, wordpress) or plaintext (PUT /api/v1/users/{user_id}/password), and optionally forcing a password reset when credentials may be out of sync. It also covers the end-to-end migration window pattern — bulk importing existing users first, intercepting live traffic during the transition via API, and running a final sync post-cutover — along with rate limit guidance and when to prefer CSV bulk import over the API approach."
+---
+
+Use the Kinde Management API to create and provision users programmatically — the right approach when you need to intercept live sign-ups or password changes during a migration window, or when you control the login form in a custom auth system and can hook directly into the sign-in path.
+
+## When to use this approach
+
+- **Migration window safety net** — your app intercepts logins/sign-ups in your legacy system and pushes users to Kinde in parallel, so no one is missed during the transition.
+- **Custom auth systems** — you host your own login form and can add a Kinde API call to the sign-up/sign-in path.
+- **Real-time password sync** — when a user successfully authenticates against your old system, you create them in Kinde with the same password.
+
+For automated drip-feed migration (no code changes to your app), see [Drip-feed migration](/get-started/switch-to-kinde/drip-feed-migration/) instead.
+
+### What you need
+
+- A Machine to Machine application authorized to use the Kinde Management API - see the [quickstart guide](/developer-tools/kinde-api/connect-to-kinde-api/).
+- Required scopes: `create:users` and `update:user_passwords`
+- A preferred way to use the Management API (Node.js, Python, etc.) - [see usage guide](/developer-tools/kinde-api/access-token-for-api/).
+
+## Core API steps
+
+### 1. Check if the user already exists
+
+Before creating a user, check whether they already exist in Kinde to avoid duplicates.
+
+```bash
+GET https://your-kinde-domain.kinde.com/api/v1/users?email={user_email}
+Authorization: Bearer {access_token}
+```
+
+- If the response returns a user, skip creation and go to Step 3 to update their password if needed.
+- If the response is empty, proceed to Step 2.
+
+### 2. Create the user
+
+```bash
+POST https://your-kinde-domain.kinde.com/api/v1/user
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+```json
+{
+  "profile": {
+    "given_name": "Lee",
+    "family_name": "Liu",
+    "email": "lliu@company.com"
+  },
+  "identities": [
+    {
+      "type": "email",
+      "details": {
+        "email": "lliu@company.com"
+      }
+    }
+  ]
+}
+```
+
+A successful response returns the new user's Kinde ID (`id`). Save this for the next step.
+
+### 3. Set the user's password
+
+```bash
+PUT https://your-kinde-domain.kinde.com/api/v1/users/{user_id}/password
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+```json
+{
+  "hashed_password": "$2a$10$examplehashvalue",
+  "hashing_method": "bcrypt",
+  "is_temporary_password": false
+}
+```
+
+Supported `hashing_method` values: `bcrypt`, `md5`, `sha256`, `crypt`, `wordpress`.
+
+If you have access to the user's plaintext password at the time of login (because your app owns the login form), you can set it directly:
+
+```json
+{
+  "password": "userPlaintextPassword",
+  "is_temporary_password": false
+}
+```
+
+### 4. Force a password reset (optional)
+
+If a user changed their password during the migration window and their hash in Kinde is out of date, prompt them to reset it:
+
+```bash
+PATCH https://your-kinde-domain.kinde.com/api/v1/users/{user_id}
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+```json
+{
+  "is_password_reset_requested": true
+}
+```
+
+The user will be prompted to set a new password on their next sign-in.
+
+## Handling the migration window
+
+The typical pattern when running a migration window alongside live traffic:
+
+1. **Before cutover** — bulk import existing users from a CSV (see [Bulk import](/get-started/switch-to-kinde/migrate-users-bulk-import/)).
+2. **During the window** — intercept sign-ups and sign-ins in your legacy system. For each:
+   - Check if the user exists in Kinde (`GET /api/v1/users?email=`).
+   - If not, create them (`POST /api/v1/user`) and set their password.
+   - If they exist but their password may have changed, update the password (`PUT /api/v1/users/{id}/password`).
+3. **After cutover** — route all auth traffic to Kinde. Run a final re-import or re-sync to catch any users you missed.
+
+## Rate limits and batching
+
+The Kinde Management API has [rate limits](/developer-tools/kinde-api/api-rate-limits/). For large user bases:
+
+- Batch API calls and add delays between requests.
+- For bulk provisioning of thousands of users, prefer the [CSV import](/get-started/switch-to-kinde/migrate-users-bulk-import/) method — it's designed for volume.
+- Use the API approach for incremental syncing (new users, password changes) rather than full migrations.
+
+For full API reference, see the [Kinde Management API docs](/kinde-apis/management/).

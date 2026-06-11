@@ -1,0 +1,117 @@
+---
+page_id: 8b3e1d47-2f96-4a0c-c8d5-6e7a2b9f3150
+title: Migrate to Kinde from Clerk
+sidebar:
+  order: 3
+  label: Clerk
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - c4bc277a-5ec7-418c-ba1c-4d58c9ddfd7d
+  - f6eaf29b-d8d9-4caf-bc1d-5319b6fb8ffc
+  - b338980f-7dd6-4ba5-90aa-330247a45536
+  - e89d246a-5cdf-4993-9cee-94b31ec27583
+description: Export users and hashed passwords from Clerk and import them into Kinde. Clerk supports bcrypt exports, so users keep their existing passwords.
+topics:
+  - get-started
+  - switch-to-kinde
+sdk: []
+languages:
+  - csv
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - clerk migration
+  - clerk to kinde
+  - migrate from clerk
+  - user import
+  - password migration
+  - hashed passwords
+  - bcrypt
+  - csv import
+  - csv column mapping
+  - bulk import
+  - authentication migration
+  - clerk export
+  - clerk csv
+updated: 2026-05-05
+featured: false
+deprecated: false
+ai_summary: "Step-by-step guide for migrating users from Clerk to Kinde using a bulk CSV import. Clerk supports exporting bcrypt-hashed passwords, and Kinde supports bcrypt natively, so users can sign in with their existing passwords without a forced reset — no drip-feed migration required. The guide covers: exporting users from the Clerk dashboard via Configure > Settings > User exports; renaming CSV columns to match Kinde's expected format, including primary_email_address to email, password_digest to hashed_password, password_hasher to hashing_method, and primary_phone_number to phone; removing columns Kinde does not use such as username, verified_email_addresses, totp_secret, and created_at; enabling password authentication in Kinde before importing; and uploading the prepared CSV via Users > Import users > Custom CSV. Errors flagged during import can be fixed by editing the CSV and re-importing — already-imported records are skipped. Links to the full bulk import guide for additional CSV fields covering organizations, roles, and permissions."
+---
+
+Migrate your users from Clerk to Kinde. Clerk supports exporting hashed passwords, and Kinde supports bcrypt — so your users can sign in with their existing passwords without a forced reset.
+
+### What you need
+
+- A Kinde account with **Admin** access 
+- Kinde account configured to match your current auth provider - see [before you migrate](/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/#before-you-migrate)
+- Clerk account with user export permissions
+
+## Key considerations
+
+- **bcrypt passwords are fully supported** — Kinde imports bcrypt hashes directly. Users keep their existing password with no reset required.
+- **No drip-feed needed** — because passwords can be migrated cleanly, a straightforward bulk import is the recommended approach for most Clerk migrations.
+- **File format** — Clerk exports a CSV file. You'll need to map the Clerk column names to Kinde's expected column names before importing.
+
+## Migration guide
+
+### 1. Export users from Clerk
+
+1. Sign in to your [Clerk dashboard](https://dashboard.clerk.com/apps).
+2. Select the application you are exporting users from.
+3. Go to **Configure > Settings**.
+4. Under **User exports**, select **Export users**.
+5. When the export is ready, select **Download**. This downloads a CSV file.
+
+![Clerk export users](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/466e727b-0a72-4475-a019-4a685579a200/socialsharingimage)
+
+See Clerk's documentation on [exporting users](https://clerk.com/docs/guides/development/migrating/overview#export-your-users-data-from-the-clerk-dashboard).
+
+### 2. Map Clerk columns to Kinde's CSV format
+
+Rename the columns in your Clerk export to match what Kinde expects. The only required column is `email` — everything else is optional but recommended.
+
+| Clerk column | Rename to | Notes |
+|---|---|---|
+| `primary_email_address` | `email` | Required — primary sign-in identifier |
+|  | `email_verified` | `TRUE` or `FALSE` |
+| `id` | `id` | Keep as-is — helps match records on re-import |
+| `first_name` | `first_name` | Keep as-is |
+| `last_name` | `last_name` | Keep as-is |
+| `primary_phone_number` | `phone` | International format, e.g. `+61555111555` |
+| `password_digest` | `hashed_password` | bcrypt hash — preserves existing passwords |
+| `password_hasher` | `hashing_method` | Value will be `bcrypt` |
+
+For the full list of supported CSV fields — including organizations, roles, and permissions — see [Prepare your CSV](/get-started/switch-to-kinde/migrate-users-bulk-import/#3-prepare-your-csv) in the bulk import guide.
+
+<Aside title="Enable password authentication first">
+
+If you are importing hashed passwords, enable password authentication in Kinde before importing. See [Password authentication](/authenticate/authentication-methods/password-authentication/).
+
+</Aside>
+
+### 3. Import into Kinde
+
+1. In Kinde, go to **Users**, then select **Import users**.
+2. Select **Custom CSV**.
+3. Follow the on-screen prompts to upload your file.
+4. Review any errors reported after import. Fix the CSV and re-import to resolve them.
+
+See the [bulk import guide](/get-started/switch-to-kinde/migrate-users-bulk-import/) to learn more.
+
+### 4. Test the migration
+
+1. Sign in to Kinde with a user from your Clerk export.
+2. Verify they can sign in with their existing Clerk credentials.
+3. Notify users of any changes to their sign-in experience before going live.
+
+## Troubleshooting
+
+Review the CSV for missing or duplicated values before importing. Kinde flags errors during import and reports them. Most errors can be fixed by editing the CSV and re-importing — records already imported without changes are skipped.
+
+## Get support
+
+If you need help with your migration, contact [Kinde support.](https://kinde.com/support)
