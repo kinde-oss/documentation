@@ -132,6 +132,8 @@ export default defineConfig({
     // Build section subfolder redirects
     "/build/applications/":
       "/build/applications/about-applications/",
+    "/build/applications/add-and-manage-applications/":
+      "/build/applications/about-applications/",
     "/build/domains/":
       "/build/domains/pointing-your-domain/",
     "/build/env-variables/":
