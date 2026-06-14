@@ -1,7 +1,7 @@
 ---
 page_id: ab64c5ff-8de5-4c1c-b008-398e74b79f89
-title: Connect Kinde and WordPress
-description: Guide to integrating Kinde with WordPress using the OpenID Connect Generic Client plugin including plugin installation and OAuth configuration
+title: Use Kinde authentication to WordPress self-hosted site
+description: "Add Kinde auth to self-hosted WordPress via OpenID Connect—social login, SSO, passwordless flows, and user migration"
 sidebar:
   order: 3
   label: Kinde and WordPress
@@ -13,6 +13,7 @@ relatedArticles:
 topics:
   - integrate
   - third-party-tools
+  - openid-connect
 sdk: []
 languages: []
 audience:
@@ -22,37 +23,31 @@ complexity: intermediate
 keywords:
   - wordpress
   - openid connect
-  - plugin
   - oauth
-  - client id
-  - client secret
+  - self-hosted wordpress
   - callback urls
-  - endpoints
-updated: 2024-01-15
+  - user migration
+  - sso
+  - refresh tokens
+updated: 2026-06-14
 featured: false
 deprecated: false
-ai_summary: Guide to integrating Kinde with WordPress using the OpenID Connect Generic Client plugin including plugin installation and OAuth configuration.
+ai_summary: "Guide to integrating Kinde authentication with self-hosted WordPress using the OpenID Connect Generic Client plugin. Covers creating a Kinde back-end web application, configuring allowed callback and logout URLs, enabling authentication methods such as email password, username, social, or enterprise connections, installing and configuring the WordPress plugin via OpenID discovery or manual endpoint setup, and testing sign-in with automatic WordPress user provisioning. Also explains advanced settings including SSO auto-login and refresh tokens, exporting WordPress users for bulk import into Kinde without passwords, and troubleshooting failed user creation when an email already exists in WordPress. No Kinde SDK is required. Intended for developers and site administrators."
 ---
 
-This topic describes how to set up Kinde with WordPress using the `OpenID Connect - Generic Client` plugin.
-
-<Aside>
-
-This topic includes only basic steps. Depending on your exact setup, additional configuration might be required.
-
-</Aside>
+WordPress includes built-in user authentication, but many teams want more than the default login form—social sign-in, enterprise SSO, passwordless flows, or a single identity layer shared across multiple products. Kinde handles authentication and user management for you, and you can bring that experience to a self-hosted WordPress site without custom code.
 
 ## What you need
 
 - A [Kinde](/get-started/guides/first-things-first/) account with **Admin** or **Engineer** permissions (sign up for free)
-- A [self-hosted WordPress](https://wordpress.org/) site
+- A [self-hosted WordPress](https://wordpress.org/) site with **Administrator** permissions
 
 ## Quickstart
 
 ### 1. Create a Kinde application
 
 1. Go to your Kinde dashboard and select **Add application**.
-2. Set a Name (e.g. "WordPress"), select **Back-end web** as the application type and select **Save**.
+2. Enter a name (for example, "WordPress"), select **Back-end web** as the application type, and select **Save**.
 3. Select **Other back end** as the SDK, and select **Save**.
 4. Go to **Details** and copy the **Domain** (or [Custom domain](/build/domains/pointing-your-domain/)), **Client ID** and **Client secret** values.
 5. In the **Allowed callback URLs** field, enter:
@@ -60,53 +55,99 @@ This topic includes only basic steps. Depending on your exact setup, additional 
    - Logout redirect URL: `https://[your_wordpress_domain]`
 
    Select **Save**.
-6. Go to **Authentication** and select the authentication method you want to use for your WordPress site (e.g., Google, Facebook, etc.).
-7. Select **Save**.
+6. Go to **Authentication** and select the authentication methods you want to use (**Email + code** is enabled by default).
+
+    To keep password authentication with username and email like WordPress, do the following:
+
+    - In **Passwordless connections**, disable **Email + code**
+    - In **Password connections**, enable **Email + password** and **Username**
+
+    ![enable email username password authentication](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/5415d8bf-5c41-41fd-2ef7-b06d08b74500/socialsharingimage)
+
+    Enable any other authentication methods you want to use for your WordPress site (for example, Google, Facebook, or Enterprise).
+
+    Select **Save**.
 
 ### 2. Install the WordPress plugin
 
 1. Sign in to your WordPress dashboard, go to **Plugins** and select **Add New**.
-2. Search for `OpenID Connect - Generic Client` (By Jonathan Daggerhart) and select **Install Now**.
+2. Search for `OpenID Connect - Generic Client` ([by Jonathan Daggerhart](https://wordpress.org/plugins/daggerhart-openid-connect-generic/)) and select **Install Now**.
 3. Once installed, select **Activate**.
 
-    ![openid connect generic client plugin installation](to be added)
+    ![openid connect generic client plugin installation](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8616e510-6cb6-4904-632c-33517727b600/socialsharingimage)
 
-### 3. Configure the Plugin
+### 3. Configure the plugin
 
-1. In WordPress, go to the **Settings > OpenID Connect Client**.
+1. In WordPress, go to **Settings > OpenID Connect Client**.
 2. In the **Quick setup** section, enter your Kinde OpenID configuration URL and select **Load Configuration**.
     ```text
     https://<YOUR_DOMAIN>/.well-known/openid-configuration
     ```
     <Aside>
-    Replace `<YOUR_DOMAIN>` with either your custom domain or your Kinde domain (e.g., `https://your_business.kinde.com`)
+    Replace `<YOUR_DOMAIN>` with your [custom domain](/build/domains/pointing-your-domain/) or your Kinde domain (for example, `https://your_business.kinde.com`).
     </Aside>
 
-    If your are having issues loading the configuration, you can manually enter the following details:
+3. Enter the **Client ID** and **Client Secret Key** from your Kinde application.
+4. Set the **Scope** to `openid profile email`.
+5. If auto-configuration fails, manually enter the following details:
 
-    - **Login Endpoint URL:** `https://<YOUR_DOMAIN>/.well-known/openid-configuration/oauth2/auth`
+    - **Login Endpoint URL:** `https://<YOUR_DOMAIN>/oauth2/auth`
     - **Userinfo Endpoint URL:** `https://<YOUR_DOMAIN>/oauth2/v2/user_profile`
     - **Token Validation Endpoint URL:** `https://<YOUR_DOMAIN>/oauth2/token`
     - **End Session Endpoint URL:** `https://<YOUR_DOMAIN>/logout`
+    - **JWKS URI:** `https://<YOUR_DOMAIN>/.well-known/jwks`
+    - **Issuer:** `https://<YOUR_DOMAIN>`
 
     <Aside>
-    You can find all these endpoints by visiting the OpenID configuration URL. (e.g. `https://<YOUR_DOMAIN>/.well-known/openid-configuration`)
+    You can find all these endpoints by visiting the OpenID configuration URL (for example, `https://<YOUR_DOMAIN>/.well-known/openid-configuration`).
     </Aside>
+6. Enter the following details:
+   - **Identity Key:** `sub`
+   - **Nickname Key:** `name`
+   - **Email Formatting:** `{email}`
+   - **Display Name Formatting:** `{given_name} {family_name}`
+7. Select **Save Changes**.
 
-2. Set the **Scope** to **openid profile email**.
-3. Enter the following details:
-   - **Client ID**: Client ID from your Kinde application
-   - **Client Secret:** Client secret from your Kinde application
-   - **Login Endpoint URL:** `https://[your_kinde_domain].kinde.com/oauth2/auth`
-   - **Userinfo Endpoint URL:** `https://[your_kinde_domain].kinde.com/oauth2/v2/user_profile`
-   - **Token Validation Endpoint URL:** `https://[your_kinde_domain].kinde.com/oauth2/token`
-   - **End Session Endpoint URL:** `https://[your_kinde_domain].kinde.com/logout`
-   - **Identity Key:** sub
-   - **Nickname Key:** sub
+### 4. Test authentication
 
-## Step 4: Test the configuration
+1. Sign out of your WordPress site and visit your login page (for example, `https://your_wordpress_domain/wp-login.php`).
+2. Select the **Login with OpenID Connect** button. The Kinde hosted login page opens.
+3. Sign in or sign up for a new account.
+4. You are redirected to your WordPress dashboard.
+5. In your Kinde dashboard, go to **Users** to confirm the new user was created.
+6. Sign out of WordPress and sign in again with your Administrator account.
+7. In your WordPress dashboard, go to **Users > All Users**. New users are assigned the **Subscriber** role by default.
 
-Finally, you should test your configuration to ensure that everything is set up correctly.
+    ![wordpress user list](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/549c87ac-5fde-4213-b5ac-512cf1484d00/socialsharingimage)
 
-1. Sign in to your WordPress site. This should redirect to Kinde pages.
-2. If everything is set up correctly, you should be able to sign in successfully.
+## Advanced configuration
+
+### Login type
+
+- **OpenID Connect button on login form**: When enabled, a button appears on the default WordPress login screen. Users can sign in with Kinde or use the default WordPress login form.
+- **Auto Login - SSO**: When enabled, users are redirected to the Kinde hosted login page, bypassing the default WordPress login screen.
+
+### Refresh tokens
+
+Add the scope `offline` and check the **Enable Refresh Token** option to get a refresh token.
+
+## Export users from WordPress
+
+1. In your WordPress dashboard, install and activate the **Import and export users and customers** plugin (by Codection).
+2. Go to **Tools > Import and export users and customers**.
+3. Select the **Export** tab and choose the roles you want to export (for example, Subscriber, Customer, or Administrator).
+4. Select **Download**. The CSV file saves to your computer.
+
+To import the exported users to Kinde, see [Import users in bulk](/manage-users/add-and-edit/import-users-in-bulk/). Do not import passwords—WordPress uses a hashing format that Kinde does not support. Users are prompted to create a new password on their next sign-in. Let your users know in advance to avoid confusion.
+
+## Troubleshooting
+
+### ERROR (failed-user-creation)
+
+When a user's email already exists in WordPress, user creation fails with the following error:
+
+```text
+ERROR (failed-user-creation): Failed user creation.
+```
+
+Enable the **Link Existing Users** option in **Settings > OpenID Connect Client**.
