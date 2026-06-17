@@ -50,22 +50,22 @@ deprecated: false
 ai_summary: "This page documents Kinde authentication for Next.js App Router (13+, Server Components) with @kinde-oss/kinde-auth-nextjs, including links to the V1 App Router and Pages Router SDKs. It covers prerequisites, creating a Back-end web app in Kinde, callback and logout URLs, the official starter kit path, and integrating an existing project with the required app/api/auth/[kindeAuth]/route.ts handleAuth handler, environment variables, optional KindeProvider in the root layout, and UI components (LoginLink, RegisterLink, LogoutLink, CreateOrgLink, PortalLink). It explains customizing auth routes via KINDE_AUTH_API_PATH and related env vars, securing the app with proxy.ts (Next.js 16+) or middleware.ts using withAuth, matchers, publicPaths, req.kindeAuth, and authorization options. It documents server getKindeServerSession and client useKindeBrowserClient APIs for session state, users, organizations, permissions, feature flags, raw and decoded tokens, claims, and token refresh; patterns for protecting routes; Management API usage with @kinde/management-api-js; org flows; self-serve portal options; UTM and language parameters; KINDE_AUDIENCE; KINDE_COOKIE_DOMAIN; Vercel preview URL strategies including an M2M script; health and debug endpoints; resolving state-not-found issues; manual cookie clearing; a Next.js–SDK compatibility matrix; and migrating from SDK V1 (async session helpers)."
 ---
 
-Complete guide for Next.js App Router SDK. 
+Complete guide for the Next.js App Router SDK.
 
 New to Kinde? Kinde is the all-in-one developer platform for authentication, access management and billing - secure and monetize your SaaS from day one. [Get started for free](https://app.kinde.com/register)
 
 <Aside title="Next.js version 13 or later">
-This SDK is for Next.js version 13+ and uses Server Side Components and App Router. See [Version compatibility](#version-compatibility)
+This SDK is for Next.js version 13+ and uses Server Components and App Router. See [Version compatibility](#version-compatibility)
 
-- If you’re using version 1 see [Next.js App Router V1](/developer-tools/sdks/backend/nextjs-sdkv1/)
+- If you’re using version 1, see [Next.js App Router V1](/developer-tools/sdks/backend/nextjs-sdkv1/)
 
-- If you’re using the pages router see [Next.js Pages Router](/developer-tools/sdks/backend/nextjs-prev-sdk/)
+- If you’re using the pages router, see [Next.js Pages Router](/developer-tools/sdks/backend/nextjs-prev-sdk/)
 
 </Aside>
 
-### What you need 
+## What you need 
 
-- A [Kinde](https://app.kinde.com/) account (Sign up for free)
+- A [Kinde](/get-started/guides/first-things-first/) account with **Admin** or **Engineer** permission (Sign up for free)
 - [Node.js](https://nodejs.org) version 20 or higher
 
 ## Set up a Kinde application 
@@ -73,44 +73,47 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
 1. Sign in to your Kinde dashboard and select **Add application**
 2. Enter a name for the application (e.g., "My Next.js App")
 3. Select **Back-end web** as the application type, then select **Save**.
-4. On the Quick start page, select **NextJS** from the list of back-end SDKs, then select **Save**.
+4. On the **Quick start** page, select **NextJS** from the list of back-end SDKs, then select **Save**.
+5. On the **Quick start** page, select **Set** for both callback URLs and logout URL.
+6. To manually set the callback URLs, go to the **Details** page and scroll down to the **Callback URLs** section. Enter the following:
+    - **Allowed callback URL:** `http://localhost:3000/api/auth/kinde_callback`
+    - **Allowed logout redirect URL:** `http://localhost:3000`
 
-![nextjs sdk](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7d96b537-48c1-4ff6-0a02-4502e963d200/socialsharingimage)
+    <Aside>
+    Replace `http://localhost:3000` with your server domain when you deploy to production. You can add multiple callback URLs. Add each URL on a new line.
+    </Aside>
+
+7. Select **Save**
 
 ## Option 1: Install the Starter kit
 
-1. On the **Quick start** page, select **Set** for both callback URL and logout URL.
-    This will set `http://localhost:3000` as your default URLs. If you want to use a different URL, you can change it in the **Details** page.
-2. Download the [Next.js starter kit](https://github.com/kinde-starter-kits/kinde-nextjs-app-router-starter-kit)
-3. Go to the root of your project and install the dependencies:
+1. Download the [Next.js starter kit](https://github.com/kinde-starter-kits/kinde-nextjs-app-router-starter-kit)
+2. Go to the root of your project and install the dependencies:
 
     ```bash
     cd kinde-nextjs-app-router-starter-kit
     npm install
     ```
-4. Create an environment variable file:
+3. Create an environment variable file:
 
     ```bash
     cp .env.local.sample .env.local
     ```
-5. Copy the environment variables from the **Quick start** page to the `.env.local` file and save changes.
-6. Start the development server:
+4. Copy the environment variables from the **Quick start** page to the `.env.local` file and save changes.
+5. Start the development server:
 
     <PackageManagers type='run' pkg='dev' />
 
-7. Open the browser and navigate to http://localhost:3000 to see the application.
-8. Sign-up for a new user.
+6. Open the browser and navigate to http://localhost:3000 to see the application.
+7. Sign up for a new user.
 
 ## Option 2: Install for an existing project
 
-1. On the **Quick start** page, select **Existing codebase**, and edit your project URL (defaults to `http://localhost:3000`)
-    - Select **Set** for both **callback URL** and **logout URL**.
-
-2. Open your project in your terminal and install the Kinde dependency with the following command:
+1. Open your project in your terminal and install the Kinde dependency with the following command:
     
     <PackageManagers pkg="@kinde-oss/kinde-auth-nextjs" />
     
-3. Create the Kinde auth endpoint:
+2. Create the Kinde auth endpoint:
     
     ```bash
     mkdir -p "app/api/auth/[kindeAuth]"
@@ -125,10 +128,10 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
         ```
     
     <Aside type="warning" title="Important">
-    Our SDK relies on this file existing in this location specified above.
+    Our SDK relies on this file existing in the location specified above.
     </Aside>
 
-4. Open the newly created `route.ts` file, enter the following code, and save the file:
+3. Open the newly created `route.ts` file, enter the following code, and save the file:
     
     ```typescript
     // app/api/auth/[kindeAuth]/route.ts
@@ -138,7 +141,7 @@ This SDK is for Next.js version 13+ and uses Server Side Components and App Rout
     This will handle Kinde Auth endpoints in your Next.js app.
 
 
-5. Copy the environment variables from the **Quick start** page to the `.env.local` or `.env` file and save changes. 
+4. Copy the environment variables from the **Quick start** page to the `.env.local` or `.env` file and save changes. 
 
     You can create an environment file using the command `touch .env.local`
 
@@ -198,7 +201,7 @@ Create or update the `proxy.ts` file and add the following code:
 
     The proxy (previously middleware) will protect all routes except the ones specified in the `publicPaths` array. It will also ignore Next.js internals and static files.
 
-    Learn more about the proxy in the [Proxy](#about-the-proxy) sections.
+    Learn more about the proxy in the [About the proxy](#about-the-proxy) section.
 
 ### Add KindeProvider (Optional)
 
@@ -362,9 +365,9 @@ The proxy works exactly the same as the old `middleware.ts` — same `withAuth` 
 
 The proxy is used to protect routes in your Next.js app, and is a requirement for a seamless authentication experience.
 
-We provide a `withAuth` helper that will protect routes covered by the matcher. If the user is not authenticated then they are redirected to login and once they have logged in they will be redirected back to the protected page which they should now have access to.
+We provide a `withAuth` helper that protects routes covered by the matcher. If the user is not authenticated, they are redirected to sign in. After they sign in, they are redirected back to the protected page.
 
-We require this proxy to run on all routes beside Next.js internals and static files. The provided matcher will do this for you.
+We require this proxy to run on all routes except Next.js internals and static files. The provided matcher will do this for you.
 
 This means that by default, all routes will be protected. You must opt-out public routes - see [opting routes out of proxy protection](#opting-routes-out-of-proxy-protection) for more information.
 
@@ -399,7 +402,7 @@ export const config = {
 You can use the `withAuth` helper to pass your proxy as a callback function.
 The callback function has access to `kindeAuth` object via the `req` parameter, which exposes the token and user data. 
 
-Using the `withAuth` helper, you can add additional configuration options object to your proxy.
+Using the `withAuth` helper, you can pass a configuration options object to your proxy.
 
 ```ts
 // proxy.ts
@@ -509,7 +512,7 @@ import {RegisterLink, LoginLink} from "@kinde-oss/kinde-auth-nextjs/components";
 <RegisterLink postLoginRedirectURL="/welcome">Sign up</RegisterLink>
 ```
 
-This appends `post_login_redirect_url` to the search params when redirecting to Kinde Auth. You can achieve the same result as above, like this:
+This appends `post_login_redirect_url` to the search params when redirecting to Kinde Auth. You can achieve the same result like this:
 
 ```jsx
 import { redirect } from "next/navigation";
@@ -1610,14 +1613,14 @@ true
 
 ## Protecting routes
 
-It’s likely that your application will have both pages that are publicly available and private ones which should only be available to logged in users. There are multiple ways you can protect pages with Kinde Auth.
+It’s likely that your application will have both publicly available pages and private pages that should only be available to signed-in users. There are multiple ways you can protect pages with Kinde Auth.
 
 ### Protect routes with Kinde Auth data
 
-On the page you want to protect, you can check if the user is authenticated and then handle it right then and there by grabbing the Kinde Auth data.
+On the page you want to protect, check whether the user is authenticated and handle access there by reading Kinde Auth data.
 
-- In **Server Components** you can get the Kinde Auth data by using the `getKindeServerSession` helper
-- In **Client Components** you can get the Kinde Auth Data using the `useKindeBrowserClient` helper
+- In **Server Components**, get Kinde Auth data using the `getKindeServerSession` helper
+- In **Client Components**, get Kinde Auth data using the `useKindeBrowserClient` helper
 
 ```jsx
 // app/protected/page.tsx - Server Component
@@ -1660,7 +1663,7 @@ export default function Admin() {
 }
 ```
 
-In the example above, we show different content based on whether or not the user is authenticated. If you want to automatically send the user to the sign in screen, you can do something like the following:
+In the example above, we show different content based on whether or not the user is authenticated. If you want to automatically send the user to the sign-in screen, you can do something like the following:
 
 ```jsx
 // app/protected/page.tsx - Server Component
@@ -1715,8 +1718,7 @@ For more information, see the [Next.js docs](https://nextjs.org/docs/app/api-ref
 
 <Aside title="Important">
 
-The `refreshData` function is an asynchronous server action, and it's important to await it
-so that you receive immediate access to the latest data.
+The `refreshData` function is an asynchronous server action, and it's important to await it so that you receive immediate access to the latest data.
 
 </Aside>
 
@@ -1754,7 +1756,7 @@ export const UpdatePermissionsButton = () => {
 
 ## Kinde Management API
 
-To use our management API please see [@kinde/management-api-js](https://github.com/kinde-oss/management-api-js)
+To use our Management API, see [@kinde/management-api-js](https://github.com/kinde-oss/management-api-js)
 
 Server Component example:
 
@@ -1825,10 +1827,9 @@ If the `orgCode` is not specified and the user belongs to multiple organizations
 
 ## Self Serve Portal
 
-To allow your users to be sent to the self-serve portal, you can use the `PortalLink` component. 
-Check here for information on enabling [self-serve portal for Organizations](https://docs.kinde.com/build/self-service-portal/self-serve-portal-for-orgs/).
-Check here for information on enabling [self-serve portal for users](https://docs.kinde.com/build/self-service-portal/self-serve-portal-for-users/).
-To use our self-serve portal API please see [Get self-serve portal link](https://docs.kinde.com/kinde-apis/frontend/).
+To allow your users to be sent to the self-serve portal, you can use the `PortalLink` component.
+See [self-serve portal for Organizations](https://docs.kinde.com/build/self-service-portal/self-serve-portal-for-orgs/) and [self-serve portal for users](https://docs.kinde.com/build/self-service-portal/self-serve-portal-for-users/) for setup details.
+To use the self-serve portal API, see [Get self-serve portal link](https://docs.kinde.com/kinde-apis/frontend/).
 
 ```jsx
 import {PortalLink} from "@kinde-oss/kinde-auth-nextjs/components";
@@ -1847,7 +1848,7 @@ import { PortalPage } from "@kinde/js-utils";
 ```
 
 ### returnUrl
-The `returnUrl` property is the URL to redirect the user to after they have completed their actions in the portal. The url must be an absolute url to work correctly. 
+The `returnUrl` property is the URL to redirect the user to after they have completed their actions in the portal. The URL must be an absolute URL to work correctly.
 
 ```jsx
 import {PortalLink} from "@kinde-oss/kinde-auth-nextjs/components";
@@ -1891,9 +1892,9 @@ import {LoginLink} from "@kinde-oss/kinde-auth-nextjs/components";
 </LoginLink>;
 ```
 
-## **Audience**
+## Audience
 
-An `audience` is the intended recipient of an access token - for example the API for your application. The `audience` argument can be passed to the Kinde client to request an audience be added to the provided token.
+An `audience` is the intended recipient of an access token — for example, the API for your application. The `audience` argument can be passed to the Kinde client to request an audience be added to the provided token.
 
 ```jsx
 // .env.local
@@ -1901,7 +1902,7 @@ An `audience` is the intended recipient of an access token - for example the A
 KINDE_AUDIENCE=<your-api>
 ```
 
-You can request multiple audiences by providing a white space separated list
+You can request multiple audiences by providing a space-separated list
 
 ```jsx
 // .env.local
@@ -1913,7 +1914,7 @@ For details on how to connect, see [Register an API](/developer-tools/your-apis
 
 ## Working with subdomains
 
-In the case you have a [custom domain](/build/domains/pointing-your-domain/) and you would like to start the authentication flow from a URL like **`auth`**`.mysite.com` and you want to redirect to a URL like **`app`**`.mysite.com` , all you have to do is set the `KINDE_COOKIE_DOMAIN` to match the domain.
+If you have a [custom domain](/build/domains/pointing-your-domain/) and you want to start the authentication flow from a URL like `auth.mysite.com` and redirect to a URL like `app.mysite.com`, set `KINDE_COOKIE_DOMAIN` to match the domain.
 
 ```jsx
 // .env
@@ -1921,13 +1922,13 @@ In the case you have a [custom domain](/build/domains/pointing-your-domain/) and
 KINDE_COOKIE_DOMAIN=.mysite.com
 ```
 
-If the URL you want to start the authentication flow from and the URL you want to redirect to don’t share the same domain, then this will not work.
+If the URL you want to start the authentication flow from and the URL you want to redirect to do not share the same domain, this will not work.
 
 ## Working with preview URLs
 
-Our Kinde Next.js SDK currently requires that these environment variables `KINDE_SITE_URL`, `KINDE_POST_LOGOUT_REDIRECT_URL`, and `KINDE_POST_LOGIN_REDIRECT_URL` are defined, and that the **callback URLs** and **logout redirect URLs** are added to your app in Kinde.
+Our Kinde Next.js SDK requires `KINDE_SITE_URL`, `KINDE_POST_LOGOUT_REDIRECT_URL`, and `KINDE_POST_LOGIN_REDIRECT_URL` to be defined, and requires **callback URLs** and **logout redirect URLs** to be added to your app in Kinde.
 
-To add Vercel’s dynamically generated URLs you can either securely use our API to add them on the fly or you can use [wildcard URLs](/get-started/connect/callback-urls/#wildcards-in-callback-urls). It should be noted that whilst wildcards are more convenient it is not as secure as explicitly adding the url to the allowlist via API as we outline below.
+To add Vercel’s dynamically generated URLs, you can either securely use our API to add them on the fly or use [wildcard URLs](/get-started/connect/callback-urls/#wildcards-in-callback-urls). Wildcards are more convenient, but they are less secure than explicitly adding each URL to the allowlist via the API, as outlined below.
 
 Add the following to your `next.config.js`.
 
@@ -2075,7 +2076,7 @@ You need to create a [machine to machine (M2M)](/developer-tools/kinde-api/conne
 
    <Aside>
 
-   You can adapt the script above to use our [Kinde Management API JS](https://github.com/kinde-oss/management-api-js) package. Please note that in this case you would have to add this package as a dependency in your project along with a few required environment variables. [See configuration details](https://github.com/kinde-oss/management-api-js?tab=readme-ov-file#installation).
+   You can adapt the script above to use our [Kinde Management API JS](https://github.com/kinde-oss/management-api-js) package. In that case, add this package as a dependency in your project along with the required environment variables. [See configuration details](https://github.com/kinde-oss/management-api-js?tab=readme-ov-file#installation).
 
    </Aside>
 
@@ -2118,9 +2119,9 @@ To check your configuration, the SDK exposes an endpoint with your settings.
 
 ### Solution
 
-1. Confirm that the domain you start the auth flow from is different from the domain you are redirected to after the auth flow is complete. If this is not the case, see the explanation.
-2. Dynamically set the KINDE_SITE_URL and `KINDE_POST_LOGIN_REDIRECT_URL` when working with vercel preview domains.
-   If you are using Vercel, you can set the `KINDE_SITE_URL` and `KINDE_POST_LOGIN_REDIRECT_URL` dynamically.
+1. Confirm that the domain you start the auth flow from matches the domain you are redirected to after the auth flow completes. If they do not match, see the explanation below.
+2. Dynamically set `KINDE_SITE_URL` and `KINDE_POST_LOGIN_REDIRECT_URL` when working with Vercel preview domains.
+   If you are using Vercel, you can set `KINDE_SITE_URL` and `KINDE_POST_LOGIN_REDIRECT_URL` dynamically.
 
 ```jsx title="next.config.js"
 const nextConfig = {
@@ -2144,17 +2145,16 @@ The `State not found error` in production is usually a result of a mismatch betw
 - The domain you are on e.g. `your-app-projects.vercel.app`
 - Callback URL set on the Kinde dashboard
 
-If you set `KINDE_SITE_URL=https:// your-app-projects.vercel.app` and `KINDE_POST_LOGIN_REDIRECT_URL=https:// your-app-projects.vercel.app/dashboard`.
-And you also set your Callback URL to be `your-app-\*.vercel.app/api/auth/kinde_callback`. You should be able to click login and complete the auth flow.
+If you set `KINDE_SITE_URL=https://your-app-projects.vercel.app` and `KINDE_POST_LOGIN_REDIRECT_URL=https://your-app-projects.vercel.app/dashboard`, and you set your callback URL to `your-app-*.vercel.app/api/auth/kinde_callback`, you should be able to start the login flow and complete authentication.
 
-However if you start the auth flow from a Vercel preview domain `your-app-PREVIEW-projects.vercel.app` and complete the auth flow, you will be redirected to `your-app-projects.vercel.app/api/auth/kinde_callback` which is **NOT** the same as the domain you started the auth flow on.
+However, if you start the auth flow from a Vercel preview domain `your-app-PREVIEW-projects.vercel.app` and complete the auth flow, you will be redirected to `your-app-projects.vercel.app/api/auth/kinde_callback`, which is **not** the same as the domain you started the auth flow on.
 
-The error happens because when you start the auth flow, a `state` cookie is set which needs to be checked against when you return back to your app. In this case, you are **NOT** being redirect to the app you started the flow on, but rather another domain where the app is running which does not have the `state` cookie.
+The error happens because when you start the auth flow, a `state` cookie is set that must be checked when you return to your app. In this case, you are **not** being redirected to the app you started the flow on, but rather another domain where the app is running, which does not have the `state` cookie.
 Since there is a `state` cookie mismatch, the auth flow is aborted for security reasons.
 
-The reason why you are redirected to the wrong domain because is likely because your `KINDE_POST_LOGIN_REDIRECT_URL` environment variable is static and is set for all your deployments/domains.
+You are likely redirected to the wrong domain because your `KINDE_POST_LOGIN_REDIRECT_URL` environment variable is static and is set for all your deployments and domains.
 
-You should set the `KINDE_POST_LOGIN_REDIRECT_URL` dynamically based on the domain you initiating the auth flow from.
+Set `KINDE_POST_LOGIN_REDIRECT_URL` dynamically based on the domain you are initiating the auth flow from.
 
 ## Clearing Kinde session cookies manually
 
