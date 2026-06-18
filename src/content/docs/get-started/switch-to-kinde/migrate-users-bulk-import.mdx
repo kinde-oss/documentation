@@ -2,7 +2,7 @@
 page_id: f6eaf29b-d8d9-4caf-bc1d-5319b6fb8ffc
 title: Bulk import users to Kinde
 sidebar:
-  order: 8
+  order: 9
   label: Bulk import
 tableOfContents:
   maxHeadingLevel: 3
@@ -36,7 +36,7 @@ keywords:
 updated: 2026-05-07
 featured: false
 deprecated: false
-ai_summary: "This guide explains how to bulk import users into Kinde using a CSV file (up to 5MB) or NDJSON for Auth0 exports (up to 20MB). It covers the full migration workflow: configuring your Kinde business with matching auth strategies, exporting users from providers like Auth0, Clerk, Supabase, Firebase, AWS Cognito, or Azure B2C, preparing a properly formatted file, and running the import via the Kinde dashboard. The guide details required and optional CSV columns including email, name, email verification status, organization IDs, roles, and permissions. It also covers migrating hashed passwords, with support for bcrypt, MD5, SHA256, crypt, and WordPress hashing methods, including salt configuration. Post-import guidance addresses handling new registrations and password changes during the migration window, recommending re-imports, forced password resets, or parallel API usage. The guide also notes that Kinde does not notify users on import, advising teams to plan their own communication strategy, and lists edge cases such as password changes mid-migration and how newly added authentication methods affect returning users."
+ai_summary: "This guide explains how to bulk import users into Kinde using CSV or NDJSON files (49MB or less). It covers the full migration workflow: configuring your Kinde business with matching auth strategies, exporting users from providers like Auth0, Clerk, Supabase, Firebase, AWS Cognito, or Azure B2C, preparing a properly formatted file, and running the import via the Kinde dashboard. The guide details required and optional CSV columns including email, name, email verification status, organization IDs, roles, and permissions. It also covers migrating hashed passwords, with support for bcrypt, MD5, SHA256, crypt, and WordPress hashing methods, including salt configuration. Post-import guidance addresses handling new registrations and password changes during the migration window, recommending re-imports, forced password resets, or parallel API usage. The guide also notes that Kinde does not notify users on import, advising teams to plan their own communication strategy, and lists edge cases such as password changes mid-migration and how newly added authentication methods affect returning users."
 ---
 
 Export your users from your existing auth system, prepare a CSV, and import them into Kinde. Users with migrated password hashes can sign in immediately with no password reset required.
@@ -64,6 +64,7 @@ Configure your Kinde business with the same auth strategies as your existing pro
 Export instructions vary by provider. Select yours:
 
 - [Auth0 →](/get-started/switch-to-kinde/auth0-to-kinde/)
+- [FusionAuth →](/get-started/switch-to-kinde/fusionauth-to-kinde/)
 - [Clerk →](/get-started/switch-to-kinde/clerk-to-kinde/)
 - [Supabase →](/get-started/switch-to-kinde/supabase-to-kinde/)
 - [Firebase →](/get-started/switch-to-kinde/firebase-to-kinde/)
@@ -74,7 +75,7 @@ If you are migrating from your own system, prepare the data to match the format 
 
 ### 3. Prepare your CSV
 
-Kinde imports users from a CSV file (up to 5MB; Auth0 imports accept NDJSON up to 20MB). Format your export with the following columns.
+Import files must be 49MB or less. This applies to Custom CSV, Auth0 NDJSON, FusionAuth NDJSON, and Custom NDJSON imports. Format your export with the following columns.
 
 **Required column:**
 
@@ -143,9 +144,11 @@ Review the CSV for missing or duplicate values. Kinde will report errors after i
 1. In Kinde, go to **Users**, then select **Import users**.
 2. Select your import type:
    - **Auth0** — for NDJSON files exported from Auth0
+   - **FusionAuth** — for NDJSON files exported from FusionAuth
+   - **Custom NDJSON** — for NDJSON files exported from other providers
    - **Custom CSV** — for all other providers
 
-   ![Import from Kinde tool screen shot](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/06ceef1a-0236-4f42-6598-c60dd511a400/socialsharingimage)
+   ![import users to kinde popup](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/588e7b84-5d42-40a3-532a-ced76589d500/socialsharingimage)
 
 3. Follow the on-screen prompts to upload your file.
 4. Review any errors reported after import. Fix the CSV and re-import to resolve them.
