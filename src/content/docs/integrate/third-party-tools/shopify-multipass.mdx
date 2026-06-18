@@ -1,9 +1,12 @@
 ---
 page_id: 1023d9f8-ae2d-4167-98e0-a4aa7b31e80c
-title: Kinde and Shopify Multipass
+title: Use Kinde as authentication provider for Shopify store
 description: Guide to integrating Kinde with Shopify Multipass for seamless user authentication and customer data passing between applications
 sidebar:
   order: 4
+  label: Kinde and Shopify
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 7d311fcf-ca33-49ec-9286-419da4a91f41
   - f74a81d3-3588-4fd4-a0ba-13eba550eff1
@@ -40,31 +43,79 @@ ai_summary: Guide to integrating Kinde with Shopify Multipass for seamless user 
 
 ## What you need
 
-- A Kinde account, this will work on all Kinde plans.
-- [Shopify Plus plan](https://www.shopify.com/au/pricing/) and [Multipass enabled.](https://shopify.dev/docs/api/multipass/)
+- A [Kinde](/get-started/guides/first-things-first/) account (Sign up for free)
+- A [Shopify](https://www.shopify.com/plus) account with Plus plan
 
-## Configure Multipass in your project
+## Connect Kinde to Shopify
 
-The following example uses [Next.js](https://nextjs.org/), however this can also be configured in other languages and frameworks.
+### 1. Create a Kinde app and get app keys
 
-### Add new environment variables
+1. Sign in to your Kinde dashboard and select **Add application**
+2. Enter a name for your app (e.g., "Shopify"), select **Back-end web**, select **Save**
+3. Select **Other back end** and select **Save**
+4. Go to **Details** page and copy the **Domain** (or [custom domain](/build/domains/pointing-your-domain/)), **Client ID** and **Client secret** values.
+5. Go to **Authentication** page and enable the authentication methods you want your users to sign in with (e.g., Google, Apple, Facebook, etc.)
+6. Select **Save**.
+
+### 2. Configure Shopify
+
+1. Sign in to your Shopify account and go to **Settings > Customer accounts > Third-party identity provider**
+2. Enter **Discovery URL**:
+   ```
+   https://<YOUR_DOMAIN>/.well-known/openid-configuration
+   ```
+    <Aside>
+    Replace `<YOUR_DOMAIN>` with either your [custom domain](/build/domains/pointing-your-domain/) or your Kinde domain (e.g., `https://your_business.kinde.com`)
+    </Aside>
+3. Enter the **Client ID** and **Client secret** values you copied from the Kinde app.
+4. Optional: In the **Additional scopes** field, add `offline` to enable refresh token support.
+5. Select **Save**.
+6. Copy the **Shopify callback URL** -you will need it in the next step.
+
+### 3. Add Shopify callback URL to Kinde
+
+1. Go to Kinde > **Settings > Environment > Applications**
+2. Select **View details** on your relevant application
+3. On the **Details** page, scroll to the **Callback URLs** section
+4. Enter the **Shopify callback URL** to the **Allowed callback URLs** field
+5. Select **Save**
+
+### 4. Test the connection
+
+1. Open your Shopify store and continue with the login process.
+2. You should be redirected to your Kinde login page.
+3. Sign up for a test user account, you should be redirected back to your Shopify store.
+4. Go to your Kinde dashboard > **Users** and you should see your test user account.
+
+## Shopify Multipass (legacy)
+
+The following example uses [NextJS](/developer-tools/sdks/backend/nextjs-sdk/), however this can also be configured in other languages and frameworks.
+
+### 1. Install project dependencies
+
+<PackageManagers pkg="multipass-js @kinde/jwt-decoder" />
+
+### 2. Add environment variables
 
 Add Shopify and Multipass settings to your .env file.
 
-```shell title=".env
-SHOPIFY_MULTIPASS_SECRET = "[Your Mulitpass secret]";
-SHOPIFY_STORE_URL = "[yourshopify].myshopify.com";
+```env
+# .env
+SHOPIFY_MULTIPASS_SECRET=<your-multipass-secret>
+SHOPIFY_STORE_URL=<your-shopify-store-url>
 ```
 
-### Set up API endpoint
+### 3. Set up API endpoint
 
-Create an endpoint file, e.g. `/api/multipass` that contains the following. Make sure to replace the generic information with your specific domain and secret information.
+Create an endpoint file, e.g. `/api/multipass` and add the following code:
+
+Make sure to replace the generic information with your specific domain and secret information.
 
 ```tsx
-import {NextResponse} from "next/server";
-import {jwtDecoder, type JWTDecoded} from "@kinde/jwt-decoder";
-import {cookies} from "next/headers";
-import {Multipass} from "multipass-js";
+import { NextResponse } from "next/server";
+import { jwtDecoder, type JWTDecoded } from "@kinde/jwt-decoder";
+import { cookies } from "next/headers";
+import { Multipass } from "multipass-js";
 
 export async function GET() {
   const decodedToken = jwtDecoder<JWTDecoded & {email: string}>(cookies().get("id_token")?.value);
