@@ -30,6 +30,13 @@ const sdkList: SDK[] = [
     type: "Back end"
   },
   {
+    name: "TanStack Start",
+    link: "/developer-tools/sdks/backend/tsr-sdk/",
+    icon: "tanstack",
+    iconWidth: "36",
+    type: "Back end"
+  },
+  {
     name: "Remix",
     link: "/developer-tools/sdks/backend/remix-sdk/",
     icon: "remix",
@@ -161,6 +168,13 @@ const sdkList: SDK[] = [
     link: "/developer-tools/sdks/backend/java-sdk/",
     icon: "java",
     iconWidth: "22",
+    type: "Back end"
+  },
+  {
+    name: "Go",
+    link: "/developer-tools/sdks/backend/go-sdk/",
+    icon: "go",
+    iconWidth: "28",
     type: "Back end"
   },
   {
