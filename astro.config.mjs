@@ -340,9 +340,7 @@ export default defineConfig({
         "./src/components/Aside.astro",
         "./src/components/FileTree.astro",
         "./src/components/Divider.astro",
-        {
-          "starlight-package-managers": ["PackageManagers"]
-        },
+        "./src/components/PackageManagers.astro",
         {
           "@astrojs/starlight/components": ["Tabs", "TabItem"]
         }

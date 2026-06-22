@@ -63,6 +63,10 @@ export function extractFrontmatter() {
         fileName: fileName,
         title: frontmatter.title || '',
         description: frontmatter.description || '',
+        ai_summary: frontmatter.ai_summary || '',
+        updated: frontmatter.updated instanceof Date
+          ? frontmatter.updated.toISOString().split('T')[0]
+          : frontmatter.updated || '',
         keywords: keywords,
         topics: topics
       });
@@ -136,9 +140,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     
     // Build content without extra labels and with minimal line breaks
     let content = '';
-    
-    if (result.description) {
-      content += result.description;
+
+    if (result.updated) {
+      content += `Last updated: ${result.updated}\n`;
+    }
+
+    const summary = result.ai_summary || result.description;
+    if (summary) {
+      if (content) content += '\n';
+      content += summary;
     }
     
     if (result.keywords) {
