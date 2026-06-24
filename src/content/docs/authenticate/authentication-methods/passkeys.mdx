@@ -11,18 +11,15 @@ relatedArticles:
   - 84581694-59d6-4a02-ab8b-c7a2889713d5
 tableOfContents:
   maxHeadingLevel: 3
-description: "Enable WebAuthn passkeys in Kinde for passwordless sign-in with biometrics or security keys—policies, API, webhooks, and rollout guidance."
+description: "Enable WebAuthn passkeys for passwordless sign-in—set environment policies, org overrides, and roll out from optional to mandatory"
 featured: false
 deprecated: false
 topics:
   - authenticate
   - authentication-methods
   - passkeys
-sdk:
-  - kinde-management-api
-languages:
-  - bash
-  - json
+sdk: []
+languages: []
 audience:
   - developer
   - product-manager
@@ -34,11 +31,11 @@ keywords:
   - passwordless sign-in
   - fido2
   - passkey policy
-  - passkey management api
-  - passkey webhooks
+  - organization passkey override
+  - passkey rollout
   - security key
-ai_summary: "Guide to enabling and managing passkey authentication in Kinde using the Web Authentication (WebAuthn) standard. Explains how passkeys complement existing email, passwordless OTP, social, and enterprise auth methods rather than replace them. Covers dashboard setup under Settings and Policies with off, optional, and mandatory environment policies, plus organization-level overrides. Describes the user experience for post-login passkey enrollment, Sign in with passkey on the login page, and passkey management in the account portal and admin Users section. Includes recommended rollout steps from optional to mandatory deployment, passkey configuration via the Kinde Management API for environment and organization settings, passkey.added and passkey.removed webhook events, and technical requirements for domain, HTTPS, RP ID, and browser or device WebAuthn support. Also answers common FAQ on passwords, multiple passkeys, signup behavior, per-application limits, and paid plan requirements. Intended for developers, product managers, and security engineers implementing passwordless passkey sign-in."
-updated: 2026-06-19
+ai_summary: "Guide to enabling and managing passkey authentication in Kinde using the Web Authentication (WebAuthn) standard. Explains how passkeys complement existing email, passwordless OTP, social, and enterprise auth methods rather than replace them. Covers dashboard setup under Settings > Policies with off, optional, and mandatory environment policies, plus organization-level overrides. Describes the user experience for post-login passkey enrollment, Sign in with passkey on the login page, and passkey management in the account portal and admin Users section. Includes recommended rollout steps from optional to mandatory deployment. Covers technical requirements for domain, HTTPS, RP ID, and browser or device WebAuthn support. Also answers common FAQ on passwords, multiple passkeys, signup behavior, per-application limits, and paid plan requirements. Intended for developers, product managers, and security engineers implementing passwordless passkey sign-in."
+updated: 2026-06-25
 ---
 
 <Aside type="upgrade">
@@ -160,7 +157,7 @@ Admins can also view a user's passkeys from the **Users** section in the Kinde a
 2. Confirm **Sign in with passkey** appears on your login page.
 3. Sign in with email/password as a test user and complete passkey setup.
 4. Sign out and sign back in with the passkey.
-5. Subscribe to `passkey.added` / `passkey.removed` webhooks if you need lifecycle visibility.
+5. Subscribe to passkey lifecycle [webhooks](/integrate/webhooks/add-manage-webhooks/) if you need visibility.
 
 ### Move to mandatory (if needed)
 
@@ -173,142 +170,6 @@ Use **`mandatory`** when you want every user who signs in with credentials to re
 ### Disable passkeys
 
 Set policy to **`off`**. Existing passkey credentials remain stored but are not usable until re-enabled. Users cannot sign in with or manage passkeys while disabled.
-
-## Configure passkeys via the Management API
-
-### Environment passkey settings
-
-| Method | Endpoint | Scope |
-| --- | --- | --- |
-| `GET` | `/api/v1/passkey` | `read:passkey` |
-| `PUT` | `/api/v1/passkey` | `update:passkey` |
-
-**Get environment settings**
-
-```bash
-GET /api/v1/passkey
-Authorization: Bearer {management_api_token}
-```
-
-Example response:
-
-```json
-{
-  "code": "OK",
-  "message": "Success",
-  "enabled": true,
-  "policy": "optional"
-}
-```
-
-**Update environment settings**
-
-```bash
-PUT /api/v1/passkey
-Authorization: Bearer {management_api_token}
-Content-Type: application/json
-
-{
-  "policy": "optional"
-}
-```
-
-Valid values: `off`, `optional`, `mandatory`.
-
-Example success response:
-
-```json
-{
-  "code": "PASSKEY_SET",
-  "message": "Passkey settings successfully updated",
-  "enabled": true,
-  "policy": "optional"
-}
-```
-
-### Organization passkey settings
-
-| Method | Endpoint | Scope |
-| --- | --- | --- |
-| `GET` | `/api/v1/organizations/{org_code}/passkey` | `read:organization_passkey` |
-| `PUT` | `/api/v1/organizations/{org_code}/passkey` | `update:organization_passkey` |
-
-**Get organization settings**
-
-```bash
-GET /api/v1/organizations/org_abc123/passkey
-Authorization: Bearer {management_api_token}
-```
-
-Example response:
-
-```json
-{
-  "code": "OK",
-  "message": "Success",
-  "enabled": true,
-  "policy": "mandatory",
-  "is_override_environment_passkey_settings": true,
-  "environment_policy": "optional"
-}
-```
-
-**Set an organization override**
-
-```bash
-PUT /api/v1/organizations/org_abc123/passkey
-Authorization: Bearer {management_api_token}
-Content-Type: application/json
-
-{
-  "policy": "mandatory",
-  "is_override_environment_passkey_settings": true
-}
-```
-
-**Revert to environment default**
-
-```bash
-PUT /api/v1/organizations/org_abc123/passkey
-Authorization: Bearer {management_api_token}
-Content-Type: application/json
-
-{
-  "is_override_environment_passkey_settings": false
-}
-```
-
-When reverting, you do not need to send `policy`. The org override row is removed and the environment policy applies.
-
-See the [Kinde Management API](/kinde-apis/management) for full endpoint reference.
-
-## Webhooks
-
-Subscribe to passkey lifecycle events via [Kinde webhooks](/integrate/webhooks/about-webhooks/):
-
-| Event | When it fires |
-| --- | --- |
-| `passkey.added` | A user successfully registers a new passkey |
-| `passkey.removed` | A passkey is deleted |
-
-Example payload shape:
-
-```json
-{
-  "type": "passkey.added",
-  "event_id": "event_…",
-  "timestamp": "2026-06-16T12:00:00Z",
-  "data": {
-    "user": {
-      "id": "kp_…"
-    },
-    "passkey": {
-      "id": "019abc50-…",
-      "name": "Passkey 1"
-    }
-  }
-}
-```
 
 ## Technical details
 
