@@ -67,11 +67,6 @@ const sidebarData = [
     items: [
       {label: "Overview", autogenerate: {directory: "developer-tools/about"}, collapsed: false},
       {
-        label: "Special guides",
-        autogenerate: {directory: "developer-tools/guides"},
-        collapsed: false
-      },
-      {
         label: "Front end SDKs",
         autogenerate: {directory: "developer-tools/sdks/frontend"},
         collapsed: false
@@ -94,6 +89,11 @@ const sidebarData = [
       {
         label: "Account API",
         autogenerate: {directory: "developer-tools/account-api"},
+        collapsed: false
+      },
+      {
+        label: "Special guides",
+        autogenerate: {directory: "developer-tools/guides"},
         collapsed: false
       }
     ]
