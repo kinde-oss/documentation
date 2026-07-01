@@ -1,8 +1,9 @@
 ---
 page_id: fe9fea0c-274c-4d6b-9cc5-eccdbaad85b7
-title: Create plans
+title: Create billing plans in Kinde
 sidebar:
   order: 2
+  label: Create plans
 tableOfContents:
   maxHeadingLevel: 3
 relatedArticles:
@@ -12,13 +13,14 @@ relatedArticles:
 app_context:
   - m: billing
   - s: plans
-description: >-
-  Step-by-step guide to creating plans in Kinde including plan groups, fixed
-  charges, metered features, and tiered pricing configuration.
+description: "Create and publish Kinde billing plans with fixed charges, metered features, tiered pricing, trials, and annual billing options"
 featured: false
 deprecated: false
 topics:
   - billing
+  - manage-plans
+  - plans
+  - tiered-pricing
 sdk: []
 languages: []
 audience:
@@ -31,22 +33,19 @@ keywords:
   - plan groups
   - fixed charges
   - billing interval
-  - offer as annual
   - metered features
   - tiered pricing
-  - plan features
-  - subscription fees
-  - trial
   - free trial
-  - trial period
+  - annual pricing
 updated: 2026-07-01
+ai_summary: "Step-by-step guide to creating billing plans in the Kinde dashboard. Explains that all plans belong to a plan group scoped to users or organizations, and that charges and features can be reused across plans. Covers adding a plan with name, description, key, and default currency; configuring plan settings including the Ask for credit card toggle and trial period with trial length and credit card prompt timing; adding fixed charges with billing intervals and optional Offer as annual yearly pricing; creating free plans with a zero price; adding metered and unmetered features with flat or tiered graduated pricing; and verifying Stripe price sync status. Notes constraints such as credit card collection requirements for paid plans and trials, annual subscriptions as a beta feature, and immutability of feature name, key, and type after creation. Intended for developers and product managers setting up SaaS subscription plans."
 ---
 
 Once you’ve got a plan strategy along with a plan feature list, prices, and details, you’re ready to create plans in Kinde.
 
-All plans must belong to a plan group. When you create your first plan, it will be automatically added to the default group. A plan group can only contain either user plans or organization plans. When you create your first plan, we automatically create a group based on the plan type you select. 
+All plans must belong to a plan group. A plan group can contain only user plans or only organization plans—not both. When you create your first plan, Kinde automatically creates a default group based on the plan type you select and adds the plan to it.
 
-Remember you can create one charge or feature that can be used and redefined across all plans. E.g. You can have one ‘Base price’ charge that is defined as `0.00` in a **free plan**, `10.00` in a **Plus plan**, and `25.00` in a **Pro plan**.
+You can define a charge or feature once and reuse it across plans. For example, a **Base price** charge can be set to `0.00` in a **free plan**, `10.00` in a **Plus plan**, and `25.00` in a **Pro plan**.
 
 
 ## Add a plan
@@ -57,7 +56,7 @@ Remember you can create one charge or feature that can be used and redefined acr
     ![Add plans window](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/a8a237d5-c242-45dc-453e-a7ad66e33a00/public)
     
 3. Choose whether the plan is for **Organizations** or **Users**, or select the **Group** the plan belongs to. Only one of these options will appear. You cannot change these selections later.
-4. Give the plan a **Name** (e.g., `Free`), a **Description**. This is the name that will also appear in the pricing table (if you use one).
+4. Give the plan a **Name** (e.g., `Free`) and a **Description**. This is the name that will also appear in the pricing table (if you use one).
 5. Give your plan a **Key** (e.g., `free_plan`) for referencing in your code. This cannot be changed after a plan is published.
 6. Select a **Default currency**. This field only appears if one has not been set. You can change this later in **Settings > Billing**, but only before any of your plans are published.
 7. Select **Save**
@@ -103,7 +102,7 @@ Enabling a trial period requires the **Ask for credit card** toggle to be on. Yo
 
 </Aside>
 
-In **Trials** section:
+In the **Trials** section:
 
 1. Enable **Trial period**.
 2. Set the **Trial length (days)** (default: 30, minimum: 1). This is how many days the customer can use the plan for free.
@@ -137,7 +136,7 @@ A fixed charge is a recurring charge such as base price or subscription fee. You
         
         <Aside>
         
-        You only need to create a new charge if the item is unique. For re-usable items such as ‘Base price’, select the existing charge but change the line item description and price for each plan.
+        You only need to create a new charge if the item is unique. For reusable items such as ‘Base price’, select the existing charge but change the line item description and price for each plan.
         
         </Aside>
         
@@ -151,13 +150,13 @@ After entering the charge name and price, configure how often the fixed charge i
 
 1. Use the **Billing interval** dropdown.
 2. Choose **Day**, **Week**, **Month**, or **Year**. The default is **Month**.
-3. The helper text in the UI reads: *Choose how often this charge is billed*.
-4. The interval you select determines how often Stripe bills the customer for this fixed charge.
-5. If you select **Year** as the billing interval, the separate **Offer as annual** toggle does not apply. Annual pricing is a distinct option for charges billed at non-yearly base intervals.
+      - The interval you select determines how often Stripe bills the customer for this fixed charge.
+      - If you select **Year** as the billing interval, the separate **Offer as annual** toggle does not apply. Annual pricing is a distinct option for charges billed at non-yearly base intervals.
 
-- **(Optional) Offer as annual** with a yearly price for this plan.
-- Select **Save** or **Save draft** to commit your changes.
-- Repeat for each fixed charge you want to add, or start adding features.
+3. (Optional) Enable **Offer as annual** with a yearly price for this plan.
+4. Select **Save** or **Save draft** to commit your changes.
+
+Repeat for each fixed charge you want to add, or start adding features.
 
 ### Offer annual pricing
 
@@ -197,7 +196,7 @@ You cannot change the Name, the Key or the Type of feature once you have created
 3. Enter a **Feature name**. Be sure to use something generic if you plan to use this feature again, e.g. `Included seats`.
 4. Enter a **Description**.
 5. Enter a **Key** for referencing the feature. 
-6. If you selected a unmetered feature, select **Save**. You’re done. Repeat from step 1 to add more features. 
+6. If you selected an unmetered feature, select **Save**. You’re done. Repeat from step 1 to add more features. 
 7. If you selected a metered feature, complete the rest of the details:
     
     ![Add feature window, select units](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/de016f2c-2477-4abd-9a2d-00e7c3e99300/public)
@@ -211,9 +210,9 @@ You cannot change the Name, the Key or the Type of feature once you have created
 11. Add a **Line item description**. This appears on the customer invoice, so might be more specific than the name, e.g. `Additional licenses for Pro (5)`.
 12. For a flat unit price, enter the price and select **Save**. You’re finished.
 13. For tiered pricing, select **Tiered - Graduated** and define each tier with unit numbers and add the price per unit. 
-14. Select **Add tier** to add a different price for higher unit tiers. For example, a unit might be $10 each if you use 1-10, but is $9 per unit if you use 11 or more.
+14. Select **Add tier** to add a different price for higher unit tiers. For example, units might cost $10 each for quantities 1–10, and $9 per unit for 11 or more.
     
-    Ensure the tiered units amounts don’t overlap. E.g. make sure they follow a pattern like 1-10, 11-20, 21-30, etc. If you want to make it so an upper limit is limitless, E.g. 1-10, 11-(blank/limitless); use 1-10, 11-1,000,000 (or a very high number). Graduated unit fields can’t be left blank.
+    Ensure the tiered unit amounts don’t overlap—for example, 1–10, 11–20, 21–30. To set a limitless upper tier (e.g., 11+), use a very high number such as 1–10, 11–1,000,000. Graduated unit fields can’t be left blank.
     
 15. Select **Save.**
 16. In the **Plan** window, select **Save** to commit your changes.
@@ -221,6 +220,6 @@ You cannot change the Name, the Key or the Type of feature once you have created
 
 ## Price sync status
 
-If you are successfully connected to Stripe and the plan/feature is part of a published plan, it will show as `price synced`. Otherwise the feature will show as `price not synced`.
+If you are connected to Stripe and the plan or feature is part of a published plan, it will show as `price synced`. Otherwise, it will show as `price not synced`.
 
     ![Price sync status](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/bc88b122-c6d6-4352-1a54-2fe844f23c00/socialsharingimage)
