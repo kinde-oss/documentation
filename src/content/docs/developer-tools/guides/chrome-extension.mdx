@@ -1,0 +1,1782 @@
+---
+page_id: 9913b80b-bbfb-4acb-94ff-2a7356286d7a
+title: Add Kinde auth to Chrome extension
+description: "Add Kinde auth to Chrome extensions with Plasmo—PKCE login, MV3 service worker, silent re-auth, and JWT-powered features"
+sidebar:
+  order: 6
+  label: Kinde in Chrome extension
+tableOfContents:
+  maxHeadingLevel: 3
+topics:
+  - developer-tools
+  - guides
+  - chrome-extension
+  - pkce
+sdk:
+  - javascript
+languages:
+  - typescript
+  - javascript
+  - bash
+  - json
+  - css
+  - tsx
+audience: developers
+complexity: intermediate
+keywords:
+  - chrome extension authentication
+  - Plasmo
+  - PKCE OAuth
+  - chrome.identity
+  - Manifest V3
+  - silent re-authentication
+  - host permissions
+  - JWKS validation
+updated: 2026-07-01
+featured: false
+deprecated: false
+ai_summary: "Comprehensive guide for building a Chrome browser extension with Kinde authentication using the Plasmo framework and Kinde js-utils. Walks through Kinde application setup, environment variables, manifest host permissions scoped to the business Kinde or custom domain, and a full PKCE authorization code flow via chrome.identity without a client secret. The MV3 background service worker handles interactive login and session-based silent re-authentication by re-running the OAuth flow with interactive false while the Kinde SSO session is active; refresh tokens are stored but not used for renewal. Includes complete source for the service worker, popup, dashboard tab, JWT utilities, ChromeStore session storage, and Tailwind styling. Extended sections cover roles and permissions from JWT claims, organization routing via org_code at login, fetchWithAuth for protected API calls with JWKS server validation, feature flags, user properties, and Management API usage from trusted backends only. Production guidance covers extension key files for stable callback URLs, separate environment configs, Chrome Web Store packaging, and troubleshooting CORS, auth cancellation, missing token claims, and dependency patch errors. Intended for developers building authenticated Manifest V3 Chrome extensions."
+---
+
+A Chrome extension built with [Plasmo](https://docs.plasmo.com) that adds Kinde authentication via PKCE — no client secret required. The extension popup triggers Kinde hosted login via `chrome.identity`, a background service worker exchanges the auth code for tokens, then opens a full-page dashboard tab with the user's profile.
+
+## What you need
+
+- A [Kinde](/get-started/guides/first-things-first/) account with **Admin** or **Engineer** permissions (sign up for free)
+- [Node.js](https://nodejs.org/) 18 or higher
+- [Google Chrome](https://www.google.com/chrome/) with Developer mode enabled
+
+## Project setup
+
+### 1. Create a Kinde application
+
+1. Go to your Kinde dashboard and select **Add application**.
+2. Set a Name, and select **Front-end and mobile** as the application type; select **Save**.
+3. Select **Other front end** as the SDK, and select **Save**.
+4. Go to **Details** and copy the **Domain** (or [Custom domain](/build/domains/pointing-your-domain/)) and **Client ID** values.
+5. Go to **Authentication** and select the authentication method you want to use for your extension (e.g., Google, Facebook, etc.).
+6. Select **Save**.
+
+    <Aside type="warning" title="Use the same domain for authentication">
+      Use either your Kinde domain (`https://YOUR_BUSINESS.kinde.com`) or your custom domain (`https://auth.yourbusiness.com`), because tokens issued to one domain cannot be used with the other.
+    </Aside>
+
+### 2. Scaffold a Plasmo project
+
+[Plasmo](https://docs.plasmo.com/introduction/getting-started) is a framework for building Chrome extensions with modern workflows. If you want to start fresh, follow the steps:
+
+1. Create a Plasmo project with the following command:
+
+    ```bash
+    npm create plasmo@latest kinde-browser-extension -- --with-tailwindcss
+    ```
+
+2. Change into the project directory:
+
+    ```bash
+    cd kinde-browser-extension
+    ```
+
+### 3. Install Kinde dependency
+
+<PackageManagers pkg="@kinde/js-utils@0.30.1" />
+
+### 4. Update `package.json`
+
+1. Update `package.json` to add the manifest config (permissions + `host_permissions`) and the postinstall script:
+
+    ```jsonc
+    {
+      "scripts": {
+        "postinstall": "node scripts/patch-expo-stub.mjs",
+        "dev": "plasmo dev",
+        "build": "plasmo build",
+        "package": "plasmo package"
+      },
+      "manifest": {
+        "permissions": ["identity", "storage"],
+        "host_permissions": [
+          "https://YOUR_BUSINESS.kinde.com/*", // or https://auth.yourbusiness.com/*
+        ]
+      }
+    }
+    ```
+
+The `host_permissions` are required so the background service worker can make cross-origin requests to Kinde's token endpoint without being blocked by CORS.
+
+### 5. Update environment variables
+
+1. Create a `.env` file at the project root and add your Kinde credentials from the **Details** page:
+
+    ```bash
+    touch .env
+    ```
+
+    ```env
+    # .env
+    PLASMO_PUBLIC_KINDE_DOMAIN=<YOUR_DOMAIN>
+    PLASMO_PUBLIC_KINDE_CLIENT_ID=your_client_id_here
+    ```
+    <Aside>
+        Replace `<YOUR_DOMAIN>` with either your Kinde domain (`https://YOUR_BUSINESS.kinde.com`) or your custom domain (`https://auth.yourbusiness.com`). Use the same domain throughout your project.
+    </Aside>
+
+## Create the source files
+
+Create each of the following files in the project root:
+
+```bash
+mkdir -p lib scripts tabs
+touch popup.tsx background.ts tabs/dashboard.tsx lib/jwt.ts lib/kinde.ts lib/session.ts style.css scripts/patch-expo-stub.mjs
+```
+
+### `popup.tsx`
+
+The extension popup. Shows a sign-in button when unauthenticated, or a compact profile card with "Open dashboard" and "Sign out" buttons when authenticated. On sign-in, the popup delegates the entire OAuth flow to the background service worker (which also opens the dashboard tab), then closes itself.
+
+```tsx
+// popup.tsx
+import { useEffect, useState } from "react"
+
+import { getAuthState, login, logout } from "~lib/kinde"
+import type { AuthState } from "~lib/kinde"
+
+import "~style.css"
+
+type Status = "loading" | "idle" | "signing-in" | "signing-out" | "error"
+
+async function openDashboard() {
+  await chrome.tabs.create({ url: chrome.runtime.getURL("tabs/dashboard.html") })
+  window.close()
+}
+
+function IndexPopup() {
+  const [auth, setAuth] = useState<AuthState>({
+    isAuthenticated: false,
+    accessToken: null,
+    idToken: null,
+    user: null,
+  })
+  const [status, setStatus] = useState<Status>("loading")
+  const [errorMessage, setErrorMessage] = useState<string>("")
+
+  useEffect(() => {
+    async function loadAuth() {
+      try {
+        const state = await getAuthState()
+        setAuth(state)
+        setStatus("idle")
+      } catch {
+        setStatus("idle")
+      }
+    }
+    loadAuth()
+  }, [])
+
+  async function handleLogin() {
+    setStatus("signing-in")
+    setErrorMessage("")
+    try {
+      await login()
+      // Background has opened the dashboard tab and handled everything.
+      // If the popup is still alive at this point, close it.
+      window.close()
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : "Authentication failed")
+      setStatus("error")
+    }
+  }
+
+  async function handleSignOut() {
+    setStatus("signing-out")
+    try {
+      await logout()
+    } catch {
+      // Clear local session even if the server-side logout fails.
+    } finally {
+      const state = await getAuthState()
+      setAuth(state)
+      setStatus("idle")
+    }
+  }
+
+  const user = auth.user
+  const initials = user?.name
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : user?.email?.[0]?.toUpperCase() ?? "?"
+
+  return (
+    <div style={{ width: 320, fontFamily: "var(--g-font-family)", background: "var(--g-color-white)" }}>
+
+      {/* Nav */}
+      <nav className="nav" style={{ padding: "1rem 1.25rem" }}>
+        <span className="text-heading-1">KindeAuth</span>
+        {auth.isAuthenticated && status !== "loading" && (
+          <div className="avatar" style={{ width: 36, height: 36, fontSize: "0.8rem", borderRadius: 8 }}>
+            {user?.picture
+              ? <img src={user.picture} alt="" style={{ width: "100%", height: "100%", borderRadius: 8, objectFit: "cover" }} />
+              : initials}
+          </div>
+        )}
+      </nav>
+
+      {/* Body */}
+      <div style={{ padding: "1.5rem 1.25rem" }}>
+        {status === "loading" ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: "2rem 0" }}>
+            <svg style={{ animation: "spin .8s linear infinite", width: 28, height: 28 }} viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="#f1f2f4" strokeWidth="3" />
+              <path d="M4 12a8 8 0 018-8" stroke="#121417" strokeWidth="3" strokeLinecap="round" />
+            </svg>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+          </div>
+        ) : auth.isAuthenticated && user ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+
+            {/* Profile blob */}
+            <div className="profile-blob">
+              <div className="avatar" style={{ width: 48, height: 48, fontSize: "1rem", borderRadius: 10 }}>
+                {user.picture
+                  ? <img src={user.picture} alt="" style={{ width: "100%", height: "100%", borderRadius: 10, objectFit: "cover" }} />
+                  : initials}
+              </div>
+              <div>
+                {user.name && <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--g-color-grey-900)" }}>{user.name}</p>}
+                {user.email && <p className="text-subtle" style={{ marginTop: 2 }}>{user.email}</p>}
+                <div className="badge" style={{ marginTop: 6 }}>
+                  <span className="badge-dot" />
+                  Signed in
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <button type="button" onClick={openDashboard} className="btn btn-dark btn-full">
+                Open dashboard →
+              </button>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={status === "signing-out"}
+                className="btn btn-light btn-full">
+                {status === "signing-out" ? "Signing out…" : "Sign out"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <div>
+              <h2 className="text-display-3" style={{ marginBottom: "0.375rem" }}>Welcome</h2>
+              <p className="text-subtle">Sign in to continue to your dashboard.</p>
+            </div>
+
+            {(status === "error") && errorMessage && (
+              <div style={{ background: "#fff5f5", border: "1px solid #fecaca", borderRadius: "var(--g-border-radius-small)", padding: "0.75rem", fontSize: "var(--g-font-size-x-small)", color: "#c0392b" }}>
+                {errorMessage}
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <button
+                type="button"
+                onClick={handleLogin}
+                disabled={status === "signing-in"}
+                className="btn btn-dark btn-full">
+                {status === "signing-in" ? "Signing in…" : "Sign in with Kinde"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="footer" style={{ padding: "0.75rem 1.25rem" }}>
+        Secured by <strong>KindeAuth</strong>
+      </div>
+    </div>
+  )
+}
+
+export default IndexPopup
+```
+
+### `background.ts`
+
+The MV3 service worker. Handles both the interactive PKCE login flow (`KINDE_LOGIN`) and silent re-authentication (`KINDE_SILENT_AUTH`) via a shared `runAuthFlow` helper. `KINDE_SILENT_AUTH` re-runs the authorization code flow with `interactive: false` — it is session-based silent re-auth, not a refresh-token grant. Refresh tokens returned by `exchangeAuthCode` are stored but never read for renewal; silent re-auth only works while the user's Kinde SSO session is still active. Running these flows in the service worker prevents macOS Chrome from closing the popup when the OAuth window opens, and bypasses CORS for declared `host_permissions` so the token exchange network call can happen here.
+
+```ts
+// background.ts
+import {
+  ChromeStore,
+  exchangeAuthCode,
+  generateAuthUrl,
+  IssuerRouteTypes,
+  setActiveStorage,
+  StorageKeys,
+} from "@kinde/js-utils"
+
+const KINDE_DOMAIN = process.env.PLASMO_PUBLIC_KINDE_DOMAIN ?? ""
+const KINDE_CLIENT_ID = process.env.PLASMO_PUBLIC_KINDE_CLIENT_ID ?? ""
+
+const sessionManager = new ChromeStore()
+setActiveStorage(sessionManager)
+
+chrome.runtime.onInstalled.addListener(() => {
+  console.log("[Kinde BG] Extension installed")
+})
+
+export type LoginMessage = { type: "KINDE_LOGIN" }
+export type LoginResponse =
+  | { success: true }
+  | { success: false; error: string }
+
+export type SilentAuthMessage = { type: "KINDE_SILENT_AUTH" }
+export type SilentAuthResponse =
+  | { success: true }
+  | { success: false; error: string }
+
+type AnyMessage = LoginMessage | SilentAuthMessage
+type AnyResponse = LoginResponse | SilentAuthResponse
+
+async function runAuthFlow(
+  interactive: boolean,
+  openDashboard: boolean,
+  sendResponse: (r: AnyResponse) => void,
+) {
+  const redirectURL = chrome.identity.getRedirectURL()
+
+  let generatedAuthURL: { url: URL }
+  try {
+    generatedAuthURL = await generateAuthUrl(
+      KINDE_DOMAIN,
+      IssuerRouteTypes.login,
+      {
+        clientId: KINDE_CLIENT_ID,
+        redirectURL,
+        responseType: "code",
+      },
+      { disableUrlSanitization: true },
+    )
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error("[Kinde BG] Failed to generate auth URL:", msg)
+    sendResponse({ success: false, error: msg })
+    return
+  }
+
+  chrome.identity.launchWebAuthFlow(
+    { url: generatedAuthURL.url.toString(), interactive },
+    async (redirectUri) => {
+      if (chrome.runtime.lastError || !redirectUri) {
+        const msg = chrome.runtime.lastError?.message ?? "Auth cancelled"
+        // Only log as error for interactive flows — a silent failure is expected when the session has expired.
+        if (interactive) console.error("[Kinde BG] Auth flow failed:", msg)
+        sendResponse({ success: false, error: msg })
+        return
+      }
+
+      const parsedUrl = new URL(redirectUri)
+      const errorParam = parsedUrl.searchParams.get("error")
+      if (errorParam) {
+        const errDesc = parsedUrl.searchParams.get("error_description") ?? errorParam
+        sendResponse({ success: false, error: errDesc })
+        return
+      }
+
+      try {
+        const urlParams = new URLSearchParams(parsedUrl.search)
+        const result = await exchangeAuthCode({
+          urlParams,
+          domain: KINDE_DOMAIN,
+          clientId: KINDE_CLIENT_ID,
+          redirectURL,
+        })
+
+        if (!result.success) {
+          console.error("[Kinde BG] Token exchange failed:", result.error)
+          sendResponse({ success: false, error: result.error ?? "Token exchange failed" })
+          return
+        }
+
+        const tokenWrites: Promise<void>[] = [
+          sessionManager.setSessionItem(
+            StorageKeys.accessToken,
+            result[StorageKeys.accessToken] ?? "",
+          ),
+          sessionManager.setSessionItem(
+            StorageKeys.idToken,
+            result[StorageKeys.idToken] ?? "",
+          ),
+        ]
+        if (result[StorageKeys.refreshToken]) {
+          tokenWrites.push(
+            sessionManager.setSessionItem(
+              StorageKeys.refreshToken,
+              result[StorageKeys.refreshToken] ?? "",
+            ),
+          )
+        }
+        await Promise.all(tokenWrites)
+
+        // Clean up ephemeral PKCE values now that the exchange is complete.
+        await Promise.all([
+          sessionManager.removeSessionItem(StorageKeys.codeVerifier),
+          sessionManager.removeSessionItem(StorageKeys.state),
+          sessionManager.removeSessionItem(StorageKeys.nonce),
+        ])
+
+        if (openDashboard) {
+          await chrome.tabs.create({
+            url: chrome.runtime.getURL("tabs/dashboard.html"),
+          })
+        }
+
+        sendResponse({ success: true })
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error("[Kinde BG] Unexpected error during token exchange:", msg)
+        sendResponse({ success: false, error: msg })
+      }
+    },
+  )
+}
+
+chrome.runtime.onMessage.addListener(
+  (message: AnyMessage, sender, sendResponse) => {
+    if (message.type !== "KINDE_LOGIN" && message.type !== "KINDE_SILENT_AUTH") return false
+
+    // Only accept messages from within this extension itself.
+    // Reject any message from a web page or a different extension.
+    if (sender.id !== chrome.runtime.id || sender.tab !== undefined) {
+      console.warn("[Kinde BG] Rejected message from untrusted sender:", sender.id)
+      sendResponse({ success: false, error: "Unauthorized sender" })
+      return false
+    }
+
+    const interactive = message.type === "KINDE_LOGIN"
+    runAuthFlow(interactive, interactive, sendResponse)
+
+    // Return true to keep the message channel open for the async response.
+    return true
+  },
+)
+```
+
+### `tabs/dashboard.tsx`
+
+A full-page tab opened automatically after login. Displays the user's profile, access token, and a sign out button. Plasmo detects any `.tsx` file in the `tabs/` directory and builds it as a standalone HTML page.
+
+```tsx
+// tabs/dashboard.tsx
+import { useEffect, useState } from "react"
+
+import { getSession, signOut } from "~lib/session"
+import type { AuthState } from "~lib/session"
+
+import "~style.css"
+
+const KINDE_DOMAIN = process.env.PLASMO_PUBLIC_KINDE_DOMAIN ?? ""
+
+type Status = "loading" | "idle" | "signing-out"
+
+function Dashboard() {
+  const [auth, setAuth] = useState<AuthState>({
+    isAuthenticated: false,
+    accessToken: null,
+    idToken: null,
+    user: null,
+  })
+  const [status, setStatus] = useState<Status>("loading")
+  const [copied, setCopied] = useState(false)
+  const [showToken, setShowToken] = useState(false)
+
+  useEffect(() => {
+    async function loadSession() {
+      try {
+        const state = await getSession()
+        setAuth(state)
+        setStatus("idle")
+      } catch {
+        setStatus("idle")
+      }
+    }
+    loadSession()
+  }, [])
+
+  async function handleSignOut() {
+    setStatus("signing-out")
+    try {
+      await signOut(KINDE_DOMAIN)
+    } catch {
+      // clear local session even if server call fails
+    }
+    window.close()
+  }
+
+  async function copyToken() {
+    if (!auth.accessToken) return
+    try {
+      await navigator.clipboard.writeText(auth.accessToken)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard write can fail if permissions are denied or the context is not secure.
+    }
+  }
+
+  const user = auth.user
+  const initials = user?.name
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : user?.email?.[0]?.toUpperCase() ?? "?"
+
+  /* ── Loading ── */
+  if (status === "loading") {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--g-font-family)" }}>
+        <svg style={{ animation: "spin .8s linear infinite", width: 32, height: 32 }} viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="#f1f2f4" strokeWidth="3" />
+          <path d="M4 12a8 8 0 018-8" stroke="#121417" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    )
+  }
+
+  /* ── Not authenticated ── */
+  if (!auth.isAuthenticated) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", fontFamily: "var(--g-font-family)" }}>
+        <p className="text-body-3">You are not signed in.</p>
+        <button type="button" className="btn btn-dark" onClick={() => window.close()}>Close tab</button>
+      </div>
+    )
+  }
+
+  /* ── Authenticated ── */
+  return (
+    <div style={{ minHeight: "100vh", background: "var(--g-color-white)", fontFamily: "var(--g-font-family)" }}>
+
+      {/* Nav */}
+      <nav className="nav">
+        <span className="text-heading-1">KindeAuth</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <div className="profile-blob">
+            <div className="avatar">
+              {user?.picture
+                ? <img src={user.picture} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "var(--g-border-radius-base)" }} />
+                : initials}
+            </div>
+            <div>
+              {user?.name && <p style={{ fontWeight: 600, fontSize: "0.875rem" }}>{user.name}</p>}
+              {user?.email && <p className="text-subtle">{user.email}</p>}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            disabled={status === "signing-out"}
+            className="btn btn-ghost">
+            {status === "signing-out" ? "Signing out…" : "Log out"}
+          </button>
+        </div>
+      </nav>
+
+      {/* Main */}
+      <main className="container" style={{ paddingTop: "var(--g-spacing-3x-large)", paddingBottom: "var(--g-spacing-3x-large)" }}>
+
+        {/* Hero greeting */}
+        <div style={{ marginBottom: "var(--g-spacing-2x-large)" }}>
+          <h1 className="text-display-2" style={{ marginBottom: "0.5rem" }}>
+            {user?.name ? `Welcome, ${user.name.split(" ")[0]}` : "Welcome"}
+          </h1>
+          <p className="text-subtle">Your authentication is all sorted. Build the important stuff.</p>
+        </div>
+
+        {/* Two-column grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "var(--g-spacing-large)", alignItems: "start" }}>
+
+          {/* Profile card — dark */}
+          <div className="card" style={{ display: "flex", flexDirection: "column", gap: "var(--g-spacing-base)" }}>
+            <div className="avatar avatar-lg" style={{ background: "rgba(255,255,255,0.12)", color: "var(--g-color-white)", borderRadius: "var(--g-border-radius-base)" }}>
+              {user?.picture
+                ? <img src={user.picture} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "var(--g-border-radius-base)" }} />
+                : initials}
+            </div>
+            {user?.name && <p style={{ fontWeight: "var(--g-font-weight-bold)", fontSize: "var(--g-font-size-large)" }}>{user.name}</p>}
+            {user?.email && <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "var(--g-font-size-small)" }}>{user.email}</p>}
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", background: "rgba(255,255,255,0.1)", borderRadius: 9999, padding: "0.25rem 0.625rem", fontSize: "var(--g-font-size-x-small)", fontWeight: "var(--g-font-weight-bold)" }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80" }} />
+              Authenticated
+            </div>
+            {user?.sub && (
+              <div style={{ marginTop: "auto", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "var(--g-spacing-base)" }}>
+                <p style={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "rgba(255,255,255,0.4)", marginBottom: "0.25rem" }}>User ID</p>
+                <p style={{ fontSize: "0.7rem", fontFamily: "monospace", color: "rgba(255,255,255,0.7)", wordBreak: "break-all" }}>{user.sub}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Right column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--g-spacing-base)" }}>
+
+            {/* Profile info card */}
+            <div className="card-light">
+              <p className="section-label">Profile information</p>
+              {[
+                { label: "Full name",     value: user?.name },
+                { label: "Email address", value: user?.email },
+                { label: "User ID",       value: user?.sub },
+              ].map(({ label, value }) =>
+                value ? (
+                  <div key={label} className="info-row">
+                    <span className="info-label">{label}</span>
+                    <span className="info-value">{value}</span>
+                  </div>
+                ) : null,
+              )}
+            </div>
+
+            {/* Access token card */}
+            {auth.accessToken && (
+              <div className="card-light">
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--g-spacing-base)" }}>
+                  <p className="section-label" style={{ marginBottom: 0 }}>Access token</p>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button type="button" className="btn btn-light" style={{ padding: "0.25rem 0.625rem", fontSize: "0.7rem" }} onClick={() => setShowToken((v) => !v)}>
+                      {showToken ? "Hide" : "Reveal"}
+                    </button>
+                    <button type="button" className="btn btn-dark" style={{ padding: "0.25rem 0.625rem", fontSize: "0.7rem" }} onClick={copyToken}>
+                      {copied ? "✓ Copied" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+                <div className="token-block">
+                  {showToken ? auth.accessToken : `${auth.accessToken.slice(0, 64)}…`}
+                </div>
+                <p className="text-subtle" style={{ marginTop: "0.5rem" }}>
+                  Pass as <code style={{ fontFamily: "monospace" }}>Bearer &lt;token&gt;</code> to authenticate API calls.
+                </p>
+              </div>
+            )}
+
+            {/* Session card */}
+            <div className="card-light">
+              <p className="section-label">Session</p>
+              <p className="text-body-3" style={{ marginBottom: "var(--g-spacing-base)", color: "var(--g-color-grey-600)" }}>
+                Signing out ends your Kinde session and closes this tab.
+              </p>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={status === "signing-out"}
+                className="btn btn-danger">
+                {status === "signing-out" ? "Signing out…" : "Sign out"}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="footer">
+        <p>KindeAuth · <a href="https://kinde.com" target="_blank" rel="noreferrer" style={{ textDecoration: "underline", textUnderlineOffset: "0.2rem" }}>kinde.com</a></p>
+        <p style={{ marginTop: "0.25rem" }}>© {new Date().getFullYear()} KindeAuth, Inc. All rights reserved.</p>
+      </footer>
+    </div>
+  )
+}
+
+export default Dashboard
+```
+
+### `lib/jwt.ts`
+
+Shared JWT utilities used by both `lib/kinde.ts` and `lib/session.ts`.
+
+```ts
+// lib/jwt.ts
+export function decodeJwt(token: string): Record<string, unknown> {
+  try {
+    const base64Url = token.split(".")[1]
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/")
+    const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, "=")
+    const jsonPayload = decodeURIComponent(
+      atob(padded)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(""),
+    )
+    return JSON.parse(jsonPayload)
+  } catch {
+    return {}
+  }
+}
+
+/** Returns true if the token's `exp` claim is in the past (or missing). */
+export function isTokenExpired(token: string): boolean {
+  const payload = decodeJwt(token)
+  const exp = payload.exp
+  if (typeof exp !== "number") return true
+  // 30-second buffer so the UI doesn't briefly flash "authenticated"
+  // while a network request is about to fail with 401.
+  return Date.now() / 1000 > exp - 30
+}
+```
+
+### `lib/kinde.ts`
+
+Core auth helpers used by the popup. `login()` delegates the interactive OAuth flow to the background via `KINDE_LOGIN`. `getAuthState()` automatically attempts silent re-authentication via `KINDE_SILENT_AUTH` when the stored access token is expired — the background re-runs the authorization code flow with `interactive: false` against the existing Kinde SSO session. This is not a refresh-token grant; it only succeeds while that SSO session is still active. If the session has also expired, the user must sign in again.
+
+```ts
+// lib/kinde.ts
+import {
+  ChromeStore,
+  setActiveStorage,
+  StorageKeys,
+} from "@kinde/js-utils"
+
+import type { LoginMessage, LoginResponse, SilentAuthMessage, SilentAuthResponse } from "~background"
+import { decodeJwt, isTokenExpired } from "~lib/jwt"
+
+export const KINDE_DOMAIN = process.env.PLASMO_PUBLIC_KINDE_DOMAIN ?? ""
+export const KINDE_CLIENT_ID = process.env.PLASMO_PUBLIC_KINDE_CLIENT_ID ?? ""
+
+if (!KINDE_DOMAIN || !KINDE_CLIENT_ID) {
+  console.error(
+    "[Kinde] Missing required environment variables. " +
+    "Set PLASMO_PUBLIC_KINDE_DOMAIN and PLASMO_PUBLIC_KINDE_CLIENT_ID in .env",
+  )
+}
+
+export const sessionManager = new ChromeStore()
+setActiveStorage(sessionManager)
+
+export interface UserInfo {
+  email?: string
+  name?: string
+  picture?: string
+  sub?: string
+}
+
+export interface AuthState {
+  isAuthenticated: boolean
+  accessToken: string | null
+  idToken: string | null
+  user: UserInfo | null
+}
+
+export async function login(): Promise<void> {
+  if (!KINDE_DOMAIN || !KINDE_CLIENT_ID) {
+    throw new Error("Kinde is not configured. Check your .env file.")
+  }
+
+  let response: LoginResponse
+  try {
+    response = await chrome.runtime.sendMessage<LoginMessage, LoginResponse>({
+      type: "KINDE_LOGIN",
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (
+      message.includes("message port closed") ||
+      message.includes("message channel closed") ||
+      message.includes("Receiving end does not exist")
+    ) {
+      // Popup closed before background responded (expected on macOS).
+      return
+    }
+    throw err
+  }
+
+  if (!response?.success) {
+    throw new Error(response?.error ?? "Login failed")
+  }
+}
+
+// Silently re-authenticates using the existing Kinde SSO session.
+// Returns true if fresh tokens were obtained, false if the session has also expired.
+async function silentRefresh(): Promise<boolean> {
+  try {
+    const response = await chrome.runtime.sendMessage<SilentAuthMessage, SilentAuthResponse>({
+      type: "KINDE_SILENT_AUTH",
+    })
+    return response?.success ?? false
+  } catch {
+    return false
+  }
+}
+
+export async function logout(): Promise<void> {
+  const redirectURL = chrome.identity.getRedirectURL()
+  const logoutUrl = new URL(`${KINDE_DOMAIN}/logout`)
+  logoutUrl.searchParams.set("redirect", redirectURL)
+
+  // Silently open Kinde's logout endpoint to destroy the server-side session.
+  await new Promise<void>((resolve) => {
+    chrome.identity.launchWebAuthFlow(
+      { url: logoutUrl.toString(), interactive: false },
+      () => resolve(),
+    )
+  })
+
+  // Clear all locally stored auth data regardless of server result.
+  await Promise.all([
+    sessionManager.removeSessionItem(StorageKeys.accessToken),
+    sessionManager.removeSessionItem(StorageKeys.idToken),
+    sessionManager.removeSessionItem(StorageKeys.refreshToken),
+    sessionManager.removeSessionItem(StorageKeys.codeVerifier),
+    sessionManager.removeSessionItem(StorageKeys.state),
+    sessionManager.removeSessionItem(StorageKeys.nonce),
+  ])
+}
+
+// The retry flag prevents infinite recursion if silent re-auth itself returns a bad token.
+export async function getAuthState(retry = true): Promise<AuthState> {
+  const accessToken = (await sessionManager.getSessionItem(StorageKeys.accessToken)) as string | null
+  const idToken = (await sessionManager.getSessionItem(StorageKeys.idToken)) as string | null
+
+  if (!accessToken || isTokenExpired(accessToken)) {
+    if (retry) {
+      const refreshed = await silentRefresh()
+      if (refreshed) return getAuthState(false)
+    }
+    return { isAuthenticated: false, accessToken: null, idToken: null, user: null }
+  }
+
+  let user: UserInfo | null = null
+  if (idToken) {
+    const payload = decodeJwt(idToken)
+    user = {
+      email: payload.email as string | undefined,
+      name: (payload.given_name
+        ? `${payload.given_name} ${payload.family_name ?? ""}`.trim()
+        : (payload.name as string | undefined)) ?? undefined,
+      picture: payload.picture as string | undefined,
+      sub: payload.sub as string | undefined,
+    }
+  }
+
+  return { isAuthenticated: true, accessToken, idToken, user }
+}
+```
+
+### `lib/session.ts`
+
+A lightweight session module used only by the dashboard tab. Kept separate from `lib/kinde.ts` to avoid pulling the background message types (`LoginMessage`, `SilentAuthMessage`, etc.) into the tab bundle.
+
+```ts
+// lib/session.ts
+/**
+ * Lightweight session helpers used by the dashboard tab page.
+ * Kept separate from lib/kinde.ts to avoid pulling background message types
+ * into the tab bundle.
+ */
+import {
+  ChromeStore,
+  setActiveStorage,
+  StorageKeys,
+} from "@kinde/js-utils"
+
+import { decodeJwt, isTokenExpired } from "~lib/jwt"
+
+const store = new ChromeStore()
+setActiveStorage(store)
+
+export interface UserInfo {
+  email?: string
+  name?: string
+  picture?: string
+  sub?: string
+}
+
+export interface AuthState {
+  isAuthenticated: boolean
+  accessToken: string | null
+  idToken: string | null
+  user: UserInfo | null
+}
+
+export async function getSession(): Promise<AuthState> {
+  const accessToken = (await store.getSessionItem(StorageKeys.accessToken)) as string | null
+  const idToken = (await store.getSessionItem(StorageKeys.idToken)) as string | null
+
+  if (!accessToken || isTokenExpired(accessToken)) {
+    return { isAuthenticated: false, accessToken: null, idToken: null, user: null }
+  }
+
+  let user: UserInfo | null = null
+  if (idToken) {
+    const payload = decodeJwt(idToken)
+    user = {
+      email: payload.email as string | undefined,
+      name: (payload.given_name
+        ? `${payload.given_name} ${payload.family_name ?? ""}`.trim()
+        : (payload.name as string | undefined)) ?? undefined,
+      picture: payload.picture as string | undefined,
+      sub: payload.sub as string | undefined,
+    }
+  }
+
+  return { isAuthenticated: true, accessToken, idToken, user }
+}
+
+export async function signOut(kindeDomain: string): Promise<void> {
+  const redirectURL = chrome.identity.getRedirectURL()
+  const logoutUrl = new URL(`${kindeDomain}/logout`)
+  logoutUrl.searchParams.set("redirect", redirectURL)
+
+  await new Promise<void>((resolve) => {
+    chrome.identity.launchWebAuthFlow(
+      { url: logoutUrl.toString(), interactive: false },
+      () => resolve(),
+    )
+  })
+
+  await Promise.all([
+    store.removeSessionItem(StorageKeys.accessToken),
+    store.removeSessionItem(StorageKeys.idToken),
+    store.removeSessionItem(StorageKeys.refreshToken),
+    store.removeSessionItem(StorageKeys.codeVerifier),
+    store.removeSessionItem(StorageKeys.state),
+    store.removeSessionItem(StorageKeys.nonce),
+  ])
+}
+```
+
+### `style.css`
+
+Global stylesheet with Kinde's design system tokens (CSS variables) and reusable component classes. This file is imported by both `popup.tsx` and `tabs/dashboard.tsx`.
+
+```css
+/* style.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Kinde design system ──────────────────────────────────────────────── */
+:root {
+  --g-color-black: #000;
+  --g-color-white: #fff;
+  --g-color-grey-100: #f1f2f4;
+  --g-color-grey-600: #5d636f;
+  --g-color-grey-700: #434851;
+  --g-color-grey-900: #121417;
+
+  --g-box-shadow: 0px 6px 12px rgba(18,20,23,.06), 0px 15px 24px rgba(18,20,23,.07), 0px -4px 12px rgba(18,20,23,.05);
+
+  --g-font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --g-font-size-x-small:  0.75rem;
+  --g-font-size-small:    0.875rem;
+  --g-font-size-base:     1rem;
+  --g-font-size-large:    1.25rem;
+  --g-font-size-x-large:  1.5rem;
+  --g-font-size-2x-large: 2rem;
+
+  --g-font-weight-base:      400;
+  --g-font-weight-semi-bold: 500;
+  --g-font-weight-bold:      600;
+  --g-font-weight-black:     700;
+
+  --g-border-radius-small: 0.5rem;
+  --g-border-radius-base:  1rem;
+  --g-border-radius-large: 1.5rem;
+
+  --g-spacing-small:    0.5rem;
+  --g-spacing-base:     1rem;
+  --g-spacing-large:    1.5rem;
+  --g-spacing-x-large:  2rem;
+  --g-spacing-2x-large: 2.5rem;
+  --g-spacing-3x-large: 3rem;
+  --g-spacing-6x-large: 6rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: var(--g-font-family);
+  color: var(--g-color-grey-900);
+  background: var(--g-color-white);
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* Typography */
+.text-subtle    { color: var(--g-color-grey-600); font-size: var(--g-font-size-x-small); }
+.text-body-3    { color: var(--g-color-grey-900); font-size: var(--g-font-size-small); }
+.text-heading-1 { font-size: var(--g-font-size-large);  font-weight: var(--g-font-weight-semi-bold); }
+.text-heading-2 { font-size: var(--g-font-size-base);   font-weight: var(--g-font-weight-semi-bold); }
+.text-display-2 { font-size: var(--g-font-size-2x-large); font-weight: var(--g-font-weight-black); line-height: 1.4; }
+.text-display-3 { font-size: var(--g-font-size-x-large);  font-weight: var(--g-font-weight-black); }
+
+/* Layout */
+.container { padding: 0 var(--g-spacing-x-large); margin: auto; max-width: 960px; }
+
+.nav {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: var(--g-spacing-x-large) var(--g-spacing-x-large);
+  border-bottom: 1px solid var(--g-color-grey-100);
+}
+
+/* Buttons */
+.btn {
+  border-radius: var(--g-border-radius-small);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: var(--g-font-weight-bold);
+  font-size: var(--g-font-size-small);
+  font-family: var(--g-font-family);
+  padding: 0.625rem var(--g-spacing-base);
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, background 0.15s;
+  text-decoration: none;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-dark  { background: var(--g-color-black); color: var(--g-color-white); }
+.btn-dark:hover:not(:disabled)  { opacity: 0.85; }
+.btn-light { background: var(--g-color-white); color: var(--g-color-black); border: 1px solid var(--g-color-grey-100); }
+.btn-light:hover:not(:disabled) { background: var(--g-color-grey-100); }
+.btn-ghost { background: transparent; color: var(--g-color-grey-700); }
+.btn-ghost:hover:not(:disabled) { background: var(--g-color-grey-100); }
+.btn-danger { background: transparent; color: #c0392b; border: 1px solid #fecaca; }
+.btn-danger:hover:not(:disabled) { background: #fff5f5; }
+.btn-full { width: 100%; justify-content: center; padding: 0.75rem var(--g-spacing-base); }
+
+/* Card */
+.card {
+  background: var(--g-color-black);
+  border-radius: var(--g-border-radius-large);
+  box-shadow: var(--g-box-shadow);
+  color: var(--g-color-white);
+  padding: var(--g-spacing-x-large);
+}
+.card-light {
+  background: var(--g-color-white);
+  border-radius: var(--g-border-radius-large);
+  box-shadow: var(--g-box-shadow);
+  color: var(--g-color-grey-900);
+  padding: var(--g-spacing-x-large);
+}
+
+/* Avatar */
+.avatar {
+  align-items: center;
+  background-color: var(--g-color-grey-100);
+  border-radius: var(--g-border-radius-base);
+  display: flex;
+  height: var(--g-spacing-3x-large);
+  justify-content: center;
+  text-align: center;
+  width: var(--g-spacing-3x-large);
+  font-weight: var(--g-font-weight-bold);
+  font-size: var(--g-font-size-base);
+  flex-shrink: 0;
+}
+.avatar-lg {
+  height: 5rem;
+  width: 5rem;
+  border-radius: var(--g-border-radius-base);
+  font-size: var(--g-font-size-x-large);
+}
+
+/* Profile blob */
+.profile-blob {
+  align-items: center;
+  display: grid;
+  gap: var(--g-spacing-base);
+  grid-template-columns: auto 1fr;
+}
+
+/* Footer */
+.footer {
+  padding: var(--g-spacing-x-large);
+  border-top: 1px solid var(--g-color-grey-100);
+  color: var(--g-color-grey-600);
+  font-size: var(--g-font-size-x-small);
+  text-align: center;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+  border-radius: 9999px;
+  font-size: var(--g-font-size-x-small);
+  font-weight: var(--g-font-weight-bold);
+  padding: 0.25rem 0.625rem;
+}
+.badge-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: #22c55e;
+}
+
+/* Token block */
+.token-block {
+  background: var(--g-color-grey-100);
+  border-radius: var(--g-border-radius-small);
+  padding: var(--g-spacing-base);
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.7rem;
+  color: var(--g-color-grey-700);
+  word-break: break-all;
+  line-height: 1.6;
+}
+
+/* Section label */
+.section-label {
+  font-size: var(--g-font-size-x-small);
+  font-weight: var(--g-font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--g-color-grey-600);
+  margin-bottom: var(--g-spacing-small);
+}
+
+/* Info row */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--g-color-grey-100);
+}
+.info-row:last-child { border-bottom: none; }
+.info-label { font-size: var(--g-font-size-x-small); color: var(--g-color-grey-600); flex-shrink: 0; width: 8rem; }
+.info-value { font-size: var(--g-font-size-small); color: var(--g-color-grey-900); font-weight: var(--g-font-weight-semi-bold); text-align: right; word-break: break-all; }
+```
+
+### `scripts/patch-expo-stub.mjs`
+
+`@kinde/js-utils` declares `expo-secure-store` as a peer dependency. It is only consumed inside `ExpoSecureStore`, via a lazy `await import("expo-secure-store")` inside `loadExpoStore()` that is wrapped in a try/catch. Without a stub, Parcel fails at **bundle time** because it cannot resolve the specifier statically — even though the import is dynamic.
+
+The stub satisfies Parcel's resolver and writes version `11.0.0`, which covers the declared peer range (`>=11.0.0`).
+
+Two caveats to keep in mind:
+
+- **The try/catch is not exercised.** Normally, if `expo-secure-store` is absent, the dynamic import throws and `loadExpoStore` catches it gracefully. With the stub in place the import *succeeds* and returns an empty `{}` object — no error is thrown. This is safe as long as you only use `ChromeStore` and never instantiate `ExpoSecureStore`. If `ExpoSecureStore` is used, it will call methods on `{}` and throw a runtime error rather than failing gracefully.
+- **The stub lives in `node_modules/` and is not committed.** It must be recreated after any clean install (`npm ci`, a `node_modules` wipe, or CI tooling that resets dependencies). The `postinstall` entry in `package.json` runs this script automatically on every `npm install`, which covers most cases.
+
+```js
+// scripts/patch-expo-stub.mjs
+import { mkdirSync, writeFileSync } from "fs"
+import { join } from "path"
+
+const dir = join(process.cwd(), "node_modules", "expo-secure-store")
+
+mkdirSync(dir, { recursive: true })
+
+writeFileSync(
+  join(dir, "index.js"),
+  "// Stub: expo-secure-store is not used in Chrome extensions\nmodule.exports = {}\n",
+)
+
+writeFileSync(
+  join(dir, "package.json"),
+  JSON.stringify({ name: "expo-secure-store", version: "11.0.0", main: "index.js" }, null, 2) + "\n",
+)
+
+console.log("✓ expo-secure-store stub created")
+```
+
+Then run `npm install` once to trigger the postinstall script.
+
+## Test the auth flow
+
+### 1. Start the dev server
+
+1. Use the following command in your terminal:
+
+    ```bash
+    npm run dev
+    ```
+
+This will generate a development build of the extension in the `build/chrome-mv3-dev/` directory.
+
+### 2. Load the extension in Chrome
+
+1. Open `chrome://extensions` in your browser.
+2. Enable **Developer mode** (top-right toggle).
+3. Select **Load unpacked** and choose `build/chrome-mv3-dev/` from your project directory.
+
+### 3. Register the callback URL in Kinde
+
+The redirect URL is tied to your extension's unique Chrome ID. Get it by running this in the extension popup's DevTools console:
+
+1. Select the extension icon in Chrome's toolbar, the popup should open.
+2. Right click on the popup and select **Inspect**, the devtools open.
+
+    ![chrome extension inspect element](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/e3d41b99-195a-4519-cd90-db70185b8c00/socialsharingimage)
+
+3. In the DevTools, go to **Console** tab and run the following code:
+
+    ```js
+    chrome.identity.getRedirectURL()
+    ```
+
+    The output will be something like:
+
+    ```text
+    https://<extension-id>.chromiumapp.org/
+    ```
+4. Copy the exact URL (including the trailing slash)
+5. Go to your Kinde dashboard > **Settings > Environment > Applications** > select **View details** on your app
+6. Go to the **Details** page, scroll to the **Callback URLs** section
+7. Add the callback URL to the **Allowed callback URLs** field
+8. Select **Save**.
+
+### 4. Sign-in with the extension
+
+1. Select the extension icon in Chrome's toolbar and select **Sign in**.
+2. Complete sign-in in the Chrome-managed auth window.
+    ![chrome extension popup](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/53481bad-e892-458d-3a02-7039cb87e600/socialsharingimage)
+3. The popup closes automatically and the dashboard tab opens with your user profile.
+4. Go to your Kinde dashboard > **Users** to verify the test user was created.
+
+## Add Kinde features
+
+Your extension now has working authentication with automatic silent re-authentication built in. The sections below show how to layer in additional Kinde features — roles, permissions, organizations, feature flags, user properties, and protected API calls.
+
+### Roles and permissions
+
+Kinde embeds `roles` and `permissions` claims directly in the access token. No extra API call is needed — you can read them from the JWT you already have stored.
+
+#### 1. Enable roles and permissions in Kinde
+
+1. Go to **Settings > User management > Roles** in your Kinde dashboard and create the roles your extension needs (e.g. `admin`, `viewer`).
+2. Go to **Settings > User management > Permissions** and create permission keys (e.g. `read:data`, `write:data`).
+3. Assign roles and permissions to users via **Users**, or programmatically via the [Kinde Management API](/developer-tools/kinde-api/connect-to-kinde-api/).
+4. Go to **Settings > APIs**, select your API, open the **Tokens** tab, and enable **Include roles in token** and **Include permissions in token**.
+
+#### 2. Add helpers to `lib/jwt.ts`
+
+Add the following types and helper functions to `lib/jwt.ts`:
+
+```ts
+export interface KindeRole {
+  id: string
+  key: string
+  name: string
+}
+
+/** Returns the roles array embedded in an access token. */
+export function getRoles(token: string): KindeRole[] {
+  const payload = decodeJwt(token)
+  const raw = payload.roles
+  if (!Array.isArray(raw)) return []
+  return raw as KindeRole[]
+}
+
+/** Returns the permissions array embedded in an access token. */
+export function getPermissions(token: string): string[] {
+  const payload = decodeJwt(token)
+  const raw = payload.permissions
+  if (!Array.isArray(raw)) return []
+  return raw.filter((p): p is string => typeof p === "string")
+}
+
+/** Returns true if the token carries the given permission key. */
+export function hasPermission(token: string, permission: string): boolean {
+  return getPermissions(token).includes(permission)
+}
+
+/** Returns true if the token carries a role matching the given key. */
+export function hasRole(token: string, roleKey: string): boolean {
+  return getRoles(token).some((r) => r.key === roleKey)
+}
+```
+
+#### 3. Use roles and permissions in the dashboard
+
+In `tabs/dashboard.tsx`, import the helpers and read roles from the stored access token:
+
+```tsx
+import { getRoles, getPermissions, hasPermission } from "~lib/jwt"
+
+// Inside Dashboard(), after auth state is loaded:
+const roles = auth.accessToken ? getRoles(auth.accessToken) : []
+const permissions = auth.accessToken ? getPermissions(auth.accessToken) : []
+const canWriteData = auth.accessToken ? hasPermission(auth.accessToken, "write:data") : false
+```
+
+Render them in the dashboard alongside the profile info card:
+
+```tsx
+{roles.length > 0 && (
+  <div className="card-light">
+    <p className="section-label">Roles</p>
+    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "var(--g-spacing-base)" }}>
+      {roles.map((role) => (
+        <span key={role.key} className="badge">{role.name}</span>
+      ))}
+    </div>
+    <p className="section-label" style={{ marginTop: "var(--g-spacing-base)" }}>Permissions</p>
+    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+      {permissions.map((perm) => (
+        <span key={perm} className="badge">{perm}</span>
+      ))}
+    </div>
+  </div>
+)}
+```
+
+You can also gate UI features inline:
+
+```tsx
+{canWriteData && (
+  <button type="button" className="btn btn-dark">Write data</button>
+)}
+```
+
+### Organizations
+
+If your Kinde account has multiple organizations, you can direct users straight to a specific org at login time by passing `org_code` to the auth URL.
+
+#### 1. Update `LoginMessage` in `background.ts`
+
+Add an optional `orgCode` field to the `LoginMessage` type:
+
+```ts
+export type LoginMessage = {
+  type: "KINDE_LOGIN"
+  orgCode?: string
+}
+```
+
+#### 2. Thread `orgCode` through `runAuthFlow`
+
+`generateAuthUrl` is called inside `runAuthFlow`, so add `orgCode` as an optional fourth parameter and spread it into the options:
+
+```ts
+async function runAuthFlow(
+  interactive: boolean,
+  openDashboard: boolean,
+  sendResponse: (r: AnyResponse) => void,
+  orgCode?: string,
+) {
+  // ...
+  generatedAuthURL = await generateAuthUrl(
+    KINDE_DOMAIN,
+    IssuerRouteTypes.login,
+    {
+      clientId: KINDE_CLIENT_ID,
+      redirectURL,
+      responseType: "code",
+      ...(orgCode ? { orgCode } : {}),
+    },
+    { disableUrlSanitization: true },
+  )
+  // ...
+}
+```
+
+Then update the `onMessage` handler to read `orgCode` from the login message and pass it through:
+
+```ts
+const interactive = message.type === "KINDE_LOGIN"
+const orgCode = interactive ? (message as LoginMessage).orgCode : undefined
+runAuthFlow(interactive, interactive, sendResponse, orgCode)
+```
+
+#### 3. Pass `orgCode` from the popup
+
+Update `login()` in `lib/kinde.ts` to accept an optional org code:
+
+```ts
+export async function login(orgCode?: string): Promise<void> {
+  if (!KINDE_DOMAIN || !KINDE_CLIENT_ID) {
+    throw new Error("Kinde is not configured. Check your .env file.")
+  }
+
+  let response: LoginResponse
+  try {
+    response = await chrome.runtime.sendMessage<LoginMessage, LoginResponse>({
+      type: "KINDE_LOGIN",
+      ...(orgCode ? { orgCode } : {}),
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (
+      message.includes("message port closed") ||
+      message.includes("message channel closed") ||
+      message.includes("Receiving end does not exist")
+    ) {
+      // Popup closed before background responded (expected on macOS).
+      return
+    }
+    throw err
+  }
+
+  if (!response?.success) {
+    throw new Error(response?.error ?? "Login failed")
+  }
+}
+```
+
+Then call it from `popup.tsx` with the org code you want:
+
+```ts
+await login("your_org_code")
+```
+
+#### 4. Read the org from the token
+
+Once authenticated, the access token includes `org_code` and `org_name` claims:
+
+```ts
+import { decodeJwt } from "~lib/jwt"
+
+const payload = decodeJwt(auth.accessToken!)
+const orgCode = payload.org_code as string | undefined
+const orgName = payload.org_name as string | undefined
+```
+
+Add these as additional rows in the profile info card in `tabs/dashboard.tsx`.
+
+### Call a protected API
+
+Use the stored access token as a `Bearer` token to authenticate requests to your backend.
+
+#### Add a `fetchWithAuth` utility to `lib/kinde.ts`
+
+```ts
+export async function fetchWithAuth(
+  url: string,
+  options: RequestInit = {},
+): Promise<Response> {
+  const state = await getAuthState()
+  if (!state.isAuthenticated || !state.accessToken) {
+    throw new Error("Not authenticated")
+  }
+
+  const headers = new Headers(options.headers)
+  headers.set("Authorization", `Bearer ${state.accessToken}`)
+
+  return fetch(url, {
+    ...options,
+    headers,
+  })
+}
+```
+
+Use it anywhere in the extension — popup, dashboard, or content scripts that import from `lib/kinde.ts`:
+
+```ts
+const res = await fetchWithAuth("https://your-api.com/me")
+const data = await res.json()
+```
+
+#### Validate the token server-side
+
+On your backend, validate the incoming token against Kinde's JWKS endpoint:
+
+```
+https://<your-subdomain>.kinde.com/.well-known/jwks
+```
+
+Kinde publishes rotating public keys at this URL. Use a JWT library that supports JWKS (e.g. `jose` for Node.js) to verify the signature, expiry, and audience before trusting any claims.
+
+### Feature flags
+
+Feature flags let you toggle functionality on or off for users from the Kinde dashboard — no code deploy required. Kinde embeds the flag values directly in the access token as a `feature_flags` object, so your extension can read them client-side the moment the user signs in or refreshes their token. This is useful for rolling out new UI panels, beta features, or A/B tests to specific users without shipping a new extension build.
+
+#### 1. Create feature flags in Kinde
+
+1. Go to **Releases > Feature flags** in your Kinde dashboard.
+2. Select **Add feature flag**.
+3. Set a **Name**, **Key** (e.g. `dark_mode`, `beta_panel`), **Type** (boolean, string, or integer), and **Default value**.
+4. Select **Save**.
+5. Go to **Settings > APIs**, select your API, open the **Tokens** tab, and enable **Include feature flags in token**.
+
+#### 2. Add a helper to `lib/jwt.ts`
+
+Add the following types and helper to `lib/jwt.ts`:
+
+```ts
+export type FeatureFlagValue = boolean | string | number
+
+export interface FeatureFlag {
+  t: "b" | "s" | "i"  // type: boolean, string, integer
+  v: FeatureFlagValue
+}
+
+/** Returns the feature flags object embedded in an access token. */
+export function getFeatureFlags(token: string): Record<string, FeatureFlag> {
+  const payload = decodeJwt(token)
+  const flags = payload.feature_flags
+  if (!flags || typeof flags !== "object" || Array.isArray(flags)) return {}
+  return flags as Record<string, FeatureFlag>
+}
+
+/** Returns the value of a specific feature flag, or the fallback if not set. */
+export function getFlag<T extends FeatureFlagValue>(
+  token: string,
+  key: string,
+  fallback: T,
+): T {
+  const flags = getFeatureFlags(token)
+  return (flags[key]?.v as T) ?? fallback
+}
+```
+
+#### 3. Read flags in the dashboard
+
+In `tabs/dashboard.tsx`, import the helpers and gate features based on flag values:
+
+```tsx
+import { getFeatureFlags, getFlag } from "~lib/jwt"
+
+// Inside Dashboard(), after auth state is loaded:
+const flags = auth.accessToken ? getFeatureFlags(auth.accessToken) : {}
+const showBetaPanel = auth.accessToken ? getFlag(auth.accessToken, "beta_panel", false) : false
+```
+
+Render all flags in a card for inspection during development:
+
+```tsx
+{Object.keys(flags).length > 0 && (
+  <div className="card-light">
+    <p className="section-label">Feature flags</p>
+    {Object.entries(flags).map(([key, flag]) => (
+      <div key={key} className="info-row">
+        <span className="info-label">{key}</span>
+        <span className="info-value">{String(flag.v)}</span>
+      </div>
+    ))}
+  </div>
+)}
+```
+
+Gate a UI feature inline:
+
+```tsx
+{showBetaPanel && (
+  <div className="card-light">
+    <p className="section-label">Beta panel</p>
+    <p className="text-body-3">This panel is only visible to beta users.</p>
+  </div>
+)}
+```
+
+Learn more at [Feature flags](/releases/feature-flags/manage-feature-flags/).
+
+### User properties
+
+User properties let you store custom typed data against a user — things like an internal account ID, onboarding state, or subscription metadata. They're defined in the Kinde dashboard as structured fields, and can be included in the access or ID token so your extension reads them without any extra API call. This is useful when you need to personalize the extension UI or gate features based on data that lives in your own system but is managed through Kinde.
+
+#### 1. Create user properties in Kinde
+
+1. Go to **Settings > Data management > Properties** in your Kinde dashboard.
+2. Select **Add property**.
+3. Set a **Name**, **Key** (e.g. `account_tier`, `internal_id`), and **Type**.
+4. Select **Save**.
+5. Go to **Settings > Token customization**, select the **Access token** or **ID token** tab, and add a claim that maps to the property you created.
+6. Assign values to users via **Users** > select a user > **Properties**, or via the Management API.
+
+#### 2. Read properties from the token
+
+Custom property claims appear in the decoded JWT payload under the key you configured in **Token customization**:
+
+```ts
+import { decodeJwt } from "~lib/jwt"
+
+const payload = decodeJwt(auth.accessToken!)
+const accountTier = payload.account_tier as string | undefined
+const internalId  = payload.internal_id  as string | undefined
+```
+
+Render them in the dashboard profile card alongside the standard profile fields:
+
+```tsx
+{accountTier && (
+  <div className="info-row">
+    <span className="info-label">Account tier</span>
+    <span className="info-value">{accountTier}</span>
+  </div>
+)}
+```
+
+Always cast and guard values from `decodeJwt` before use — it returns `Record<string, unknown>` and will return `{}` on any parse failure.
+
+Learn more at [User properties](/properties/about-properties/).
+
+### Management API
+
+The Kinde Management API gives you full programmatic, server-side control over your Kinde environment. From a trusted backend you can:
+
+- Create, update, and delete users
+- Manage organizations and their members
+- Assign and remove roles and permissions
+- Create and update user and organization properties
+- Rotate feature flags and token customizations
+- Retrieve audit logs
+
+Because the Management API requires a **client secret**, it must only be called from a server you control — never from extension code that ships to end users. Putting a client secret in extension code exposes it to anyone who inspects the bundle.
+
+The recommended pattern is:
+
+1. Your Chrome extension calls your own backend, authenticated with the user's `Bearer` access token (see [Call a protected API](#call-a-protected-api)).
+2. Your backend validates the token, then makes signed Management API calls to Kinde on the user's behalf.
+
+Learn more at [Management API](/developer-tools/kinde-api/connect-to-kinde-api/).
+
+## Production
+
+### Build and package
+
+1. Run a production build:
+
+    ```bash
+    npm run build
+    ```
+
+    Output goes to `build/chrome-mv3-prod/`.
+
+2. Create a ZIP for the Chrome Web Store:
+
+    ```bash
+    npm run package
+    ```
+
+    This produces a `.zip` in the `build/` directory, ready to upload to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole).
+
+### Extension ID and callback URLs
+
+Chrome assigns a **different extension ID** in the Web Store vs. during development. The `chrome.identity` redirect URL is derived from the extension ID, so the production callback URL will be different from your dev one.
+
+After uploading your extension:
+
+1. Copy the **Item ID** from the Chrome Web Store Developer Dashboard.
+2. Derive your production redirect URL:
+
+    ```
+    https://<production-item-id>.chromiumapp.org/
+    ```
+
+3. Go to your Kinde dashboard > **Settings > Applications** > select your app > **Details**.
+4. Add the production URL to **Allowed callback URLs** alongside your dev URL.
+5. Select **Save**.
+
+### Use a key file for a consistent extension ID
+
+Plasmo supports a `key` field in the manifest to pin the extension ID across environments. This means your dev and production redirect URLs will match, so you only need to register one callback URL in Kinde.
+
+1. Generate a 2048-bit RSA private key and extract the base64-encoded public key Chrome expects:
+
+    ```bash
+    openssl genrsa 2048 | openssl pkcs8 -topk8 -nocrypt -out key.pem
+    openssl rsa -in key.pem -pubout -outform DER | openssl base64 -A
+    ```
+
+    The second command prints a long base64 string — copy it.
+
+2. Add `key.pem` to `.gitignore` — treat it like a secret.
+
+3. Store the base64 public key in your `.env` file:
+
+    ```env
+    PLASMO_PUBLIC_EXTENSION_KEY=MIIBIjAN...your base64 public key here...AQAB
+    ```
+
+4. Reference it in `package.json` under the Plasmo manifest `key` field using Plasmo's env var interpolation syntax:
+
+    ```json
+    "manifest": {
+      "key": "$PLASMO_PUBLIC_EXTENSION_KEY",
+      "permissions": ["identity", "storage"],
+      "host_permissions": [
+        "https://YOUR_BUSINESS.kinde.com/*"
+      ]
+    }
+    ```
+
+    Plasmo substitutes `$PLASMO_PUBLIC_EXTENSION_KEY` at build time so Chrome derives a stable extension ID from it.
+
+5. Register the single redirect URL in Kinde once and it will work for all builds.
+
+### Separate environments with `.env` files
+
+Use a separate Kinde application (or at minimum a separate environment) for production to keep user data isolated:
+
+```env
+# .env.production
+PLASMO_PUBLIC_KINDE_DOMAIN=https://your-subdomain.kinde.com
+PLASMO_PUBLIC_KINDE_CLIENT_ID=your_production_client_id
+```
+
+Plasmo automatically loads `.env.production` when running `npm run build` and `.env` for `npm run dev`. You do not need to change any code between environments.
+
+## Troubleshooting
+
+### "Auth cancelled" or the auth window closes immediately
+
+`chrome.identity.launchWebAuthFlow` returns this error when the user dismisses the window, or when the redirect URL is not registered in Kinde. Check:
+
+- The callback URL in Kinde **exactly** matches the output of `chrome.identity.getRedirectURL()` (copy-paste it, including the trailing slash).
+- You are loading the extension from the correct `build/chrome-mv3-dev/` directory.
+- Developer mode is enabled in `chrome://extensions`.
+
+### Extension ID changes after reloading
+
+Chrome only preserves extension IDs for packed extensions. When loading unpacked, the ID may change if you remove and re-add the extension. Use the **reload button** (↺) on `chrome://extensions` instead of removing and re-adding. Better still, use a key file (see [Use a key file for a consistent extension ID](#use-a-key-file-for-a-consistent-extension-id)) to lock the ID permanently.
+
+### CORS error when exchanging tokens
+
+The background service worker must declare `host_permissions` that match your Kinde domain exactly — the same host you set in `PLASMO_PUBLIC_KINDE_DOMAIN`. Check `package.json`:
+
+```json
+"host_permissions": [
+  "https://YOUR_BUSINESS.kinde.com/*"
+]
+```
+
+Replace `YOUR_BUSINESS` with your Kinde subdomain from the **Details** page. If your business is on a regional host (for example `YOUR_BUSINESS.au.kinde.com`), use that full hostname instead of `.kinde.com`.
+
+If you use a [custom Kinde domain](/build/domains/pointing-your-domain/), use your custom host:
+
+```json
+"host_permissions": [
+  "https://auth.yourdomain.com/*"
+]
+```
+
+Changes to `host_permissions` require you to reload the unpacked extension.
+
+### Roles and permissions are missing from the token
+
+Two things are required:
+
+1. **Enable token inclusion** — go to **Settings > APIs** in Kinde, select your API, open **Tokens**, and enable **Include roles in token** and **Include permissions in token**.
+2. **Assign roles/permissions to the user** — assignments made after login don't take effect until the user signs out and back in to get a fresh token.
+
+### `Cannot read properties of undefined` when decoding claims
+
+`decodeJwt` returns `{}` on any parse failure. Always guard before accessing claims:
+
+```ts
+const payload = decodeJwt(token)
+const roles = Array.isArray(payload.roles) ? payload.roles : []
+const orgCode = typeof payload.org_code === "string" ? payload.org_code : undefined
+```
+
+### `expo-secure-store` not found during install
+
+Run `npm install` once to trigger the `postinstall` script. If the error persists, run the script directly:
+
+```bash
+node scripts/patch-expo-stub.mjs
+```
+
+Then restart your dev server with `npm run dev`.
