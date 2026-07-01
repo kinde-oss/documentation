@@ -1,7 +1,7 @@
 ---
 page_id: 9913b80b-bbfb-4acb-94ff-2a7356286d7a
 title: Add Kinde auth to Chrome extension
-description: "Step-by-step guide for integrating Kinde authentication into a Chrome browser extension using the Plasmo framework, PKCE flow via chrome.identity, background service worker token exchange, ChromeStore session management, silent token renewal, and a full-page dashboard tab with roles, permissions, feature flags, and user properties."
+description: "Add Kinde auth to Chrome extensions with Plasmo—PKCE login, MV3 service worker, silent re-auth, and JWT-powered features"
 sidebar:
   order: 6
   label: Kinde in Chrome extension
@@ -10,16 +10,10 @@ tableOfContents:
 topics:
   - developer-tools
   - guides
-  - browser-extension
   - chrome-extension
-  - oauth
-  - authentication
   - pkce
-  - roles-and-permissions
-  - feature-flags
-  - organizations
 sdk:
-  - "@kinde/js-utils"
+  - javascript
 languages:
   - typescript
   - javascript
@@ -30,48 +24,18 @@ languages:
 audience: developers
 complexity: intermediate
 keywords:
-  - browser extension
-  - Chrome extension
+  - chrome extension authentication
   - Plasmo
-  - PKCE
+  - PKCE OAuth
   - chrome.identity
-  - service worker
-  - background worker
-  - OAuth
-  - authentication
-  - authorization
-  - ChromeStore
-  - token exchange
-  - access token
-  - id token
-  - silent refresh
-  - silent authentication
-  - token renewal
-  - roles
-  - permissions
-  - organizations
-  - org_code
-  - feature flags
-  - user properties
-  - Management API
-  - JWT
-  - JWKS
-  - fetchWithAuth
-  - protected API
-  - login
-  - logout
-  - popup
-  - dashboard tab
   - Manifest V3
-  - MV3
-  - Tailwind CSS
-  - Chrome Web Store
-  - extension key file
-  - expo-secure-store
-updated: 2026-06-02
+  - silent re-authentication
+  - host permissions
+  - JWKS validation
+updated: 2026-07-01
 featured: false
 deprecated: false
-ai_summary: "Step-by-step guide for building a Chrome extension with Kinde authentication using the Plasmo framework and @kinde/js-utils. Covers project scaffolding, environment variables, and a full PKCE OAuth flow via chrome.identity with no client secret. The background MV3 service worker handles both interactive login (KINDE_LOGIN) and silent token renewal (KINDE_SILENT_AUTH) through a shared runAuthFlow helper, automatically refreshing expired tokens against the existing Kinde browser session. Includes complete source files for the service worker, popup, full-page dashboard tab, shared JWT utilities, ChromeStore session module, and Tailwind CSS design system. Covers adding Kinde features including roles and permissions read from JWT claims, organizations with org_code routing at login, a fetchWithAuth utility for protected API calls with server-side JWKS validation, feature flags via getFeatureFlags and getFlag helpers, user properties surfaced through token customization, and Management API usage from a trusted backend only. Also covers production deployment with extension key files for stable IDs across environments, Chrome Web Store packaging, and troubleshooting for CORS errors, expo-secure-store stub fragility, and missing token claims."
+ai_summary: "Comprehensive guide for building a Chrome browser extension with Kinde authentication using the Plasmo framework and Kinde js-utils. Walks through Kinde application setup, environment variables, manifest host permissions scoped to the business Kinde or custom domain, and a full PKCE authorization code flow via chrome.identity without a client secret. The MV3 background service worker handles interactive login and session-based silent re-authentication by re-running the OAuth flow with interactive false while the Kinde SSO session is active; refresh tokens are stored but not used for renewal. Includes complete source for the service worker, popup, dashboard tab, JWT utilities, ChromeStore session storage, and Tailwind styling. Extended sections cover roles and permissions from JWT claims, organization routing via org_code at login, fetchWithAuth for protected API calls with JWKS server validation, feature flags, user properties, and Management API usage from trusted backends only. Production guidance covers extension key files for stable callback URLs, separate environment configs, Chrome Web Store packaging, and troubleshooting CORS, auth cancellation, missing token claims, and dependency patch errors. Intended for developers building authenticated Manifest V3 Chrome extensions."
 ---
 
 A Chrome extension built with [Plasmo](https://docs.plasmo.com) that adds Kinde authentication via PKCE — no client secret required. The extension popup triggers Kinde hosted login via `chrome.identity`, a background service worker exchanges the auth code for tokens, then opens a full-page dashboard tab with the user's profile.
@@ -92,6 +56,10 @@ A Chrome extension built with [Plasmo](https://docs.plasmo.com) that adds Kinde 
 4. Go to **Details** and copy the **Domain** (or [Custom domain](/build/domains/pointing-your-domain/)) and **Client ID** values.
 5. Go to **Authentication** and select the authentication method you want to use for your extension (e.g., Google, Facebook, etc.).
 6. Select **Save**.
+
+    <Aside type="warning" title="Use the same domain for authentication">
+      Use either your Kinde domain (`https://YOUR_BUSINESS.kinde.com`) or your custom domain (`https://auth.yourbusiness.com`), because tokens issued to one domain cannot be used with the other.
+    </Aside>
 
 ### 2. Scaffold a Plasmo project
 
@@ -117,7 +85,7 @@ A Chrome extension built with [Plasmo](https://docs.plasmo.com) that adds Kinde 
 
 1. Update `package.json` to add the manifest config (permissions + `host_permissions`) and the postinstall script:
 
-    ```json
+    ```jsonc
     {
       "scripts": {
         "postinstall": "node scripts/patch-expo-stub.mjs",
@@ -128,8 +96,7 @@ A Chrome extension built with [Plasmo](https://docs.plasmo.com) that adds Kinde 
       "manifest": {
         "permissions": ["identity", "storage"],
         "host_permissions": [
-          "https://*.kinde.com/*",
-          "https://*.au.kinde.com/*"
+          "https://YOUR_BUSINESS.kinde.com/*", // or https://auth.yourbusiness.com/*
         ]
       }
     }
@@ -147,9 +114,12 @@ The `host_permissions` are required so the background service worker can make cr
 
     ```env
     # .env
-    PLASMO_PUBLIC_KINDE_DOMAIN=https://your-subdomain.kinde.com
+    PLASMO_PUBLIC_KINDE_DOMAIN=<YOUR_DOMAIN>
     PLASMO_PUBLIC_KINDE_CLIENT_ID=your_client_id_here
     ```
+    <Aside>
+        Replace `<YOUR_DOMAIN>` with either your Kinde domain (`https://YOUR_BUSINESS.kinde.com`) or your custom domain (`https://auth.yourbusiness.com`). Use the same domain throughout your project.
+    </Aside>
 
 ## Create the source files
 
@@ -333,7 +303,7 @@ export default IndexPopup
 
 ### `background.ts`
 
-The MV3 service worker. Handles both the interactive PKCE login flow (`KINDE_LOGIN`) and silent token renewal (`KINDE_SILENT_AUTH`) via a shared `runAuthFlow` helper. Running these flows in the service worker prevents macOS Chrome from closing the popup when the OAuth window opens, and bypasses CORS for declared `host_permissions` so the token exchange network call can happen here.
+The MV3 service worker. Handles both the interactive PKCE login flow (`KINDE_LOGIN`) and silent re-authentication (`KINDE_SILENT_AUTH`) via a shared `runAuthFlow` helper. `KINDE_SILENT_AUTH` re-runs the authorization code flow with `interactive: false` — it is session-based silent re-auth, not a refresh-token grant. Refresh tokens returned by `exchangeAuthCode` are stored but never read for renewal; silent re-auth only works while the user's Kinde SSO session is still active. Running these flows in the service worker prevents macOS Chrome from closing the popup when the OAuth window opens, and bypasses CORS for declared `host_permissions` so the token exchange network call can happen here.
 
 ```ts
 // background.ts
@@ -731,8 +701,9 @@ export function decodeJwt(token: string): Record<string, unknown> {
   try {
     const base64Url = token.split(".")[1]
     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/")
+    const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, "=")
     const jsonPayload = decodeURIComponent(
-      atob(base64)
+      atob(padded)
         .split("")
         .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
         .join(""),
@@ -756,7 +727,7 @@ export function isTokenExpired(token: string): boolean {
 
 ### `lib/kinde.ts`
 
-Core auth helpers used by the popup. `login()` delegates the interactive OAuth flow to the background via `KINDE_LOGIN`. `getAuthState()` automatically attempts a silent re-authentication via `KINDE_SILENT_AUTH` when the stored token is expired — if the user's Kinde browser session is still alive, fresh tokens are returned with no user prompt. If the session has also expired, the user is prompted to sign in again.
+Core auth helpers used by the popup. `login()` delegates the interactive OAuth flow to the background via `KINDE_LOGIN`. `getAuthState()` automatically attempts silent re-authentication via `KINDE_SILENT_AUTH` when the stored access token is expired — the background re-runs the authorization code flow with `interactive: false` against the existing Kinde SSO session. This is not a refresh-token grant; it only succeeds while that SSO session is still active. If the session has also expired, the user must sign in again.
 
 ```ts
 // lib/kinde.ts
@@ -806,9 +777,17 @@ export async function login(): Promise<void> {
     response = await chrome.runtime.sendMessage<LoginMessage, LoginResponse>({
       type: "KINDE_LOGIN",
     })
-  } catch {
-    // Popup closed before background responded (expected on macOS).
-    return
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (
+      message.includes("message port closed") ||
+      message.includes("message channel closed") ||
+      message.includes("Receiving end does not exist")
+    ) {
+      // Popup closed before background responded (expected on macOS).
+      return
+    }
+    throw err
   }
 
   if (!response?.success) {
@@ -816,7 +795,7 @@ export async function login(): Promise<void> {
   }
 }
 
-// Silently re-authenticates using the existing Kinde browser session.
+// Silently re-authenticates using the existing Kinde SSO session.
 // Returns true if fresh tokens were obtained, false if the session has also expired.
 async function silentRefresh(): Promise<boolean> {
   try {
@@ -853,7 +832,7 @@ export async function logout(): Promise<void> {
   ])
 }
 
-// The retry flag prevents infinite recursion if the silent refresh itself returns a bad token.
+// The retry flag prevents infinite recursion if silent re-auth itself returns a bad token.
 export async function getAuthState(retry = true): Promise<AuthState> {
   const accessToken = (await sessionManager.getSessionItem(StorageKeys.accessToken)) as string | null
   const idToken = (await sessionManager.getSessionItem(StorageKeys.idToken)) as string | null
@@ -1268,7 +1247,7 @@ The redirect URL is tied to your extension's unique Chrome ID. Get it by running
 
 ## Add Kinde features
 
-Your extension now has working authentication with automatic silent token renewal built in. The sections below show how to layer in additional Kinde features — roles, permissions, organizations, feature flags, user properties, and protected API calls.
+Your extension now has working authentication with automatic silent re-authentication built in. The sections below show how to layer in additional Kinde features — roles, permissions, organizations, feature flags, user properties, and protected API calls.
 
 ### Roles and permissions
 
@@ -1427,8 +1406,17 @@ export async function login(orgCode?: string): Promise<void> {
       type: "KINDE_LOGIN",
       ...(orgCode ? { orgCode } : {}),
     })
-  } catch {
-    return
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (
+      message.includes("message port closed") ||
+      message.includes("message channel closed") ||
+      message.includes("Receiving end does not exist")
+    ) {
+      // Popup closed before background responded (expected on macOS).
+      return
+    }
+    throw err
   }
 
   if (!response?.success) {
@@ -1473,12 +1461,12 @@ export async function fetchWithAuth(
     throw new Error("Not authenticated")
   }
 
+  const headers = new Headers(options.headers)
+  headers.set("Authorization", `Bearer ${state.accessToken}`)
+
   return fetch(url, {
     ...options,
-    headers: {
-      ...options.headers,
-      Authorization: `Bearer ${state.accessToken}`,
-    },
+    headers,
   })
 }
 ```
@@ -1709,8 +1697,7 @@ Plasmo supports a `key` field in the manifest to pin the extension ID across env
       "key": "$PLASMO_PUBLIC_EXTENSION_KEY",
       "permissions": ["identity", "storage"],
       "host_permissions": [
-        "https://*.kinde.com/*",
-        "https://*.au.kinde.com/*"
+        "https://YOUR_BUSINESS.kinde.com/*"
       ]
     }
     ```
@@ -1747,20 +1734,20 @@ Chrome only preserves extension IDs for packed extensions. When loading unpacked
 
 ### CORS error when exchanging tokens
 
-The background service worker must declare `host_permissions` covering your Kinde domain. Check `package.json`:
+The background service worker must declare `host_permissions` that match your Kinde domain exactly — the same host you set in `PLASMO_PUBLIC_KINDE_DOMAIN`. Check `package.json`:
 
 ```json
 "host_permissions": [
-  "https://*.kinde.com/*",
-  "https://*.au.kinde.com/*"
+  "https://YOUR_BUSINESS.kinde.com/*"
 ]
 ```
 
-If you use a [custom Kinde domain](/build/domains/pointing-your-domain/), add it explicitly:
+Replace `YOUR_BUSINESS` with your Kinde subdomain from the **Details** page. If your business is on a regional host (for example `YOUR_BUSINESS.au.kinde.com`), use that full hostname instead of `.kinde.com`.
+
+If you use a [custom Kinde domain](/build/domains/pointing-your-domain/), use your custom host:
 
 ```json
 "host_permissions": [
-  "https://*.kinde.com/*",
   "https://auth.yourdomain.com/*"
 ]
 ```
