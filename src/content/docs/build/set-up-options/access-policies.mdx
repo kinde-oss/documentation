@@ -1,62 +1,127 @@
 ---
 page_id: 10d87520-542b-4881-9d63-9b7128766e60
-title: Set global access policies
-description: Guide for setting global access policies including self-signup controls, domain restrictions, organization creation, and social profile synchronization settings.
+title: Set global access policies for your business
+description: "Control how users join and sign in—set global policies for sign-up, domains, org creation, invitations, and MFA"
 sidebar:
   order: 6
+  label: Set global access policies
 relatedArticles:
   - bc69e746-1ade-4433-8b0f-f2bc7d8a7a6a
   - 43e8aa2d-76a4-4445-ae90-84d3f1a55fcb
+tableOfContents:
+  maxHeadingLevel: 3
 topics:
   - access-policies
+  - organizations
   - security
   - user-management
 sdk: []
 languages: []
-audience: developers
+audience:
+  - developers
+  - product-manager
+  - business owners
 complexity: intermediate
 keywords:
-  - access policies
+  - global access policies
+  - self sign-up
   - domain restrictions
-  - self signup
   - organization creation
-  - social profile sync
-  - global policies
-updated: 2026-06-25
+  - member invitations
+  - passkeys
+  - profile sync
+  - MFA OTP expiration
+updated: 2026-07-01
 featured: false
 deprecated: false
-ai_summary: Guide for setting global access policies including self-signup controls, domain restrictions, organization creation, and social profile synchronization settings.
+ai_summary: "Guide to configuring global access policies at the environment level in Kinde via Settings > Environment > Policies. Explains how settings apply to all organizations by default and can be overridden per organization on the Kinde Scale plan. Covers allowing or disabling self sign-up, restricting sign-up to allowed email domains, enabling organization creation during registration for B2B self-serve onboarding, signing users into their most recent organization, passkeys on paid plans, syncing user profiles from social and enterprise identity providers on sign-in, MFA and OTP code expiration duration, and member invitations including invite application selection. Includes a quick reference table for common policy combinations and links to related guides for per-organization policies, disabling sign-up, organization creation flows, and the self-serve portal. Intended for business owners, product managers, and developers configuring onboarding and authentication access rules."
 ---
 
-This topic is about setting user access policies at the environment level. If you want to apply user access policies per organization, see [Set access policies for an organization](/build/organizations/organization-access-policies/)
+Access policies are the ground rules for who can join your product and how sign-in works across your entire Kinde environment. Settings here apply to every organization by default, so they are the first place to shape onboarding, security, and the experience your customers have when they register or sign in.
 
-This topic covers the following tasks:
+With access policies, you can:
 
-- Allow anyone to sign-up for an account
-- Create an organization when someone signs up (for B2B businesses usually)
-- Allow only users from specific domains to sign up (i.e. restrict sign up based on email domain)
-- Enable profiles from social providers to sync with Kinde profiles (recommended if you allow social sign in)
+- Allow anyone to sign up for an account
+- Create an organization when someone signs up (usually for B2B businesses)
+- Allow only users from specific domains to sign up (e.g., @yourdomain.com only)
+- Enable profiles from social providers to sync with Kinde profiles (recommended if you allow social sign-in)
+
+If you need different rules for specific customers, you can override these defaults per organization on the [Kinde Scale plan](https://kinde.com/pricing/). See [Set access policies for an organization](/build/organizations/organization-access-policies/).
 
 ## Set policies for all organizations
 
 1. In Kinde, go to **Settings > Environment > Policies**.
-2. If you want users to be able to sign up or register to your application, select **Allow self sign-up**.
-3. If you want to restrict which domains can sign up to your applications, enter domains in the **Allowed domains** list. Use the format `domain.com` and not `https://www.domain.com`. If you leave this empty, users from any domain can sign up.
-4. Choose if you want to **Allow organization creation on sign up**. This is common for B2B businesses.
-5. Select **Sync user profiles on sign in** if you want to keep basic user profile data provided by third-party sources (like Google, GitHub, etc.) in sync with Kinde profiles. You only need to select this if you allow sign-up and sign-in using social providers.
-6. Configure how long authentication codes remain valid using the **MFA/OTP Code expiration duration** setting. Set shorter expiry times for higher security environments, or extend them for workflows where users need more time. The expiry duration now appears in your email templates automatically. The default is 120 minutes (2 hours).
-7. Select **Save**.
+2. Make the required changes and select **Save** when you're done.
 
-## Invitations
+### Allow self sign-up
 
-If member invitations are available on your plan, an **Invitations** section appears on the **Policies** page. These settings control whether organization members can invite other people into their organization, and which application invitation links open.
+Let people create their own accounts without you adding them manually. **Allow self sign-up** is enabled by default.
 
-1. Go to **Settings > Environment > Policies**.
-2. Switch on **Allow invitations** to let users invite others into their organization.
-3. In **Invite application**, select the application that invitation links should use. The list contains your standard **Front-end and mobile** and **Back-end web** applications. This determines where invited users land when they accept an invitation.
-4. Select **Save**.
+Turn this off if you want an invitation-only or admin-managed model—for example, internal tools, enterprise customers you onboard yourself, or apps where every user must be approved first. You can still add users manually, import them, or send invitations. See [Disable self sign-up](/authenticate/custom-configurations/disable-sign-up/).
 
-When **Allow invitations** is off, invitation features are hidden across the organization self-serve portal, and any attempt to accept an existing invitation is blocked.
+### Allowed domains
+
+Limit sign-up to specific email domains—for example, only `@yourcompany.com` for an internal app, or `@partner.com` for a partner portal.
+
+Enter domains in the **Allowed domains** list. This only applies when **Allow self sign-up** is enabled.
+
+- Use the format `domain.com` and not `https://www.domain.com`.
+- If you leave this empty, users from any domain can sign up.
+
+On the [Kinde Scale plan](https://kinde.com/pricing/), you can also set domain restrictions per organization. See [Set access policies for an organization](/build/organizations/organization-access-policies/).
+
+### Allow organization creation on sign up
+
+Let new customers create their own organization (workspace, account, team—whatever you call it in your product) when they register. This is the foundation of self-serve B2B onboarding: a company signs up, gets its own organization, and becomes the first admin.
+
+Switch this on if you offer a "Start free trial" or "Create your workspace" flow where each customer is a separate business. Switch it off if you create organizations yourself—for example, when you provision accounts for enterprise customers or manage all organizations in the Kinde dashboard.
+
+Your application must route users through the organization-creation sign-up flow for this to take effect. If you have developers on your team, see [Allow organization creation on sign up](/build/organizations/allow-org-create-on-signup/) and [Organizations for developers](/build/organizations/orgs-for-developers/).
+
+### Sign users in to most recent org
+
+When someone belongs to more than one organization, Kinde normally shows an organization picker at sign-in. Enable **Sign users in to most recent org** to skip that screen and sign them straight into the organization they used last.
+
+This works well if your app already has its own organization switcher and you want returning users to land in their last workspace without an extra step. Leave it off if you want users to choose their organization on every sign-in, or if most of your users only belong to one organization.
+
+See [Sign users in to last organization](/authenticate/manage-authentication/sign-in-to-last-org/) for more details.
+
+### Passkeys
+
+<Aside type="upgrade">
+Passkeys require a [Kinde paid plan](https://kinde.com/pricing/).
+</Aside>
+
+Passkeys let users sign in with biometrics (Face ID, fingerprint) or a device PIN instead of typing a password. They are more secure than passwords alone and faster for users who sign in regularly.
+
+### Sync user profiles on sign in
+
+When users sign in through a social provider (Google, GitHub, etc.) or an [enterprise connection](/authenticate/enterprise-connections/about-enterprise-connections/) (Microsoft Entra ID, SAML, and so on), Kinde can refresh their profile details—such as name, email, and picture—from that provider each time they sign in.
+
+Switch this on to keep user records accurate when people update their details at their identity provider. This is especially important if you rely on enterprise SSO, where profile data is managed outside Kinde.
+
+Leave it on if you use social or enterprise sign-in. You only need to switch it off if you intentionally manage profile data only within Kinde and do not want external updates to overwrite it.
+
+Some enterprise connections also have their own profile sync setting—both the global policy here and the connection setting need to be enabled for sync to work. See [About users](/manage-users/about/).
+
+### MFA/OTP Code expiration duration
+
+When users receive a one-time code by email or SMS—for multi-factor authentication, passwordless sign-in, or password reset—this setting controls how long the code stays valid.
+
+- The default expiry duration is 120 minutes (2 hours).
+- The expiry duration appears in your email templates automatically.
+- Set a shorter duration for higher-security environments.
+- Extend it if users often need more time to check their inbox or phone—for example, in regions with slower SMS delivery.
+
+### Invitations
+
+If member invitations are available on your plan, an **Invitations** section appears on the **Policies** page. These settings control whether organization members can invite other people into their organization and which application handles invitation links.
+
+Switch on **Allow invitations** to let users invite others into their organization.
+
+In **Invite application**, select the application that invitation links should use. The list contains your standard **Front-end and mobile** and **Back-end web** applications. This determines where invited users land when they accept an invitation.
+
+When **Allow invitations** is disabled, invitation features are hidden across the organization self-serve portal, and any attempt to accept an existing invitation is blocked.
 
 <Aside type="warning">
 
@@ -72,11 +137,11 @@ This setting works together with the **Members and roles** function of the organ
 
 ## Policy setting quick reference
 
-Note that global access policies can be overriden at the individual organization level if you are on a [Kinde Scale plan](https://kinde.com/pricing/) and activate the Advanced organization feature.
+Global access policies can be overridden at the individual organization level if you are on a [Kinde Scale plan](https://kinde.com/pricing/) and activate the Advanced organization feature.
 
 | To…                                                                                             | Do this…                                                                                          |
 | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | Allow anyone to sign up to your applications.                                                   | Select **Allow self sign-up**.                                                                    |
-| Allow only people from `specificdomain.com` to sign up to your applications.                    | Select **Allow self sign-up** and enter the specificdomain.com into the **Allowed domains** list. |
+| Allow only people from `specificdomain.com` to sign up to your applications.                    | Select **Allow self sign-up** and enter `specificdomain.com` in the **Allowed domains** list. |
 | Allow anyone to sign up to your applications and create an organization if they are a business. | Select **Allow self sign-up** and **Allow organization creation on sign up**.                     |
 | Let organization members invite other people into their organization.                           | Select **Allow invitations** and choose an **Invite application**.                                |
