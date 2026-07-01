@@ -1,18 +1,23 @@
 ---
 page_id: a2668524-5842-4c68-ab50-30b7e8c3e842
-title: Enable self-serve portal for orgs
-description: Guide for enabling self-serve portals for organizations including business details management, billing access, permission controls, and portal link generation methods.
+title: Enable self-serve portal for organizations
+description: "Let org admins self-manage billing, members, and settings—configure the portal, invitations, roles, and link generation."
 sidebar:
   order: 2
+  label: Enable self-serve portal for orgs
 relatedArticles:
   - f36bce4a-52bb-4785-865b-6b33356f9838
   - ab20745f-0918-403a-8103-fc5749082dba
+tableOfContents:
+  maxHeadingLevel: 3
 topics:
   - self-serve-portal
   - organizations
+  - member-invitations
   - billing
 sdk:
   - react
+  - kinde-management-api
 languages:
   - javascript
   - jsx
@@ -22,13 +27,15 @@ keywords:
   - organization portal
   - self-serve portal
   - org management
-  - billing portal
+  - member invitations
   - portal permissions
   - organization alias
-updated: 2026-06-25
+  - portal link
+  - kinde management api
+updated: 2026-07-01
 featured: false
 deprecated: false
-ai_summary: Guide for enabling self-serve portals for organizations including business details management, billing access, permission controls, and portal link generation methods.
+ai_summary: "Guide to enabling and configuring the Kinde self-serve portal for organizations (B2B). Covers dashboard setup including return URL, organization alias, and selecting which functions org admins can manage such as business details, payment details, API keys, members and roles, SSO connections, and MFA. Explains how authorized members can invite new users, assign roles with org:write:members and role-based gating, and revoke pending invitations when Members and roles is enabled and environment-level invitations are allowed. Describes portal access control through system permissions such as org:write:billing, custom role assignment, and auto-assignment options. Documents generating one-time portal links via the React PortalLink component, the Account API portal_link endpoint, or the Kinde Management API generate_url endpoint with optional return_url, sub_nav, and organization_code. Notes Scale plan per-organization portal configuration. Intended for developers integrating org portal access into applications."
 ---
 
 You can configure a self-serve portal to enable authorized organization members to be able to self-manage functions provided by Kinde. Authorized org members can update:
@@ -54,6 +61,21 @@ If you are on the Kinde Scale plan, you can configure the [portal per organizati
    ![Options for showing hiding settings for org members](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/5f99fef4-86e5-4a67-5a80-43ae34cbbd00/public)
 5. Select **Save**.
 
+## Portal access control with system permissions
+
+Each core function within the self-serve portal is governed by a corresponding system permission. For example, the `org:write:billing` permission allows users to update billing details.
+
+These permissions can be included in your custom roles and assigned to organization members.
+
+We recommend creating custom roles with varying levels of portal access, which you can then assign as needed. For instance, you might create a role that allows members to view billing details but not update them. You can select these permissions within your existing roles, or when you create them.
+
+![Roles with system permissions for self-serve portal](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/1e90e72e-00d5-4063-8d34-79d1a9b8f000/public)
+
+When [configuring org roles](/billing/get-started/add-billing-role/), you can specify whether it should be:
+
+- Automatically assigned to all new organization members.
+- Automatically assigned to the organization creator.
+
 ## Invite members from the portal
 
 When you enable the **Members and roles** function, authorized members can invite other people into their organization directly from the portal, without you adding users manually or via the API.
@@ -75,11 +97,15 @@ A member can only invite others and assign roles if they have sufficient permiss
 
 1. Open the organization portal and go to **Members**.
 2. Select **Add member**.
-3. Enter the new member's **First name**, **Last name**, and **Email**.
-4. Select the **Roles** the member will have in the organization. You can select more than one; unavailable roles are disabled.
-5. Select **Save**. The person receives an email invitation to join the organization. They can set up a new account or sign in to an existing one to accept. For more on what the invitee sees, see [Accepting an invitation](/authenticate/custom-configurations/accepting-an-invitation/).
 
-{/* TODO: screenshot — Add member dialog in the organization portal showing First name, Last name, Email and Roles fields */}
+    ![add member dialog in the organization portal](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/bf8b9e65-af74-49fb-312f-d626f9a97400/socialsharingimage)
+3. Enter the new member's **First name**, **Last name**, and **Email**.
+4. Select the **Roles** the member will have in the organization. 
+    - You can select more than one.
+    - Unavailable roles are disabled.
+5. Select **Save**. 
+
+    The person receives an email invitation to join the organization. They can set up a new account or sign in to an existing one to accept. For more on what the invitee sees, see [Accepting an invitation](/authenticate/custom-configurations/accepting-an-invitation/).
 
 ### Revoke a pending invitation
 
@@ -90,22 +116,7 @@ Pending invitations appear in an **Invitations** list on the **Members** screen,
 
 ### When invitations are turned off
 
-If invitations are disabled for the environment, the **Add member** option and the **Invitations** list are hidden, and opening the add-member screen shows an "Invitations are disabled" message.
-
-## Portal access control with system permissions
-
-Each core function within the self-serve portal is governed by a corresponding system permission. For example, the `org:write:billing` permission allows users to update billing details.
-
-These permissions can be included in your custom roles and assigned to organization members.
-
-We recommend creating custom roles with varying levels of portal access, which you can then assign as needed. For instance, you might create a role that allows members to view billing details but not update them. You can select these permissions within your existing roles, or when you create them.
-
-![Roles with system permissions for self-serve portal](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/1e90e72e-00d5-4063-8d34-79d1a9b8f000/public)
-
-When [configuring org roles](/billing/get-started/add-billing-role/), you can specify whether it should be:
-
-- Automatically assigned to all new organization members.
-- Automatically assigned to the organization creator.
+If invitations are disabled for the environment, the **Add member** option and the **Invitations** list are hidden in the portal when members browse **Members** normally. A bookmarked or direct URL to the add-member screen still loads that page and shows an "Invitations are disabled" message instead of the invite form.
 
 ## Generate the self-serve portal link
 
