@@ -1,54 +1,82 @@
 ---
 page_id: b338c2df-0bba-4d47-bcac-0fe540aef3c2
-title: About Kinde's Account API
-description: "Overview of Kinde's Account API for accessing user data like roles, permissions, profile, and billing entitlements using browser-scoped access tokens"
+title: Use Kinde Account API to access user data from your app
+description: "Access user roles, permissions, billing entitlements, and profile data from your app with Kinde's browser-scoped Account API."
 sidebar:
   order: 1
+  label: Use Kinde Account API
 relatedArticles:
   - 50284476-2442-414c-af20-01ed3ef4ca4e
   - 51899f7f-3436-46e0-9a1b-6ecc3603a0df
 topics:
   - developer-tools
   - account-api
-sdk: []
-languages: []
+  - access-tokens
+sdk:
+  - nextjs
+languages:
+  - typescript
+  - javascript
 audience:
   - developers
 complexity: intermediate
 keywords:
   - account api
   - user access token
-  - roles
-  - permissions
-  - profile
   - billing entitlements
   - feature flags
-  - properties
-updated: 2024-01-15
+  - user profile
+  - roles and permissions
+  - browser-scoped token
+  - self-serve portal
+updated: 2026-07-02
 featured: false
 deprecated: false
-ai_summary: Overview of Kinde's Account API for accessing user data like roles, permissions, profile, and billing entitlements using browser-scoped access tokens
+ai_summary: "Overview of Kinde's Account API for retrieving user data from browser-scoped access tokens. Explains how the API uses a logged-in user's access token to fetch roles, permissions, profile information, billing entitlements, feature flags, and properties. Covers setup steps including obtaining an access token via a Kinde SDK or manual OAuth flow, and calling Account API endpoints with Bearer authentication. Describes common use cases such as gating features by billing entitlements, offloading large JWT claims, redirecting users to the self-serve portal, and accessing or revoking user sessions via the user_profile endpoint. Notes that most Account API data is read-only due to browser token security constraints, and points to the Kinde Management API for write operations. Intended for developers integrating user data access into frontend or full-stack applications."
 ---
 
-Kinde's [Account API](https://docs.kinde.com/kinde-apis/frontend/) uses a users access token to grab data like roles, permissions, profile, billing entitlements, etc. These details can be called from a browser as the call is scoped to the user who the token is for.
+Kinde's [Account API](https://docs.kinde.com/kinde-apis/frontend/) uses a user's access token to retrieve data like roles, permissions, profile, billing entitlements, and more. You can call these endpoints from a browser because each request is scoped to the user the token represents.
 
-<Aside>
+<Aside title="Account API data is read-only">
 
-Some data is intentially not available via the Accounts API. For example, plan entitlements information for organizations. This is because Accounts API data is surfaced via a browser token and passing data this way is less secure. Access the Kinde Management API to access secure data. Or contact support for guidance.
+Most of the data you can access via the Account API is read-only (except for a few OAuth methods). Account API data is surfaced through a browser token, and passing data this way is less secure. If you want to do more with the API, check out the [Kinde Management API](/developer-tools/about/using-kinde-without-an-sdk/).
 
 </Aside>
 
-## When to use the Kinde Account API
+## Use the Kinde Account API
 
-- `properties` - show a specific promotion for users in certain regions or industries
-- `feature flags` - roll out beta features for a subset of users
-- `permissions` - only give access to certtain parts of your app based on permissions
-- `roles` - restrict access to functions by role, e.g. admins.
-- `entitlements` - to enable individual users to see plan entitlements
+Kinde uses the logged-in user's access token to access the Account API. 
 
-## Access the Account API
+1. Get the access token using the [relevant SDK](/developer-tools/about/our-sdks/) or manually if you are [using Kinde without an SDK](/build/about/using-kinde-without-an-sdk/).
 
-1. Get a user access token. This can be obtained when a user signs in via the methods you've setup in Kinde (e.g. Google, passwordless, etc).
-2. Call one of the Account API endpoints using the user access token in the Authorization header as a Bearer token. Typically, you can use the getToken command in the relevant SDK.
+    ```typescript title="Next.js example"
+    import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
-If you want an endpoint added to the [Account API library](https://docs.kinde.com/kinde-apis/frontend/), contact us via support@kinde.com. 
+    const { getAccessTokenRaw } = getKindeServerSession();
+    const accessToken = await getAccessTokenRaw();
+
+    console.log(accessToken); // use your access token
+    ```
+
+2. Call the relevant Account API endpoint:
+
+    ```javascript title="JavaScript example"
+    fetch('https://<YOUR_DOMAIN>/account_api/v1/entitlements', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    })
+    ```
+
+    <Aside>
+    Replace `<YOUR_DOMAIN>` with either your [custom domain](/build/domains/pointing-your-domain/) (e.g., `auth.yourbusiness.com`) or your Kinde domain (`your_business.kinde.com`).
+    </Aside>
+
+## Use cases
+
+- **Access user billing entitlements** - to gate product features based on the user's billing entitlements.
+- **Access user properties, feature flags, roles, and permissions** - If your access token includes too many claims, offload some of them and access them via the Account API when needed.
+- **Get the self-serve portal link** - to redirect the user to the self-serve portal so they can manage their account. See [Self-serve portal for users](/build/self-service-portal/self-serve-portal-for-users/).
+- **Access and revoke user sessions** - You can obtain the latest user profile using the `user_profile` endpoint. You can also introspect the token or revoke it.
+
+See the [Account API library](https://docs.kinde.com/kinde-apis/frontend/) for the full list of endpoints and their usage. If you want an endpoint to be added, contact us at support@kinde.com. 
