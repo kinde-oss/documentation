@@ -1,7 +1,7 @@
 ---
 page_id: 02d02820-92da-4721-9a91-222c9b095869
 title: Use Kinde without an SDK
-description: "Comprehensive guide for integrating with Kinde without SDKs using OAuth 2.0 and OpenID Connect standards including authorization flows, token exchange, and request parameters."
+description: "Integrate Kinde auth in any language using OAuth 2.0 and OpenID Connect—no SDK required. Covers flows, tokens, and route protection."
 sidebar:
   order: 2
 tableOfContents:
@@ -19,50 +19,24 @@ topics:
   - oauth
   - openid-connect
   - authentication
-  - tokens
-  - security
 sdk: []
 languages:
   - javascript
-  - markdown
 audience: developers
 complexity: advanced
 keywords:
-  - OAuth 2.0
-  - OpenID Connect
-  - Authorization Code Flow
+  - authorization code flow
   - PKCE
-  - Proof Key for Code Exchange
-  - access token
-  - id_token
-  - refresh token
   - token exchange
-  - JWKS
   - JWT verification
-  - scopes
-  - openid
-  - offline
-  - callback URL
-  - redirect_uri
-  - state parameter
-  - CSRF protection
-  - nonce
-  - prompt
-  - login_hint
-  - org_code
-  - multi-tenant
-  - userinfo endpoint
+  - refresh token
+  - OAuth scopes
   - route protection
-  - sign in
-  - sign up
-  - logout
-  - custom domain
-  - no SDK
-  - framework agnostic
-updated: 2026-05-23
+  - callback URL
+updated: 2026-07-02
 featured: false
 deprecated: false
-ai_summary: "This guide explains how to integrate Kinde authentication into any language or framework without using an official SDK, relying entirely on OAuth 2.0 and OpenID Connect standards. A 9-step quickstart covers both the Authorization Code Flow for server-rendered back-end applications and the Authorization Code Flow with PKCE for single-page apps and mobile clients — including generating a PKCE code verifier and challenge, building the authorization URL, handling the callback (with state validation to prevent CSRF attacks), exchanging the authorization code for tokens, and decoding the id_token to display user information. The guide details how to protect routes at two layers: a frontend token expiry check and backend RS256 JWT verification against the JWKS endpoint. It also covers silently refreshing access tokens with a refresh token and signing users out via the Kinde logout endpoint. A full reference covers all 24 supported request parameters — including prompt, login_hint, org_code, nonce, and audience — ordered by importance. FAQs address why the Implicit Flow is not supported and when to use the userinfo endpoint instead of decoding the id_token directly."
+ai_summary: "This guide explains how to integrate Kinde authentication into any language or framework without using an official SDK, relying on OAuth 2.0 and OpenID Connect standards. A nine-step quickstart walks through creating a Kinde application, configuring callback URLs, and implementing either the Authorization Code Flow for server-rendered back-end apps or Authorization Code Flow with PKCE for single-page and mobile public clients. It covers generating PKCE code verifiers and challenges, building authorization URLs, handling callbacks with state validation to prevent CSRF, exchanging authorization codes for tokens, and decoding the id_token for user profile data. Dedicated sections explain why each grant type is used and which app types they suit. The guide describes two-layer route protection combining frontend token expiry checks with backend RS256 JWT verification against the JWKS endpoint, silent access token refresh using refresh tokens, user sign-out via the Kinde logout endpoint, and generating self-serve portal links via the Account API. A full reference documents supported OAuth scopes and request parameters including prompt, login_hint, org_code, nonce, and audience. FAQs address why the Implicit Flow is not supported and when to use the userinfo endpoint versus decoding the id_token. Intended for developers building custom OAuth integrations."
 ---
 
 Kinde is designed to help founders and developers build SaaS products by providing software infrastructure like authentication, feature flags, user management, and more.
@@ -126,7 +100,7 @@ These are the OpenID endpoints for Kinde, found at:
 `https://<YOUR_DOMAIN>/.well-known/openid-configuration`
 
 <Aside>
-Replace `<YOUR_DOMAIN>` with either your custom domain or your Kinde domain (e.g., `https://your_business.kinde.com`)
+Replace `<YOUR_DOMAIN>` with either your custom domain (e.g., `auth.yourbusiness.com`) or your Kinde domain (e.g., `your_business.kinde.com`)
 </Aside>
 
 - Authorization endpoint: `https://<YOUR_DOMAIN>/oauth2/auth`
@@ -437,6 +411,27 @@ As part of verification, validate the following claims:
 
 Reject any token that fails signature verification or has an unexpected claim value.
 
+### Kinde self-serve portal link
+
+Call the Kinde Account API with the logged in user's access token to generate a self-serve portal link for the user:
+
+```javascript title="JavaScript example"
+const response = await fetch("/account_api/v1/portal_link", {
+  headers: {
+    Authorization: `Bearer ${userAccessToken}`
+  }
+});
+const data = await response.json();
+window.location = data.url;
+```
+
+Optional parameters:
+
+- `return_url` – where to redirect the user after exiting the portal.
+- `sub_nav` – specify the portal section to open (e.g., `organization_billing`, `profile`).
+
+See: [Self-serve portal for users](/build/self-service-portal/self-serve-portal-for-users/).
+
 ### Sign out your users
 
 To sign a user out:
@@ -452,17 +447,17 @@ To sign a user out:
 
 To register a logout URL, go to **Settings > Applications > [Your app] > View details**, then add it to the **Allowed logout redirect URLs** field.
 
-## Supported grant types
+## Supported grant types in Kinde
 
 ### Authorization Code Flow
 
-Recommended for server-rendered web applications.
+The Authorization Code Flow is the standard way to sign users in when your app runs on a server you control. Instead of returning tokens directly in the browser, Kinde redirects the user back to your app with a short-lived authorization `code`. Your server then exchanges that code for tokens by making a secure back-channel request to Kinde's token endpoint, including your `client_secret`. This two-step design keeps tokens off the URL and out of the browser — the authorization code is useless on its own without your secret. Use this flow for server-rendered web applications, traditional back-end web apps, and any client that can store a `client_secret` securely on the server.
 
-### Authorization Code Flow + PKCE
+### PKCE extension
 
-Kinde supports the Proof Key for Code Exchange (PKCE) extension. When using PKCE, include the `code_challenge` and `code_challenge_method` parameters in the authorization request. This flow is recommended for mobile apps and single-page applications (SPAs).
+The Authorization Code Flow with PKCE (Proof Key for Code Exchange) works the same way, but replaces the `client_secret` with a one-time cryptographic proof. Before redirecting the user to Kinde, your app generates a random `code_verifier` and sends a hashed version (`code_challenge`) in the authorization request. When exchanging the authorization code for tokens, your app sends the original `code_verifier` instead of a secret. Kinde verifies they match, proving that the same app that started the login is completing it. This matters because single-page apps (SPAs) and mobile apps are "public clients" — their code runs on the user's device, so a `client_secret` could be extracted and abused. PKCE gives you the security of the authorization code flow without needing a secret. Use PKCE for SPAs, native mobile apps, desktop apps, and any client that cannot keep a `client_secret` confidential.
 
-## OAuth 2.0 scopes
+## OAuth 2.0 scopes for Kinde
 
 The following scopes can be requested from Kinde.
 
