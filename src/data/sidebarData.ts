@@ -11,12 +11,7 @@ const sidebarData = [
     items: [
       {
         label: "Guides",
-        items: [
-          {label: "First things first", link: "/get-started/guides/first-things-first/"},
-          {label: "Add Kinde to your codebase", link: "/get-started/guides/byo-code/"},
-          {label: "Common setup tasks", link: "/get-started/guides/set-up-tasks/"},
-          {label: "Error codes", link: "/get-started/guides/error-codes/"}
-        ],
+        autogenerate: {directory: "get-started/guides"},
         collapsed: false
       },
       {
