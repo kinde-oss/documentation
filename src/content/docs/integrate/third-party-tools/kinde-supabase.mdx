@@ -67,6 +67,8 @@ In this guide, we will walk through integrating Kinde and Supabase. We’ll use 
 2. If you don't have a project yet, create one by selecting **New Project** and finish the setup process.  
 3. Go to **Authentication > CONFIGURATION > Sign In / Providers**
 4. Scroll down to the **Custom Providers** section and select **New Provider**, a window opens.
+
+    ![supabase custom auth provider screen 1](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b905dab8-efd7-441d-b055-4c5928f94f00/socialsharingimage)
 5. Enter the following details:
     - **Provider Identifier**: `kinde`
     - **Display Name**: (e.g., "Kinde")
@@ -75,204 +77,212 @@ In this guide, we will walk through integrating Kinde and Supabase. We’ll use 
 7. Enter your application details you copied from Kinde from the previous step:
     - Client ID
     - Client Secret
-    - Scopes: `openid, profile, email`
+    - Scopes: `openid, email, profile`
+
+        <Aside>
+        If you want to add the offline scope for getting a refresh token, use the `offline_access` scope for Kinde.
+        </Aside>
+
+    ![supabase custom auth provider screen 2](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/66af62b7-dc62-4758-db12-81c1767c8f00/socialsharingimage)
 8. Copy the **Callback URL** provided by Supabase. We will add it to Kinde.
 9. Select **Update provider**.
 10. Go to your Kinde application > **Details** page and enter the callback URL you copied from Supabase to the **Allowed Callback URLs** field. Select **Save**.
 
-## Step 3: Setup a Next.js project with Supabase and Kinde
+    ![supabase kinde callback url screen](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/43fe4fd7-e12c-4c8b-7b92-56ab47a62100/socialsharingimage)
 
-1. Run the following command in your terminal window to start a new project with Next.js and Supabase. Follow the on-screen instructions.
-    
-    <PackageManagers type='dlx' pkg='create-next-app' args='-e with-supabase' />
-    
-2. Set a name for your project (e.g: `kinde-with-supabase`)
-3. Go into the project directory:
-    
+### 3. Add Kinde authentication to your Supabase app
+
+You can add Kinde authentication to your Supabase app by using the `signInWithOAuth` method.
+
+```typescript title="JavaScript example"
+const { data, error } = await supabase.auth.signInWithOAuth({
+  provider: 'custom:kinde',
+});
+```
+
+Check out the [Supabase documentation](https://supabase.com/docs/guides/auth/custom-oauth-providers) for more details.
+
+Here's a guide on how to add Kinde authentication to a Next.js app with Supabase:
+
+1. If you want to create a new Supabase Next.js project run the following command:
+
     ```bash
-    cd kinde-with-supabase
-    
+    npx create-next-app -e with-supabase
     ```
-    
-4. Install the dependencies:
-    
-    <PackageManagers pkg='@kinde-oss/kinde-auth-nextjs jsonwebtoken' />
-    <PackageManagers pkg='@types/jsonwebtoken' dev />
-    
-5. Create the Kinde auth endpoint in this path **app/api/auth/[kindeAuth]**:
-    
+
+2. Add the following to your `.env.local` file:
+
+    ```env
+    # env.local
+    NEXT_PUBLIC_KINDE_DOMAIN=https://<your-subdomain>.kinde.com
+    ```
+
+    You can use either your Kinde domain (`https://your_brand.kinde.com`) or your [Custom domain](build/domains/pointing-your-domain/) (`https://auth.yourbrand.com`). Make sure you use the same one you used during the OIDC configuration in the previous step.
+
+3. Create the required files:
+
     ```bash
-    mkdir -p "app/api/auth/[kindeAuth]"
-    touch "app/api/auth/[kindeAuth]/route.js"
+    mkdir -p app/auth/callback
+    touch components/login-button.tsx
+    touch components/register-button.tsx
+    touch app/auth/callback/route.ts
     ```
-    
-6. Open the newly created `route.js` file, enter the following code, and save the file:
-    
-    ```bash
-    import { handleAuth } from "@kinde-oss/kinde-auth-nextjs/server"
-    export const GET = handleAuth()
-    ```
-    
-7. Create an environment variables file `.env.local` by typing:
-    
-    ```bash
-    touch .env.local
-    ```
-    
-8. Add the following to your `.env.local` file:
-    - The Kinde environment vars details you copied earlier. You can get these again from your Kinde application Quick start page.
-    - The Supabase Project URL from **Supabase > Project Settings > Data API > Project URL.**
-    - The Publishable key from **Supabase > Project Settings > API Keys > API Keys** tab **→ Publishable key**
-    
-    ```
-    KINDE_CLIENT_ID=<kinde_client_id>
-    KINDE_CLIENT_SECRET=<kinde_client_secret>
-    KINDE_ISSUER_URL=https://<your_kinde_business>.kinde.com
-    KINDE_SITE_URL=http://localhost:3000
-    KINDE_POST_LOGOUT_REDIRECT_URL=http://localhost:3000
-    KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000
-    NEXT_PUBLIC_SUPABASE_URL=https://<supabase_project_id>.supabase.co
-    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=<supabase_publishable_key>
-    
-    ```
-    
-9. To ensure the user is redirected to the homepage after they sign in, update the `KINDE_POST_LOGIN_REDIRECT_URL` in your `.env.local` file to:
-    
-    ```
-    KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000
-    ```
-    
-10. Open the `components/auth-button.tsx` file and replace the entire content with the following. This code will replace Supabase Auth functions with Kinde Auth.
-    
+
+    `components/logout-button.tsx` already exists in the starter — modify it (see step 8 below), don't create it.
+
+4. Open `components/login-button.tsx`, enter the following code, and save the file:
+
     ```tsx
-      import {
-      RegisterLink,
-      LoginLink,
-      LogoutLink,
-      } from "@kinde-oss/kinde-auth-nextjs/components"
-      import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
-    
-      import { Button } from "./ui/button"
-    
-      export async function AuthButton() {
-        const { getUser } = getKindeServerSession()
-        const user = await getUser()
-    
-        return user ? (
-          <div className="flex items-center gap-4">
-            Hey, {user.email}!<LogoutLink className="text-subtle">Log out</LogoutLink>
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <Button asChild size="sm" variant={"outline"}>
-              <LoginLink className="btn btn-ghost sign-in-btn">Sign in</LoginLink>
-            </Button>
-            <Button asChild size="sm" variant={"default"}>
-              <RegisterLink className="btn btn-dark">Sign up</RegisterLink>
-            </Button>
-          </div>
-        )
-      }
+    "use client";
+
+    import { createClient } from "@/lib/supabase/client";
+    import { Button } from "@/components/ui/button";
+
+    export function LoginButton() {
+      const login = async () => {
+        const supabase = createClient();
+        await supabase.auth.signInWithOAuth({
+          provider: "custom:kinde",
+          options: {
+            redirectTo: `${window.location.origin}/auth/callback`,
+          },
+        });
+      };
+
+      return (
+        <Button size="sm" variant="default" onClick={login}>
+          Sign in
+        </Button>
+      );
+    }
     ```
-    
-11. Replace `lib/supabase/server.ts` with the following code:
-    
+
+5. Open `components/register-button.tsx`, enter the following code, and save the file:
+
     ```tsx
-    import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
-    import { createServerClient } from "@supabase/ssr"
-    import { cookies } from "next/headers"
-    import jwt from "jsonwebtoken"
-    
-    export const createClient = async () => {
-      const cookieStore = await cookies()
-    
-      const { getIdToken } = getKindeServerSession()
-      const idToken = await getIdToken()
-    
-      let token: string
-      if (idToken) {
-        token = jwt.sign(idToken, process.env.KINDE_CLIENT_SECRET!)
-      } else {
-        token = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!
-      }
-    
-      return createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
-        {
-          global: {
-            headers: {
-              Authorization: `Bearer ${token}`,
+    "use client";
+
+    import { createClient } from "@/lib/supabase/client";
+    import { Button } from "@/components/ui/button";
+
+    export function RegisterButton() {
+      const register = async () => {
+        const supabase = createClient();
+        await supabase.auth.signInWithOAuth({
+          provider: "custom:kinde",
+          options: {
+            queryParams: {
+              prompt: "create",
             },
+            redirectTo: `${window.location.origin}/auth/callback`,
           },
-          cookies: {
-            getAll() {
-              return cookieStore.getAll()
-            },
-            setAll(cookiesToSet) {
-              try {
-                cookiesToSet.forEach(({ name, value, options }) => {
-                  cookieStore.set(name, value, options)
-                })
-              } catch (error) {
-                // The `set` method was called from a Server Component.
-                // This can be ignored if you have middleware refreshing
-                // user sessions.
-              }
-            },
-          },
+        });
+      };
+
+      return (
+        <Button size="sm" variant="default" onClick={register}>
+          Sign up
+        </Button>
+      );
+    }
+    ```
+
+6. Open `app/auth/callback/route.ts`, enter the following code, and save the file:
+
+    ```ts
+    import { createClient } from "@/lib/supabase/server";
+    import { NextResponse } from "next/server";
+
+    export async function GET(request: Request) {
+      const { searchParams, origin } = new URL(request.url);
+      const code = searchParams.get("code");
+      const next = searchParams.get("next") ?? "/protected";
+
+      if (code) {
+        const supabase = await createClient();
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!error) {
+          return NextResponse.redirect(`${origin}${next}`);
         }
-      )
-    }
-    ```
-    
-12. Replace `lib/supabase/middleware.ts` with the following code:
-    
-    ```tsx
-    import { NextResponse, type NextRequest } from "next/server"
-    import { hasEnvVars } from "../utils"
-    
-    export async function updateSession(request: NextRequest) {
-      const supabaseResponse = NextResponse.next({
-        request,
-      })
-    
-      // If the env vars are not set, skip middleware check. You can remove this once you setup the project.
-      if (!hasEnvVars) {
-        return supabaseResponse
       }
-    
-      // Do not run code between createServerClient and
-      // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-      // issues with users being randomly logged out.
-    
-      // IMPORTANT: DO NOT REMOVE auth.getUser()
-    
-      // IMPORTANT: You *must* return the supabaseResponse object as it is.
-      // If you're creating a new response object with NextResponse.next() make sure to:
-      // 1. Pass the request in it, like so:
-      //    const myNewResponse = NextResponse.next({ request })
-      // 2. Copy over the cookies, like so:
-      //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-      // 3. Change the myNewResponse object to fit your needs, but avoid changing
-      //    the cookies!
-      // 4. Finally:
-      //    return myNewResponse
-      // If this is not done, you may be causing the browser and server to go out
-      // of sync and terminate the user's session prematurely!
-    
-      return supabaseResponse
+
+      return NextResponse.redirect(`${origin}/auth/error?error=oauth_callback_failed`);
     }
     ```
-    
-13. Start the development environment by typing the following in your terminal:
-    
-    <PackageManagers type='run' pkg='dev' />
-    
-14. Go to [http://localhost:3000](http://localhost:3000/) and sign up/sign in to your Kinde application to test the integration.
-    
-    ![Your local app showing supabase readiness](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/115c087b-d820-444e-7809-a059c37fa400/public)
-    
+
+7. Open `components/auth-button.tsx` and replace the login/sign-up page links with OAuth buttons:
+
+    - Remove the `Link` imports and `<Link href="/auth/login">` / `<Link href="/auth/sign-up">` buttons.
+    - Add the following imports:
+
+        ```tsx
+        import { LoginButton } from "./login-button";
+        import { RegisterButton } from "./register-button";
+        ```
+
+    - Update the logged-out state to render:
+
+        ```tsx
+        <div className="flex gap-2">
+          <LoginButton />
+          <RegisterButton />
+        </div>
+        ```
+
+    - Keep the logged-in state the same — show the user email and `<LogoutButton />`.
+
+8. Open `components/logout-button.tsx` and replace `router.push("/auth/login")` with Supabase sign-out and a Kinde logout redirect. Replace the entire file content with the following:
+
+    ```tsx
+    "use client";
+
+    import { createClient } from "@/lib/supabase/client";
+    import { Button } from "@/components/ui/button";
+
+    export function LogoutButton() {
+      const logout = async () => {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        const kindeDomain = process.env.NEXT_PUBLIC_KINDE_DOMAIN;
+        const redirect = encodeURIComponent(window.location.origin);
+        window.location.href = `${kindeDomain}/logout?redirect=${redirect}`;
+      };
+
+      return <Button onClick={logout}>Logout</Button>;
+    }
+    ```
+
+9. Open `lib/supabase/proxy.ts` and change the unauthenticated redirect from `/auth/login` to `/`:
+
+    ```ts
+    url.pathname = "/";
+    ```
+
+10. Open `app/protected/page.tsx` and change the unauthenticated redirect from `/auth/login` to `/`:
+
+    ```ts
+    redirect("/");
+    ```
+
+### 4. Test user authentication
+
+1. Run the development server:
+
+    ```bash
+    npm run dev
+    ```
+
+2. Go to http://localhost:3000 and select the **Sign up** button. You will be redirected to the Kinde hosted registration page.
+
+3. Complete the registration process and you will be redirected to your Supabase app protected page.
+
+    ![supabase kinde app protected page screen](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/2f7698b3-63d7-4263-a0cd-5a64bb1f4c00/socialsharingimage)
+
+4. Go to your Kinde dashboard > **Users** and you will see the new user in the list.
+
+5. Go to your Supabase dashboard > **Authentication > MANAGE > Users** and you will also see the same users in the list.
+
+    ![supabase kinde user management screen](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4056bfe1-e8d4-46cb-af36-da87d4fbbc00/socialsharingimage)
 
 ## Well done!
 
