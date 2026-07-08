@@ -25,18 +25,27 @@ audience:
 complexity: advanced
 keywords:
   - SAML
+  - entity ID
+  - entityID
   - Name ID
   - signing algorithm
   - protocol binding
   - upstream parameters
   - RSA-SHA256
   - HTTP POST binding
-updated: 2025-09-19
+updated: 2026-04-20
+ai_summary: "When setting up a SAML enterprise (SSO) connection, several advanced options may need configuration. The Entity ID must match exactly between Kinde and the IdP, as mismatches cause sign-in failures (Azure AD older tenants may require an `spn:` prefix). The Name ID identifies the user in the SAML assertion and supports four formats: Unspecified, EmailAddress, Persistent, or Transient — the chosen format must be supported by the IdP. For signing SAML requests, RSA-SHA256 is the preferred algorithm; RSA-SHA1 is deprecated. Protocol Binding determines how requests are sent: HTTP Redirect uses GET (lightweight, size-limited), while HTTP POST supports larger payloads and is preferred for signed requests. Key Attributes pass user metadata (Email, First/Last Name, User ID) from the IdP to Kinde and should only be configured if the IdP supports them. Single Logout, when enabled, signs users out of all connected apps simultaneously and requires a Single Logout Endpoint URL from the customer and a Logout URL from Kinde added to the IdP. Finally, Upstream Parameters allow static or dynamic provider-specific parameters (e.g., email hint, account switcher) to be passed to the IdP during authentication — supported values vary by provider."
 ---
 
 When you set up a SAML connection, you might need to include advanced configurations to meet identity provider requirements, and to get the connection running properly and securely.
 
-Here's some of the advanced options you might come across when setting up an enterprise (SSO) connection. 
+Here's some of the advanced options you might come across when setting up an enterprise (SSO) connection.
+
+## Entity ID (entityID)
+
+For SAML SSO, the **entity ID** must match between your Kinde enterprise connection and your identity provider (IdP). In SAML metadata and some admin consoles this value appears as **`entityID`**. Enter the same string in Kinde (the **Entity ID** field on the enterprise connection) and in your IdP’s SAML application—field names vary (for example **Audience**, **SP Entity ID**, or **Entity ID**).
+
+If these values do not match, sign-in can fail (for example with an invalid SAML response). If you use Microsoft Entra ID (Azure AD), see [Microsoft Entra ID (SAML)](/authenticate/enterprise-connections/entra-id-saml/) for notes on older tenants and the optional `spn:` prefix.
 
 ## Name ID
 
