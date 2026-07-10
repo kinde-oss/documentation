@@ -1,7 +1,7 @@
 ---
 page_id: 08415f77-cd58-498d-b3b2-d1cdda162153
 title: JavaScript SDK
-description: "Complete guide for JavaScript SDK including PKCE authentication, login/register flows, organization management, and API integration for single-page applications."
+description: "Complete guide for the Kinde JavaScript (PKCE) SDK covering setup, authentication, getAccessToken() for API calls, background token refresh, organizations, permissions, feature flags, and API references."
 sidebar:
   order: 3
 tableOfContents:
@@ -32,11 +32,13 @@ keywords:
   - logout
   - organizations
   - access tokens
+  - getAccessToken
+  - refresh tokens
   - JWT
-updated: 2026-04-14
+updated: 2026-07-10
 featured: false
 deprecated: false
-ai_summary: Complete guide for JavaScript SDK including PKCE authentication, login/register flows, organization management, and API integration for single-page applications.
+ai_summary: Complete guide for the Kinde JavaScript (PKCE) SDK for single-page apps, covering setup with the starter kit or an existing project, createKindeClient configuration, login/register/logout flows, user profile helpers, and calling your API with getAccessToken() (getToken() is deprecated). Explains background access-token refresh on init, pre-expiry timers, and tab focus; session persistence via custom domains or is_dangerously_use_local_storage for local dev; organizations, permissions, feature flags, audience and scope; FAQs; and full createKindeClient and kindeClient API references.
 ---
 
 Kinde JavaScript SDK for single-page JavaScript apps.
@@ -242,8 +244,7 @@ The `getAccessToken` method lets you securely call your API and pass the bearer 
 We recommend using our middleware on your back end to verify users and protect endpoints. Our current implementation is Node/Express, but we’re working on more.
 
 <Aside title="Deprecation Notice">
-  The original getToken method is deprecated, and we recommend updating to use the latest version of
-  the SDK and using the getAccessToken method
+  `getToken()` is deprecated and may return `undefined` with the new auth flow. Use `getAccessToken()` instead.
 </Aside>
 
 ## Organizations
@@ -587,18 +588,23 @@ const kinde = await createKindeClient({
 });
 ```
 
+### Does getAccessToken read storage only, or does it refresh the token?
+
+It **only reads** the cached access token from memory (or configured storage). **`getAccessToken()`** returns whatever access token JWT is currently stored—**including if it is expired**—and it **does not** call Kinde’s token endpoint. The SDK refreshes tokens in the background (see below); when those flows succeed, the next `getAccessToken()` reads the updated value.
+
 ### When does the JavaScript SDK refresh access tokens in the background?
 
-The PKCE client refreshes the access token in two main situations:
+The PKCE client refreshes the access token in these situations:
 
-- **Initial load:** If you use Kinde’s **httpOnly cookie** refresh flow (custom domain) or local storage for the refresh token (`is_dangerously_use_local_storage`), initialization may call the token endpoint to restore a session.
-- **When you call `getToken()` or `getIdToken()`:** If the cached access token is missing or the SDK treats it as no longer active (it uses a **short buffer before the JWT `exp`** so the token is refreshed before it actually expires), the client attempts a refresh using the refresh token.
+- **Initial load:** On client initialization, **`checkAuth`** runs and may refresh when the access token is expired or within about **10 seconds** of expiry. This also applies when you use Kinde’s **httpOnly cookie** refresh flow (custom domain) or local storage for the refresh token (`is_dangerously_use_local_storage`) to restore a session.
+- **After sign-in:** A timer schedules refresh about **10 seconds before** the access token expires. This automatic refresh is **on by default** for sessions established through the SDK’s auth flows.
+- **Returning to the tab:** When the document becomes visible again or the window regains focus, the client attempts a refresh if the access token is expired or close to expiry.
 
-The [React SDK](/developer-tools/sdks/frontend/react-sdk/) uses `@kinde/js-utils` for additional timer- and focus-driven refresh on the provider. With this JavaScript client, calling `getToken()` before API requests is the reliable way to obtain a token that has been refreshed when needed.
+With this JavaScript client, calling `getAccessToken()` before API requests is the reliable way to read the token that background refresh has kept up to date. The [React SDK](/developer-tools/sdks/frontend/react-sdk/) uses a similar pattern with `@kinde/js-utils`; see [When does the React SDK refresh tokens silently?](/developer-tools/sdks/frontend/react-sdk/#when-does-the-react-sdk-refresh-tokens-silently).
 
-### Does getToken throw or return an error object when refresh fails?
+### Does getAccessToken throw or return an error object when something goes wrong?
 
-No. `getToken()` resolves to **`Promise<string | undefined>`**. You receive the JWT string on success and **`undefined`** if the token cannot be obtained (for example, refresh failed or there is no refresh token). It **does not throw** for those cases and **does not** return a structured error object. Always check for a missing value before using the token in an `Authorization` header.
+No. **`getAccessToken()`** resolves to **`Promise<string | undefined>`**. You get the JWT when a value exists in storage and **`undefined`** when there is nothing to read (for example, the user is signed out or refresh failed in the background). It **does not throw** and **does not** return an error object, because it **does not perform refresh**. Always check for a missing value before using the token in an `Authorization` header.
 
 ## API References - createKindeClient
 
@@ -813,11 +819,33 @@ redirect;
 ```
 
 
-### `getToken`
+### `getAccessToken`
 
-Returns the access token JWT. If the cached token is missing or inactive, the client **attempts a silent refresh** via the refresh token before resolving.
+Returns the raw access token JWT from memory (or configured storage). This is the recommended method for reading the token to call your API.
 
-Type: `Promise<string | undefined>` — JWT string on success, **`undefined`** if no token can be returned. Failures **do not throw** and **do not** yield an error object.
+Type: `Promise<string | undefined>` — the cached JWT, or **`undefined`** if none is stored. This method **does not refresh** the token; the value may be **expired**. It **does not throw** and **does not** return an error object. See [Does getAccessToken read storage only, or does it refresh the token?](#does-getaccesstoken-read-storage-only-or-does-it-refresh-the-token) and [When does the JavaScript SDK refresh access tokens in the background?](#when-does-the-javascript-sdk-refresh-access-tokens-in-the-background).
+
+Usage:
+
+```javascript
+await kinde.getAccessToken();
+```
+
+Sample output:
+
+```text
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+
+Use the [Kinde Online JWT decoder](https://www.kinde.com/tools/online-jwt-decoder/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c) to decode this token.
+
+### `getToken` (Deprecated)
+
+**Deprecated:** Use [getAccessToken](#getaccesstoken) instead.
+
+May return **`undefined`** with the new auth flow. The legacy implementation attempted a silent refresh when the cached token was missing or inactive; prefer **`getAccessToken()`** with the SDK’s background refresh behavior described above.
+
+Type: `Promise<string | undefined>`
 
 Usage:
 
@@ -831,9 +859,7 @@ Sample output:
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
 ```
 
-Use the [Kinde Online JWT decoder](https://www.kinde.com/tools/online-jwt-decoder/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c) to decode this token.
-
-For background refresh timing and the difference from the React SDK’s `getAccessToken()`, see [When does the JavaScript SDK refresh access tokens in the background?](#when-does-the-javascript-sdk-refresh-access-tokens-in-the-background) and [Does getToken throw or return an error object when refresh fails?](#does-gettoken-throw-or-return-an-error-object-when-refresh-fails).
+For background refresh timing and the difference from the React SDK’s `getAccessToken()`, see [When does the JavaScript SDK refresh access tokens in the background?](#when-does-the-javascript-sdk-refresh-access-tokens-in-the-background) and [Does getAccessToken throw or return an error object when something goes wrong?](#does-getaccesstoken-throw-or-return-an-error-object-when-something-goes-wrong).
 
 ### `getIdToken`
 
