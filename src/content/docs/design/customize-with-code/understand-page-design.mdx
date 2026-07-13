@@ -9,6 +9,7 @@ relatedArticles:
   - f0bc688b-a817-42ab-9a20-8e09cec06f37
   - 261fb4ed-83e5-4f92-8f52-8da22749a92e
   - b42663d8-5e2a-42cd-859a-f9737a1495df
+  - 4d6158a0-af5c-4c4e-abd3-353c7190c264
 topics:
   - design
   - customize-with-code
@@ -31,7 +32,8 @@ keywords:
   - kinde.json
   - route mapping
   - server rendering
-updated: 2026-03-03
+  - connection switching
+updated: 2026-07-13
 featured: false
 deprecated: false
 ai_summary: Comprehensive guide for understanding Kinde page customization including React templating, directory structure, route mapping, and server-rendered JavaScript implementation.
@@ -336,6 +338,28 @@ The `pageSettings` object is required when you need to enable bindings that give
     <Aside>
     Bindings are explicitly opted-in for performance reasons. By declaring only the bindings you need, you tell Kinde's runtime which internal features to initialize, avoiding unnecessary computation and keeping your page render as fast as possible.
     </Aside>
+
+## Connection switching context
+
+On authentication pages, the `context` object includes the connections a user can switch to and the action needed to perform a switch. Use these to build a connection switcher — see [Add a connection switcher to a custom page](/design/customize-with-code/switch-connection/).
+
+### `context.connections`
+
+- `available` — an array of connections the current user can switch to. Each entry includes `id`, `friendlyId`, `name`, `connectionType` (`social`, `enterprise`, `credential`, or `other`), `credentialMethod`, `identityType`, `provider`, and `logoName`.
+
+### `context.actions`
+
+- `switchConnection` — the action used to switch connection. Contains `actionUrl`, `method`, and a `fields` map. Pass this object (JSON-encoded) to the `data-kinde-change-connection-action` attribute on your switch buttons.
+
+### `context.session`
+
+- `pipelineStepId` — the current pipeline step identifier. Pass it to the `data-kinde-change-connection-psid` attribute.
+- `state` — the current authentication `state` value, when present.
+
+### `context.auth` additions
+
+- `activeConnectionId` — the connection the flow is currently using.
+- `sessionConnectionId` — the connection originally requested for the session, if any.
 
 ## How to access environment variables in your page
 
