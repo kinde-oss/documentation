@@ -1,8 +1,11 @@
 ---
 page_id: 815f10b0-7bd2-407a-9ac2-9fb582862a5b
 title: Secure your API using scopes
+description: "Guide to creating, importing, and managing custom API scopes for granular access control, including OpenAPI spec imports"
 sidebar:
   order: 5
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - f1ba22b9-b35f-478a-be09-4524d060fe36
   - 51899f7f-3436-46e0-9a1b-6ecc3603a0df
@@ -25,19 +28,22 @@ keywords:
   - permissions
   - authorization
   - scope management
-updated: 2024-01-15
+  - openapi import
+  - openapi spec
+  - scope generation
+updated: 2026-06-05
 featured: false
 deprecated: false
-ai_summary: Guide to creating and managing custom API scopes for granular access control and enhanced security
+ai_summary: "This guide covers custom API scopes in Kinde for granular access control over your own registered APIs. Custom scopes require Kinde Plus or higher and do not apply to the Kinde Management API. Scopes define permissions included in access tokens and let you move beyond broad read or write permissions to fine-grained names such as read:userprofile or write:roles. You can add scopes manually from the Scopes tab or automatically import them by uploading OpenAPI 3.x or Swagger 2 specs. Kinde generates one scope per supported HTTP operation using a method and normalized path naming pattern, with descriptions taken from operation summaries when available. The guide explains managing imports, including syncing updated specs, viewing import logs, and deleting imports without affecting manually added scopes. You also learn how to authorize applications and toggle which scopes each app can request, edit scope descriptions, and safely delete scopes that may cause breaking changes if in use. It covers requesting a subset of enabled scopes in M2M token calls for tighter security, the permissions required for OpenAPI import actions, and assigning scopes to API keys."
 ---
 
 <Aside type="upgrade">
 
-You must be on the [Kinde Plus or Scale plan](https://kinde.com/pricing/) to use this feature.
+You must be on the [Kinde Plus plan](https://kinde.com/pricing/) and higher to use custom API scopes.
 
 </Aside>
 
-Kinde lets you add custom scopes to help manage others who access to your APIs. Scopes define token permissions used by your APIs, and provide a reliable way to control access to your API resources.
+Kinde lets you add custom scopes to help manage access to your APIs. Scopes define token permissions used by your APIs, and provide a reliable way to control access to your API resources.
 
 You need to have [registered your APIs](/developer-tools/your-apis/register-manage-apis/) in Kinde to secure them using scopes.
 
@@ -57,7 +63,7 @@ Note that this topic is NOT about adding custom scopes for the Kinde Management 
 
 ## Add scopes to an API
 
-1. In Kinde, go to **Settings > APIs**.
+1. In Kinde, go to **Settings > Environment > APIs**.
 2. Select **View details** on the API you want to add scopes for.
 3. In the menu, select **Scopes**.
 4. Select **Add scope**.
@@ -67,9 +73,103 @@ Note that this topic is NOT about adding custom scopes for the Kinde Management 
 8. Repeat from step 4 for all the scopes you want to add for this API.
 9. Repeat from step 1 to add scopes for a different API.
 
+## Import scopes from an OpenAPI spec
+
+If your API is already described in an OpenAPI 3.x or Swagger 2 specification, you can upload the file to Kinde and automatically generate scopes from your API operations — instead of adding each scope manually.
+
+You need a registered custom API (not the Kinde Management API) and the API scopes feature enabled for your plan.
+
+### Upload an OpenAPI spec
+
+1. In Kinde, go to **Settings > Environment > APIs**.
+2. Select **View details** on the API you want to generate scopes for.
+3. In the side menu, select **OpenAPI spec**.
+4. Select **Upload file**.
+5. Choose a `.json`, `.yaml`, or `.yml` file that contains a valid OpenAPI 3.x or Swagger 2 document with a `paths` object. (Maximum file size: 20MB)
+    Your file will be uploaded.
+
+Kinde parses the file and creates one scope per supported HTTP operation in the spec. When the import finishes, the generated scopes appear on the **Scopes** tab. Scopes imported from OpenAPI are labeled with an **OpenAPI** badge.
+
+### How scopes are generated
+
+Kinde creates a scope for each HTTP operation (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`, `HEAD`, and `TRACE`) defined under `paths` in your spec.
+
+Each scope name follows this pattern:
+
+```
+{method}:{normalized_path}
+```
+
+For example, these operations:
+
+| OpenAPI path      | HTTP method | Generated scope     |
+| ----------------- | ----------- | ------------------- |
+| `/users/{userId}` | `GET`       | `get:users_userid`  |
+| `/users/{userId}` | `POST`      | `post:users_userid` |
+| `/health`         | `GET`       | `get:health`        |
+
+Kinde builds the scope name by:
+
+- Lowercasing the HTTP method and path
+- Removing `{` and `}` from path parameters (for example, `{userId}` becomes `userid`)
+- Replacing non-alphanumeric characters with underscores
+- Replacing `/` with `_`
+
+If a generated scope name would exceed 64 characters, Kinde shortens it and appends a stable hash suffix so scope names stay unique.
+
+The scope **description** is taken from the operation's `summary` field when present. If there is no summary, Kinde uses `operationId`, or falls back to the HTTP method and path (for example, `GET /users/{userId}`).
+
+Reserved scope names (such as `openid`, `profile`, and `offline_access`) are skipped and not imported.
+
+### Manage imports
+
+After your first upload, the **OpenAPI spec** page shows:
+
+- **Active file** — the currently active spec and when it was uploaded
+- **Import history** — previous uploads and deletions
+
+Select **View logs** on any history entry to see a report of scopes that were created, skipped as duplicates, or removed during that import.
+
+#### Upload a new spec
+
+To sync scopes with an updated API definition, upload a new file from the **OpenAPI spec** page.
+
+When you upload a replacement file:
+
+- New operations in the spec create new scopes
+- Operations that already have a matching scope are reported as duplicates and are not recreated
+- Scopes that were generated from the previous import but are no longer in the new spec are removed
+
+You need permission to delete API scopes to replace an existing import.
+
+#### Delete an import
+
+To remove an OpenAPI import and all scopes generated from it:
+
+1. On the **OpenAPI spec** page, open the actions menu on the active file row.
+2. Select **Delete import**.
+3. Confirm the deletion.
+
+This removes only scopes that were generated from that import. Scopes you added manually on the **Scopes** tab are not affected.
+
+### Work with generated scopes
+
+Generated scopes behave like manually created scopes. You can authorize them for applications, assign them to API keys, and request them in token calls.
+
+On the **Scopes** tab, scopes imported from OpenAPI show an **OpenAPI** badge. You cannot edit or delete individual generated scopes from the **Scopes** tab — update them by uploading a new spec, or remove them by deleting the import on the **OpenAPI spec** page.
+
+### Permissions required
+
+| Action                       | Permissions                                             |
+| ---------------------------- | ------------------------------------------------------- |
+| View the OpenAPI spec page   | `read:apis`                                             |
+| Upload a spec (first import) | `create:api_scopes`, `update:apis`                      |
+| Replace an existing import   | `create:api_scopes`, `update:apis`, `delete:api_scopes` |
+| Delete an import             | `update:apis`, `delete:api_scopes`                      |
+
 ## Authorize and enable scopes for an application
 
-1. Go to **Settings > Applications** and select **View details** on the relevant application.
+1. Go to **Settings > Environment > Applications** and select **View details** on the relevant application.
 2. Select **APIs** in the side menu.
 3. If the application is not yet authorized, select the three dots menu next to the API you’re giving the app access to, and then select **Authorize application**.
 4. In the same three dots menu, select **Manage scopes**.
@@ -84,18 +184,18 @@ Take care deleting scopes. If a scope is in use, it can cause breaking changes f
 
 </Aside>
 
-1. Go to **Settings > APIs** and select **View details** on the relevant API tile.
+1. Go to **Settings > Environment > APIs** and select **View details** on the relevant API tile.
 2. Select **Scopes** in the menu.
 3. Find the scope you want to change.
 4. Select the dots menu (far right) and select:
-   - **Edit scope.** You can only change the scope description. Select **Save**.
+   - **Edit scope**. You can only change the scope description. Select **Save**.
    - **Delete scope**. Confirm that you want to delete and select **Delete scope**.
 
 ## Request a subset of scopes for an authorized application
 
-By default token requests for an authorized application will return all the scopes enabled in the section above. However, you can also optionally ask for a subset of enabled scopes to be returned by including them in the body of the access token request. You might do this to add more security to access requests for your API, or because you want your users to be very specific in their requests.
+By default, token requests for an authorized application will return all the scopes enabled in the section above. However, you can also optionally ask for a subset of enabled scopes to be returned by including them in the body of the access token request. You might do this to add more security to access requests for your API, or because you want your users to be very specific in their requests.
 
-Example request
+Example request:
 
 ```
 curl --request POST \
@@ -104,10 +204,10 @@ curl --request POST \
   --data grant_type=client_credentials \
   --data 'client_id=<your_m2m_client_id>' \
   --data 'client_secret=<your_m2m_client_secret>' \
-  --data 'audience=<your_api_audience>\
+  --data 'audience=<your_api_audience>' \
   --data 'scope=join:competitions update:competitions'
 ```
 
 ## API Key scopes
 
-If you manage access to your APIs using API keys, you can [set scopes for the API keys](/manage-your-apis/add-manage-api-keys/scopes-for-api-keys/), giving you more granular control over access, depending who has the keys.
+If you manage access to your APIs using API keys, you can [set scopes for the API keys](/manage-your-apis/add-manage-api-keys/scopes-for-api-keys/), giving you more granular control over access, depending on who has the keys.

@@ -1,0 +1,138 @@
+---
+page_id: d0e70a47-6e28-4a63-8215-76eec9fee0a0
+title: Migrate to Kinde from Azure B2C
+sidebar:
+  order: 8
+  label: Azure B2C
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - c4bc277a-5ec7-418c-ba1c-4d58c9ddfd7d
+  - f3dc6458-7d1e-407e-bc4c-62ac0ee4c075
+  - f6eaf29b-d8d9-4caf-bc1d-5319b6fb8ffc
+  - e89d246a-5cdf-4993-9cee-94b31ec27583
+description: Export users from Azure B2C and migrate to Kinde. Azure B2C does not export passwords, so choose between bulk import with password reset, API-based migration, drip-feed, or a hard cutover.
+topics:
+  - get-started
+  - switch-to-kinde
+sdk: []
+languages:
+  - bash
+  - csv
+audience:
+  - developers
+  - admins
+complexity: advanced
+keywords:
+  - azure b2c migration
+  - azure ad b2c
+  - migrate from azure
+  - azure b2c export
+  - user migration
+  - drip feed migration
+  - ropc
+  - resource owner password credentials
+updated: 2026-05-05
+featured: false
+deprecated: false
+ai_summary: "Step-by-step guide for migrating users from Azure B2C to Kinde. Because Azure B2C does not export passwords, the guide covers four migration approaches: drip-feed (recommended), bulk import with API sync, bulk import only, and hard cutover. Drip-feed uses Kinde's user:existing_password_provided workflow trigger to validate each login against Azure B2C's ROPC endpoint on first sign-in, with no password reset required. Bulk import options import users by email only and prompt them to set a new password or use passwordless on first sign-in. Covers exporting users via the Azure portal Download users option or programmatically via the Microsoft Graph API with pagination, and maps Azure B2C fields (id, mail, givenName, surname, accountEnabled) to Kinde's CSV format. Includes guidance on handling local accounts vs. federated social identities, setting up the MS Entra ID connection in Kinde before importing AD-based users, and enabling the ROPC user flow in Azure B2C and Enumeration protection in Kinde before starting drip-feed migration."
+---
+
+Migrate your users from Azure B2C to Kinde. Azure B2C does not export passwords, so the migration approach you choose will determine how users authenticate on first sign-in.
+
+### What you need
+
+- A Kinde account with **Admin** access
+- Kinde account configured to match your current auth provider — see [before you migrate](/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/#before-you-migrate)
+- Azure B2C tenant with user export permissions
+
+## Key considerations
+
+- **Passwords cannot be exported** — Azure B2C does not provide access to hashed passwords. Users will need to reset their password or use a new sign-in method, unless you use drip-feed migration.
+- **Local accounts vs. federated identities** — users who signed in via social providers (Google, Facebook, etc.) in Azure B2C can be imported by email and prompted to re-link their social login.
+- **MS Entra ID connection** — if you use Azure AD-based logins, [set up the MS Entra ID connection in Kinde](/authenticate/enterprise-connections/azure/) before importing users so Kinde can match them to the right connection.
+
+## Export users from Azure B2C
+
+### Option A: Azure portal
+
+1. In the [Azure portal](https://portal.azure.com/), go to **Azure AD B2C**.
+2. Select **Users** from the left menu.
+3. Select **Download users** to export a CSV of all users.
+
+The portal export includes basic user properties (email, display name, object ID). It does not include passwords.
+
+### Option B: Microsoft Graph API (recommended for large user bases)
+
+Use the Microsoft Graph API to export users programmatically with full control over which attributes are included:
+
+```bash
+GET https://graph.microsoft.com/v1.0/users?$select=id,displayName,givenName,surname,mail,userPrincipalName,accountEnabled
+Authorization: Bearer {access_token}
+```
+
+Paginate using the `@odata.nextLink` value in the response. Convert the output to a Kinde-compatible CSV.
+
+**Column mapping:**
+
+| Azure B2C field | Kinde column |
+|-----------------|--------------|
+| `id` | `id` |
+| `mail` or `userPrincipalName` | `email` |
+| `givenName` | `first_name` |
+| `surname` | `last_name` |
+| `accountEnabled` | `email_verified` (use `TRUE`/`FALSE`) |
+
+## Choose your migration method
+
+### Drip-feed (recommended)
+
+Migrate users seamlessly as they log in. A Kinde workflow validates each login against Azure B2C's ROPC endpoint, creates the user in Kinde on success, and takes over authentication going forward.
+
+**Before you start:**
+1. [Bulk import](/get-started/switch-to-kinde/migrate-users-bulk-import/) user email addresses (without passwords) to seed Kinde.
+2. Enable **Enumeration protection** in Kinde (**Settings > Attack protection > Enumeration protection**).
+3. Enable the ROPC user flow in your Azure B2C tenant.
+
+The [drip-feed migration tutorial](/workflows/workflow-tutorials/drip-feed-migration/) includes the Azure B2C-specific workflow code.
+
+### Bulk import with API sync (catch new registrations)
+
+Export users and import into Kinde. During the migration window, use the Kinde API to push any new sign-ups from Azure B2C directly to Kinde so no one is missed.
+
+1. Set up an API integration to push new Azure B2C registrations to Kinde in real time.
+2. Export existing users using the portal or Graph API.
+3. Import into Kinde via [bulk import](/get-started/switch-to-kinde/migrate-users-bulk-import/).
+4. Switch to Kinde.
+5. Users will be prompted to set a new password or sign in via passwordless on first sign-in.
+
+See [Create users with the API](/get-started/switch-to-kinde/create-users-with-api/) for the Kinde API steps.
+
+### Bulk import only
+
+Simplest option. Export users, import into Kinde, switch. No API integration needed.
+
+1. Export users using the portal or Graph API.
+2. Re-import before cutover to catch any new registrations.
+3. Follow the [bulk import guide](/get-started/switch-to-kinde/migrate-users-bulk-import/).
+4. Users set a new password or sign in via passwordless on first sign-in.
+
+### Hard cutover (maintenance window)
+
+For the cleanest cutover when a short service interruption is acceptable:
+
+1. Block new registrations in Azure B2C (not logins — since passwords aren't migrated, existing logins don't affect the migration).
+2. Export all users.
+3. Import into Kinde via [bulk import](/get-started/switch-to-kinde/migrate-users-bulk-import/).
+4. Switch to Kinde.
+5. Users set a new password or sign in via passwordless on first sign-in.
+
+## Next steps
+
+- If using drip-feed, monitor the workflow logs to confirm users are migrating successfully.
+- Once migration traffic from Azure B2C drops to zero, disable the workflow and decommission your Azure B2C tenant.
+- Notify users of the change before go-live — especially that they will need to verify their email or set a new password on first sign-in.
+
+## Get support
+
+If you need help with your migration, contact [Kinde support.](https://kinde.com/support)

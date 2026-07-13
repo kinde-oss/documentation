@@ -39,6 +39,9 @@ keywords:
   - certificate
   - private key
   - JIT provisioning
+  - metadata URL
+  - metadata hosting
+  - XML
 updated: 2026-04-20
 ai_summary: "Kinde acts as a SAML service provider (SP), requiring an external identity provider (IdP) such as Google, Microsoft, or Cloudflare. Before setup, users can be provisioned via bulk import, API, manual entry, or just-in-time (JIT) provisioning during connection setup. Security can optionally be increased by adding a signed certificate and private key pair (generated via OpenSSL or obtained from the IdP). To configure the connection, provide a unique Entity ID (must match exactly in both Kinde and the IdP; older Microsoft Azure apps may need an `spn:` prefix), the IdP metadata URL, sign-in URL, sign request algorithm, protocol binding, and Name ID format. The Email Key Attribute should always be set to ensure correct email retrieval from the SAML response. Home realm domains route users to the correct sign-in page and must be unique across all connections. The ACS URL (or custom domain URL) must be copied into the IdP configuration. JIT provisioning auto-creates user records on first sign-in. Upstream parameters can optionally be passed to the IdP if supported. Once configured, enable the connection, assign it to apps or organizations, save, and test by attempting a sign-in through the application."
 ---
@@ -98,9 +101,17 @@ Depending on your SAML set up, you may need to include advanced configurations f
 3. If Microsoft is your provider and your app is a bit older, you may need to add `spn:` to the beginning of the **Entity ID** string in Kinde, e.g. `spn:5836g209gbhw09r8y0913`. This is not required for newly created apps.
 4. Enter the **IdP metadata URL**. This URL comes from your identity provider.
 
-   ![optional fields for saml](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4f1851db-5c34-496b-ced1-07c1cd272b00/public)
+
+   <Aside title="No metadata URL? Host the XML file yourself">
+
+   If your identity provider gives you the SAML metadata as an XML file but does not provide a hosted metadata URL, upload the file to a publicly accessible location such as an [AWS S3](https://aws.amazon.com/s3/) bucket, [Cloudflare R2](https://developers.cloudflare.com/r2/), a [GitHub Gist](https://docs.github.com/en/get-started/writing-on-github/editing-and-sharing-content-with-gists/creating-gists/), or any public website. Then enter that file's URL in the **IdP metadata URL** field. Kinde reads the file from this URL so your signing certificates stay up to date.
+
+   </Aside>
 
 5. Enter a **sign in URL** if your IdP requires a specific URL.
+ 
+   ![optional fields for saml](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4f1851db-5c34-496b-ced1-07c1cd272b00/public)
+
 6. If you want, select the **Sign request algorithm** and **Protocol binding**. The options you choose will depend on what your identity provider prefers or requires.
 7. Select a **Name ID** format. This helps identify and link user identities between your IdP and Kinde. 
 8. Enter an **Email key attribute**. This is the attribute in the SAML token that contains the user’s email. Setting this value ensures that the email address returned in the SAML response is correctly retrieved. We do not recommend leaving this field blank, but if you do we will set ‘email’ as the attribute.

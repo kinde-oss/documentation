@@ -1,21 +1,22 @@
 ---
 page_id: 7fe91aba-930c-4a63-8996-85af6bb605a7
 title: Add and manage webhooks
-description: Guide to adding and managing webhooks in Kinde including security setup, trigger configuration, API management, and local testing with proxy tools
+description: "Add and manage Kinde webhooks—configure event triggers, secure JWT payloads, use the Management API, and test locally"
 sidebar:
   order: 2
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 84581694-59d6-4a02-ab8b-c7a2889713d5
   - 95bf5e04-3415-4dc8-9ff6-953171df3f8b
-tableOfContents:
-  maxHeadingLevel: 3
 app_context:
   - m: settings
     s: webhooks
 topics:
   - integrate
   - webhooks
-sdk: []
+sdk:
+  - kinde-management-api
 languages:
   - javascript
   - jwt
@@ -26,17 +27,16 @@ complexity: intermediate
 keywords:
   - webhook management
   - webhook triggers
+  - passkey webhooks
   - authentication webhooks
   - user management webhooks
   - billing webhooks
   - jwt validation
-  - local testing
-  - ngrok
-  - localtunnel
-updated: 2026-02-03
+  - local webhook testing
+updated: 2026-06-19
 featured: false
 deprecated: false
-ai_summary: Guide to adding and managing webhooks in Kinde including security setup, trigger configuration, API management, and local testing with proxy tools.
+ai_summary: "Guide to adding and managing webhooks in Kinde through the dashboard and Kinde Management API. Covers webhook security including JWT-signed payloads and JWKS validation, plus the Kinde webhooks decoder package for JavaScript backends. Explains how to add, edit, and delete webhooks in Settings > Environment > Webhooks, and lists available webhook triggers by category: authentication (organization.created, user.created, user.authenticated, and others), passkey (passkey.added and passkey.removed), user management (roles, permissions, organizations, users), and billing (customer plan and payment events). Includes Management API endpoints for creating, updating, deleting, and listing webhooks and events. Notes that user.created does not fire on user import. Covers local testing with proxy tools such as localtunnel, ngrok, and webhook.site. Intended for developers and admins integrating Kinde event notifications."
 ---
 
 <Aside type="warning">
@@ -45,9 +45,9 @@ If you are experiencing issues with webhooks, it could be because the webhook re
 
 </Aside>
 
-Webhooks are outbound calls that are sent from Kinde when a specified event occurs. Calls are sent using HTTPS REST calls to a verified external URL you specify.
+Webhooks are outbound HTTPS requests that Kinde sends when a specified event occurs. Each request is delivered to an external URL you configure.
 
-Use Kinde’s webhooks to create triggers and push event data to your other systems and applications.
+Use Kinde webhooks to subscribe to event triggers and push event data to your other systems and applications.
 
 <Aside type="upgrade">
 
@@ -59,51 +59,55 @@ Webhook limits apply if you are on the Kinde free plan. [See all plans](https://
 
 Webhook request payloads are signed and sent as a JSON Web Token (JWT) from Kinde.
 
-If you’re using a library to validate your JWTs, it will require the URL for your public JSON Web Key (also known as a `JWKS` file). The JWKS file can be found at `https://<your_subdomain>.kinde.com/.well-known/jwks`
+If you're using a library to validate JWTs, you'll need the URL for your public JSON Web Key Set (JWKS). The JWKS file is available at `https://<your_subdomain>.kinde.com/.well-known/jwks`.
 
-If you are using a JavaScript backend, you can use the [Kinde webhooks decoder](https://www.npmjs.com/package/@kinde/webhooks) to decode and verify the JWT, outlined in the [webhooks decoder](/integrate/webhooks/about-webhooks#webhooks-decoder) section.
+If you're using a JavaScript backend, you can use the [Kinde webhooks decoder](https://www.npmjs.com/package/@kinde/webhooks) to decode and verify the JWT. See the [webhooks decoder](/integrate/webhooks/about-webhooks#webhooks-decoder) section for details.
 
-## Add a webhook
+## Manage webhooks in Kinde dashboard
 
-1. Go to **Settings > Webhooks**.
+### Add a webhook
+
+1. Go to **Settings > Environment > Webhooks**.
 2. Select **Add webhook**.
-3. Give the webhook a name and enter a description so it’s clear what it’s for.
+3. Give the webhook a name and enter a description so its purpose is clear.
 4. Enter the external URL.
 5. Select the event triggers. You can choose from a number of triggers and categories. See below for definitions.
 
-## Edit a webhook
+### Edit a webhook
 
-1. Go to **Settings > Webhooks**.
+1. Go to **Settings > Environment > Webhooks**.
 2. Select the webhook name to open the details window.
 3. Update events and triggers.
 4. Select **Save**.
 
-## Delete a webhook
+### Delete a webhook
 
-1. Go to **Settings > Webhooks**.
+1. Go to **Settings > Environment > Webhooks**.
 2. Select the three-dot menu next to the webhook you want to delete.
 3. Select **Delete webhook**. A confirmation message appears.
 4. Confirm you want to delete the webhook.
 
 ## Manage webhooks via the Kinde API
 
-Everything you can do in Kinde’s UI with webhooks, you can also do through the Kinde API using these endpoints.
+Everything you can do with webhooks in the Kinde dashboard, you can also do through the Kinde API using these endpoints.
 
-- `POST api/v1/webhooks` - create a webhook
-- `PATCH api/v1/webhook/{webhook_id}` - update a webhook
-- `DELETE api/v1/webhook/{webhook_id}` - delete a webhook
-- `GET api/v1/webhooks` - list of available webhooks
+- `GET /api/v1/webhooks` — list available webhooks
+- `POST /api/v1/webhooks` — create a webhook
+- `PATCH /api/v1/webhooks/{webhook_id}` — update a webhook
+- `DELETE /api/v1/webhooks/{webhook_id}` — delete a webhook
 
 Events can also be retrieved using:
 
-- `GET /api/v1/events/{event_id}` - get an event by the event_id provided in a webhook
-- `GET /api/v1/event_types` - list the available event types
+- `GET /api/v1/event_types` — list available event types
+- `GET /api/v1/events/{event_id}` — get an event by its event_id from a webhook payload
+
+Learn more in the [Kinde Management API reference](/kinde-apis/management).
 
 ## Webhook triggers
 
 ### Authentication webhooks
 
-```jsx
+```text
 organization.created;
 user.created;
 user.authentication_failed;
@@ -112,9 +116,16 @@ subscriber.created;
 access_request.created;
 ```
 
+### Passkey webhooks
+
+```text
+passkey.added;
+passkey.removed;
+```
+
 ### User management webhooks
 
-```jsx
+```text
 role.created;
 role.updated;
 role.deleted;
@@ -129,7 +140,7 @@ user.deleted;
 
 ### Billing webhooks
 
-```jsx
+```text
 customer.agreement_cancelled;
 customer.agreement_created;
 customer.invoice_overdue;
@@ -143,18 +154,18 @@ customer.plan_changed;
 
 <Aside>
 
-The `user.created` trigger does not create a call when you import users
+The `user.created` trigger does not fire when you import users.
 
 </Aside>
 
-## Testing webhooks locally
+## Test webhooks on your local machine
 
-In order to use webhooks, you need a publicly available URL. To test locally you need to use a proxy to expose your local instance on the internet.
+To use webhooks, you need a publicly available URL. To test locally, use a proxy to expose your local instance on the internet.
 
-Here are a couple of free tools to help you to do this.
+Here are a couple of free tools to help you do this.
 
-- [localtunnel](https://theboroer.github.io/localtunnel-www/) - fast and easy, we recommend using the `--subdomain` attribute to fix the issued subdomain.
-- [Ngrok](https://ngrok.com/) - for intermediate users, requires some dev experience to get set up.
+- [localtunnel](https://theboroer.github.io/localtunnel-www/) — fast and easy; we recommend using the `--subdomain` attribute to fix the issued subdomain.
+- [ngrok](https://ngrok.com/) — for intermediate users; requires some development experience to set up.
 
 Each of these services exposes a local port through a public URL that can be set as your webhook endpoint.
 
