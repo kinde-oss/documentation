@@ -39,6 +39,58 @@ deprecated: false
 ai_summary: How to let users switch authentication connections from a custom UI page using Kinde page context and data-kinde-change-connection attributes.
 ---
 
+Let users switch authentication types within your custom UI page mid-flow.
+
+## Full code example
+
+```jsx title="page.tsx"
+export default async function Page(event) {
+  const { connections, actions, session } = event.context;
+  const available = connections?.available ?? [];
+  const switchAction = actions?.switchConnection;
+  const psid = session?.pipelineStepId;
+
+  return (
+    <div data-kinde-root>
+      <h1>Choose how to continue</h1>
+      <ul>
+        {available.map((connection) => (
+          <li key={connection.id}>
+            <button
+              type="button"
+              data-kinde-change-connection-button="true"
+              data-kinde-change-connection-id={connection.id}
+              data-kinde-change-connection-psid={psid}
+              data-kinde-change-connection-action={JSON.stringify(switchAction)}
+            >
+              Continue with {connection.name}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+### Pre-fill an identifier when switching
+
+If the user has already typed an email or username, pass it with `data-kinde-change-connection-login-hint` so the target connection's form is pre-filled:
+
+```jsx
+data-kinde-change-connection-login-hint={enteredEmail}
+```
+
+For credential connections (for example email + password), Kinde carries the entered credential into the credential screen automatically, so the user does not re-type it.
+
+<Aside>
+
+The connection switch is submitted as a secure `POST`, not a client-side redirect, so the browser back button and the user's session state stay consistent.
+
+</Aside>
+
+
+
 When you build your own sign-up and sign-in UI with Kinde page customization, you can let people switch to a different authentication connection from within your page — for example, from an email form to "Continue with Google", or between two enterprise connections. Kinde handles the switch server-side and returns the user to the right next step.
 
 You do not need to add any script. Kinde automatically loads the connection-switch behaviour on custom UI pages. Your job is to render the buttons and tag them with the `data-kinde-change-connection-*` attributes described below.
@@ -118,51 +170,3 @@ Tag each connection button with the connection-switch data attributes. Kinde rea
 | `data-kinde-change-connection-action` | Yes | The switch action as a JSON string: `JSON.stringify(context.actions.switchConnection)`. |
 | `data-kinde-change-connection-auth-intent` | No | `"sign_in"` (default) or `"sign_up"`. Controls whether the target connection continues as a sign-in or sign-up. |
 | `data-kinde-change-connection-login-hint` | No | Pre-fills the identifier (email or username) on the target connection. |
-
-## Full example
-
-```jsx
-export default async function Page(event) {
-  const { connections, actions, session } = event.context;
-  const available = connections?.available ?? [];
-  const switchAction = actions?.switchConnection;
-  const psid = session?.pipelineStepId;
-
-  return (
-    <div data-kinde-root>
-      <h1>Choose how to continue</h1>
-      <ul>
-        {available.map((connection) => (
-          <li key={connection.id}>
-            <button
-              type="button"
-              data-kinde-change-connection-button="true"
-              data-kinde-change-connection-id={connection.id}
-              data-kinde-change-connection-psid={psid}
-              data-kinde-change-connection-action={JSON.stringify(switchAction)}
-            >
-              Continue with {connection.name}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-```
-
-## Pre-fill an identifier when switching
-
-If the user has already typed an email or username, pass it with `data-kinde-change-connection-login-hint` so the target connection's form is pre-filled:
-
-```jsx
-data-kinde-change-connection-login-hint={enteredEmail}
-```
-
-For credential connections (for example email + password), Kinde carries the entered credential into the credential screen automatically, so the user does not re-type it.
-
-<Aside>
-
-The connection switch is submitted as a secure `POST`, not a client-side redirect, so the browser back button and the user's session state stay consistent.
-
-</Aside>
