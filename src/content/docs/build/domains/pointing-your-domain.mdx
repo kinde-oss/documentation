@@ -42,7 +42,7 @@ keywords:
   - auth endpoint
   - domain provisioning
   - KINDE_ISSUER_URL
-updated: 2026-05-13
+updated: 2026-07-13
 featured: false
 deprecated: false
 ai_summary: "This guide explains how to configure a custom domain for your Kinde business. It covers the full setup: adding your custom domain in the Kinde dashboard, creating CNAME DNS records with your domain provider, and monitoring the verification and SSL provisioning process. Advanced topics include configuring CAA records to authorize both ZeroSSL (sectigo.com) and Let's Encrypt for certificate issuance, adding the custom domain to social sign-in provider apps so the sign-in form reflects your brand, and handling multi-level subdomains that require additional DNS entries. Troubleshooting guidance covers common DNS formatting tips, how to confirm the custom domain appears in your application's App keys, and how to update environment variables such as KINDE_ISSUER_URL to point to the custom domain. The FAQ section addresses provisioning time (5 minutes to a few hours), the benefits of using a custom domain (seamless user experience, first-party cookies for SPAs, branding), when to keep using the Kinde domain (Management API and machine-to-machine apps), why the challenge DNS record must stay after verification for SSL renewal, and local domain support limitations."
@@ -65,7 +65,7 @@ This is a guide for setting up a custom domain for your Kinde business. If you a
 
 1. Go to your Kinde dashboard > **Settings > Environment > Custom domains**.
 2. Select **Add custom domain**.
-3. In the dialog, enter your custom domain. Be sure to include the subdomain, for example `auth.mysite.com`.
+3. In the dialog, enter your custom domain. Be sure to include the subdomain, for example `auth.your_business.com`.
 4. Select **Save**. DNS details appear.
 5. Copy the CNAME records for your domain control panel. See the next step.
 
@@ -103,11 +103,11 @@ DNS settings vary from provider to provider. Here are the general steps:
 
 Once you have created the DNS entries, Kinde will start the verification process. This can take anywhere from a few minutes to a couple of hours. You will see **Provisioning in progress** next to your custom domain:
 
-    ![Custom domain provisioning in progress in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/bfbfa604-01c4-4558-e993-ac0521adcc00/socialsharingimage)
+    ![Custom domain provisioning in progress in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9e8eeda1-978b-4512-8f73-518f939fef00/socialsharingimage)
 
 When it completes, the verification status will change to **Provisioned** and an SSL certificate will be provisioned. 
 
-    ![Custom domain provisioned with SSL in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ac49f8f6-bc18-46c2-d692-5cf770410e00/socialsharingimage)
+    ![Custom domain provisioned with SSL in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/826c27f1-503f-46d3-3e2f-119d46ca3700/socialsharingimage)
 
 Your domain will then be used instead of Kinde’s. You will also receive an email notification when the process is complete.
 
@@ -115,7 +115,7 @@ Your domain will then be used instead of Kinde’s. You will also receive an ema
 2. Select **Details**.
 3. The custom domain will be listed under **App keys** section.
 
-    ![Custom domain listed under App keys in application details](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/df6c1dad-e7a7-47a5-0b08-75d8c00b3600/socialsharingimage)
+    ![Custom domain listed under App keys in application details](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4228326b-d8d3-412a-1941-fd67cdc35300/socialsharingimage)
 
 Your next step is to update your code to use the custom domain.
 
@@ -123,16 +123,16 @@ If you encounter any errors during the setup, see the troubleshooting tips below
 
 ## Advanced setup
 
-### CAA records
+### CAA records (if you use them)
 
 If your domain has **CAA (Certificate Authority Authorization)** records, they restrict which certificate authorities can issue SSL certificates for your domain. Kinde provisions and renews certificates using **ZeroSSL** and **Let's Encrypt**, so you must allow both in your CAA records or certificate issuance will fail.
 
-Add CAA records that authorize both providers. For your custom domain (or the subdomain you use, e.g. `account`), add two CAA records like this:
+Add CAA records that authorize both providers. For your custom domain (or the subdomain you use, e.g. `auth`), add two CAA records like this:
 
 | Host | Record type | Value |
 |------|-------------|--------|
-| `account` (or your subdomain) | CAA | `0 issue "sectigo.com"` |
-| `account` (or your subdomain) | CAA | `0 issue "letsencrypt.org"` |
+| `auth` (or your subdomain) | CAA | `0 issue "sectigo.com"` |
+| `auth` (or your subdomain) | CAA | `0 issue "letsencrypt.org"` |
 
 - **ZeroSSL** uses the CA domain **sectigo.com**
 - **Let's Encrypt** uses the CA domain **letsencrypt.org**
@@ -147,15 +147,15 @@ When you use social connections to authenticate users, you need to add the callb
 
 If you haven't set this up, follow these instructions for the [relevant social provider](/authenticate/social-sign-in/add-social-sign-in/).
 
-If you already have social auth set up, make sure you add the custom domain callback (e.g. `account.example.com/login/callback`) as an authorized redirect URI in the provider app.
+If you already have social auth set up, make sure you add the custom domain callback (e.g. `auth.your_business.com/login/callback`) as an authorized redirect URI in the provider app.
 
 ### Using multi-level subdomains
 
-If you are using a multi-level subdomain, like `multi.subdomain.example.com`, how you set up DNS records will depend on how your zones are set up.
+If you are using a multi-level subdomain, like `multi.subdomain.your_business.com`, how you set up DNS records will depend on how your zones are set up.
 
 The details provided in the admin console assume the domain entered is adding a single level to your DNS zone, but if you are adding more than one level you’ll need to create others.
 
-So if your business is `multi.subdomain.example.com` and your zone is `example.com`, you need to create a DNS entry for `multi.subdomain`, as well as for `_acme-challenge.multi.subdomain`.
+So if your business is `multi.subdomain.your_business.com` and your zone is `your_business.com`, you need to create a DNS entry for `multi.subdomain`, as well as for `_acme-challenge.multi.subdomain`.
 
 ![Multi-level subdomain DNS records](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ee01b968-bea8-4082-7680-cde0522fbf00/public)
 
@@ -165,21 +165,21 @@ There are many different ways people manage multi-level domains and zones, and u
 
 ### Custom domain tips
 
-- Name your custom domain. It needs to include a subdomain for this procedure to work. Common subdomain names include `account`, `id`, or `auth`, e.g. `account.example.com`.
+- Name your custom domain. It needs to include a subdomain for this procedure to work. Common subdomain names include `account`, `id`, or `auth`, e.g. `auth.your_business.com`.
 - Make sure your application is configured to use the exact custom domain. This includes updating the environment variables and any relevant configuration files. For example, the `KINDE_ISSUER_URL` needs to be updated to the custom domain.
 - Ensure that the callback and logout redirect URLs in your Kinde settings are updated with the custom domain. This can be done in the Kinde dashboard under **Settings > Applications > [your app] > View details**.
 
 ### Domains and auth endpoints
 
-Auth endpoints are available for both custom domains and your Kinde subdomain. You can get tokens from either endpoint, but they are not interchangeable. For example, if you get an ID and access token from `account.example.com`, it cannot be used with `mydomain.kinde.com`.
+Auth endpoints are available for both custom domains and your Kinde subdomain. You can get tokens from either endpoint, but they are not interchangeable. For example, if you get an ID and access token from `auth.your_business.com`, it cannot be used with `your_business.kinde.com`.
 
 ### Tips for the DNS set up
 
 When you create the DNS records for linking your own domain to Kinde, be sure to match the format you have used above.
 
-For example, if your custom domain is `account.example.com`, then:
+For example, if your custom domain is `auth.your_business.com`, then:
 
-- **Host**: `account`
+- **Host**: `auth`
 - **Record type**: `CNAME`
 - **Value**: "Value from Kinde" (e.g., `au.kinde.com.`)
 - **TTL**: Leave as default
@@ -195,7 +195,7 @@ The verification process can take anywhere from 5 minutes to a few hours, depend
 
 Using a custom domain on Kinde gives your users a seamless experience, improves branding, and helps with security.
 
-By default, Kinde issues a Kinde subdomain when you first register. But for your production environment you can use your own custom domain instead of Kinde’s as your URL. For example, `auth.mysite.com` instead of `mysite.kinde.com`.
+By default, Kinde issues a Kinde subdomain when you first register. But for your production environment you can use your own custom domain instead of Kinde’s as your URL. For example, `auth.your_business.com` instead of `your_business.kinde.com`.
 
 Here's why you might want to use a custom domain:
 
