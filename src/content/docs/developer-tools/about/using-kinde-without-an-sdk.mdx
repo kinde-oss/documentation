@@ -33,7 +33,7 @@ keywords:
   - OAuth scopes
   - route protection
   - callback URL
-updated: 2026-07-02
+updated: 2026-07-13
 featured: false
 deprecated: false
 ai_summary: "This guide explains how to integrate Kinde authentication into any language or framework without using an official SDK, relying on OAuth 2.0 and OpenID Connect standards. A nine-step quickstart walks through creating a Kinde application, configuring callback URLs, and implementing either the Authorization Code Flow for server-rendered back-end apps or Authorization Code Flow with PKCE for single-page and mobile public clients. It covers generating PKCE code verifiers and challenges, building authorization URLs, handling callbacks with state validation to prevent CSRF, exchanging authorization codes for tokens, and decoding the id_token for user profile data. Dedicated sections explain why each grant type is used and which app types they suit. The guide describes two-layer route protection combining frontend token expiry checks with backend RS256 JWT verification against the JWKS endpoint, silent access token refresh using refresh tokens, user sign-out via the Kinde logout endpoint, and generating self-serve portal links via the Account API. A full reference documents supported OAuth scopes and request parameters including prompt, login_hint, org_code, nonce, and audience. FAQs address why the Implicit Flow is not supported and when to use the userinfo endpoint versus decoding the id_token. Intended for developers building custom OAuth integrations."
@@ -123,7 +123,9 @@ Replace `<YOUR_DOMAIN>` with either your custom domain (e.g., `auth.yourbusiness
   <TabItem label="Backend application">
     2. In your app, generate a random `state` value:
 
-        ```js title="JavaScript example"
+        ```js title="Node.js example"
+        import crypto from 'node:crypto';
+
         const state = crypto.randomBytes(32).toString('hex');
         ```
 
@@ -143,20 +145,39 @@ Replace `<YOUR_DOMAIN>` with either your custom domain (e.g., `auth.yourbusiness
   <TabItem label="SPAs and mobile apps">
     2. In your app, generate a random `state` value, a `code_verifier`, and derive a `code_challenge` from it:
 
-        ```js title="JavaScript example"
-        const state = crypto.randomBytes(32).toString('hex');
-        
+        ```js title="Browser JavaScript example"
+        function base64UrlEncode(buffer) {
+          const bytes = new Uint8Array(buffer);
+          let binary = '';
+          for (const byte of bytes) {
+            binary += String.fromCharCode(byte);
+          }
+          return btoa(binary)
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+        }
+
+        const stateBytes = new Uint8Array(32);
+        crypto.getRandomValues(stateBytes);
+        const state = Array.from(stateBytes, (b) =>
+          b.toString(16).padStart(2, '0')
+        ).join('');
+
         // 64 random bytes, base64url-encoded = 86-char code_verifier
-        const codeVerifier = crypto.randomBytes(64).toString('base64url');
+        const verifierBytes = new Uint8Array(64);
+        crypto.getRandomValues(verifierBytes);
+        const codeVerifier = base64UrlEncode(verifierBytes);
 
         // SHA-256 hash of the verifier, base64url-encoded = code_challenge
-        const codeChallenge = crypto
-          .createHash('sha256')
-          .update(codeVerifier)
-          .digest('base64url');
+        const digest = await crypto.subtle.digest(
+          'SHA-256',
+          new TextEncoder().encode(codeVerifier)
+        );
+        const codeChallenge = base64UrlEncode(digest);
         ```
 
-        Store `state` and `code_verifier` in `sessionStorage` — you will need them when the user returns to the callback URL.
+        Store `state` and `code_verifier` in `sessionStorage` (for SPAs) and secure device storage (Keychain/Keystore) for mobile apps— you will need them when the user returns to the callback URL.
 
     3. Send the user to Kinde's authorization endpoint with the state and PKCE parameters included in the URL:
 
