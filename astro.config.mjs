@@ -62,6 +62,8 @@ export default defineConfig({
       "/design/content-customization/set-language-for-pages/",
     "/design/pages/internationalization/":
       "/design/content-customization/set-language-for-pages/",
+    "/get-started/guides/start-with-starter-kit/":
+      "/get-started/guides/byo-code/",
     
     // Section-level redirects to prevent 404s when users truncate URLs
     "/authenticate/":

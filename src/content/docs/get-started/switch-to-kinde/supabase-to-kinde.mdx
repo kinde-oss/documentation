@@ -1,0 +1,138 @@
+---
+page_id: 71acd8f5-eef5-4ebe-a1b0-2a1beeac32a0
+title: Migrate to Kinde from Supabase
+sidebar:
+  order: 5
+  label: Supabase
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - c4bc277a-5ec7-418c-ba1c-4d58c9ddfd7d
+  - f6eaf29b-d8d9-4caf-bc1d-5319b6fb8ffc
+  - 8b3e1d47-2f96-4a0c-c8d5-6e7a2b9f3150
+  - e89d246a-5cdf-4993-9cee-94b31ec27583
+description: Export users and hashed passwords from Supabase Auth and import them into Kinde. Supabase uses bcrypt, which Kinde supports natively — users keep their existing passwords.
+topics:
+  - get-started
+  - switch-to-kinde
+sdk: []
+languages:
+  - sql
+  - csv
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - supabase migration
+  - supabase to kinde
+  - migrate from supabase
+  - supabase auth export
+  - supabase auth users
+  - user import
+  - password migration
+  - hashed passwords
+  - bcrypt
+  - csv import
+  - csv column mapping
+  - bulk import
+  - sql export
+  - social login migration
+updated: 2026-05-05
+featured: false
+deprecated: false
+ai_summary: "Step-by-step guide for migrating users from Supabase Auth to Kinde using a bulk CSV import. Supabase stores passwords as bcrypt hashes in the auth.users table, which is not accessible via the standard API. Users are exported by running a SQL query in the Supabase SQL Editor — selecting id, email, encrypted_password, email_verified (derived from email_confirmed_at), and name fields from raw_user_meta_data. The exported CSV requires one column rename (encrypted_password to hashed_password) and a new hashing_method column set to bcrypt for every row. Social and OAuth users stored in auth.identities can be imported by email and will re-link their social login on first sign-in. The prepared CSV is imported in Kinde via Users > Import users > Custom CSV. Password authentication must be enabled in Kinde before importing hashed passwords. Links to the full bulk import guide for additional CSV fields covering organizations, roles, and permissions."
+---
+
+Migrate your users from Supabase Auth to Kinde. Supabase stores passwords as bcrypt hashes, and Kinde supports bcrypt natively — your users can sign in with their existing passwords with no reset required.
+
+### What you need
+
+- A Kinde account with **Admin** access 
+- Kinde account configured to match your current auth provider - see [before you migrate](/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/#before-you-migrate)
+- Supabase account with SQL editor permissions
+
+## Key considerations
+
+- **bcrypt passwords are fully supported** — Kinde imports bcrypt hashes directly. Users keep their existing password.
+- **Export via SQL** — Supabase Auth data lives in the `auth.users` table, which isn't exposed via the standard API. You export users by running a SQL query in the Supabase dashboard.
+- **Social/OAuth identities are separate** — users who signed in via Google, GitHub, etc. are stored in the `auth.identities` table. These users can be imported by email and will be prompted to re-link their social login on first sign-in.
+- **`raw_user_meta_data` varies by app** — the structure of this field depends on what your app stores. Check it in the SQL editor before building your export query.
+
+## Migration guide
+
+### 1. Export users from Supabase
+
+1. Sign in to your [Supabase dashboard](https://app.supabase.com/) and select your project.
+2. Go to **SQL Editor** in the sidebar.
+3. Run the following query:
+
+    ```sql
+    SELECT
+      id,
+      email,
+      encrypted_password AS hashed_password,
+      CASE WHEN email_confirmed_at IS NOT NULL THEN 'TRUE' ELSE 'FALSE' END AS email_verified,
+      raw_user_meta_data->>'first_name' AS first_name,
+      raw_user_meta_data->>'last_name'  AS last_name
+    FROM auth.users
+    WHERE email IS NOT NULL;
+    ```
+
+4. In the results panel, set the row limit to **No Limit** so all users are returned.
+5. Select **Export** and choose **Download CSV**.
+
+<Aside>
+
+If your app stores names under different keys in `raw_user_meta_data` (e.g. `full_name` or `name`), adjust the query to match. Run `SELECT DISTINCT raw_user_meta_data FROM auth.users LIMIT 5;` to inspect the structure first.
+
+</Aside>
+
+### 2. Prepare the CSV for Kinde
+
+The SQL query exports columns that mostly match Kinde's expected names. Rename the one that differs and add the `hashing_method` column.
+
+| Supabase column | Rename to | Notes |
+|---|---|---|
+| `email` | `email` | Required — primary sign-in identifier |
+| `id` | `id` | Keep as-is |
+| `email_verified` | `email_verified` | Keep as-is — `TRUE` or `FALSE` |
+| `first_name` | `first_name` | Keep as-is |
+| `last_name` | `last_name` | Keep as-is |
+| `encrypted_password` | `hashed_password` | bcrypt hash — preserves existing passwords |
+| *(new column)* | `hashing_method` | Add this column and set every row to `bcrypt` |
+
+For the full list of supported CSV fields — including organizations, roles, and permissions — see [Prepare your CSV](/get-started/switch-to-kinde/migrate-users-bulk-import/#3-prepare-your-csv) in the bulk import guide.
+
+<Aside title="Enable password authentication first">
+
+If you are importing hashed passwords, enable password authentication in Kinde before importing. See [Password authentication](/authenticate/authentication-methods/password-authentication/).
+
+</Aside>
+
+Your final CSV should look like this:
+
+```text
+id,email,first_name,last_name,email_verified,hashed_password,hashing_method
+abc-123,bills@company.com,Bill,Smith,TRUE,$2a$10$examplehash,bcrypt
+def-456,carlosg@company.com,Carlos,Garcia,TRUE,$2a$10$examplehash,bcrypt
+```
+
+### 3. Import into Kinde
+
+1. In Kinde, go to **Users**, then select **Import users**.
+2. Select **Custom CSV**.
+3. Follow the on-screen prompts to upload your file.
+4. Review any errors reported after import. Fix the CSV and re-import to resolve them.
+
+See the [bulk import guide](/get-started/switch-to-kinde/migrate-users-bulk-import/) to learn more.
+
+### 4. Test the migration
+
+1. Sign in to Kinde with a user from your Supabase export.
+2. Verify they can sign in with their existing Supabase credentials.
+3. Notify users of any changes to their sign-in experience before going live.
+
+## Get support
+
+If you need help with your migration, contact [Kinde support.](https://kinde.com/support)
