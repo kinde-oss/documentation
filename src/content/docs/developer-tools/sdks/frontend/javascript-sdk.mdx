@@ -1,7 +1,7 @@
 ---
 page_id: 08415f77-cd58-498d-b3b2-d1cdda162153
 title: JavaScript SDK
-description: "Complete guide for the Kinde JavaScript (PKCE) SDK covering setup, authentication, getAccessToken() for API calls, background token refresh, organizations, permissions, feature flags, and API references."
+description: "Complete guide for the Kinde JavaScript (PKCE) SDK covering setup, authentication, getAccessToken() for API calls, invitations, the self-serve portal, background token refresh, organizations, permissions, feature flags, and API references."
 sidebar:
   order: 3
 tableOfContents:
@@ -35,10 +35,12 @@ keywords:
   - getAccessToken
   - refresh tokens
   - JWT
-updated: 2026-07-10
+  - portal
+  - invitations
+updated: 2026-07-14
 featured: false
 deprecated: false
-ai_summary: Complete guide for the Kinde JavaScript (PKCE) SDK for single-page apps, covering setup with the starter kit or an existing project, createKindeClient configuration, login/register/logout flows, user profile helpers, and calling your API with getAccessToken() (getToken() is deprecated). Explains background access-token refresh on init, pre-expiry timers, and tab focus; session persistence via custom domains or is_dangerously_use_local_storage for local dev; organizations, permissions, feature flags, audience and scope; FAQs; and full createKindeClient and kindeClient API references.
+ai_summary: Complete guide for the Kinde JavaScript (PKCE) SDK for single-page apps, covering setup with the starter kit or an existing project, createKindeClient configuration, login/register/logout flows, invitations, the self-serve portal, user profile helpers, and calling your API with getAccessToken() (getToken() is deprecated). Explains background access-token refresh on init, pre-expiry timers, tab focus, and multi-tab sync; session persistence via custom domains or is_dangerously_use_local_storage for local dev; organizations, permissions, feature flags, audience and scope; FAQs; and full createKindeClient and kindeClient API references.
 ---
 
 Kinde JavaScript SDK for single-page JavaScript apps.
@@ -176,6 +178,32 @@ Once your user is redirected back to your site from Kinde, you can set a callbac
     });
     ```
 
+When an existing session is restored on page load (for example after a refresh, when a custom domain or local-storage refresh token is available), use `on_session_restore_callback` instead. It receives the same `user` shape as the redirect callback.
+
+    ```javascript
+    const kinde = await createKindeClient({
+      client_id: "<your_kinde_client_id>",
+      domain: "https://<your_kinde_subdomain>.kinde.com",
+      redirect_uri: window.location.origin,
+      on_session_restore_callback: (user) => {
+        if (user) {
+          // render logged in view
+        }
+      },
+    });
+    ```
+
+### Invitations
+
+To complete an organization or user invitation, pass the invitation code into `login` or `register`:
+
+    ```javascript
+    await kinde.login({ invitation_code: "abc123" });
+    await kinde.register({ invitation_code: "abc123" });
+    ```
+
+If the user lands on your app with `invitation_code` (and related invitation query params) in the URL, the SDK starts the sign-in flow automatically with that code.
+
 ### Log out
 
 This is implemented in much the same way as signing in or registering. The Kinde single-page application client already includes a sign-out method.
@@ -190,6 +218,29 @@ This is implemented in much the same way as signing in or registering. The Kinde
       await kinde.logout();
     });
     ```
+
+You can also pass options to sign the user out of every session, or override the post-logout redirect:
+
+    ```javascript
+    await kinde.logout({
+      allSessions: true,
+      redirectUrl: "https://yourapp.com",
+    });
+    ```
+
+### Self-serve portal
+
+Authenticated users can open the Kinde [self-serve portal](/build/self-service-portal/self-serve-portal-for-users/) with `portal()`. The client redirects them to a one-time portal URL.
+
+    ```javascript
+    document.getElementById("account").addEventListener("click", async () => {
+      await kinde.portal({
+        returnUrl: window.location.origin,
+      });
+    });
+    ```
+
+Optional `subNav` opens a specific portal section (for example `profile` or organization billing pages). See the [portal API reference](#portal).
 
 ## View user profile
 
@@ -211,7 +262,7 @@ The user object:
     }
     ```
 
-Additionally, you can use the `getUserProfile()` async function to request the latest user information from the server.
+Additionally, you can use the `getUserProfile()` async function to request the current user profile after session restore or redirect.
 
     ```javascript
     const user = await kinde.getUserProfile();
@@ -599,6 +650,7 @@ The PKCE client refreshes the access token in these situations:
 - **Initial load:** On client initialization, **`checkAuth`** runs and may refresh when the access token is expired or within about **10 seconds** of expiry. This also applies when you use Kinde’s **httpOnly cookie** refresh flow (custom domain) or local storage for the refresh token (`is_dangerously_use_local_storage`) to restore a session.
 - **After sign-in:** A timer schedules refresh about **10 seconds before** the access token expires. This automatic refresh is **on by default** for sessions established through the SDK’s auth flows.
 - **Returning to the tab:** When the document becomes visible again or the window regains focus, the client attempts a refresh if the access token is expired or close to expiry.
+- **Multi-tab sync:** From SDK **v4.5.0**, token refreshes are coordinated across browser tabs so duplicate refreshes and race conditions are avoided when the same session is open in more than one tab.
 
 With this JavaScript client, calling `getAccessToken()` before API requests is the reliable way to read the token that background refresh has kept up to date. The [React SDK](/developer-tools/sdks/frontend/react-sdk/) uses a similar pattern with `@kinde/js-utils`; see [When does the React SDK refresh tokens silently?](/developer-tools/sdks/frontend/react-sdk/#when-does-the-react-sdk-refresh-tokens-silently).
 
@@ -683,6 +735,28 @@ const kinde = await createKindeClient({
 });
 ```
 
+### `on_session_restore_callback`
+
+A callback function that will be called when an existing authenticated session is restored on page load (not during the OAuth redirect handshake). Use this to rehydrate your UI after a refresh or when opening a new tab with a persisted session.
+
+Type: `function`
+
+Required: No
+
+Usage:
+
+```javascript
+const kinde = await createKindeClient({
+  // ...other options,
+  on_session_restore_callback: (user, appState) => {
+    console.log({user, appState});
+    if (user) {
+      // render logged in view
+    }
+  }
+});
+```
+
 ### `on_error_callback`
 
 A callback function that will be called when an error occurs.
@@ -748,25 +822,28 @@ Constructs the redirect URL and sends the user to Kinde to sign in.
 
 Arguments:
 
-Optional `options` uses `AuthOptions`:
+Optional `options` uses `RedirectOptions` (also accepts the legacy `AuthOptions` fields). You can pass either snake_case or the camelCase style from `@kinde/js-utils`.
 
 ```ts
 type AuthOptions = {
   org_code?: string;
+  invitation_code?: string;
   app_state?: Record<string, unknown>;
-  authUrlParams?: object;
+  authUrlParams?: Record<string, string | number | boolean | bigint | null | undefined>;
 };
 ```
 
 - **`org_code`** — Sign the user in to a specific organization. Pass that organization's Kinde code.
+- **`invitation_code`** — Complete an invitation flow. See [**Invitations**](#invitations).
 - **`app_state`** — Data returned to your app after redirect. Read it from the second argument of `on_redirect_callback` (see **Persisting application state**).
-- **`authUrlParams`** — Optional.
+- **`authUrlParams`** — Optional extra query parameters for the authorize URL.
 
 Usage:
 
 ```jsx
 await kinde.login();
 await kinde.login({ org_code: "org_1234" });
+await kinde.login({ invitation_code: "abc123" });
 await kinde.login({
   app_state: { redirectTo: window.location.pathname },
 });
@@ -778,22 +855,66 @@ Constructs the redirect URL and sends the user to Kinde to sign up.
 
 Arguments:
 
-Same optional `AuthOptions` as [`login`](#login).
+Same optional `RedirectOptions` as [`login`](#login).
 
 Usage:
 
 ```jsx
 await kinde.register();
+await kinde.register({ invitation_code: "abc123" });
 ```
 
 ### `logout`
 
 Logs the user out of Kinde.
 
+Arguments:
+
+Optional `options` as a redirect URL string (legacy) or `LogoutOptions`:
+
+```ts
+type LogoutOptions = {
+  allSessions?: boolean;
+  redirectUrl?: string;
+};
+```
+
+- **`allSessions`** — When `true`, signs the user out of every session.
+- **`redirectUrl`** — Overrides `logout_uri` for where the user lands after sign-out.
+
 Usage:
 
 ```jsx
 await kinde.logout();
+await kinde.logout({
+  allSessions: true,
+  redirectUrl: "https://yourapp.com",
+});
+```
+
+### `portal`
+
+Redirects an authenticated user to the Kinde self-serve portal. The user must be signed in and have a valid access token. Learn more about the [self-serve portal for users](/build/self-service-portal/self-serve-portal-for-users/) and [for organizations](/build/self-service-portal/self-serve-portal-for-orgs/).
+
+Arguments:
+
+```ts
+options?: {
+  returnUrl?: string;
+  subNav?: PortalPage; // e.g. "profile", "organization_details"
+}
+```
+
+- **`returnUrl`** — Where to send the user after they leave the portal. Defaults to the current page URL.
+- **`subNav`** — Optional portal section to open. Values come from the `PortalPage` enum exported by the SDK / `@kinde/js-utils`.
+
+Usage:
+
+```jsx
+await kinde.portal({
+  returnUrl: window.location.origin,
+  subNav: "profile",
+});
 ```
 
 ### `createOrg`
@@ -803,13 +924,14 @@ Constructs the redirect URL and sends the user to Kinde to sign up and create a 
 Arguments:
 
 ```jsx
-options?: OrgOptions
+options?: RedirectOptions
 ```
 
 Usage:
 
 ```jsx
 await kinde.createOrg();
+await kinde.createOrg({ org_name: "Acme" });
 ```
 
 Sample output:
@@ -843,7 +965,7 @@ Use the [Kinde Online JWT decoder](https://www.kinde.com/tools/online-jwt-decode
 
 **Deprecated:** Use [getAccessToken](#getaccesstoken) instead.
 
-May return **`undefined`** with the new auth flow. The legacy implementation attempted a silent refresh when the cached token was missing or inactive; prefer **`getAccessToken()`** with the SDK’s background refresh behavior described above.
+May return **`undefined`** with the new auth flow. The legacy implementation attempted a silent refresh when the cached token was missing or inactive (and still accepts optional `{ isForceRefresh: true }`); prefer **`getAccessToken()`** with the SDK’s background refresh behavior described above.
 
 Type: `Promise<string | undefined>`
 
@@ -863,7 +985,7 @@ For background refresh timing and the difference from the React SDK’s `getAcce
 
 ### `getIdToken`
 
-Returns the raw ID token from memory.
+Returns the raw ID token from memory. Call with no arguments (`getIdToken(options)` is deprecated).
 
 Type: `Promise<string | undefined>`
 
@@ -881,7 +1003,7 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ### `getUser`
 
-Returns the profile for the current user from the client.
+Returns the profile for the current user from the client. Profile fields are `string | undefined` (not `null`).
 
 Type: `KindeUser`
 
@@ -904,7 +1026,7 @@ Sample output:
 
 ### `getUserProfile`
 
-Returns the latest user profile from the server.
+Returns the current user profile (from session / ID token claims via shared Kinde helpers). Prefer this when you need a freshly mapped profile after session restore.
 
 Type: `Promise<KindeUser | undefined>`
 
