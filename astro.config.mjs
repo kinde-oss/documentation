@@ -107,15 +107,13 @@ export default defineConfig({
     "/mcp-server/about-mcp-server/operations-and-scopes/":
       "/mcp-servers/operations-and-scopes/",
     "/mcp-server/get-started/":
-      "/mcp-servers/manage-kinde-account-with-ai-assistants/",
+      "/mcp-servers/manage-kinde-account-with-ai-agents/",
     "/mcp-server/get-started/setup-mcp-server/":
-      "/mcp-servers/manage-kinde-account-with-ai-assistants/",
+      "/mcp-servers/manage-kinde-account-with-ai-agents/",
     "/mcp-server/mcp-connections/":
       "/mcp-servers/add-mcp-connection/",
     "/mcp-server/mcp-connections/expose-apis-to-mcp-clients/":
       "/mcp-servers/add-mcp-connection/",
-    "/mcp-server/manage-kinde-account-with-ai-assistants/":
-      "/mcp-servers/manage-kinde-account-with-ai-assistants/",
     "/mcp-server/operations-and-scopes/":
       "/mcp-servers/operations-and-scopes/",
     "/mcp-servers/about-kinde-mcp-servers/":

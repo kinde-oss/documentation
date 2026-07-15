@@ -133,7 +133,7 @@ const sidebarData = [
   },
   {
     label: "MCP Servers",
-    description: "Expose your APIs to AI assistants, or manage Kinde with the Model Context Protocol",
+    description: "Expose your APIs to AI agents, or manage Kinde with the Model Context Protocol",
     icon: "mcp",
     collapsed: true,
     cardLink: "/mcp-servers/",
