@@ -1,18 +1,20 @@
 ---
 page_id: 1c9f5b72-5c33-4e7c-9a0d-2b7d6e9a1c4f
 title: User-level API keys
-description: Learn how to create and use user-level API keys that carry a trusted user context for B2C apps and per-user integrations.
+description: "Issue user-level API keys with trusted user context for B2C apps, personal scripts, and MCP clients"
 sidebar:
   order: 7
 relatedArticles:
   - 8f7a2b1c-3d4e-4f6a-8b8c-9d0e1f2a3b4c
   - 7d6c5b4a-3f2e-4a0b-8c8d-7e6f5a4b3c2d
   - 3b2a1c0e-9d8f-4a7b-6c5d-3c2d1a0b9c8e
+  - edb34665-0eda-47a1-b8e1-89f705c6ac87
 topics:
   - api-keys
   - key-types
 sdk: []
-languages: []
+languages:
+  - json
 audience:
   - developers
   - admins
@@ -20,12 +22,15 @@ complexity: intermediate
 keywords:
   - user-level api keys
   - b2c
-  - user isolation
-  - api key security
-updated: 2025-08-18
+  - user_id
+  - mcp connections
+  - per-user authorization
+  - personal automations
+  - self-serve api keys
+updated: 2026-07-15
 featured: false
 deprecated: false
-ai_summary: Learn how to create and use user-level API keys that carry a trusted user context, including verification behavior, common use cases, and best practices.
+ai_summary: "Explains user-level API keys in Kinde, which authenticate requests on behalf of a single user and return a trusted user_id in the verification response. Covers benefits for security, simplicity, and self-serve key creation, verification response shape with org_code null and user_id set, and use cases such as B2C data access, personal automations, and AI assistance. Describes using user API keys as credentials for MCP connections, mapping selected scopes to MCP tools, and passing the key as a Bearer token against the MCP connection URL. Includes best practices for naming, minimum scopes, rotation, monitoring, validating user_id, enforcing scopes server-side, and audit logging. Aimed at developers and admins building per-user API access."
 ---
 
 User-level API keys are tied to an individual user account. When verified, these keys return a trusted user context so you can authorize requests on a per-user basis. This is ideal for B2C apps, personal automations, and integrations where actions should be attributed to a specific user.
@@ -87,6 +92,16 @@ Rely on the `user_id` for authorization and auditing within your API. If you nee
 ### AI assistance
 
 - **User-specific retrieval**: Attribute AI actions and retrieval to a user.
+
+## Use with MCP connections
+
+User-level API keys are the credential MCP clients send when connecting to an [MCP connection for your APIs](/mcp-servers/add-mcp-connection/).
+
+- Create a user API key for the **same API** authorized on the connection.
+- Select only the scopes the assistant should call. Each selected scope maps to one MCP tool; tools without a matching scope are hidden from the client.
+- In the MCP client config, pass the key as `Authorization: Bearer <key>` against the connection URL (`https://<your_subdomain>.kinde.com/mcp/<connection-id>`).
+
+Copy-ready snippets are available on the connection’s **Quick start** tab in Kinde.
 
 ## Best practices for user-level API keys
 

@@ -1,0 +1,242 @@
+---
+page_id: edb34665-0eda-47a1-b8e1-89f705c6ac87
+title: Add a new MCP connection
+description: "Create an MCP connection to turn your registered APIs into MCP tools for AI assistants. Authenticate with user API keys and connect Cursor, Claude, VS Code, and other MCP clients."
+sidebar:
+  order: 2
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - 2219e226-2b23-5132-a2a7-c578b1cfb0c1
+  - 51899f7f-3436-46e0-9a1b-6ecc3603a0df
+  - 1c9f5b72-5c33-4e7c-9a0d-2b7d6e9a1c4f
+  - 5d4c3b2a-1e0f-4a9b-8c7d-5e4f3a2b1c0d
+app_context: []
+topics:
+  - mcp-servers
+  - developer-tools
+  - your-apis
+  - api-keys
+sdk: []
+languages: []
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - mcp connections
+  - expose apis to mcp
+  - openapi
+  - user api key
+  - mcp tools
+  - cursor
+  - claude
+  - vs code
+  - model context protocol
+  - founder mcp
+updated: 2026-07-14
+featured: false
+deprecated: false
+ai_summary: Learn how to expose your own APIs to MCP clients like Cursor, Claude, and VS Code. Create an MCP connection from an OpenAPI spec, configure backend authentication, issue a user API key with the right scopes, connect an AI assistant to your unique connection URL, and monitor tool calls in the audit log.
+---
+
+<Aside>
+
+This feature is in beta. Availability depends on your plan and whether MCP connections are enabled for your environment. Contact Kinde if you need access.
+
+</Aside>
+
+You can turn your registered APIs into MCP tools that AI assistants call on behalf of your users. Each **MCP connection** gets a unique URL. Tools come from your API’s OpenAPI spec. Clients authenticate with a **user API key**, and only the scopes on that key determine which tools the assistant can use.
+
+This is different from [managing your Kinde account with AI assistants](/mcp-servers/manage-kinde-account-with-ai-assistants/), which uses an Environment API key against the Kinde Management API. This guide is for exposing **your** APIs.
+
+## What you need
+
+- A Kinde plan that includes the `api_scopes` entitlement
+- MCP connections enabled for your environment (beta feature)
+- A registered **custom** API (not the Kinde Management API) with an active OpenAPI / Swagger spec
+- An OpenAPI `servers[0].url` value that points at a reachable upstream base URL (Kinde uses this when proxying tool calls)
+- Permission to read and update APIs (`read:apis` / `update:apis`)
+
+## How it works
+
+1. You upload an OpenAPI spec for your API. Kinde generates scopes and MCP tool metadata for each operation.
+2. You create an MCP connection and authorize that API.
+3. You configure how Kinde authenticates to your upstream API (for example, pass through the user’s API key, or send a static bearer token).
+4. A user creates a user API key for the authorized API and selects the scopes (tools) they need.
+5. An MCP client connects to `https://<your_subdomain>.kinde.com/mcp/<connection-id>` with that key.
+6. When the assistant calls a tool, Kinde proxies the matching HTTP request to your API and records an audit entry.
+
+## Step 1: Upload an OpenAPI spec
+
+If you have not already imported a spec:
+
+1. Go to **Settings > Environment > APIs** and open your API.
+2. Select **OpenAPI spec**.
+3. Select **Upload file** and choose a JSON or YAML OpenAPI 3.x or Swagger 2 file (maximum 20MB).
+
+Ensure the spec includes a server URL under `servers` (first entry). That URL becomes the base URL for upstream tool calls.
+
+See also [Register and manage APIs](/developer-tools/your-apis/register-manage-apis/).
+
+## Step 2: Create an MCP connection
+
+1. In Kinde, go to **Home > MCP Servers** (Beta) > **Connections**.
+2. Select **Add new connection**.
+3. Enter a **Connection name** — a label to identify this connection.
+4. Select the **API**. Only APIs with an active OpenAPI spec are listed.
+5. Select **Save**.
+
+If no APIs have an active spec, you’ll see a warning (**No APIs with an active spec**) with a link to **Go to APIs**.
+
+Each connection exposes your API tools to MCP clients via a unique URL.
+
+## Step 3: Authorize the API (if needed)
+
+When you create a connection you may already have selected an API. You can change or re-authorize it later:
+
+1. Open the connection.
+2. Select **APIs**.
+3. Use the row menu on the API and choose **Authorize connection** or **Re-authorize connection**.
+
+<Aside>
+
+Changing the authorized API updates which tools are available on this connection. The connection URL stays the same.
+
+</Aside>
+
+## Step 4: Review tools
+
+Open the connection and select **Tools**.
+
+Tools are generated from the operations in the authorized API’s active OpenAPI spec.
+
+- Each tool maps to one OpenAPI operation.
+- Tool names prefer a sanitized `operationId` when present; otherwise Kinde derives a name from the API name, HTTP method, and path. Duplicate names are disambiguated automatically.
+- An MCP client only sees tools whose corresponding API scopes are assigned to the user’s API key.
+
+## Step 5: Configure backend authentication
+
+Open the connection and select **Details**. Under **Backend authentication**, choose how Kinde authenticates to your upstream API on behalf of users.
+
+| Authentication type | Behavior |
+| --- | --- |
+| **Pass through user token** | Forwards the MCP client’s user API key as `Authorization: Bearer <key>` to your API. |
+| **Static bearer token** | Sends a configured token as `Authorization: Bearer <token>`. |
+| **API key (X-Api-Key header)** | Sends a configured key as `X-Api-Key: <key>`. |
+| **Static headers only** | Adds no authentication header. Use extra headers for any custom auth your API needs. |
+| **Coming Soon - OAuth 2.0 client credentials** | Shown in the UI but not available yet. Choose another type. |
+
+### Extra HTTP headers
+
+You can add headers applied on every upstream request after the primary auth headers. Header values support templates that Kinde replaces per request:
+
+- `{{kinde.user.id}}`
+- `{{kinde.user.username}}`
+- `{{kinde.user.email}}`
+- `{{kinde.user.firstname}}`
+- `{{kinde.user.lastname}}`
+
+Select **Save** when you’re done.
+
+## Step 6: Create a user API key
+
+MCP clients authenticate with a **user API key** for the authorized API.
+
+1. Create a user API key for that API, either in the admin for the user, or via **Account → API keys** when the user API keys portal module is enabled.
+2. Select only the scopes the assistant should be able to call (each scope maps to one MCP tool).
+3. Copy the key securely — you’ll only see it once.
+
+See [User-level API keys](/manage-your-apis/about-api-keys/user-api-keys/) and [Scopes for API keys](/manage-your-apis/add-manage-api-keys/scopes-for-api-keys/).
+
+## Step 7: Connect an MCP client
+
+Open the connection and select **Quick start**.
+
+Prefer **Remote MCP (HTTP)** unless your client only supports a command-based server.
+
+Replace:
+
+- `YOUR_SUBDOMAIN` with your Kinde subdomain
+- `CONNECTION_ID` with the connection ID from the connection URL
+- `KINDE_USER_API_KEY` with the user API key
+- `connection-name` with a slug derived from the connection name (optional label in the client config)
+
+### Remote MCP (HTTP)
+
+For clients that support remote MCP over HTTPS with headers (for example Cursor and VS Code–based tools). Merge this into your existing MCP config:
+
+```json
+{
+  "mcpServers": {
+    "connection-name": {
+      "url": "https://YOUR_SUBDOMAIN.kinde.com/mcp/CONNECTION_ID",
+      "headers": {
+        "Authorization": "Bearer KINDE_USER_API_KEY"
+      }
+    }
+  }
+}
+```
+
+### Stdio bridge (command-based clients)
+
+Only if your client cannot use HTTP MCP. Requires Node and `npx`.
+
+```json
+{
+  "mcpServers": {
+    "connection-name": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://YOUR_SUBDOMAIN.kinde.com/mcp/CONNECTION_ID",
+        "--header",
+        "Authorization: Bearer KINDE_USER_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+You can also copy the connection URL from the **Details** tab (**Connection URL** field).
+
+### Test the connection
+
+In your AI assistant, ask something like: “What tools do you have available from this MCP server?” You should see tools matching the scopes on the user API key.
+
+## Monitor tool calls
+
+Open the connection and select **Tools audit**.
+
+You’ll see every tool call made through this connection, including the agent, user, outcome, and upstream status.
+
+| Column | Meaning |
+| --- | --- |
+| User | Email or user ID associated with the API key |
+| Tool | MCP tool name |
+| Outcome | **OK** or **Error** |
+| Upstream | HTTP status returned by your API (when available) |
+| Duration | Time spent calling upstream |
+| When | Timestamp |
+
+You can search by tool or user, and filter outcome to **All**, **OK**, or **Error**. Select **View details** for method, path, error summary, agent ID, IP address, user agent, MCP protocol version, and session ID.
+
+## Delete a connection
+
+1. On **Connections**, open the overflow menu on a connection card.
+2. Select **Delete connection**.
+3. Confirm.
+
+<Aside type="warning">
+
+The connection URL will stop working immediately and cannot be restored.
+
+</Aside>
+
+## Permissions
+
+| Action | Permission |
+| --- | --- |
+| View connections, tools, audit | `read:apis` |
+| Create, delete, authorize APIs, configure backend auth | `update:apis` |

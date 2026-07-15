@@ -96,6 +96,30 @@ export default defineConfig({
       "/workflows/about-workflows/",
     "manage-your-apis/":
       "manage-your-apis/about-api-keys/api-keys-overview/",
+    "/mcp-server/":
+      "/mcp-servers/",
+    
+    // MCP Servers section redirects (singular slug + prior nested paths)
+    "/mcp-server/about-kinde-mcp-servers/":
+      "/mcp-servers/",
+    "/mcp-server/about-mcp-server/":
+      "/mcp-servers/",
+    "/mcp-server/about-mcp-server/operations-and-scopes/":
+      "/mcp-servers/operations-and-scopes/",
+    "/mcp-server/get-started/":
+      "/mcp-servers/manage-kinde-account-with-ai-assistants/",
+    "/mcp-server/get-started/setup-mcp-server/":
+      "/mcp-servers/manage-kinde-account-with-ai-assistants/",
+    "/mcp-server/mcp-connections/":
+      "/mcp-servers/add-mcp-connection/",
+    "/mcp-server/mcp-connections/expose-apis-to-mcp-clients/":
+      "/mcp-servers/add-mcp-connection/",
+    "/mcp-server/manage-kinde-account-with-ai-assistants/":
+      "/mcp-servers/manage-kinde-account-with-ai-assistants/",
+    "/mcp-server/operations-and-scopes/":
+      "/mcp-servers/operations-and-scopes/",
+    "/mcp-servers/about-kinde-mcp-servers/":
+      "/mcp-servers/",
     
     // Authenticate section subfolder redirects
     "/authenticate/about-auth/":

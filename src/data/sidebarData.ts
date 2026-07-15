@@ -132,23 +132,12 @@ const sidebarData = [
     ]
   },
   {
-    label: "MCP Server",
-    description: "Integrate Kinde with AI assistants using the Model Context Protocol",
-    icon: "dev-tools",
+    label: "MCP Servers",
+    description: "Expose your APIs to AI assistants, or manage Kinde with the Model Context Protocol",
+    icon: "mcp",
     collapsed: true,
-    cardLink: "/mcp-server/about-mcp-server",
-    items: [
-      {
-        label: "About MCP Server",
-        autogenerate: {directory: "mcp-server/about-mcp-server"},
-        collapsed: false
-      },
-      {
-        label: "Get started",
-        autogenerate: {directory: "mcp-server/get-started"},
-        collapsed: false
-      }
-    ]
+    cardLink: "/mcp-servers/",
+    autogenerate: {directory: "mcp-servers"}
   },
   {
     label: "Auth and access",
@@ -215,7 +204,7 @@ const sidebarData = [
       "Test your application's authentication flows, passwordless flows, and backend APIs",
     icon: "build",
     cardLink: "/testing/",
-    collapsed: false,
+    collapsed: true,
     items: [
       {label: "Overview", link: "/testing/"},
       {label: "Setup test user and environment", link: "/testing/setup-test-user-environment/"},
