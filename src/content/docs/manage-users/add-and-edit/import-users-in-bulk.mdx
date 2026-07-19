@@ -9,10 +9,11 @@ relatedArticles:
   - 855b9b3b-2729-481f-a81b-231e8375fa59
 app_context:
   - m: users
-description: Comprehensive guide to importing users in bulk to Kinde including custom CSV and NDJSON format requirements, validation rules, and error handling for large-scale user management.
+description: "Import users in bulk to Kinde from CSV or NDJSON—handle passwords, roles, organizations, and migrations at scale."
 topics:
   - manage-users
   - add-and-edit
+  - user-import
 sdk: []
 languages:
   - csv
@@ -25,29 +26,40 @@ complexity: intermediate
 keywords:
   - bulk import
   - csv import
-  - auth0 migration
+  - ndjson import
   - user migration
   - password import
+  - hashing methods
   - organization assignment
-  - roles and permissions
-  - hashed passwords
   - external_organization_id
   - username case sensitivity
-updated: 2025-09-02
+updated: 2026-07-19
 featured: false
 deprecated: false
-ai_summary: Comprehensive guide to importing users in bulk to Kinde from CSV and JSON, including file requirements, data preparation, password handling, and organization assignment.
+ai_summary: "Guide to importing users in bulk to Kinde using UTF-8 CSV or NDJSON files up to 49MB. Covers file requirements, username case-insensitivity, and preparing data so users link to roles, permissions, organizations, feature flags, properties, identities, and API scopes. Includes the full NDJSON schema with single-line and readable examples, plus CSV preparation covering required fields (email or phone, external_organization_id), optional user data, and password columns for hashed_password, hashing_method (crypt, bcrypt, sha256, md5, wordpress), salt, salt_position, and salt_format. Explains assigning users to multiple organizations with different roles across separate lines or a follow-up file. Provides a high-level overview of migrating from Firebase Authentication with a link to the dedicated Firebase guide, and points Auth0 users to the Auth0 import guide. Documents the import steps in the Kinde admin, error handling and re-import behavior, impact on end-users, weak password handling, and why re-imports do not overwrite existing records. Intended for admins and developers managing large-scale user migrations."
 ---
 
-You can import users in bulk, from CSV or JSON. If you are moving to Kinde from Auth0, see [this guide](/manage-users/add-and-edit/import-users-from-auth0/) instead.
+You can import users in bulk, from CSV or JSON. If you are moving to Kinde from Auth0 or Firebase, see the dedicated migration guides ([Auth0](/manage-users/add-and-edit/import-users-from-auth0/), [Firebase](/get-started/switch-to-kinde/firebase-to-kinde/)) instead.
 
 ## File requirements
 
 - CSV - User details and passwords need to be in UTF-8 encoded CSV format
-- JSON - User details and passwords need to be in NDJSON (Newline Delimited JSON) format
+- NDJSON - User details and passwords need to be in NDJSON (Newline Delimited JSON) format, one user object per line
+- Firebase NDJSON - Firebase Authentication user objects in NDJSON format (one object per line), prepared from `firebase auth:export`
 - File size must be 49MB or less
 
 If you’ve got large user sets (over 49MB) or are concerned about file size limits, you might consider importing in batches, or contact us for import support.
+
+## Importing from Firebase
+
+If you are migrating from Firebase Authentication, at a high level you will:
+
+- Export your users with the Firebase CLI (`firebase auth:export`)
+- Convert the JSON export to NDJSON — one user object per line — with a `.ndjson` extension
+- Upload the file using the **Firebase** import type in the admin
+- Enter your Firebase project's password hash parameters on the confirmation screen, so migrated users keep their existing password (Kinde supports Firebase's modified `scrypt` hashes)
+
+For the full step-by-step workflow, including exporting, NDJSON conversion, hash parameters, and the Firebase-to-Kinde field mapping, see [Migrate to Kinde from Firebase Authentication](/get-started/switch-to-kinde/firebase-to-kinde/).
 
 ## Before you import users
 
@@ -420,6 +432,7 @@ id,roles,permissions,external_organization_id
 
 1. In Kinde, go to **Users**, then select **Import users**.
 2. Select the option for your situation:
+   - **Firebase** — see [Migrate to Kinde from Firebase Authentication](/get-started/switch-to-kinde/firebase-to-kinde/)
    - Custom CSV
    - Custom NDJSON
 3. Follow the on-screen prompts to import the data.
