@@ -31,7 +31,7 @@ keywords:
   - nextjs
   - callback URL
   - authentication
-updated: 2026-07-13
+updated: 2026-07-19
 featured: false
 deprecated: false
 ai_summary: "Guide to adding Kinde authentication to a Supabase project by configuring Kinde as a custom OAuth provider. Covers creating a Kinde back-end web application, enabling sign-in methods, and copying domain, client ID, and client secret. Walks through Supabase Auth custom provider setup with OIDC auto-discovery, issuer URL, scopes including offline_access for refresh tokens, and Allowed Callback URLs. Shows how to call signInWithOAuth with the custom:kinde provider and implement Next.js login, register, and logout buttons plus an OAuth callback route using the with-supabase starter. Includes steps to test registration and verify users appear in both Kinde and Supabase. Intended for developers integrating Kinde Auth with Supabase."
@@ -68,22 +68,29 @@ This guide walks through connecting Kinde to Supabase Auth, then adding sign-in,
     - **Provider Identifier**: `kinde`
     - **Display Name**: (e.g., "Kinde")
     - **Configuration Method**: Leave as **Auto-discovery (Recommended)**
-6. Enter the **Issuer URL**: `https://<your_brand_name>.kinde.com` or your [Custom domain](/build/domains/pointing-your-domain/) if you have one.
+6. Enter the **Issuer URL**: `https://<your_business>.kinde.com` or your [Custom domain](/build/domains/pointing-your-domain/) if you have one.
 7. Enter the application details you copied from Kinde in the previous step:
     - Client ID
     - Client Secret
     - Scopes: `openid, email, profile`
 
         <Aside>
-        To get a refresh token, include the `offline_access` scope.
+        To get a refresh token, include the `offline` scope.
         </Aside>
 
     ![supabase custom auth provider screen 2](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/66af62b7-dc62-4758-db12-81c1767c8f00/socialsharingimage)
 8. Copy the **Callback URL** provided by Supabase. You’ll add this to Kinde next.
 9. Select **Update provider**.
-10. Go to your Kinde application **Details** page and paste the callback URL into the **Allowed Callback URLs** field. Select **Save**.
+10. Go to your Kinde application **Details** page and paste the callback URL into the **Allowed Callback URLs** field. In the **Allowed logout redirect URLs** field, add your local and production app origins (for example, `http://localhost:3000` and `https://your-app.com`) so users return to your app after logout. Select **Save**.
 
     ![supabase kinde callback url screen](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/43fe4fd7-e12c-4c8b-7b92-56ab47a62100/socialsharingimage)
+
+
+11. In your Supabase dashboard, go to **Authentication > CONFIGURATION > URL Configuration**:
+
+    - Set the **Site URL** to your app origin, for example `http://localhost:3000` for local development or `https://your-app.com` for production.
+    - Under **Redirect URLs**, select **Add URL** and add your `/auth/callback` routes, for example `http://localhost:3000/auth/callback` and your production URL (`https://your-app.com/auth/callback`).
+    - Select **Save**.
 
 ### 3. Add Kinde authentication to your Supabase app
 
@@ -108,10 +115,10 @@ To add Kinde authentication to a Next.js app with Supabase:
 2. Add the following to your `.env.local` file:
 
     ```env title="env.local"
-    NEXT_PUBLIC_KINDE_DOMAIN=https://<your_brand_name>.kinde.com
+    NEXT_PUBLIC_KINDE_DOMAIN=https://<your_business>.kinde.com
     ```
 
-    You can use either your Kinde domain (`https://your_brand_name.kinde.com`) or your [Custom domain](/build/domains/pointing-your-domain/) (`https://auth.your_brand_name.com`). Use the same domain you used for the Issuer URL in the previous step.
+    You can use either your Kinde domain (`https://your_business.kinde.com`) or your [Custom domain](/build/domains/pointing-your-domain/) (`https://auth.your_business.com`). Use the same domain you used for the Issuer URL in the previous step.
 
 3. Create the required files:
 
@@ -188,7 +195,12 @@ To add Kinde authentication to a Next.js app with Supabase:
     export async function GET(request: Request) {
       const { searchParams, origin } = new URL(request.url);
       const code = searchParams.get("code");
-      const next = searchParams.get("next") ?? "/protected";
+      const nextParam = searchParams.get("next") ?? "/protected";
+      // Only allow same-origin relative paths to prevent open redirects.
+      const next =
+        nextParam.startsWith("/") && !nextParam.startsWith("//")
+          ? nextParam
+          : "/protected";
 
       if (code) {
         const supabase = await createClient();
