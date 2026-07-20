@@ -1,7 +1,7 @@
 ---
 page_id: 50284476-2442-414c-af20-01ed3ef4ca4e
 title: Kinde Management API Quickstart Guide
-description: "Step-by-step guide to setting up M2M applications and authorizing them for Kinde Management API access with proper scopes"
+description: "Connect to the Kinde Management API—create an M2M app, set scopes, and call your first endpoint"
 sidebar:
   order: 1
   label: "Quickstart"
@@ -18,9 +18,10 @@ topics:
   - developer-tools
   - kinde-api
   - authentication
-  - machine-to-machine
+  - m2m
 sdk: []
-languages: []
+languages:
+  - bash
 audience:
   - developers
   - admins
@@ -28,76 +29,112 @@ complexity: intermediate
 keywords:
   - management api
   - m2m application
-  - machine to machine
-  - api access
-  - scopes
-  - authorization
-  - access token
   - client credentials
-  - oauth2
-  - client id
-  - client secret
-  - api keys
+  - access token
+  - api scopes
   - test token
-  - quickstart
-  - ci/cd
-updated: 2026-05-04
+  - oauth2
+  - machine to machine
+updated: 2026-07-20
 featured: false
 deprecated: false
-ai_summary: "This quickstart guide walks you through connecting to the Kinde Management API using a Machine to Machine (M2M) application. The Management API provides programmatic access to everything available in the Kinde dashboard, making it ideal for CI/CD pipelines and automated account management. To get started, you create an M2M application in your Kinde dashboard and authorize it to use the Management API. You then configure the specific OAuth2 scopes your application needs — such as read:users, write:users, read:roles, and write:roles — to control what the access token can do. Once scoped, you retrieve the application's Domain, Client ID, and Client Secret from the Details page. The guide also covers how to test the API directly from the Kinde dashboard without writing code. You generate a test token for your M2M application and use it to call endpoints interactively on the Kinde Management API page, reviewing live JSON responses. For production use, tokens must be requested server-side via the OAuth2 client credentials flow. The guide links to further resources including calling the API in production, using Postman, managing Kinde configurations, and learning more about M2M scopes."
+ai_summary: "This quickstart guide shows how to connect to the Kinde Management API using a Machine to Machine (M2M) application. The Management API provides programmatic access to everything available in the Kinde dashboard, making it useful for CI/CD pipelines and automated account management. You create an M2M application in the Kinde dashboard, authorize it for the Management API, and enable OAuth2 scopes such as read:users, create:users, read:roles, and create:roles. You then copy the Domain, Client ID, and Client Secret from the Details page and request an access token with the OAuth2 client credentials flow via curl. The guide also covers testing endpoints from the Kinde dashboard: generate a test token, open the Management API page, and send live requests. Dashboard tokens are for testing only; production tokens must be requested server-side. Related guides cover calling the API in production, Postman, configuration automation, and M2M scopes."
 ---
 
-The Kinde Management API lets you do everything you can do with the Kinde UI. It is useful for programmatically managing your Kinde account and resources such as use in CI/CD pipelines.
+The Kinde Management API lets you do everything you can do with the Kinde UI. It is useful for programmatically managing your Kinde account and resources, such as in CI/CD pipelines.
 
-In order to call the Kinde Management API, you will need a **Machine to Machine (M2M)** access token authorized to use the Management API.
+To call the Kinde Management API, you need a **Machine to Machine (M2M)** access token authorized to use the Management API.
 
-This guide shows you how to set up and authorize a new M2M application with the appropriate scopes. Take a look at this [YouTube video](https://www.youtube.com/watch?v=iqO7CL3QyY8) for a quick demo:
+This guide shows you how to set up and authorize a new M2M application with the appropriate scopes. Watch this [YouTube video](https://www.youtube.com/watch?v=iqO7CL3QyY8) for a quick demo:
 
 <YoutubeVideo videoId="iqO7CL3QyY8" />
 
-## Quickstart guide
+## Quickstart
 
-### 1. Create a M2M application
+### 1. Create an application for API access
 
 1. Go to your Kinde dashboard and select **Add application**.
-2. Give the application a name (e.g., "API Automation"), and select **Machine to Machine** as the application type.
+2. Give the application a name (e.g., "API Automation"), and select **Machine to machine (M2M)** as the application type.
+
+    ![kinde create m2m application](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/42de9925-c6c2-4ff0-704b-573d7506f400/socialsharingimage)
 3. Select **Save**.
+4. Go to the **APIs** page.
+5. Select the three dots next to the **Kinde Management API**, then choose **Authorize application**.
+6. Select the three dots next to the **Kinde Management API** again, and select **Manage scopes**.
 
-### 2. Authorize the Management API
+    ![kinde management api authorize setting](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/254d9f70-5620-45f9-6293-2823ebaa0900/socialsharingimage)
+7. Enable the scopes you want for this application (e.g., `read:users`, `create:users`, `read:roles`, `create:roles`).
 
-1. On your application settings page, select **APIs**.
-2. Select the three dots next to the **Kinde Management API**, then choose **Authorize application**.
-
-### 3. Add scopes
-
-1. On the **APIs** page, select the three dots in the **Kinde Management API** row, now select **Manage scopes**.
-2. Enable the scopes you want to include for this application. (e.g., `read:users`, `write:users`, `read:roles`, `write:roles`)
+    ![kinde manage scopes dialog](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8fad3762-5504-4671-40d4-28f793456200/socialsharingimage)
 
     <Aside>
-    Each Kinde endpoint requires specific permissions to be present in the token, to grant access to it. These are known as scopes. If a scope is not in the access token, the API will return an error indicating which scope is required. Learn more about [Management API scopes](/developer-tools/kinde-api/about-m2m-scopes/).
+    Each Kinde endpoint requires specific permissions in the access token. These are known as scopes. If a required scope is missing from the access token, the API returns an error indicating which scope is needed. Learn more about [Management API scopes](/developer-tools/kinde-api/about-m2m-scopes/).
     </Aside>
 
-3. Select **Save**.
+8. Select **Save**.
 
-### 4. Get app keys
+### 2. Get app keys
 
 1. Go to the **Details** page and copy the app keys:
 
-    - Domain
+    - Domain or [Custom domain](/build/domains/pointing-your-domain/) (if you have set one)
     - Client ID
     - Client Secret
 
-    You will need these details when you call the Kinde Management API.
+    You need these details when you call the Kinde Management API.
+
+### 3. Get an M2M access token
+
+1. Make a `curl` request with your app keys to get an access token:
+
+    ```bash
+    curl --request POST \
+      --url 'https://<YOUR_DOMAIN>/oauth2/token' \
+      --header 'content-type: application/x-www-form-urlencoded' \
+      --data 'grant_type=client_credentials' \
+      --data 'client_id=<YOUR_CLIENT_ID>' \
+      --data 'client_secret=<YOUR_CLIENT_SECRET>' \
+      --data 'audience=https://<your_business>.kinde.com/api'
+    ```
+
+<Aside>
+Replace `<YOUR_DOMAIN>` with either your Kinde subdomain (e.g., `https://your_business.kinde.com`) or your [Custom domain](/build/domains/pointing-your-domain/) (e.g., `https://auth.your_business.com`).
+</Aside>
+
+A successful response includes your access token:
+
+```jsonc
+{
+  "access_token": "<your_access_token>", // the JWT access token
+  "expires_in": 86399,
+  "scope": "", // any subset of the scopes you defined in the request
+  "token_type": "Bearer",
+}
+```
+
+See [Call the Kinde Management API](/developer-tools/kinde-api/access-token-for-api/) for an extended list of programming languages you can use to call the Kinde API.
+
+### 4. Call the Management API
+
+1. Make a `curl` request with your M2M access token to call an endpoint on the Management API:
+
+    ```bash
+    curl --request GET \
+      --url 'https://<YOUR_DOMAIN>/api/v1/users' \
+      --header 'Authorization: Bearer <your_m2m_access_token>'
+    ```
+
+See [The Kinde Management API](/kinde-apis/management/) for all available endpoints and actions you can perform.
 
 ## Test using the API dashboard
 
 ### 1. Get the test token
 
-1. Go to your Kinde dashboard > **Settings > Environment > APIs** 
+1. Go to **Settings > Environment > APIs** in your Kinde dashboard.
 2. Select **View details** on the **Kinde Management API**.
 3. Select **Test** in the menu.
-4. Select your M2M application from the dropdown, and select **Get token**.
-5. Select the **Use test token** button to open the management API page with the test token pre-populated.
+4. Select your M2M application from the dropdown (e.g., "API Automation"), then select **Get token**.
+5. Select **Use test token** to open the Management API page with the test token pre-populated.
 
     ![kinde test token](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/321a49c0-f629-4c7a-9ef2-349ad0f31f00/public)
 
@@ -107,16 +144,16 @@ This guide shows you how to set up and authorize a new M2M application with the 
 
 ### 2. Test endpoints
 
-1. The **Kinde Management API** page will open with the test token pre-populated. Here you can test the relevant endpoints.
+The **Kinde Management API** page opens with the test token pre-populated. You can test endpoints from this page.
 
-    ![kinde management api page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/72840d32-1f90-4fc3-30e9-40074f163f00/public)
+![kinde management api page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/72840d32-1f90-4fc3-30e9-40074f163f00/public)
 
-2. Search for the endpoint you want to test (e.g., roles)
-3. Select **Test request** in the code snippet. A pop-up will open.
+1. Search for the endpoint you want to test (e.g., roles).
+2. Select **Test request** in the code snippet. A pop-up opens.
 
     ![kinde management api test request](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/833a2c93-61ad-4fa7-8999-4b9ac4a44f00/public)
 
-4. Select **Send** and you will see the response JSON.
+3. Select **Send** to see the response JSON.
 
     Sample response:
 
@@ -146,9 +183,10 @@ This guide shows you how to set up and authorize a new M2M application with the 
 
 ## Next steps
 
-Now that you have finished setting up an authorized M2M app, take a look at the following guides:
+Now that you have set up an authorized M2M app, see the following guides:
 
-- [Call the Management API](/developer-tools/kinde-api/access-token-for-api/) for production use
+- Browse the [Kinde Management API](/kinde-apis/management/)
+- [Call the Management API](/developer-tools/kinde-api/access-token-for-api/) for a list of programming languages you can use to call the Kinde API
 - [Call the API using Postman](/developer-tools/kinde-api/call-the-api-postman/)
 - [Automate and replicate your Kinde configurations](/developer-tools/guides/manage-kinde-configuration/)
 - [Learn about scopes](/developer-tools/kinde-api/about-m2m-scopes/)
