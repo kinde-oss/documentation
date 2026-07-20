@@ -34,7 +34,7 @@ keywords:
 updated: 2026-04-13
 featured: false
 deprecated: false
-ai_summary: Comprehensive guide to refresh tokens including how they work, implementation with offline scope, token rotation, security best practices, and SDK integration.
+ai_summary: Comprehensive guide to refresh tokens including how they work, implementation with offline scope, token rotation, security best practices, and front-end SDK integration with getAccessToken() for JavaScript (PKCE) and React.
 ---
 
 Refresh tokens are used to request new access tokens.
@@ -126,11 +126,11 @@ The `refresh_token` cookie uses `Path=/oauth2/token` by default. This path scope
 
 You should store the refresh token you get with your initial `/token` request. Otherwise, your user will need to go through the sign in process again, to get a new access token.
 
-## Use the SDK `getToken` function to silently refresh tokens
+## Use the SDK to silently refresh tokens
 
 Front-end packages do **not** all behave the same way:
 
-- **[JavaScript (PKCE) SDK](/developer-tools/sdks/frontend/javascript-sdk/):** `getToken()` uses the cached access token when it is still considered active; otherwise it **attempts a silent refresh** via the refresh token before resolving. On failure it returns **`undefined`** (it does not throw). See [When does the JavaScript SDK refresh access tokens in the background?](/developer-tools/sdks/frontend/javascript-sdk/#when-does-the-javascript-sdk-refresh-access-tokens-in-the-background) and [Does getToken throw or return an error object when refresh fails?](/developer-tools/sdks/frontend/javascript-sdk/#does-gettoken-throw-or-return-an-error-object-when-refresh-fails).
+- **[JavaScript (PKCE) SDK](/developer-tools/sdks/frontend/javascript-sdk/):** Use **`getAccessToken()`**. It **only reads** the cached JWT from memory (or configured storage) and **does not** refresh it. Silent refresh runs on client init, on a **pre-expiry timer** (about **10 seconds** before access token expiry by default), and when the tab or window regains focus; when those succeed, the next `getAccessToken()` reads the updated value. See [Does getAccessToken read storage only, or does it refresh the token?](/developer-tools/sdks/frontend/javascript-sdk/#does-getaccesstoken-read-storage-only-or-does-it-refresh-the-token) and [When does the JavaScript SDK refresh access tokens in the background?](/developer-tools/sdks/frontend/javascript-sdk/#when-does-the-javascript-sdk-refresh-access-tokens-in-the-background).
 
 - **[React SDK](/developer-tools/sdks/frontend/react-sdk/):** Use **`getAccessToken()`** on the hook. It **only reads** the cached JWT from session storage and **does not** refresh it. Silent refresh runs on provider init, on a **pre-expiry timer** (about **10 seconds** before access token expiry by default), and optionally when **`refreshOnFocus`** is enabled; when those succeed, the next `getAccessToken()` reads the updated value. See [Does getAccessToken throw or return an error object when something goes wrong?](/developer-tools/sdks/frontend/react-sdk/#does-getaccesstoken-throw-or-return-an-error-object-when-something-goes-wrong) and [When does the React SDK refresh tokens silently?](/developer-tools/sdks/frontend/react-sdk/#when-does-the-react-sdk-refresh-tokens-silently).
 
