@@ -1,7 +1,7 @@
 ---
 page_id: 2aa551b8-06c0-4947-bd4b-d643c77ed224
 title: Manage languages on user facing pages
-description: "Comprehensive guide for managing languages on user-facing pages including language selection, default language configuration, language detection, and widget translation support."
+description: "Set supported and default languages for Kinde auth pages, with detection priority, RTL support, and localized widget content"
 sidebar:
   order: 3
 relatedArticles:
@@ -21,32 +21,33 @@ languages:
 audience: developers
 complexity: intermediate
 keywords:
-  - language management
-  - multi-language
-  - internationalization
-  - RTL languages
-  - language detection
+  - supported languages
   - default language
-  - Kinde widget
-updated: 2024-01-15
+  - language detection
+  - RTL
+  - internationalization
+  - auth page translation
+  - page content
+  - locale
+updated: 2026-07-14
 featured: false
 deprecated: false
-ai_summary: Comprehensive guide for managing languages on user-facing pages including language selection, default language configuration, language detection, and widget translation support.
+ai_summary: "Guide to managing languages on Kinde user-facing authentication pages. Explains that only user-facing screens such as sign-up, sign-in, verification, confirmations, and one-time code emails are translated, not the full Kinde platform. Covers selecting supported languages and the default fallback language in Settings, language detection priority from the auth URL, browser preference, Kinde default, and US English, plus right-to-left language support. Describes automatic base-language matching, widget translations from page content settings, and using localized content fields such as logo_alt, page_title, heading, and description in custom page code. Intended for developers configuring multi-language auth experiences."
 ---
 
-By default, all Kinde user-facing screens (for example the sign up and sign in screens) are in US English. However, you can make your end-user experience more international by selecting multiple languages for these screens as well.
+By default, Kinde user-facing screens (such as sign-up and sign-in) are in US English. You can select additional languages for these screens to better support international users.
 
 ## What gets translated?
 
-Only the user facing pages are translated. This includes, sign up, sign in, verification code, confirmations, one-time code emails. It is not yet possible to select a different language for the whole Kinde platform.
+Only the user-facing pages are translated. This includes sign-up, sign-in, verification code, confirmations, and one-time code emails. It is not yet possible to select a different language for the whole Kinde platform.
 
-To change the language displayed on sign up and request access pages, you need to [customize the relevant page](/design/brand/global-brand-defaults/).
+To change the language displayed on sign-up and request access pages, you need to [customize the relevant page](/design/brand/global-brand-defaults/).
 
 ## Supported languages
 
-Kinde’s language support offering is growing all the time.
+Kinde's language support continues to grow.
 
-Here’s just a sample of what we have so far: English (en / en-US / en-AU / en-GB), Dutch, German, Polish, Hebrew, Italian, French, Malay, Spanish, Russian, Portuguese (Brazilian), Norwegian, Swedish.
+Here is a sample of what is available so far: English (en / en-US / en-AU / en-GB), Dutch, German, Polish, Hebrew, Italian, French, Malay, Spanish, Russian, Portuguese (Brazilian), Norwegian, Swedish.
 
 We aim to eventually support [all these languages](https://github.com/kinde-oss/kinde-translations#language-codes).
 
@@ -54,51 +55,51 @@ Feel free to submit a pull request via [GitHub](https://github.com/kinde-oss/kin
 
 ## Choose languages
 
-Kinde will display the relevant language on authentication screens, when the user’s regional settings are detected.
+Kinde displays the relevant language on authentication screens when the user's regional settings are detected.
 
 1. Go to **Settings > Languages**.
 2. In the **Supported languages** section, select the checkboxes of all the languages you want to support.
 
-Includes support for right to left (RTL) languages.
+Kinde also supports right-to-left (RTL) languages.
 
 ## Change the default language
 
-The default language is the fallback language if a user’s region is not detected, or if the detected language is not selected as supported in Kinde.
+The default language is the fallback if a user's region is not detected, or if the detected language is not selected as supported in Kinde.
 
-1. Go to **Settings > Languages**.
-2. In the **Default language** dropdown, choose the language you would like to display as standard.
+1. Go to **Settings > Environment > Languages**.
+2. In the **Default language** dropdown, choose the language you want to display as the default.
 
 ## How Kinde displays languages
 
 For user-facing authentication screens, Kinde gives display priority using language detection, as follows:
 
-1. The language supplied in the auth url ^
-2. The preferred language selected in the user’s browser ^
+1. The language supplied in the auth URL ^
+2. The preferred language selected in the user's browser ^
 3. The default language you have selected in Kinde
 4. US English as a last resort, if a translation is not available
 
 ^ If you have chosen not to support a language, we will try the next available option.
 
-Through language matching, Kinde automatically works out the closest base language to the requested language and will use this if supported by your app.
+Through language matching, Kinde automatically selects the closest base language to the requested language and uses it if your app supports it.
 
 ## Translation of content in the Kinde widget
 
-Translations inside of the Kinde widget are taken care of by Kinde. We will grab the copy from the relevant route and language from your [page content settings](/design/content-customization/update-auth-page-content/) and apply them to the widget. 
+Translations in the Kinde widget are handled by Kinde. Kinde loads the copy from the relevant route and language from your [page content settings](/design/content-customization/update-auth-page-content/) and applies it to the widget.
 
 ## Customize text on authentication pages
 
 You can customize the text on various pages in the auth flow. See [Update page content for the auth flow](/design/content-customization/update-auth-page-content/) for more information.
 
-Kinde provides relevant localized content within the `context` object that is passed into the Page default function as mentioned above. Localizations and placeholder replacements are handled for you at run time. 
+Kinde provides relevant localized content within the `context` object that is passed into the Page default function. Localizations and placeholder replacements are handled for you at runtime.
 
 For example:
 
 ```jsx
 const {content} = event.context.widget;
 
-<img src={<img_url>} alt={content.logoAlt} />
+<img src={img_url} alt={content.logo_alt} />
 
-<title>{content.pageTitle}</title>
+<title>{content.page_title}</title>
 
 <h1>{content.heading}</h1>
 

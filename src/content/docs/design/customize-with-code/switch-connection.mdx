@@ -1,0 +1,149 @@
+---
+page_id: 4d6158a0-af5c-4c4e-abd3-353c7190c264
+title: Add a connection switcher to a custom page
+description: "Let users switch between social, enterprise, and credential logins mid-flow on your custom Kinde UI page"
+sidebar:
+  order: 5.5
+  label: Add a connection switcher
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - 743d264d-ef08-4f2e-a42c-2b971152dccf
+  - c42663d8-5e2a-42cd-859a-f9737a1495df
+  - 66f83c18-d261-48b8-a517-648ed1b7b064
+  - b42663d8-5e2a-42cd-859a-f9737a1495df
+topics:
+  - design
+  - customize-with-code
+  - page-design
+  - authentication
+sdk: []
+languages:
+  - javascript
+  - jsx
+  - react
+  - json
+audience: developers
+complexity: intermediate
+keywords:
+  - connection switcher
+  - change connection
+  - login hint
+  - auth intent
+  - custom UI
+  - social connection
+  - enterprise connection
+  - switchConnection
+updated: 2026-07-14
+featured: false
+deprecated: false
+ai_summary: "Guide to adding a connection switcher on a custom Kinde UI page so users can change authentication connection mid-flow. Explains how to use page context including connections.available, actions.switchConnection, and session.pipelineStepId, then tag buttons with data-kinde-change-connection attributes. Covers the secure POST switch behavior, login-hint pre-fill for email or username, automatic credential carry-over for email and password connections, optional auth-intent for sign-in versus sign-up, and connection object fields such as id, friendlyId, connectionType, and provider. Includes a full page code example and an API reference for attributes. Intended for developers building custom authentication UI with Kinde page customization."
+---
+
+A connection switcher lets users change authentication connection mid-flow on your custom UI page. For example, they can move from an email form to Continue with Google, or switch between enterprise connections. You render buttons tagged with `data-kinde-change-connection-*` attributes. Kinde handles the switch server-side and continues the flow on the chosen connection, so users do not have to restart sign-in.
+
+## What you need
+
+- A custom UI page configured with Kinde (see the [quickstart guide](/design/customize-with-code/quick-start-guide/))
+
+## Full code example
+
+```jsx title="kindeSrc/environment/pages/(kinde)/(default)/page.tsx"
+export default async function Page(event) {
+  const { connections, actions, session } = event.context;
+  const available = connections?.available ?? [];
+  const switchAction = actions?.switchConnection;
+  const psid = session?.pipelineStepId;
+  // Email or username already entered on this page
+  const enteredEmail = "";
+
+  return (
+    <div data-kinde-root>
+      <h1>Choose how to continue</h1>
+      <ul>
+        {available.map((connection) => (
+          <li key={connection.id}>
+            <button
+              type="button"
+              data-kinde-change-connection-button="true"
+              data-kinde-change-connection-id={connection.id}
+              data-kinde-change-connection-psid={psid}
+              data-kinde-change-connection-action={JSON.stringify(switchAction)}
+              data-kinde-change-connection-login-hint={enteredEmail}
+            >
+              Continue with {connection.name}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+<Aside>
+
+The connection switch is submitted as a secure `POST`, not a client-side redirect. This keeps the browser back button and the user's session state consistent.
+
+</Aside>
+
+<Aside>
+
+`data-kinde-change-connection-login-hint` pre-fills the identifier (email or username) on the target connection. For credential connections (for example email + password), Kinde also carries the entered credential into the credential screen automatically, so the user does not need to retype it. Omit the attribute if nothing has been entered yet.
+
+</Aside>
+
+## How it works
+
+You do not need to add any script. Kinde automatically loads the connection-switch behaviour on custom UI pages. Render the buttons and tag them with the `data-kinde-change-connection-*` attributes described below.
+
+1. Read the available connections and switch action from the page `context`.
+2. Render a button (or any clickable element) for each connection with the required data attributes.
+3. When the user clicks, Kinde submits a secure `POST` and continues the flow on the chosen connection. Credential connections go to the credential screen; social and enterprise connections start the provider redirect.
+
+Pass `actions.switchConnection` through as a JSON string. Treat it as an opaque action object from context. Do not construct the POST payload yourself.
+
+## API reference
+
+### Connection object
+
+Each entry in `context.connections.available` includes:
+
+| Field | Description |
+| --- | --- |
+| `id` | Internal connection ID. Use this (or `friendlyId`) as the connection to switch to. |
+| `friendlyId` | Human-readable connection identifier. |
+| `name` | Display name for the connection. |
+| `connectionType` | `social`, `enterprise`, `credential`, or `other`. |
+| `credentialMethod` | For credential connections, the method (for example `email:password`, `phone:otp`). `null` otherwise. |
+| `identityType` | The identity type, such as `email`, `username`, or `phone`. |
+| `provider` | The provider key, such as `google` or `microsoft`. |
+| `logoName` | The logo asset name, for rendering a provider icon. |
+
+You also need `actions.switchConnection` and `session.pipelineStepId` from the page `context`. See the full example above.
+
+**Sample connection object:**
+
+```json
+{
+  "id": "conn_0192...",
+  "friendlyId": "google_oauth",
+  "name": "Google",
+  "connectionType": "social",
+  "credentialMethod": null,
+  "identityType": "email",
+  "provider": "google",
+  "logoName": "google"
+}
+```
+
+### Data attributes
+
+| Attribute | Required | Description |
+| --- | --- | --- |
+| `data-kinde-change-connection-button` | Yes | Set to `"true"` to mark the element as a switch trigger. |
+| `data-kinde-change-connection-id` | Yes | The connection to switch to — the `id` or `friendlyId` from `context.connections.available`. |
+| `data-kinde-change-connection-psid` | Yes | The current pipeline step ID, from `context.session.pipelineStepId`. |
+| `data-kinde-change-connection-action` | Yes | The switch action as a JSON string: `JSON.stringify(context.actions.switchConnection)`. |
+| `data-kinde-change-connection-auth-intent` | No | `"sign_in"` (default) or `"sign_up"`. Continues the target connection as sign-in or sign-up. |
+| `data-kinde-change-connection-login-hint` | No | Pre-fills the identifier (email or username) on the target connection. |
