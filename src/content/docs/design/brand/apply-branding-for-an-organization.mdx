@@ -1,10 +1,12 @@
 ---
 page_id: f3e20936-d4da-4abc-8430-7620cae7fa6b
-title: Apply unique branding for an organization
-description: "Comprehensive guide for applying unique branding to organizations including logo, favicon, theme, and color customization with API integration and reset functionality."
+title: Set unique branding for an organization
+description: "Brand each Kinde organization with its own logo, favicon, theme, and colors—overrides apply instantly without redeploy"
 sidebar:
   order: 2
-  label: Set brand defaults for orgs
+  label: Set unique branding for orgs
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 7b32cd0e-7af3-4d57-9c3c-4a37df3d14d1
   - a1887098-e139-4f98-adf7-ff5785aec76d
@@ -20,31 +22,23 @@ topics:
 sdk: []
 languages: []
 audience: developers
-complexity: intermediate
+complexity: beginner
 keywords:
   - organization branding
-  - multi-tenancy
-  - logo
+  - multi-tenancy branding
+  - logo upload
   - favicon
+  - organization avatar
+  - dark mode theme
   - brand colors
-  - theme
-  - API
   - reset branding
-updated: 2024-01-15
+updated: 2026-07-27
 featured: false
 deprecated: false
-ai_summary: Comprehensive guide for applying unique branding to organizations including logo, favicon, theme, and color customization with API integration and reset functionality.
+ai_summary: "Guide to applying unique brand overrides for a Kinde organization so multi-tenant authentication pages such as sign-up, sign-in, and password reset match each tenant. Walks through Organizations > Brand in the Kinde dashboard, previewing and saving changes, and uploading logos for light and dark mode, including file size and format limits, the 120px resize constraint, and logo fallback to the org name or global business logo. Covers SVG and fallback PNG favicons, organization avatars for the self-serve portal, light, dark, or user-preference theme, and customizing page backgrounds, cards, buttons, input fields, and links. Also explains resetting all organization brand settings to global defaults. Changes apply immediately without redeploying. Intended for developers configuring per-organization authentication page branding."
 ---
 
-If your business model supports multi-tenancy or multiple user groups and you use [organizations](/build/organizations/multi-tenancy-using-organizations/) in Kinde, you can apply brand overrides to modify the pages in each organization.
-
-This means that when a user signs up or signs in to an organization, they have the brand experience associated with that organization, through page logo and colours.
-
-You can change the background, button, and text colours, as well as the favicon and logo for:
-
-- Sign up and sign in pages
-- Request access and subscription pages
-- Emails
+If your business offer multi-tenancy using Kinde's [organizations](/build/organizations/multi-tenancy-using-organizations/) feature, you can apply brand overrides to modify the authentication pages such as sign-up, sign-in, and password reset.
 
 <img
   src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c5a7fcf3-205b-4cf1-f199-d9da7aa11000/public"
@@ -56,20 +50,49 @@ You can change the background, button, and text colours, as well as the favicon 
   decoding="async"
 />
 
-## To add or change a logo for an organization
+To access the organization brand settings:
 
-Logos must be under 1MB, and they are resized to have a maximum width or height of 120 pixels based on the aspect ratio. SVG works best as it displays well on any screen, but PNG and other formats are accepted.
+1. Sign in to your Kinde dashboard and select **Organizations**.
+2. In the list of organizations, select the one you want to modify.
+3. Select **Brand**.
 
-1. In Kinde, go to **Organizations**.
-2. In the list, select the organization you want to view. The organization **Details** page opens.
-3. Select **Brand** in the left menu. The **Brand** page for the organization opens.
-4. Scroll to the **Logo** section:
-   1. To remove an existing logo, select the trashcan icon.
-   2. To add a new or replace the logo, select **Upload image**.
-5. Select **Preview** to see what your changes look like.
-6. Select **Back** to exit the preview.
-7. Select **Save** to apply the changes.
-8. Test the change in your test or production environments.
+The following setting options are similar to the [global brand defaults](/design/brand/global-brand-defaults/), but apply only to the selected organization.
+
+## Preview your changes
+
+There is a **Preview** button at the top of the page next to the **Save** button. You can use this to preview your changes before saving them.
+
+1. Select **Preview** to see what your changes look like.
+2. Select **Back** to exit the preview.
+3. Select **Save** to apply the changes.
+4. Test the change in your test or production environments.
+
+## Upload org brand assets
+
+### Logo
+
+Add the organization logo to authentication pages. You can upload logos for both light and dark mode.
+
+- Maximum logo size: 1MB
+- Supported file types: SVG, PNG, JPG, WebP, and AVIF
+
+After uploading, select **Preview** or **Save** to apply your changes. The logo is immediately visible on the sign-in page. You do not need to redeploy your application.
+
+**Kinde default:**
+
+<img src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/02b207f1-d0bb-46bd-5249-75a961fd0700/socialsharingimage" alt="org default register page" width="400px" />
+
+**After custom logo upload:**
+
+<img src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f8761f81-f3c5-4923-e238-59763b80d600/socialsharingimage" alt="after adding logo" width="400px" />
+
+Logos are resized to a maximum width or height of 120 pixels based on aspect ratio. SVG works best because it displays well on any screen, but PNG and other formats are accepted.
+
+<Aside type="warning" title="120px is the maximum logo height or width">
+
+The 120 px maximum height or width is a fixed constraint and cannot be changed through standard brand settings. If you need a larger logo, use [custom authentication pages](/authenticate/custom-configurations/custom-authentication-pages/) to control the layout and sizing directly.
+
+</Aside>
 
 <Aside title="Logo fallback behavior">
 
@@ -77,75 +100,66 @@ If an organization logo is not available, you can set fallback behavior to show 
 
 </Aside>
 
-## To add a logo via the Kinde Management API
+### Favicon
 
-Use this endpoint `POST {{domain}}/api/v1/organizations/{org_code}/logos/light`
+Favicons are small icons that appear on browser tabs and mobile app shortcuts.
 
-For different logo variations, adjust the type path parameter (e.g., `light`, `dark`).
+![image of browser favicons](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f4cc6e0f-3f87-46af-f99d-7c4910602600/public)
 
-In the Header, set a boundary value, e.g. `content-type: multipart/form-data; boundary="value"`
+- Maximum favicon size: 5KB
+- Supported file type: SVG
+- Must be a multiple of 48px (e.g., 48x48, 96x96, 144x144, etc.)
 
-Use `form-data` in the body to upload a valid PNG, JPEG, GIF, SVG, AVIF or WEBP image smaller than 1MB.
+1. In the **Favicon** section:
+   1. Add an SVG favicon (so it works in most browsers).
+   2. Add a **Fallback** PNG for other browsers, such as Safari.
+2. Select **Save**.
 
-You can also delete logos via the API. [See the API docs](https://docs.kinde.com/kinde-apis/management/#tag/organizations/post/api/v1/organizations/{org_code}/logos/{type}).
 
-## To add or change a favicon for an organization
+**Kinde default:**
 
-Favicons are the tiny image shown on the tab of a browser. Image files must be a multiple of 48px square (e.g. 48x48, 96x96).
+<img src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8984253b-f4e8-489a-09aa-35a6d568aa00/socialsharingimage" alt="default favicon" width="500px" />
 
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/310d10e2-ab73-4aec-9872-7352aca57200/public"
-  alt=""
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
+**Custom:**
 
-1. In Kinde, go to **Organizations**.
-2. In the list, select the organization you want to view. The organization **Details** page opens.
-3. Select **Brand** in the left menu. The **Brand** page for the organization opens.
-4. In the **Favicon** section, select **Upload image** to add or replace a favicon.
-   1. Upload an **SVG** that will work in most browsers.
-   2. Add a **Fallback** image in PNG for other browsers.
-5. To preview a favicon, you’ll need to save it and check in your test or live environment.
-6. To remove a favicon, select the trashcan icon near the image.
-7. Select **Save** to apply the changes.
+<img src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9002c528-a275-45a8-c411-7b0568023a00/socialsharingimage" alt="custom favicon" width="500px" />
 
-## Add an avatar for an organization
+### Avatar
 
 If your organizations manage their own profile or payment details via a [Kinde self-serve portal](/build/self-service-portal/self-serve-portal-for-orgs/), you can upload an avatar to personalize the experience for organization members. An avatar is usually a simple logo.
 
-Avatars must be in SVG format, and be smaller than 5kb. They appears as a 36px square in the interface. 
+- Maximum avatar size: 5KB
+- Supported file type: SVG
+- Display resolution: 36px square
 
-1. In Kinde, open the organization details and go to **Brand** in the menu.
-2. In the **Avatar** section, select **Upload image**. 
-3. Select **Save**.
+1. In the **Avatar** section, select **Upload image**.
+2. Select **Save**.
 
-## Set a light or dark theme
+## Theme (light or dark mode)
 
-1. In Kinde, go to **Organizations**.
-2. In the list, select the organization you want to view. The organization **Details** page opens.
-3. Select **Brand** in the left menu.
-4. Set the **Theme**: **Light**, **Dark**, or **User preference**. If you select user preference, make sure you choose a brand color scheme for both experiences. See below.
-5. Select **Save**.
+Set the default theme to match your organization preference:
 
-## Set brand colors for an organization
+- **Light**: white background with dark text
+- **Dark**: dark background with light text
+- **User preference**: the theme is determined by the user's device preference
 
-1. In Kinde, go to **Organizations**.
-2. In the list, select the organization you want to view. The organization **Details** page opens.
-3. Select **Brand** in the left menu. The **Brand** page for the organization opens.
-4. Change the following elements to appear how you want: background, buttons, text color, link color, and button border radius.
-5. Select **Preview** to see what your changes look like.
-6. Select **Save** to apply the changes.
+Select **Save** to apply your changes.
 
-## Reset organization brand to match global styles
+## Other page elements
 
-If you want to revert to global styles for an organization, it is easy to reset.
+- **Pages**: Set the background color of auth pages in light and dark modes.
+- **Cards**: Set the border radius for card elements in pixels. (Default is 16px)
+- **Buttons**: Customize buttons for light and dark mode. You can change:
+  - Background color
+  - Text color
+  - Border radius (default is 8px)
+- **Input fields**: Set the border radius for input fields in pixels. (Default is 8px)
+- **Links**: Set the link text color in light and dark mode.
 
-1. In Kinde, go to **Organizations**.
-2. In the list, select the organization you want to view. The organization **Details** page opens.
-3. Select **Brand** in the left menu. The **Brand** page for the organization opens.
-4. In the bottom section called **Admin actions**, select **Reset to default**.
-5. Select **Save**. This removes logo, color schemes, etc.
+## Reset all changes
+
+If you want to revert to global styles for an organization scroll to the bottom of the page and select **Reset to default**.
+
+<Aside type="danger" title="This change is irreversible">
+Resetting will remove all design assets and color values.
+</Aside>
