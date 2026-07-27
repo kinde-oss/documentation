@@ -1,9 +1,11 @@
 ---
 page_id: faa70a38-f043-4328-8787-c7fe8857fbc8
 title: .NET SDK
-description: "Guide to using the Kinde .NET SDK for integrating with the Management API, including installation, configuration, and API calls for user and organization management."
+description: "Complete guide for .NET SDK including authentication flows, Management API integration, environment configuration, and session management for .NET 6.0+ applications."
 sidebar:
   order: 8
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - ab197622-210b-48a1-a32b-39ac51a5a539
   - 7d8325e2-7c7a-4fc6-9da7-969086fb947d
@@ -34,87 +36,1046 @@ keywords:
   - openid connect
   - machine to machine
   - kinde client
+  - authentication
+  - authorization
+  - pkce
+  - environment variables
 updated: 2024-01-15
 featured: false
 deprecated: false
-ai_summary: Guide to using the Kinde .NET SDK for integrating with the Management API, including installation, configuration, and API calls for user and organization management.
+ai_summary: Complete guide for .NET SDK including authentication flows, Management API integration, environment configuration, and session management for .NET 6.0+ applications.
 ---
 
 {/* @case-police-ignore Api */}
 {/* @case-police-ignore Mvc */}
 {/* @case-police-ignore Html */}
 
-Kinde auth can be integrated into your application without the need for an SDK. Follow the appropriate guide to secure your API or use OpenID Connect to secure your web application:
+The Kinde .NET SDK allows developers to connect their .NET applications to Kinde.
 
-- [Integrate with ASP.NET based APIs](/developer-tools/your-apis/dotnet-based-apis/)
-- [Integrate with ASP.NET using Open ID Connect](/developer-tools/guides/dotnet-open-id-connect/)
+You can find our [.NET SDK](https://github.com/kinde-oss/kinde-dotnet-sdk) and [.NET starter kit](https://github.com/kinde-starter-kits/dotnet-starter-kit) on GitHub.
 
-The Kinde .NET SDK allows developers to quickly and securely call the Kinde Management API. The Kinde SDK is available from the Nuget package repository at [https://www.nuget.org/packages/Kinde.SDK](https://www.nuget.org/packages/Kinde.SDK)
+The SDK is officially supported for .NET 6.0 or later.
 
-## Before you begin
+## Register with Kinde
 
-- Kinde .NET SDK supports .NET 6.0+
-- If you haven’t already got a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). Registering gives you a Kinde domain, which you need to get started, e.g. `yourapp.kinde.com`.
-- Create a [machine to machine application for Kinde Management API access](/developer-tools/kinde-api/connect-to-kinde-api/).
+If you haven't already created a Kinde account, [register for free here](https://app.kinde.com/register). Registration gives you a Kinde domain, which you will need to get started. e.g. `yourapp.kinde.com`.
 
-## Add packages to your application
+<Aside>
 
-Use `Dotnet CLI` or `NuGet CLI` to add packages in your project.
+This documentation covers the current version of the .NET SDK.
 
-Dotnet CLI:
+</Aside>
+
+## Kinde .NET SDK
+
+The Kinde .NET SDK provides the core functionality for connecting to Kinde from .NET applications. This is necessary for integrating with Kinde.
+
+## Install
+
+### Install from NuGet
+
+The Kinde .NET SDK is available through [NuGet](https://www.nuget.org/packages/Kinde.SDK). To install it, use one of the following methods:
+
+#### .NET CLI
 
 ```bash
 dotnet add package Kinde.SDK
 ```
 
-NuGet:
+#### Package Manager Console
 
 ```bash
-NuGet\Install-Package Kinde.SDK
+Install-Package Kinde.SDK
 ```
 
-This command is intended to be used within the Package Manager Console in Visual Studio, as it uses the NuGet module's version of Install-Package.
+#### PackageReference
 
-## Configure API client
+Add this to your `.csproj` file:
 
-Create and authorize a new client:
-
-```csharp
-var client = new KindeClient(new ApplicationConfiguration("<your-kinde-domain>", "", ""), new KindeHttpClient());
-await client.Authorize(new ClientCredentialsConfiguration("<your-client-id>", "", "<your-client-secret>", "https://<your-kinde-domain>/api"));
+```xml
+<PackageReference Include="Kinde.SDK" Version="2.0.2" />
 ```
 
-Replacing `<your-kinde-domain>` with your Kinde domain, `<your-client-id>` and `<your-client-secret>` with your machine to machine app keys.
+## Connect to Kinde
 
-## Call management API
+### Set up configuration
 
-The client can be used to call the management API. For example, listing users:
+The Kinde .NET SDK requires programmatic configuration. You can configure it using appsettings.json with dependency injection or by creating configuration objects directly.
 
-```csharp
-var usersApi = new UsersApi(client);
-var users = await usersApi.GetUsersAsync();
-foreach (var user in users.Users)
+#### Using appsettings.json with dependency injection
+
+The recommended approach is to use appsettings.json with dependency injection as shown in the starter kit.
+
+#### By appsettings.json config
+
+Create an `appsettings.json` file in your project root:
+
+```json
 {
-    Console.WriteLine($"Id: {user.Id}, Email: {user.Email}, Name: {user.FirstName} {user.LastName}.");
+  "Authentication": {
+    "Schemes": {
+      "OpenIdConnect": {
+        "Authority": "https://<replace>.kinde.com",
+        "ClientId": "<replace>",
+        "ClientSecret": "<replace>",
+        "MapInboundClaims": false,
+        "ResponseType": "code",
+        "SignedOutRedirectUri": "/"
+      }
+    }
+  },
+  "KindeManagementApi": {
+    "Domain": "https://<replace>.kinde.com",
+    "ClientId": "<replace>",
+    "ClientSecret": "<replace>",
+    "Audience": "https://<replace>.kinde.com/api"
+  }
 }
 ```
 
-Note this requires the `read:users` scope to be added to the API in the machine to machine application in Kinde.
+#### Programmatic configuration
 
-An example of creating an organization then renaming it:
+If you want to pass in configuration programmatically, use the `KindeClientBuilder`.
 
 ```csharp
-var orgApi = new OrganizationsApi(client);
-var newOrg = await orgApi.CreateOrganizationAsync(new CreateOrganizationRequest("My new organization"));
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "<replace>"
+);
 
-var response = await orgApi.UpdateOrganizationAsync(newOrg.Organization.Code, new UpdateOrganizationRequest()
-{
-    Name = "A different name
-});
+var kindeClient = new KindeClient(configuration, new HttpClient());
 ```
 
-Note this requires the `create:organizations` and `update:organizations` scopes to be added to the API in the machine to machine application in Kinde.
+## Retrieve a M2M token
 
-For full details of the available management API functions, see the [Kinde Management API specification](/kinde-apis/management/).
+The example below details how to implement a server-level token request. This is needed for M2M communication and authorization.
 
-If you need help getting Kinde connected, contact us at [support@kinde.com](mailto:support@kinde.com).
+```csharp
+// Create application configuration for management API
+var appConfig = new ApplicationConfiguration
+{
+    Domain = "https://<replace>.kinde.com",
+    ForceApi = true // This is important for management API
+};
+
+// Create client credentials configuration
+var clientCredentialsConfig = new ClientCredentialsConfiguration(
+    "<replace>", // clientId
+    "<replace>", // scopes
+    "<replace>", // clientSecret
+    "<replace>"  // audience
+);
+
+// Create client credentials flow directly
+var clientCredentialsFlow = new ClientCredentialsFlow(appConfig, clientCredentialsConfig);
+
+// Authorize using client credentials
+using var httpClient = new HttpClient();
+var state = await clientCredentialsFlow.Authorize(httpClient);
+
+if (state == AuthorizationStates.NonAuthorized)
+{
+    throw new ApplicationException("Client credentials authorization failed");
+}
+
+// Get the access token
+var token = await clientCredentialsFlow.GetOrRefreshToken(httpClient);
+```
+
+### User Code Authorization Example (PKCE)
+
+To authenticate a user on the client-side, configure as follows.
+
+
+#### By appsettings.json config
+
+Create an `appsettings.json` file in your project root:
+
+```json
+{
+  "Authentication": {
+    "Schemes": {
+      "OpenIdConnect": {
+        "Authority": "https://<replace>.kinde.com",
+        "ClientId": "<replace>",
+        "ClientSecret": "<replace>",
+        "MapInboundClaims": false,
+        "ResponseType": "code",
+        "SignedOutRedirectUri": "/"
+      }
+    }
+  },
+  "KindeManagementApi": {
+    "Domain": "https://<replace>.kinde.com",
+    "ClientId": "<replace>",
+    "ClientSecret": "<replace>",
+    "Audience": "https://<replace>.kinde.com/api"
+  }
+}
+```
+
+#### Programmatic configuration
+
+If you want to pass in configuration programmatically, use the `KindeClientBuilder`.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+```
+
+## Generate the redirect URL
+
+Before the PKCE code can be processed, a user must be directed to Kinde to sign in. The client library can generate this URL as follows.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+var authorizationUrl = await kindeClient.GetRedirectionUrl("state");
+```
+
+The AuthorizationUrl contains the url and CodeVerify information. If using a code grant the code verify needs to be stored for the redirect call. This can be done using the ASP.NET Core session. Here is an example:
+
+```csharp
+HttpContext.Session.SetString("AuthorizationUrl", authorizationUrl);
+return Redirect(authorizationUrl);
+```
+
+## Request tokens upon redirect
+
+If it is a code auth, then the `AuthorizationUrl` needs to be retrieved.
+
+```csharp
+var authorizationUrl = HttpContext.Session.GetString("AuthorizationUrl");
+```
+
+The token request looks like the following.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+KindeClient.OnCodeReceived(code, "state");
+var token = await kindeClient.GetToken();
+```
+
+## Get user information
+
+It is possible to retrieve user information using an AccessToken. In the example below, an access token is passed in a client session.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var userDetails = kindeClient.GetUserDetails();
+```
+
+Retrieve the user details for the code that has been authenticated.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+KindeClient.OnCodeReceived(code, "state");
+var userDetails = kindeClient.GetUserDetails();
+```
+
+### User profile
+
+The UserInfo object retrieved above contains the following properties.
+
+| Property | Description                                 |
+|----------|---------------------------------------------|
+| UserInfo | The user object for more information        |
+| Subject  | The subject of the user object              |
+| Id       | The id of the user on Kinde                 |
+| GivenName| The given or first name of the user         |
+| FamilyName| The family or surname of the user on Kinde  |
+| Email    | The email address of the user on Kinde      |
+| Picture  | The picture of the user on Kinde            |
+
+## API reference - for the Kinde core
+
+#### `Login`
+
+The login process generates an authorization url. This can be used by the browser to initiate the login on Kinde, and once completed the user will be re-directed back.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+var authorizationUrl = await kindeClient.GetRedirectionUrl("state");
+```
+
+Send the redirect response using:
+
+```csharp
+return Redirect(authorizationUrl);
+```
+
+#### `Register` authenticate flow
+
+The register process generates an authorization URL. This URL can be used to redirect the user to Kinde to register, and then redirect them back to complete the PKCE login.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Register(authConfig);
+var authorizationUrl = await kindeClient.GetRedirectionUrl("state");
+```
+
+Send the redirect response using:
+
+```csharp
+return Redirect(authorizationUrl);
+```
+
+#### `Logout`
+
+The logout process generates an authorization URL. This can be used by the browser to initiate the logout.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var logoutUrl = await kindeClient.Logout();
+```
+
+Send the redirect response using:
+
+```csharp
+return Redirect(logoutUrl);
+```
+
+#### `GetToken`  
+
+To complete authentication of a user and retrieve their tokens, do the following.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+KindeClient.OnCodeReceived(code, "state");
+var token = await kindeClient.GetToken();
+```
+
+Retrieve a client session for the application and then retrieve the tokens for that client.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new ClientCredentialsConfiguration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    audience: "<replace>"
+);
+
+await kindeClient.Authorize(authConfig);
+var token = await kindeClient.GetToken();
+```
+
+#### `CreateOrg` authentication flow
+
+The create organization process generates an authorization URL. This URL can be used to redirect the user to Kinde to create an organization, and then redirect them back to complete the PKCE login.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+var authorizationUrl = await kindeClient.GetRedirectionUrl("state");
+```
+
+Send the redirect response using:
+
+```csharp
+return Redirect(authorizationUrl);
+```
+
+#### `GetClaim`
+
+Claims are available from the tokens.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+KindeClient.OnCodeReceived(code, "state");
+var claim = kindeClient.GetClaim("key");
+```
+
+The API on the token provides the `GetClaim` method, which uses a key name to identify the claim in the token, and return the json object it refers to.
+
+#### `GetPermission`
+
+The permissions are available from the token.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+KindeClient.OnCodeReceived(code, "state");
+var permissions = kindeClient.GetPermissions();
+```
+
+#### `GetOrganization`
+
+The organization can be retrieved from the access token.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+KindeClient.OnCodeReceived(code, "state");
+var organization = kindeClient.GetOrganization();
+```
+
+#### `GetUserDetails`
+
+The user details are available either via the AccessToken or via the OAuth2 user info endpoint. Using the Token API:
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+KindeClient.OnCodeReceived(code, "state");
+
+// retrieve user information
+var userDetails = kindeClient.GetUserDetails();
+var permissions = kindeClient.GetPermissions();
+var claim = kindeClient.GetClaim("key");
+var flag = kindeClient.GetFlag("flag_name");
+```
+
+### User profile
+
+If this is not sufficient, the OAuth2 user info endpoint can be invoked. This can be done using an access token, or just after code auth. The following scopes are required, `openid, profile, email`.
+
+Using the code-created client:
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+KindeClient.OnCodeReceived(code, "state");
+var userDetails = kindeClient.GetUserDetails();
+Assert.NotNull(userDetails);
+Assert.NotNull(userDetails.Email);
+Assert.NotNull(userDetails.Id);
+Assert.NotNull(userDetails.Picture);
+Assert.NotNull(userDetails.GivenName);
+Assert.NotNull(userDetails.FamilyName);
+```
+
+Using a token-created client:
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new ClientCredentialsConfiguration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    audience: "<replace>"
+);
+
+await kindeClient.Authorize(authConfig);
+var userDetails = kindeClient.GetUserDetails();
+Assert.NotNull(userDetails);
+Assert.NotNull(userDetails.Email);
+Assert.NotNull(userDetails.Id);
+Assert.NotNull(userDetails.Picture);
+Assert.NotNull(userDetails.GivenName);
+Assert.NotNull(userDetails.FamilyName);
+```
+
+#### `GetUserOrganizations`
+
+The organization can be retrieved from the access token.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+KindeClient.OnCodeReceived(code, "state");
+var organizations = kindeClient.GetOrganizations();
+```
+
+### `GetFlag`
+
+The flags can be retrieved from the token. Once you have referenced the access token, the `GetFlag` method can be called. This method returns a `FeatureFlag` object
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+KindeClient.OnCodeReceived(code, "state");
+var flag = kindeClient.GetFlag("flag_name");
+```
+
+#### `GetBooleanFlag`
+
+This method returns a boolean value of the internal flag value.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+KindeClient.OnCodeReceived(code, "state");
+var flag = kindeClient.GetBooleanFlag("flag_name");
+```
+
+#### `GetStringFlag`
+
+This method returns a string value.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+KindeClient.OnCodeReceived(code, "state");
+var flag = kindeClient.GetStringFlag("flag_name");
+```
+
+#### `GetIntegerFlag`
+
+The method returns the value for the key in type integer.
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+KindeClient.OnCodeReceived(code, "state");
+var flag = kindeClient.GetIntegerFlag("flag_name");
+```
+
+## ASP.NET Core Integration
+
+This section covers integrating Kinde with ASP.NET Core applications.
+
+### Project dependencies
+
+#### PackageReference
+
+In order to use this SDK include following package reference in your `.csproj` file.
+
+```xml
+<PackageReference Include="Kinde.SDK" Version="2.0.2" />
+```
+
+### Project configuration
+
+Configure the `Program.cs` file to use Kinde authentication.
+
+```csharp
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+})
+.AddCookie()
+.AddOpenIdConnect(options =>
+{
+    options.Scope.Add("email");
+    
+    // Allow HTTP in development for local testing
+    if (builder.Environment.IsDevelopment())
+    {
+        options.RequireHttpsMetadata = false;
+    }
+    
+    options.Events.OnRedirectToIdentityProvider = context =>
+    {
+        // Set optional parameters for registration
+        if (context.Properties.Parameters.ContainsKey("register"))
+        {
+            context.ProtocolMessage.Prompt = "create";
+        }
+        return Task.CompletedTask;
+    };
+});
+
+// Configure Kinde Management API
+builder.Services.Configure<KindeManagementApiConfiguration>(
+    builder.Configuration.GetSection("KindeManagementApi"));
+```
+
+### Configuration
+
+Configuration is handled through the `appsettings.json` file and dependency injection.
+
+```json
+{
+  "Authentication": {
+    "Schemes": {
+      "OpenIdConnect": {
+        "Authority": "https://<replace>.kinde.com",
+        "ClientId": "<replace>",
+        "ClientSecret": "<replace>",
+        "MapInboundClaims": false,
+        "ResponseType": "code",
+        "SignedOutRedirectUri": "/"
+      }
+    }
+  },
+  "KindeManagementApi": {
+    "Domain": "https://<replace>.kinde.com",
+    "ClientId": "<replace>",
+    "ClientSecret": "<replace>",
+    "Audience": "https://<replace>.kinde.com/api"
+  }
+}
+```
+
+## Kinde Management API
+
+You can access Kinde's API endpoints through the Kinde Management API. This lets developers work programmatically, rather than through the main Kinde interface.
+
+### Development
+
+The Kinde Management Library contains the components needed to access the Kinde Management API. It includes an OpenAPI-generated client and a `KindeClient` tool that instantiates the `ApiClient` using OIDC details.
+
+### Project Dependencies
+
+#### PackageReference
+
+To use this SDK, include the following package reference in your `.csproj` file:
+
+```xml
+<PackageReference Include="Kinde.SDK" Version="2.0.2" />
+```
+
+### Building the SDK from Source
+
+1. Clone the repository to your machine:
+
+   ```bash
+   git clone https://github.com/kinde-oss/kinde-dotnet-sdk
+   ```
+
+2. Go into the project:
+
+   ```bash
+   cd kinde-dotnet-sdk
+   ```
+
+3. Build the project:
+
+   ```bash
+   dotnet build
+   ```
+
+### Documentation
+
+NuGet automatically downloads the dependency from the NuGet repository and makes it available in your project.
+
+### Library usage
+
+#### Set up appsettings.json
+
+Create an `appsettings.json` file in your project root:
+
+```json
+{
+  "KindeManagementApi": {
+    "Domain": "https://<replace>.kinde.com",
+    "ClientId": "<replace>",
+    "ClientSecret": "<replace>",
+    "Scope": "create:users create:user_identities read:users read:user_identities",
+    "Audience": "https://<replace>.kinde.com/api"
+  }
+}
+```
+
+#### Programmatic configuration
+
+If you want to pass in configuration programmatically, create the configuration objects directly:
+
+```csharp
+var appConfig = new ApplicationConfiguration
+{
+    Domain = "https://<replace>.kinde.com",
+    ForceApi = true
+};
+
+var clientCredentialsConfig = new ClientCredentialsConfiguration(
+    "<replace>", // clientId
+    "<replace>", // scopes
+    "<replace>", // clientSecret
+    "<replace>"  // audience
+);
+```
+
+##### Get an `ApiClient`
+
+This example gets an `ApiClient` instance and then creates an `ApplicationsApi` instance using the `ApiClient`.
+
+```csharp
+// Get access token using client credentials
+var appConfig = new ApplicationConfiguration
+{
+    Domain = "<replace>",
+    ForceApi = true
+};
+
+var clientCredentialsConfig = new ClientCredentialsConfiguration(
+    "<replace>", // clientId
+    "<replace>", // scopes
+    "<replace>", // clientSecret
+    "<replace>"  // audience
+);
+
+var clientCredentialsFlow = new ClientCredentialsFlow(appConfig, clientCredentialsConfig);
+using var httpClient = new HttpClient();
+var state = await clientCredentialsFlow.Authorize(httpClient);
+var accessToken = await clientCredentialsFlow.GetOrRefreshToken(httpClient);
+
+// Create the management API client
+var configuration = new Configuration
+{
+    BasePath = "<replace>",
+    AccessToken = accessToken
+};
+
+var applicationsApi = new ApplicationsApi(configuration);
+```
+
+### Test sign up
+
+Register your first user by signing up yourself. You'll see your newly registered user on the **Users** page in Kinde.
+
+### User Permissions
+
+The user permissions are available in two ways. One is from the ID token as a claim, the other is via the Kinde Management API.
+
+#### Permissions in token
+
+```csharp
+var configuration = new ApplicationConfiguration(
+    domain: "<replace>",
+    replyUrl: "<replace>",
+    logoutUrl: "/"
+);
+
+var kindeClient = new KindeClient(configuration, new HttpClient());
+var authConfig = new PKCES256Configuration(
+    clientId: "<replace>",
+    clientSecret: "<replace>",
+    redirectUri: "<replace>",
+    scope: "openid"
+);
+
+await kindeClient.Authorize(authConfig);
+KindeClient.OnCodeReceived(code, "state");
+var permissions = kindeClient.GetPermissions();
+```
+
+#### Permissions via the Management API
+
+The permissions are up to you to define. The code below provides an example on how to retrieve the permissions from the portal using the Kinde Management API.
+
+```csharp
+// Get access token using client credentials
+var appConfig = new ApplicationConfiguration
+{
+    Domain = "<replace>",
+    ForceApi = true
+};
+
+var clientCredentialsConfig = new ClientCredentialsConfiguration(
+    "<replace>", // clientId
+    "<replace>", // scopes
+    "<replace>", // clientSecret
+    "<replace>"  // audience
+);
+
+var clientCredentialsFlow = new ClientCredentialsFlow(appConfig, clientCredentialsConfig);
+using var httpClient = new HttpClient();
+var state = await clientCredentialsFlow.Authorize(httpClient);
+var accessToken = await clientCredentialsFlow.GetOrRefreshToken(httpClient);
+
+// Create the management API client
+var configuration = new Configuration
+{
+    BasePath = "<replace>",
+    AccessToken = accessToken
+};
+
+var organizationApi = new OrganizationsApi(configuration);
+
+// org code is the org that the user is associated with
+// user id is the user
+// expanded
+var permissions = await organizationApi.GetOrganizationUserPermissionsAsync(orgCode, userId, expand);
+```
+
+### Create an organization
+
+Use the `OrganizationsApi` to create a new organization.
+
+```csharp
+// Get access token using client credentials
+var appConfig = new ApplicationConfiguration
+{
+    Domain = "<replace>",
+    ForceApi = true
+};
+
+var clientCredentialsConfig = new ClientCredentialsConfiguration(
+    "<replace>", // clientId
+    "<replace>", // scopes
+    "<replace>", // clientSecret
+    "<replace>"  // audience
+);
+
+var clientCredentialsFlow = new ClientCredentialsFlow(appConfig, clientCredentialsConfig);
+using var httpClient = new HttpClient();
+var state = await clientCredentialsFlow.Authorize(httpClient);
+var accessToken = await clientCredentialsFlow.GetOrRefreshToken(httpClient);
+
+// Create the management API client
+var configuration = new Configuration
+{
+    BasePath = "<replace>",
+    AccessToken = accessToken
+};
+
+var organizationApi = new OrganizationsApi(configuration);
+
+// Create organization
+var organization = await organizationApi.CreateOrganizationAsync(new CreateOrganizationRequest { Name = "test" });
+```
+
+If you need help connecting to Kinde, please contact us at [support@kinde.com](mailto:support@kinde.com).
