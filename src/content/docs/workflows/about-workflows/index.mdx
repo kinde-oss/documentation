@@ -1,67 +1,130 @@
 ---
 page_id: 85c135db-f55a-4edf-8d1b-0af4140c1925
-title: About workflows
+title: About Kinde workflows
 sidebar:
   order: 1
+  label: About workflows
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - b5a147ac-c189-40b5-8300-b518dd353f91
   - a49abb3b-467f-4b4c-aba2-07ec360b3f19
   - d360c480-49a8-47d3-b178-1abd34ae669f
-description: Learn about Kinde workflows - custom code execution triggered by Kinde events that allows unlimited customization of authentication flows, token generation, and external integrations using TypeScript/JavaScript.
+description: "Extend Kinde with your own TypeScript—customize tokens, auth steps, and integrations using event-triggered workflows."
 topics:
   - "workflows"
   - "about-workflows"
-  - "customization"
-sdk: null
+  - "triggers"
+sdk: "kinde infrastructure"
 languages:
-  - "TypeScript"
-  - "JavaScript"
+  - "typescript"
+  - "javascript"
 audience:
   - "developers"
-  - "admins"
 complexity: "beginner"
 keywords:
-  - "workflows"
-  - "customization"
-  - "triggers"
-  - "TypeScript"
-  - "JavaScript"
+  - "workflow triggers"
+  - "custom claims"
+  - "access token"
+  - "ID token"
   - "token customization"
+  - "post-authentication"
+  - "M2M token"
   - "external integrations"
-updated: 2026-03-03
+updated: 2026-07-28
 featured: false
 deprecated: false
-ai_summary: "Introduction to Kinde workflows - custom code execution triggered by Kinde events, allowing unlimited customization of authentication flows, token generation, and external integrations using TypeScript/JavaScript."
+ai_summary: "Overview of Kinde workflows for developers. Explains that a workflow is code you own in your own repo, synced to Kinde and executed on defined triggers. Covers when to use workflows, such as customizing access and ID token claims, reducing token size, and changing claim data types. Includes a sample TypeScript workflow that removes permissions and feature_flags from the access token using the Kinde infrastructure package. Lists available triggers including user token generation, post-authentication, pre-registration, pre-MFA, M2M token generation, password-provided events, and plan selection or cancellation. Summarizes basic rules for file naming and languages, and limitations around built-in verification and auth tokens in custom emails. Links to the infrastructure repo, base template, quick start, and token customization tutorial."
 ---
 
-In Kinde, workflows exist to give you (almost) unlimited power over how Kinde works for you.
+A workflow is code you own, triggered by Kinde, that shapes tokens, auth steps, and integrations that Kinde doesn't support out of the box.
 
-Develop code in your own repo, and push it to a Kinde workflow, where we execute it in ways that you define, triggered by Kinde events.
+How it works:
 
-See the [Triggers](/workflows/example-workflows/workflow-user-post-auth/) section for the whole list of triggers.
+1. Develop code in your own repo.
+2. Connect and sync the repo to Kinde.
+3. Kinde executes the code based on triggers.
 
-We will add more (and allow you to create your own) as we develop the feature.
+## When to use
 
-## When to use a workflow
+- You want Kinde to do something that it doesn't currently do.
+- You want to customize access or ID tokens in ways that we don't support out of the box. For example, fetch data from an external system and include it as claims in your tokens.
+- You want to reduce the size of tokens by removing claims you don't need.
+- You want to change the data type of a claim. For example, changing an array to a space-delimited string.
 
-- You want Kinde to do something that it doesn’t currently do.
-- You want to customize an access or ID tokens in ways that we don’t support out of the box. For example, you want to fetch data from an external system to include it as claims in your tokens.
-- You want to reduce the size and weight of tokens, remove things that you don’t need.
-- You want to change the data type of a claim. For example changing from an array to a space delimited string.
+## Example workflow
 
-## Workflow limitations
+The following workflow removes the `permissions` and `feature_flags` claims from the access token. See the full workflow example: [Customize token with workflow](/workflows/workflow-tutorials/customize-token-with-workflow/).
 
-- Workflows cannot prevent or bypass Kinde's built-in verification (e.g. email verification, OTP delivery). Those steps always run as part of the auth flow.
+```typescript title="Sample workflow: Workflow.ts"
+import {
+  onUserTokenGeneratedEvent,
+  WorkflowSettings,
+  WorkflowTrigger,
+  accessTokenCustomClaims,
+} from "@kinde/infrastructure";
+
+// The setting for this workflow
+export const workflowSettings: WorkflowSettings = {
+  id: "removeClaimWorkflow",
+  name: "Remove Claim Workflow",
+  trigger: WorkflowTrigger.UserTokenGeneration,
+  failurePolicy: {
+    action: "stop",
+  },
+  bindings: {
+    "kinde.accessToken": {}, // required to modify access token claims
+    url: {}, // required for URL parameters
+  },
+};
+
+// The workflow code to be executed when the event is triggered
+export default async function Workflow(event: onUserTokenGeneratedEvent) {
+  const accessToken = accessTokenCustomClaims<{
+    permissions: string[],
+    feature_flags: Record<string, unknown>,
+  }>()
+
+  accessToken.permissions = []
+  accessToken.feature_flags = {}
+}
+```
+
+## Kinde workflows
+
+### Triggers
+
+- [User token generation](/workflows/example-workflows/user-token-generation/) — Customize access and ID tokens with claims from your own systems.
+- [User post-authentication](/workflows/example-workflows/workflow-user-post-auth/) — Run logic after sign-in, such as syncing users to external tools or applying security checks.
+- [User pre-registration](/workflows/example-workflows/pre-user-registration-workflow/) — Gate who can create an account before a user record is created in Kinde.
+- [Pre-MFA](/workflows/example-workflows/pre-mfa-workflow/) — Control when multi-factor authentication is required, including grace periods and conditional enforcement.
+- [M2M token generation](/workflows/example-workflows/m2m-token-generation-workflow/) — Customize machine-to-machine tokens for API and service-to-service access.
+- [New password provided](/workflows/example-workflows/new-password-provided-workflow/) — Enforce custom password rules or sync new passwords to an external system.
+- [Existing password provided](/workflows/example-workflows/existing-password-provided-workflow/) — Validate passwords against an external source, useful for migrations and legacy auth.
+- [Plan selection](/workflows/example-workflows/plan-selection-workflow/) — Validate or control subscription plan changes in the self-serve portal or via API.
+- [Plan cancellation request](/workflows/example-workflows/plan-cancellation-request-workflow/) — Intercept cancellation requests to apply custom eligibility checks or retention logic.
+
+We'll add more triggers over time, including the option to create your own.
+
+### Basic rules
+
+- Workflow code must be written in TypeScript or plain JavaScript.
+- Filenames must end in the word `Workflow` for Kinde to recognize them as containing workflow code. For example, `MFAWorkflow.ts` or `PreauthorizationWorkflow.jsx`.
+- File extensions must be `.ts`, `.js`, `.tsx`, or `.jsx`.
+- Each trigger can only have one workflow.
+- Only Kinde-defined triggers are available for now.
+
+### Limitations
+
+- Workflows cannot prevent or bypass Kinde's built-in verification (for example, email verification or OTP delivery). Those steps always run as part of the auth flow.
 - Workflows cannot expose the authentication token (or verification code) for use in your own custom emails. Tokens and codes are only available within Kinde's secure flow; use [custom email content](/design/content-customization/email-content/) and [custom sender](/get-started/connect/customize-email-sender/) to brand the emails Kinde sends.
 
-## Basic workflow rules
+## See more
 
-- Workflow actions need to be written in TypeScript or plain JavaScript
-- Filenames must end in the word 'Workflow' for Kinde to recognize them as containing workflow code. For example, `MFAWorkflow.ts` or `PreauthorizationWorkflow.jsx`
-- File extensions should be .ts, .js, .tsx or .jsx
-- Each trigger can only have one workflow
-- Only Kinde-defined triggers are available (for now)
+- [Kinde Infrastructure repo on GitHub](https://github.com/kinde-oss/infrastructure)
+- [Kinde workflow base template on GitHub](https://github.com/kinde-starter-kits/workflow-base-template)
 
-## Explanation of methods and code helpers
+## Next steps
 
-We’ve provided a set of methods and examples in our [Infrastructure repo in GitHub](https://github.com/kinde-oss/infrastructure). The README contains a guide to creating the code that powers your workflows.
+- [Workflow Quickstart guide](/workflows/getting-started/quick-start-guide/)
+- [Workflow tutorials (customize tokens)](/workflows/workflow-tutorials/customize-token-with-workflow/)
