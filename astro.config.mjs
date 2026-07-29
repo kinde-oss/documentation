@@ -64,6 +64,8 @@ export default defineConfig({
       "/design/content-customization/set-language-for-pages/",
     "/integrate/third-party-tools/shopify-multipass/":
       "/integrate/third-party-tools/kinde-shopify/",
+    "/get-started/guides/start-with-starter-kit/":
+      "/get-started/guides/byo-code/",
     
     // Section-level redirects to prevent 404s when users truncate URLs
     "/authenticate/":

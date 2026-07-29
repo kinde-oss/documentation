@@ -1,18 +1,23 @@
 ---
 page_id: a2668524-5842-4c68-ab50-30b7e8c3e842
-title: Enable self-serve portal for orgs
-description: Guide for enabling self-serve portals for organizations including business details management, billing access, permission controls, and portal link generation methods.
+title: Enable self-serve portal for organizations
+description: "Let org admins self-manage billing, members, and settings—configure the portal, invitations, roles, and link generation."
 sidebar:
   order: 2
+  label: Enable self-serve portal for orgs
 relatedArticles:
   - f36bce4a-52bb-4785-865b-6b33356f9838
   - ab20745f-0918-403a-8103-fc5749082dba
+tableOfContents:
+  maxHeadingLevel: 3
 topics:
   - self-serve-portal
   - organizations
+  - member-invitations
   - billing
 sdk:
   - react
+  - kinde-management-api
 languages:
   - javascript
   - jsx
@@ -22,13 +27,15 @@ keywords:
   - organization portal
   - self-serve portal
   - org management
-  - billing portal
+  - member invitations
   - portal permissions
   - organization alias
-updated: 2025-11-12
+  - portal link
+  - kinde management api
+updated: 2026-07-01
 featured: false
 deprecated: false
-ai_summary: Guide for enabling self-serve portals for organizations including business details management, billing access, permission controls, and portal link generation methods.
+ai_summary: "Guide to enabling and configuring the Kinde self-serve portal for organizations (B2B). Covers dashboard setup including return URL, organization alias, and selecting which functions org admins can manage such as business details, payment details, API keys, members and roles, SSO connections, and MFA. Explains how authorized members can invite new users, assign roles with org:write:members and role-based gating, and revoke pending invitations when Members and roles is enabled and environment-level invitations are allowed. Describes portal access control through system permissions such as org:write:billing, custom role assignment, and auto-assignment options. Documents generating one-time portal links via the React PortalLink component, the Account API portal_link endpoint, or the Kinde Management API generate_url endpoint with optional return_url, sub_nav, and organization_code. Notes Scale plan per-organization portal configuration. Intended for developers integrating org portal access into applications."
 ---
 
 You can configure a self-serve portal to enable authorized organization members to be able to self-manage functions provided by Kinde. Authorized org members can update:
@@ -36,7 +43,7 @@ You can configure a self-serve portal to enable authorized organization members 
 - [Business details](/manage-your-account/business-information/update-your-details/)
 - [Payment details](/manage-your-account/profile-and-plan/update-kinde-payment/) (if you have billing set up)
 - [API Keys](/manage-your-apis/add-manage-api-keys/self-serve-api-keys/)
-- Members and roles
+- [Members and roles](#invite-members-from-the-portal) — invite new members into the organization, assign their roles, and revoke pending invitations
 - [SSO enterprise connections](/authenticate/self-serve-sso/add-sso-self-serve/) (in beta)
 - Multi-factor auth settings (coming soon)
 
@@ -69,9 +76,51 @@ When [configuring org roles](/billing/get-started/add-billing-role/), you can sp
 - Automatically assigned to all new organization members.
 - Automatically assigned to the organization creator.
 
+## Invite members from the portal
+
+When you enable the **Members and roles** function, authorized members can invite other people into their organization directly from the portal, without you adding users manually or via the API.
+
+<Aside>
+
+Member invitations must also be enabled at the environment level. Go to **Settings > Environment > Policies**, switch on **Allow invitations**, and choose the **Invite application** that invitation links should open. See [Set global access policies](/build/set-up-options/access-policies/).
+
+</Aside>
+
+### Who can invite members
+
+A member can only invite others and assign roles if they have sufficient permission in the organization:
+
+- The member needs the `org:write:members` permission to open the **Add member** flow.
+- Each role in the **Add member** dialog is gated individually—a member can only assign a role if they hold the permission required to grant it. Roles they can't assign appear disabled. This mirrors the role gating used for Kinde team members, so a member can never grant access broader than their own.
+
+### Invite a member
+
+1. Open the organization portal and go to **Members**.
+2. Select **Add member**.
+
+    ![add member dialog in the organization portal](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/bf8b9e65-af74-49fb-312f-d626f9a97400/socialsharingimage)
+3. Enter the new member's **First name**, **Last name**, and **Email**.
+4. Select the **Roles** the member will have in the organization. 
+    - You can select more than one.
+    - Unavailable roles are disabled.
+5. Select **Save**. 
+
+    The person receives an email invitation to join the organization. They can set up a new account or sign in to an existing one to accept. For more on what the invitee sees, see [Invited user sign-up experience](/authenticate/custom-configurations/invited-user-experience/).
+
+### Revoke a pending invitation
+
+Pending invitations appear in an **Invitations** list on the **Members** screen, showing each invitee's name, email, role, and the date invited.
+
+1. Find the invitation in the **Invitations** list.
+2. Select the actions menu next to it, then select **Revoke invitation**.
+
+### When invitations are turned off
+
+If invitations are disabled for the environment, the **Add member** option and the **Invitations** list are hidden in the portal when members browse **Members** normally. A bookmarked or direct URL to the add-member screen still loads that page and shows an "Invitations are disabled" message instead of the invite form.
+
 ## Generate the self-serve portal link
 
-Access to the portal is granted via a one-time link. You then use the link on an 'account' or 'profile' button in your app to open the Kinde portal screens. 
+Access to the portal is granted via a one-time link. You then use the link on an 'account' or 'profile' button in your app to open the Kinde portal screens.
 
 There are two main ways to generate this link:
 

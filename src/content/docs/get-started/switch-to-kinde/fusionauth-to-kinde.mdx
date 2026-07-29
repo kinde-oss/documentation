@@ -1,0 +1,144 @@
+---
+page_id: 9979b4df-b3c9-4a8b-bcd0-47c71acc8468
+title: Migrate to Kinde from FusionAuth
+sidebar:
+  order: 3
+  label: FusionAuth
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - c4bc277a-5ec7-418c-ba1c-4d58c9ddfd7d
+  - f6eaf29b-d8d9-4caf-bc1d-5319b6fb8ffc
+  - b338980f-7dd6-4ba5-90aa-330247a45536
+  - e89d246a-5cdf-4993-9cee-94b31ec27583
+description: Export FusionAuth users and password hashes as NDJSON and import into Kinde—users sign in with existing credentials, no reset required
+topics:
+  - get-started
+  - switch-to-kinde
+sdk: []
+languages:
+  - json
+  - ndjson
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - fusionauth migration
+  - fusionauth to kinde
+  - migrate from fusionauth
+  - ndjson import
+  - password hash migration
+  - pbkdf2
+  - bcrypt
+  - bulk user import
+updated: 2026-06-18
+featured: false
+deprecated: false
+ai_summary: "Step-by-step guide for migrating users from FusionAuth to Kinde using bulk NDJSON import via Users > Import users > FusionAuth. FusionAuth exports user details and password hashes together, so Kinde imports both in one step with no separate password import. Covers exporting from FusionAuth via direct database export (snake_case fields) or the FusionAuth API (camelCase fields), both of which Kinde accepts. Documents field mapping for email, username, phone, names, verification status, and password hash attributes. Supported password schemes include salted-pbkdf2-hmac-sha256, salted-pbkdf2-hmac-sha256-512, salted-pbkdf2-hmac-sha512-512, and bcrypt; users on unsupported schemes import successfully but reset on first sign-in. Social and federated logins are not included. Import files must be 49MB or less. Includes guidance on username case sensitivity, testing migrated sign-in, re-import behavior, migration window edge cases, and user communication. Intended for developers and admins moving authentication from FusionAuth to Kinde."
+---
+
+Migrate your users from FusionAuth to Kinde. FusionAuth exports user details and password hashes together, so you can import everything in a single step — no separate password import required.
+
+### What you need
+
+- A Kinde account with **Admin** access
+- A Kinde account configured to match your current auth provider — see [before you migrate](/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/#before-you-migrate)
+- A FusionAuth account with user export permissions
+
+## Key considerations
+
+- **Password hashes are supported** — Kinde imports FusionAuth password hashes automatically. Users on supported schemes keep their existing password with no reset required.
+- **NDJSON format** — user data must be in Newline Delimited JSON format, with one user object per line. File size must be 49MB or less. Split large exports into batches, or [contact support](https://kinde.com/support) for import help.
+- **Social identities are not supported** — this importer covers email, username, and phone identities. Social and federated logins (Google, Apple, etc.) are stored separately in FusionAuth and are not included in this import.
+- **Username case sensitivity** — Kinde treats usernames as case-insensitive. Before importing, check that all usernames are unique when letter casing is ignored.
+
+## Migration guide
+
+### 1. Export users from FusionAuth
+
+FusionAuth recommends exporting users as part of their [offboarding process](https://fusionauth.io/docs/lifecycle/migrate-users/offboard). There are two ways to produce the NDJSON file Kinde expects:
+
+- **Direct database export** (recommended by FusionAuth) — produces snake_case field names (for example `first_name`, `mobile_phone`, `encryption_scheme`).
+- **FusionAuth API export** — produces camelCase field names (for example `firstName`, `mobilePhone`, `encryptionScheme`).
+
+Kinde accepts both naming styles, so use whichever export method suits you. Each line in the file should be a single user object.
+
+Kinde reads the following fields from each user record:
+
+| FusionAuth field | Used for |
+|---|---|
+| `id` | Stable external identifier — used to match records on re-import |
+| `email` | Email identity |
+| `username` | Username identity |
+| `mobile_phone` / `mobilePhone` | Phone identity |
+| `first_name` / `firstName` | Given name |
+| `last_name` / `lastName` | Family name |
+| `verified` | Whether the identity is verified |
+| `encryption_scheme` / `encryptionScheme` | Password hashing variant |
+| `salt` | Password salt (base64) |
+| `factor` / `iterations` | PBKDF2 iteration count |
+| `password` | Password hash (base64 derived key) |
+
+#### Supported password hashing
+
+Kinde imports FusionAuth password hashes automatically. The following schemes are supported:
+
+- `salted-pbkdf2-hmac-sha256` (PBKDF2, HMAC-SHA256, 256-bit)
+- `salted-pbkdf2-hmac-sha256-512` (PBKDF2, HMAC-SHA256, 512-bit)
+- `salted-pbkdf2-hmac-sha512-512` (PBKDF2, HMAC-SHA512, 512-bit)
+- `bcrypt`
+
+Users on an unsupported or custom hashing scheme import successfully but are prompted to reset their password on first sign-in.
+
+#### How identities are treated on import
+
+Kinde imports the email, username, and phone identities found on each FusionAuth user. Users can have more than one identity — these are listed under the user's profile in Kinde.
+
+### 2. Import into Kinde
+
+1. In Kinde, go to **Users**, then select **Import users**.
+2. Select **FusionAuth**.
+
+    ![import from fusionauth](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7101c8f3-4f88-4410-fd1e-02477cbd9500/socialsharingimage)
+
+3. Follow the on-screen prompts to upload your NDJSON file (49MB or less).
+4. Review any [import errors](/manage-users/add-and-edit/troubleshoot-user-import-errors/) reported after import. Fix the file and re-import to resolve them.
+
+<Aside>
+
+Kinde will not duplicate users with existing identifiers. Records that have already been imported and are unchanged will be ignored on re-import.
+
+</Aside>
+
+See the [bulk import guide](/get-started/switch-to-kinde/migrate-users-bulk-import/) for more on file formats and post-import handling.
+
+### 3. Test the migration
+
+1. Sign in as a user from your FusionAuth export.
+2. Verify they can sign in with their existing FusionAuth credentials.
+3. Notify users of any changes to their sign-in experience before going live.
+
+## After import
+
+### Impact on end users
+
+Importing users and passwords together should mean your end users won't notice anything when they next sign in. However:
+
+- If a user changes their password after the export and while the migration is in progress, they will be prompted to reset their password on next sign-in.
+- If you set up a new authentication method as part of the migration (for example, going passwordless), users will be prompted to use the new method on sign-in.
+- If you add or remove roles or permissions, users may gain or lose access to parts of your system.
+
+### Re-importing can update user info
+
+If you import a user and they start authenticating via Kinde, a subsequent import with changes — for example, an updated name or a new permission — will update their record in Kinde. We do not recommend making ongoing user updates via import; manage updates via the Kinde admin or [API](/kinde-apis/management/) instead.
+
+### Communication to users
+
+Kinde does not send notifications or invitations when users are added via import. The goal is a seamless experience that feels like nothing has changed.
+
+If you have changed the sign-in experience — for example, adding multi-factor authentication — consider contacting your users to let them know.
+
+## Get support
+
+If you need help with your migration, contact [Kinde support](https://kinde.com/support).

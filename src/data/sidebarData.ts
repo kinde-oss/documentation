@@ -9,7 +9,11 @@ const sidebarData = [
     collapsed: true,
     cardLink: "/get-started/guides/first-things-first/",
     items: [
-      {label: "Guides", autogenerate: {directory: "get-started/guides"}, collapsed: false},
+      {
+        label: "Guides",
+        autogenerate: {directory: "get-started/guides"},
+        collapsed: false
+      },
       {
         label: "Learn about Kinde",
         autogenerate: {directory: "get-started/learn-about-kinde"},

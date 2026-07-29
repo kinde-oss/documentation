@@ -1,0 +1,216 @@
+---
+page_id: df85ffe2-19aa-4f3a-b94e-ddd86452ef79
+title: Enable Passkeys to sign in users
+sidebar:
+  order: 8
+  label: Passkeys
+relatedArticles:
+  - 26e55a64-13dd-4c7b-b9ad-e7595903ddc8
+  - 720fcdda-daa6-4dff-ad2d-177af555e6bb
+  - 0145d1ce-564e-4c28-820f-2f126abbfe3a
+  - 84581694-59d6-4a02-ab8b-c7a2889713d5
+tableOfContents:
+  maxHeadingLevel: 3
+description: "Enable WebAuthn passkeys for passwordless sign-in—set environment policies, org overrides, and roll out from optional to mandatory"
+featured: false
+deprecated: false
+topics:
+  - authenticate
+  - authentication-methods
+  - passkeys
+sdk: []
+languages: []
+audience:
+  - developer
+  - product-manager
+  - security-engineer
+complexity: intermediate
+keywords:
+  - passkeys
+  - webauthn
+  - passwordless sign-in
+  - fido2
+  - passkey policy
+  - organization passkey override
+  - passkey rollout
+  - security key
+ai_summary: "Guide to enabling and managing passkey authentication in Kinde using the Web Authentication (WebAuthn) standard. Explains how passkeys complement existing email, passwordless OTP, social, and enterprise auth methods rather than replace them. Covers dashboard setup under Settings > Policies with off, optional, and mandatory environment policies, plus organization-level overrides. Describes the user experience for post-login passkey enrollment, Sign in with passkey on the login page, and passkey management in the account portal and admin Users section. Includes recommended rollout steps from optional to mandatory deployment. Covers technical requirements for domain, HTTPS, RP ID, and browser or device WebAuthn support. Also answers common FAQ on passwords, multiple passkeys, signup behavior, per-application limits, and paid plan requirements. Intended for developers, product managers, and security engineers implementing passwordless passkey sign-in."
+updated: 2026-06-25
+---
+
+<Aside type="upgrade">
+Passkeys require a [Kinde paid plan](https://kinde.com/pricing/).
+</Aside>
+
+Passkeys are a passwordless sign-in method based on the Web Authentication (WebAuthn) standard. Users authenticate with device biometrics (Face ID, Touch ID, Windows Hello), a platform authenticator, or a FIDO2 security key — no password required.
+
+Passkeys complement your existing auth methods rather than replace them. [Email/password](/authenticate/authentication-methods/password-authentication/), [passwordless OTP](/authenticate/authentication-methods/passwordless-authentication/), [social sign-in](/authenticate/social-sign-in/add-social-sign-in/), and [enterprise connections](/authenticate/enterprise-connections/about-enterprise-connections/) continue to work as before. When enabled, users can sign in with a passkey from the login page, and credential users can be prompted to register one after sign-in.
+
+![passkey default button](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ed8376ed-4d56-4aee-9720-f0ded25fe800/socialsharingimage)
+
+## Enable passkeys in Kinde
+
+1. Go to your Kinde dashboard > **Settings > Policies**.
+2. Scroll down to the **Passkeys** section.
+
+    ![passkey setting in kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/da08767d-0454-4b23-50f5-98e4fcf19a00/socialsharingimage)
+3. Select **Optional** or **Mandatory** to enable passkeys.
+4. Select **Save**.
+
+This sets the default passkey policy for the entire environment.
+
+### Organization override
+
+You can override the default passkey policy for an organization.
+
+1. Go to your Kinde dashboard > **Organizations**, and select the organization you want to configure.
+2. Select **Policies**.
+3. Under **Passkeys**, enable **Override environment passkey settings**.
+
+    ![passkey override setting in organization](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/a42c08b0-3a1b-4594-c904-d22733fb1700/socialsharingimage)
+4. From the dropdown menu, choose **Off**, **Optional**, or **Mandatory** for that organization.
+5. Select **Save**.
+
+When you configure an org override, the UI shows the current environment default.
+
+### Passkey policies
+
+Passkeys are controlled by a **policy** with three values:
+
+| Policy | Behavior |
+| --- | --- |
+| **`off`** | Passkeys are disabled. No sign-in button, no setup prompts, no account portal passkey management. |
+| **`optional`** | Passkeys are enabled. Users see **Sign in with passkey** on login. After credentials sign-in or registration, users without a passkey are prompted to set one up, but can choose **Not now**. |
+| **`mandatory`** | Same as optional, except users **must** complete passkey setup before continuing. The skip option is not shown. |
+
+The default policy for new environments is **`off`**.
+
+When passkeys are enabled, users can:
+
+- **Sign in with a passkey** from the login page
+- **Register a passkey** after signing in with email/password (or other credentials)
+- **Manage passkeys** from the account portal (add, rename, delete)
+
+Passkeys are stored per user per environment. Each registered passkey is linked to a passkey identity on the user record.
+
+### Policy resolution
+
+- **Environment policy** — the default for all organizations in the environment.
+- **Organization override** — an organization can override the environment default with its own policy.
+
+When an organization override is disabled, the organization inherits the environment policy.
+
+## User experience
+
+### Post-login passkey setup
+
+![setup a passkey](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/5709efc9-9b46-4484-b505-863fc1d2b300/socialsharingimage)
+
+After a user signs in or registers using **credentials** (email/password, username, or phone OTP), Kinde may prompt them to set up a passkey if:
+
+- Passkeys are enabled for the relevant organization
+- The user does not already have a passkey
+- Policy is `optional` or `mandatory`
+- For `optional` only: the user has not previously chosen **Not now**
+
+The setup screen explains that the user can use device biometrics or a security key for faster sign-in next time.
+
+| Policy | Setup screen |
+| --- | --- |
+| `optional` | **Continue** registers a passkey; **Not now** skips and records the decline |
+| `mandatory` | **Continue** only — setup is required to proceed |
+
+Passkey setup is not triggered after social or enterprise SSO sign-in.
+
+### Sign in with passkey
+
+![sign in with passkey button](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/5a554c40-62db-4cbe-214f-1f30834f1e00/socialsharingimage)
+
+When passkeys are enabled (`optional` or `mandatory`), the login page shows a **Sign in with passkey** button.
+
+- Shown only on **sign-in**, not sign-up (users need an existing account and a registered passkey).
+- Displayed alongside credential and SSO options according to your auth page layout.
+- Uses the browser WebAuthn API to perform a challenge–response assertion.
+
+Users who have never registered a passkey cannot use this button to create an account.
+
+### Account portal
+
+Authenticated users can manage passkeys under **Profile** in the account portal when passkeys are enabled:
+
+![account portal passkey management](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4865d31f-3d20-43aa-cf0d-58916897e100/socialsharingimage)
+
+- View registered passkeys (name, last sign-in, sign-in count)
+- **Add passkey** for the current device or a security key
+- Rename a passkey
+- Delete a passkey
+
+Admins can also view a user's passkeys from the **Users** section in the Kinde admin.
+
+![admin users passkey management](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4a52fbf1-1fcb-4155-f001-3716833d3a00/socialsharingimage)
+
+## Recommended rollout
+
+### Start with optional
+
+1. Set environment policy to **`optional`**.
+2. Confirm **Sign in with passkey** appears on your login page.
+3. Sign in with email/password as a test user and complete passkey setup.
+4. Sign out and sign back in with the passkey.
+5. Subscribe to passkey lifecycle [webhooks](/integrate/webhooks/add-manage-webhooks/) if you need visibility.
+
+### Move to mandatory (if needed)
+
+Use **`mandatory`** when you want every user who signs in with credentials to register a passkey after first sign-in. Consider:
+
+- Users on devices without WebAuthn support will be blocked at setup
+- Social/SSO-only users are unaffected (they do not currently see the setup prompt)
+- Organization overrides let you pilot mandatory policy on a subset of orgs first
+
+### Disable passkeys
+
+Set policy to **`off`**. Existing passkey credentials remain stored but are not usable until re-enabled. Users cannot sign in with or manage passkeys while disabled.
+
+## Technical details
+
+Passkeys use the Web Authentication (WebAuthn) standard.
+
+### Domain and HTTPS
+
+- The **Relying Party ID (RP ID)** is derived from your Kinde auth domain (hostname without port).
+- **HTTPS is required** in production. HTTP is permitted only for `localhost` during local development.
+- Your custom auth domain must be correctly configured; passkeys are bound to that domain.
+
+### Browser and device support
+
+Users need a browser and device that support WebAuthn. This includes:
+
+- Modern Chromium, Safari, and Firefox browsers
+- Platform authenticators (Touch ID, Face ID, Windows Hello)
+- FIDO2 hardware security keys
+
+## FAQ
+
+### Do passkeys replace passwords?
+
+No. Passkeys are an additional sign-in method. Users who register a passkey can still sign in with email/password unless you restrict that separately.
+
+### Can a user have multiple passkeys?
+
+Yes. Each device or security key can be registered separately (for example, laptop, phone, YubiKey).
+
+### What happens if a user skips optional setup?
+
+Kinde records the decline. They will not be prompted again until they clear that state (for example, by registering a passkey from the account portal, or if that decline is reset administratively).
+
+### Does passkey sign-in work for new user registration?
+
+No. The **Sign in with passkey** button is sign-in only. New users register with credentials (or SSO), then may be prompted to add a passkey.
+
+### Can I configure passkeys per application?
+
+Policy is set at the environment or organization level, not per application. All apps in an environment share the same passkey policy (subject to org overrides).
+
+### What Kinde plan do I need to use passkeys?
+
+All paid plans support passkeys (Pro, Plus, Scale, Enterprise). See [Kinde pricing](https://kinde.com/pricing/) for more information.
