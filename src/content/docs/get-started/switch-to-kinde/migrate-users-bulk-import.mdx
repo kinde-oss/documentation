@@ -33,7 +33,9 @@ keywords:
   - bulk user migration
   - password hash migration
   - NDJSON import
-updated: 2026-05-07
+  - firebase import
+  - firebase scrypt
+updated: 2026-07-19
 featured: false
 deprecated: false
 ai_summary: "This guide explains how to bulk import users into Kinde using CSV or NDJSON files (49MB or less). It covers the full migration workflow: configuring your Kinde business with matching auth strategies, exporting users from providers like Auth0, Clerk, Supabase, Firebase, AWS Cognito, or Azure B2C, preparing a properly formatted file, and running the import via the Kinde dashboard. The guide details required and optional CSV columns including email, name, email verification status, organization IDs, roles, and permissions. It also covers migrating hashed passwords, with support for bcrypt, MD5, SHA256, crypt, and WordPress hashing methods, including salt configuration. Post-import guidance addresses handling new registrations and password changes during the migration window, recommending re-imports, forced password resets, or parallel API usage. The guide also notes that Kinde does not notify users on import, advising teams to plan their own communication strategy, and lists edge cases such as password changes mid-migration and how newly added authentication methods affect returning users."
@@ -75,7 +77,7 @@ If you are migrating from your own system, prepare the data to match the format 
 
 ### 3. Prepare your CSV
 
-Import files must be 49MB or less. This applies to Custom CSV, Auth0 NDJSON, FusionAuth NDJSON, and Custom NDJSON imports. Format your export with the following columns.
+Import files must be 49MB or less. This applies to Custom CSV, Auth0 NDJSON, FusionAuth NDJSON, Custom NDJSON, and Firebase NDJSON imports. Format your export with the following columns.
 
 **Required column:**
 
@@ -122,6 +124,7 @@ Include these if you're migrating hashed passwords:
 | `sha256` | Optional | Required if salt included |
 | `crypt` | Optional | — |
 | `wordpress` | Optional | — |
+| `firebase-scrypt` | Required | — |
 
 <Aside title="bcrypt $2b variant">
 
@@ -145,6 +148,7 @@ Review the CSV for missing or duplicate values. Kinde will report errors after i
 2. Select your import type:
    - **Auth0** — for NDJSON files exported from Auth0
    - **FusionAuth** — for NDJSON files exported from FusionAuth
+   - **Firebase** — for NDJSON files prepared from a Firebase Authentication export (`firebase auth:export`)
    - **Custom NDJSON** — for NDJSON files exported from other providers
    - **Custom CSV** — for all other providers
 
