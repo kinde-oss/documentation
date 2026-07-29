@@ -324,7 +324,7 @@ This guide shows you how to integrate Kinde authentication into a desktop app bu
         } catch {}
       },
       async exists() {
-        return (await this.load()) !== null
+        return fs.existsSync(getStorePath())
       },
     }
     
@@ -532,6 +532,11 @@ This guide shows you how to integrate Kinde authentication into a desktop app bu
           nodeIntegration: false,
           sandbox: true,
         },
+      })
+      // Open target="_blank" / window.open links in the system browser
+      win.webContents.setWindowOpenHandler(({ url }) => {
+        shell.openExternal(url)
+        return { action: "deny" }
       })
       win.loadFile(path.join(__dirname, "renderer", "index.html"))
     }
@@ -750,7 +755,7 @@ This guide shows you how to integrate Kinde authentication into a desktop app bu
             <strong class="text-heading-2">KindeAuth</strong>
             <p class="footer-tagline text-body-3">
               Visit our
-              <a class="link" href="https://kinde.com/docs">help center</a>
+              <a class="link" href="https://kinde.com/docs" target="_blank" rel="noreferrer">help center</a>
             </p>
             <small class="text-subtle"
               >&copy; 2026 KindeAuth, Inc. All rights reserved</small
@@ -762,6 +767,12 @@ This guide shows you how to integrate Kinde authentication into a desktop app bu
       </body>
     </html>
     ```
+
+    <Aside>
+
+    In production, register `win.webContents.setWindowOpenHandler` so external links (footer help center, docs CTA) open with `shell.openExternal` instead of navigating your `BrowserWindow`.
+
+    </Aside>
     
 3. Add the following code to `style.css` file to style the UI.
     
