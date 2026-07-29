@@ -1471,7 +1471,7 @@ export async function fetchWithAuth(
 }
 ```
 
-Use it anywhere in the extension — popup, dashboard, or content scripts that import from `lib/kinde.ts`:
+Use it from the popup or other extension pages that send messages without a tab context. The background sender guard in this guide rejects messages where `sender.tab` is set, so content scripts (and tab-hosted pages) cannot trigger `KINDE_LOGIN` or `KINDE_SILENT_AUTH` unless you explicitly allow them. Because `fetchWithAuth` calls `getAuthState()` — which may attempt silent re-auth — call it from the popup by default. From a content script, either relax that guard for trusted same-extension messages, or read a still-valid token from storage without going through the background message path:
 
 ```ts
 const res = await fetchWithAuth("https://your-api.com/me")
