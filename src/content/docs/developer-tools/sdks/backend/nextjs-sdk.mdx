@@ -33,7 +33,7 @@ keywords:
   - authentication
   - route protection
   - environment variables
-updated: 2024-01-15
+updated: 2026-08-03
 featured: false
 deprecated: false
 ai_summary: Complete guide for Next.js App Router SDK including installation, configuration, middleware setup, route protection, and authentication integration for Next.js 13+ applications.
@@ -147,11 +147,12 @@ Want to learn more about middleware? Check out the [Next.js middleware docs](htt
 
 </Aside>
 
-#### **Middleware configuration**
+### **Middleware configuration**
 
 Create a `middleware.ts` file in your project's root directory and add the following code:
+
 ```ts
-import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
+import {withAuth} from "@kinde-oss/kinde-auth-nextjs/middleware";
 
 export default function middleware(req) {
   return withAuth(req);
@@ -160,12 +161,12 @@ export default function middleware(req) {
 export const config = {
   matcher: [
     // Run on everything but Next internals and static files
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)"
   ]
 };
 ```
 
-#### **Route protection with callback function after authorization**
+### **Route protection with callback function after authorization**
 
 You can use the `withAuth` helper as shown below with a `middleware` callback function which has access to the `req.kindeAuth` object that exposes the token and user data.
 
@@ -178,35 +179,163 @@ export default withAuth(async function middleware(req) {
 
 export const config = {
   matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)"
   ]
 };
 ```
 
-#### **Opting routes out of middleware protection**
+### **Combining withAuth with other middleware**
 
-As the middleware matcher is set to protect all routes, you can opt routes out of middleware protection by adding them to the `publicPaths` array.
+Next.js allows only one `proxy` (or legacy `middleware`) export per app. If you need Kinde auth alongside other middleware — for example internationalization, custom headers, or early redirects — compose them with the `withAuth` callback rather than a generic middleware chain helper.
+
+#### How composition works
+
+Pass your additional middleware as the first argument to `withAuth`. Kinde runs authentication (and optional `isAuthorized`) first. When the user is authenticated and authorized, your callback runs with `req.kindeAuth` available.
+
+If your callback returns a `NextResponse`, Kinde copies any refreshed session cookies onto that response before returning it. Always `return` the response from the other middleware so those cookies are preserved.
+
+```
+Request → withAuth (auth / refresh) → your callback → NextResponse (cookies merged) → client
+```
+
+#### Basic example: custom logic after auth
+
+Use the callback to run extra logic only after a successful auth check. Return a `NextResponse` when you mutate the response.
+
+proxy.ts
 
 ```ts
-import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
+import {withAuth} from "@kinde-oss/kinde-auth-nextjs/middleware";
+import {NextRequest, NextResponse} from "next/server";
 
 export default withAuth(
-  async function middleware(req) {
+  async function proxy(req: NextRequest) {
+    console.log("Authenticated user:", req.kindeAuth?.user);
+
+    const response = NextResponse.next();
+    response.headers.set("x-kinde-user-id", req.kindeAuth?.user?.id ?? "");
+    return response;
   },
   {
-    // Middleware still runs on all routes, but doesn't protect the blog route
-    publicPaths: ["/blog"],
+    publicPaths: ["/"]
   }
 );
 
 export const config = {
   matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-  ],
-}
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)"
+  ]
+};
 ```
 
-#### **Additional middleware options**
+If your app still uses the legacy `middleware.ts` file, use the same pattern and name the callback `middleware` instead of `proxy`.
+
+#### Example: next-intl
+
+A common setup is combining Kinde with [`next-intl`](https://next-intl.dev/). Call the intl middleware from inside the `withAuth` callback and return its response:
+
+proxy.ts
+
+```ts
+import {withAuth} from "@kinde-oss/kinde-auth-nextjs/middleware";
+import createMiddleware from "next-intl/middleware";
+import {NextRequest} from "next/server";
+
+const intlMiddleware = createMiddleware({
+  locales: ["en", "de"],
+  defaultLocale: "en"
+});
+
+export default withAuth(
+  async function proxy(req: NextRequest) {
+    return intlMiddleware(req);
+  },
+  {
+    // Adjust for locale prefixes as needed, e.g. ["/en", "/de", "/en/about"]
+    // Or use RegExp: [/^\/(en|de)(\/about)?$/]
+    publicPaths: ["/", "/about"]
+  }
+);
+
+export const config = {
+  matcher: [
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)"
+  ]
+};
+```
+
+#### Running logic before auth
+
+When something must run **before** Kinde auth (maintenance mode, custom early redirects, etc.), wrap the middleware returned by `withAuth`:
+
+proxy.ts
+
+```ts
+import {withAuth} from "@kinde-oss/kinde-auth-nextjs/middleware";
+import createMiddleware from "next-intl/middleware";
+import {NextRequest, NextResponse} from "next/server";
+
+const intlMiddleware = createMiddleware({
+  locales: ["en", "de"],
+  defaultLocale: "en"
+});
+
+const authMiddleware = withAuth(
+  async function proxy(req: NextRequest) {
+    return intlMiddleware(req);
+  },
+  {
+    publicPaths: ["/"]
+  }
+);
+
+export default async function proxy(req: NextRequest) {
+  // Pre-auth checks (example: maintenance mode)
+  if (process.env.MAINTENANCE_MODE === "true") {
+    return NextResponse.redirect(new URL("/maintenance", req.url));
+  }
+
+  return authMiddleware(req);
+}
+
+export const config = {
+  matcher: [
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)"
+  ]
+};
+```
+
+#### Pitfalls to avoid
+
+- **Prefer the `withAuth` callback over generic chain helpers.** Third-party “chain multiple middleware” utilities often discard or replace the `NextResponse` that carries refreshed Kinde cookies, which can break sessions or cause auth errors.
+- **Always return the other middleware’s response** from the callback so cookie merging works.
+- **Keep Kinde auth routes reachable.** Do not block `/api/auth` (or your configured API path) with your matcher or other middleware. See the standard matcher and `publicPaths` guidance elsewhere on this page.
+- **Locale-prefixed apps:** include locale prefixes in `publicPaths` (for example `/en/about`) or use `RegExp` patterns so public routes are matched correctly.
+
+#### Related options
+
+You can still pass the usual `withAuth` options alongside a callback, including `publicPaths`, `isAuthorized`, `isReturnToCurrentPage`, and `loginPage`. See **Additional proxy options object** on this page.
+
+### **Opting routes out of middleware protection**
+
+As the middleware matcher is set to protect all routes, you can opt routes out of middleware protection by adding them to the `publicPaths` array.
+
+```ts
+import {withAuth} from "@kinde-oss/kinde-auth-nextjs/middleware";
+
+export default withAuth(async function middleware(req) {}, {
+  // Middleware still runs on all routes, but doesn't protect the blog route
+  publicPaths: ["/blog"]
+});
+
+export const config = {
+  matcher: [
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)"
+  ]
+};
+```
+
+### **Additional middleware options**
 
 There are options that can be passed into the middleware function to configure its functionality.
 
@@ -216,7 +345,7 @@ There are options that can be passed into the middleware function to configure i
 - `isAuthorized` - define the criteria for authorization
 
 ```ts
-import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
+import {withAuth} from "@kinde-oss/kinde-auth-nextjs/middleware";
 
 export default withAuth(
   async function middleware(req) {
@@ -225,7 +354,7 @@ export default withAuth(
   {
     isReturnToCurrentPage: true,
     loginPage: "/login",
-    publicPaths: ["/public", '/more'],
+    publicPaths: ["/public", "/more"],
     isAuthorized: ({token}) => {
       // The user will be considered authorized if they have the permission 'eat:chips'
       return token.permissions.includes("eat:chips");
@@ -235,9 +364,9 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-  ],
-}
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)"
+  ]
+};
 ```
 
 ## **Set up the Kinde Auth Provider**
@@ -1503,13 +1632,11 @@ if (!(await isAuthenticated())) {
 }
 ```
 
-
-
 ## Refreshing Kinde data
 
-Our middleware will automatically refresh the tokens in your session in the background. 
+Our middleware will automatically refresh the tokens in your session in the background.
 
-Sometimes, you may want to refresh these tokens on demand. An example of this is when you update Kinde data via the UI or with the Management API. 
+Sometimes, you may want to refresh these tokens on demand. An example of this is when you update Kinde data via the UI or with the Management API.
 
 To immediately get the most up-to-date Kinde data in your session, use the `refreshData` function provided by `useKindeBrowserClient`.
 
@@ -1635,7 +1762,7 @@ If the `orgCode` is not specified and the user belongs to multiple organizations
 
 ## Self Serve Portal
 
-To allow your users to be sent to the self-serve portal, you can use the `PortalLink` component. 
+To allow your users to be sent to the self-serve portal, you can use the `PortalLink` component.
 Check here for information on enabling [self-serve portal for Organizations](https://docs.kinde.com/build/self-service-portal/self-serve-portal-for-orgs/).
 Check here for information on enabling [self-serve portal for users](https://docs.kinde.com/build/self-service-portal/self-serve-portal-for-users/).
 To use our self-serve portal API please see [Get self-serve portal link](https://docs.kinde.com/kinde-apis/frontend/).
@@ -1643,26 +1770,28 @@ To use our self-serve portal API please see [Get self-serve portal link](https:/
 ```jsx
 import {PortalLink} from "@kinde-oss/kinde-auth-nextjs/components";
 
-<PortalLink>Portal Link Name</PortalLink>
+<PortalLink>Portal Link Name</PortalLink>;
 ```
+
 ### subNav
 
-The  `subNav=""` property allows you to set the area of the portal you want the user to land on. By default, it will send users to their profile. 
+The `subNav=""` property allows you to set the area of the portal you want the user to land on. By default, it will send users to their profile.
 
 ```jsx
 import {PortalLink} from "@kinde-oss/kinde-auth-nextjs/components";
-import { PortalPage } from "@kinde/js-utils";
+import {PortalPage} from "@kinde/js-utils";
 
-<PortalLink subNav={PortalPage.organizationPaymentDetails}></PortalLink>
+<PortalLink subNav={PortalPage.organizationPaymentDetails}></PortalLink>;
 ```
 
 ### returnUrl
-The `returnUrl` property is the URL to redirect the user to after they have completed their actions in the portal. The url must be an absolute url to work correctly. 
+
+The `returnUrl` property is the URL to redirect the user to after they have completed their actions in the portal. The url must be an absolute url to work correctly.
 
 ```jsx
 import {PortalLink} from "@kinde-oss/kinde-auth-nextjs/components";
 
-<PortalLink returnUrl="http://yourdomain.example"></PortalLink>
+<PortalLink returnUrl="http://yourdomain.example"></PortalLink>;
 ```
 
 ## Analytics
