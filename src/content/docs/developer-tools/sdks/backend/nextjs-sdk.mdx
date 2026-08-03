@@ -44,10 +44,10 @@ keywords:
   - permissions and feature flags
   - environment variables
   - Vercel preview deployments
-updated: 2026-04-15
+updated: 2026-08-03
 featured: false
 deprecated: false
-ai_summary: "This page documents Kinde authentication for Next.js App Router (13+, Server Components) with @kinde-oss/kinde-auth-nextjs, including links to the V1 App Router and Pages Router SDKs. It covers prerequisites, creating a Back-end web app in Kinde, callback and logout URLs, the official starter kit path, and integrating an existing project with the required app/api/auth/[kindeAuth]/route.ts handleAuth handler, environment variables, optional KindeProvider in the root layout, and UI components (LoginLink, RegisterLink, LogoutLink, CreateOrgLink, PortalLink). It explains customizing auth routes via KINDE_AUTH_API_PATH and related env vars, securing the app with proxy.ts (Next.js 16+) or middleware.ts using withAuth, matchers, publicPaths, req.kindeAuth, and authorization options. It documents server getKindeServerSession and client useKindeBrowserClient APIs for session state, users, organizations, permissions, feature flags, raw and decoded tokens, claims, and token refresh; patterns for protecting routes; Management API usage with @kinde/management-api-js; org flows; self-serve portal options; UTM and language parameters; KINDE_AUDIENCE; KINDE_COOKIE_DOMAIN; Vercel preview URL strategies including an M2M script; health and debug endpoints; resolving state-not-found issues; manual cookie clearing; a Next.js–SDK compatibility matrix; and migrating from SDK V1 (async session helpers)."
+ai_summary: "This page documents Kinde authentication for Next.js App Router (13+, Server Components) with @kinde-oss/kinde-auth-nextjs, including links to the V1 App Router and Pages Router SDKs. It covers prerequisites, creating a Back-end web app in Kinde, callback and logout URLs, the official starter kit path, and integrating an existing project with the required app/api/auth/[kindeAuth]/route.ts handleAuth handler, environment variables, optional KindeProvider in the root layout, and UI components (LoginLink, RegisterLink, LogoutLink, CreateOrgLink, PortalLink). It explains customizing auth routes via KINDE_AUTH_API_PATH and related env vars, securing the app with proxy.ts (Next.js 16+) or middleware.ts using withAuth, matchers, publicPaths, req.kindeAuth, authorization options, and combining the proxy with other middleware (including next-intl on public routes). It documents server getKindeServerSession and client useKindeBrowserClient APIs for session state, users, organizations, permissions, feature flags, raw and decoded tokens, claims, and token refresh; patterns for protecting routes; Management API usage with @kinde/management-api-js; org flows; self-serve portal options; UTM and language parameters; KINDE_AUDIENCE; KINDE_COOKIE_DOMAIN; Vercel preview URL strategies including an M2M script; health and debug endpoints; resolving state-not-found issues; manual cookie clearing; a Next.js–SDK compatibility matrix; and migrating from SDK V1 (async session helpers)."
 ---
 
 Complete guide for Next.js App Router SDK. 
@@ -474,6 +474,85 @@ export const config = {
   ],
 }
 ```
+
+### Combining with other middleware
+
+Next.js allows only one `proxy.ts` (or legacy `middleware.ts`) default export. To run other middleware alongside Kinde, nest that logic inside the `withAuth` callback rather than wrapping `withAuth` in a generic middleware chain utility. Those utilities usually treat `withAuth` like a plain `(req) => NextResponse` handler and can break redirects and session cookies.
+
+`withAuth` is a factory that owns authentication redirects, token refresh, and cookie writes. When your callback returns a `NextResponse`, Kinde copies any refreshed session cookies onto that response before returning it.
+
+#### Custom logic after authentication
+
+```ts
+// proxy.ts
+import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
+import { NextResponse } from "next/server";
+
+export default withAuth(
+  async function proxy(req) {
+    // Authenticated (or authorized) request — run additional logic here
+    const res = NextResponse.next();
+    res.headers.set("x-user-id", req.kindeAuth?.user?.id ?? "");
+    return res;
+  },
+  {
+    publicPaths: ["/"],
+  }
+);
+
+export const config = {
+  matcher: [
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+  ],
+};
+```
+
+Always return the `NextResponse` from your additional middleware so Kinde can merge session cookies onto it. The same pattern applies if you still use `middleware.ts` — only the file and exported function name differ.
+
+#### Middleware that must also run on public routes
+
+The `withAuth` callback runs only after a successful auth check on protected routes. It is not invoked for paths in `publicPaths` (Kinde returns early after optional token refresh). If other middleware must run on both public and protected routes — for example internationalization with next-intl — wrap `withAuth` and call that middleware for public paths yourself:
+
+```ts
+// proxy.ts
+import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
+import createMiddleware from "next-intl/middleware";
+import type { NextRequest } from "next/server";
+import { routing } from "./i18n/routing";
+
+const handleI18n = createMiddleware(routing);
+
+const publicPaths = ["/", "/about", "/login"];
+
+const authProxy = withAuth(
+  function proxy(req) {
+    // Runs after successful auth on protected routes
+    return handleI18n(req);
+  },
+  { publicPaths }
+);
+
+export default function proxy(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const isPublic = publicPaths.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  );
+
+  if (isPublic) {
+    return handleI18n(req);
+  }
+
+  return authProxy(req);
+}
+}
+export const config = {
+  matcher: [
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+  ],
+};
+```
+
+If your app uses locale-prefixed routes (for example `/en/about`), include those paths in `publicPaths` as well.
 
 ## Authentication
 
