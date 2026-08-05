@@ -3,7 +3,7 @@ page_id: 98a6a913-a9ba-474c-8b01-6db706d08b4c
 title: Create users with the Kinde API during migration
 description: Use the Kinde Management API to create users programmatically during a migration — catching new sign-ups and password changes in real time.
 sidebar:
-  order: 10
+  order: 11
   label: Create users with API
 tableOfContents:
   maxHeadingLevel: 3
@@ -38,10 +38,12 @@ keywords:
   - real-time user sync
   - set password api
   - identity migration
-updated: 2026-05-05
+  - ASP.NET Identity v2
+  - aspnet-identity-v2
+updated: 2026-08-05
 featured: false
 deprecated: false
-ai_summary: "This guide explains how to use the Kinde Management API to create and provision users programmatically during a migration. It covers three primary use cases — acting as a real-time safety net during a migration window to capture new sign-ups and password changes, integrating with custom auth systems where the developer controls the login form, and syncing passwords when users authenticate against a legacy system. The guide walks through four core API steps: checking whether a user already exists to avoid duplicates (GET /api/v1/users?email=), creating a new user with profile and identity data (POST /api/v1/user), setting a password using either a hashed value with a supported hashing method (bcrypt, md5, sha256, crypt, wordpress) or plaintext (PUT /api/v1/users/{user_id}/password), and optionally forcing a password reset when credentials may be out of sync. It also covers the end-to-end migration window pattern — bulk importing existing users first, intercepting live traffic during the transition via API, and running a final sync post-cutover — along with rate limit guidance and when to prefer CSV bulk import over the API approach."
+ai_summary: "Guide to using the Kinde Management API to create users and synchronize passwords during a migration window. It covers finding and creating users, setting plaintext or hashed passwords with supported methods including ASP.NET Identity v2, forcing password resets, handling live registrations and password changes, and choosing between API synchronization and bulk import."
 ---
 
 Use the Kinde Management API to create and provision users programmatically — the right approach when you need to intercept live sign-ups or password changes during a migration window, or when you control the login form in a custom auth system and can hook directly into the sign-in path.
@@ -118,7 +120,17 @@ Content-Type: application/json
 }
 ```
 
-Supported `hashing_method` values: `bcrypt`, `md5`, `sha256`, `crypt`, `wordpress`.
+Supported `hashing_method` values: `bcrypt`, `md5`, `sha256`, `crypt`, `wordpress`,
+and `aspnet-identity-v2`.
+
+<Aside title="ASP.NET Identity v2">
+
+For `aspnet-identity-v2`, send the `PasswordHash` value from `AspNetUsers` as
+`hashed_password`. Do not send `salt`, `salt_position`, `iterations`, or `variant`
+because those parameters are embedded in the hash. See
+[Migrate to Kinde from ASP.NET Identity](/get-started/switch-to-kinde/aspnet-identity-to-kinde/).
+
+</Aside>
 
 If you have access to the user's plaintext password at the time of login (because your app owns the login form), you can set it directly:
 

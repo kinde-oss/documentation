@@ -29,12 +29,22 @@ keywords:
   - password hash errors
   - CSV validation
   - duplicate records
+  - invalid email
+  - missing information
+  - organization errors
+  - role errors
+  - permission errors
+  - password errors
   - INVALID_SIGNER_KEY
   - organization role errors
+  - ASP.NET Identity
+  - invalid password hash
+  - file encoding
+  - UTF-16
 updated: 2026-08-09
 featured: false
 deprecated: false
-ai_summary: "Troubleshooting guide for bulk user import errors in Kinde. Explains how Kinde validates import files and surfaces common failures including duplicate records by ID or email, invalid emails, missing or invalid fields, and references to organizations, roles, or permissions that do not exist. Covers viewing the post-import error log, correcting the file, and re-importing without deleting already imported users. Details password import failures such as unmatched users, unsupported hashing algorithms, and incorrect columns, plus Firebase scrypt validation errors for signer key, salt separator, rounds, and memory cost. Also covers remediating bad data from a previous provider and assigning users when organization, role, or permission keys do not match. Intended for admins and developers resolving migration and bulk import issues."
+ai_summary: "Troubleshooting guide for bulk user import errors in Kinde. Explains how Kinde validates import files and surfaces common failures including duplicate records by ID or email, invalid emails, missing or invalid fields, and references to organizations, roles, or permissions that do not exist. Covers viewing the post-import error log, correcting the file, and re-importing without deleting already imported users. Details password import failures such as unmatched users, unsupported hashing algorithms, and incorrect columns, plus Firebase scrypt validation errors for signer key, salt separator, rounds, and memory cost, ASP.NET Identity v2 hash validation, unsupported ASP.NET Core Identity v3 hashes, missing login identities, and UTF-8 or UTF-16 file encoding failures. Also covers remediating bad data from a previous provider and assigning users when organization, role, or permission keys do not match. Intended for admins and developers resolving migration and bulk import issues."
 ---
 
 When you import users in bulk from a file, Kinde checks to see if there are errors that will prevent a new user record from being created or updated.
@@ -82,6 +92,36 @@ If you're importing `firebase-scrypt` passwords, each of the four Firebase hash 
 - **Invalid mem cost** (`INVALID_MEM_COST`) — the `mem_cost` column is missing or outside the range 1–20.
 
 These four values come from the Firebase console: **Authentication > Users > ⋮ > [Password hash parameters](/manage-users/add-and-edit/import-users-in-bulk/#importing-from-firebase)**. They are project-wide, so the fix usually applies to every failed row at once. Correct the values in your file and re-import.
+
+### ASP.NET Identity password errors
+
+When you use the **ASP.NET Identity** import type or the `aspnet-identity-v2` hashing
+method, a password validation error prevents the entire row from being imported. Fix the
+file and re-import the row.
+
+- **The password hash is invalid** — `PasswordHash` must contain a valid
+  [ASP.NET Identity v2 hash](/get-started/switch-to-kinde/aspnet-identity-to-kinde/#which-hash-format-do-i-have).
+  V2 hashes are 68 base64 characters and decode to 49 bytes. ASP.NET Core Identity v3
+  hashes are longer and typically start with `AQAAAA`; Kinde cannot verify them. A value
+  can also become invalid if it is truncated or reformatted in a spreadsheet. To import
+  the user without a password, clear `PasswordHash`. They can then set a password when
+  they first sign in.
+- **The hashing configuration is invalid** — do not provide `salt`, `salt_position`,
+  `iterations`, or `variant` with `aspnet-identity-v2`. These values are embedded in the
+  hash, so clear the corresponding fields.
+- **The row has no login identity** — a row with a password must also have an email,
+  phone number, or username. Add a login identity or remove the password.
+
+### File encoding errors
+
+If the whole import fails before rows are processed, check the file encoding. Kinde
+accepts CSV and NDJSON files encoded as UTF-8 or UTF-16 with a byte order mark (BOM).
+Other encodings, including Windows-1252 and Latin-1, are rejected to prevent corrupted
+names and email addresses.
+
+Re-save the file as UTF-8 or BOM-marked UTF-16 and import it again. In SQL Server
+Management Studio, choose one of those encodings when saving the results. With `bcp`, use
+`-w` for UTF-16 or `-c -C 65001` for UTF-8.
 
 ### Bad data from previous provider
 

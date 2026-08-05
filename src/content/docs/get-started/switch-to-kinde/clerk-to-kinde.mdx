@@ -9,7 +9,7 @@ tableOfContents:
 relatedArticles:
   - c4bc277a-5ec7-418c-ba1c-4d58c9ddfd7d
   - f6eaf29b-d8d9-4caf-bc1d-5319b6fb8ffc
-  - b338980f-7dd6-4ba5-90aa-330247a45536
+  - 1977cf9a-cde0-4d88-85a7-92173771b191
   - e89d246a-5cdf-4993-9cee-94b31ec27583
 description: Export users and hashed passwords from Clerk and import them into Kinde. Clerk supports bcrypt exports, so users keep their existing passwords.
 topics:
@@ -36,7 +36,7 @@ keywords:
   - authentication migration
   - clerk export
   - clerk csv
-updated: 2026-05-05
+updated: 2026-08-05
 featured: false
 deprecated: false
 ai_summary: "Step-by-step guide for migrating users from Clerk to Kinde using a bulk CSV import. Clerk supports exporting bcrypt-hashed passwords, and Kinde supports bcrypt natively, so users can sign in with their existing passwords without a forced reset — no drip-feed migration required. The guide covers: exporting users from the Clerk dashboard via Configure > Settings > User exports; renaming CSV columns to match Kinde's expected format, including primary_email_address to email, password_digest to hashed_password, password_hasher to hashing_method, and primary_phone_number to phone; removing columns Kinde does not use such as username, verified_email_addresses, totp_secret, and created_at; enabling password authentication in Kinde before importing; and uploading the prepared CSV via Users > Import users > Custom CSV. Errors flagged during import can be fixed by editing the CSV and re-importing — already-imported records are skipped. Links to the full bulk import guide for additional CSV fields covering organizations, roles, and permissions."
@@ -46,7 +46,7 @@ Migrate your users from Clerk to Kinde. Clerk supports exporting hashed password
 
 ### What you need
 
-- A Kinde account with **Admin** access 
+- A Kinde account with **Admin** access
 - Kinde account configured to match your current auth provider - see [before you migrate](/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/#before-you-migrate)
 - Clerk account with user export permissions
 
@@ -74,16 +74,16 @@ See Clerk's documentation on [exporting users](https://clerk.com/docs/guides/dev
 
 Rename the columns in your Clerk export to match what Kinde expects. The only required column is `email` — everything else is optional but recommended.
 
-| Clerk column | Rename to | Notes |
-|---|---|---|
-| `primary_email_address` | `email` | Required — primary sign-in identifier |
-|  | `email_verified` | `TRUE` or `FALSE` |
-| `id` | `id` | Keep as-is — helps match records on re-import |
-| `first_name` | `first_name` | Keep as-is |
-| `last_name` | `last_name` | Keep as-is |
-| `primary_phone_number` | `phone` | International format, e.g. `+61555111555` |
-| `password_digest` | `hashed_password` | bcrypt hash — preserves existing passwords |
-| `password_hasher` | `hashing_method` | Value will be `bcrypt` |
+| Clerk column            | Rename to         | Notes                                         |
+| ----------------------- | ----------------- | --------------------------------------------- |
+| `primary_email_address` | `email`           | Required — primary sign-in identifier         |
+|                         | `email_verified`  | `TRUE` or `FALSE`                             |
+| `id`                    | `id`              | Keep as-is — helps match records on re-import |
+| `first_name`            | `first_name`      | Keep as-is                                    |
+| `last_name`             | `last_name`       | Keep as-is                                    |
+| `primary_phone_number`  | `phone`           | International format, e.g. `+61555111555`     |
+| `password_digest`       | `hashed_password` | bcrypt hash — preserves existing passwords    |
+| `password_hasher`       | `hashing_method`  | Value will be `bcrypt`                        |
 
 For the full list of supported CSV fields — including organizations, roles, and permissions — see [Prepare your CSV](/get-started/switch-to-kinde/migrate-users-bulk-import/#3-prepare-your-csv) in the bulk import guide.
 
