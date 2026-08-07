@@ -1,7 +1,7 @@
 ---
 page_id: f74a81d3-3588-4fd4-a0ba-13eba550eff1
 title: React SDK
-description: "Complete guide for React SDK including installation, provider setup, authentication hooks, callback handling, and API integration for React 18+ applications."
+description: "Integrate Kinde auth in React 18+ with providers, hooks, iframe popup login, tokens, orgs, permissions, and feature flags"
 sidebar:
   order: 4
 head:
@@ -25,17 +25,17 @@ audience: developers
 complexity: intermediate
 keywords:
   - React SDK
-  - React Context Provider
-  - useKindeAuth hook
-  - authentication
-  - login
-  - register
-  - logout
+  - useKindeAuth
+  - KindeProvider
+  - popup authentication
+  - iframe
   - access tokens
-updated: 2026-04-14
+  - organizations
+  - feature flags
+updated: 2026-07-30
 featured: false
 deprecated: false
-ai_summary: Complete guide for React SDK including installation, provider setup, authentication hooks, callback handling, and API integration for React 18+ applications.
+ai_summary: "Guide to integrating the Kinde React SDK (v5) with React 18+ applications. Covers installing the starter kit or wrapping an existing app with KindeProvider, sign-in and sign-up via hooks and link components, logout, and the self-serve portal. Documents popup authentication for apps running inside an iframe, including popupOptions, same-origin redirectUri requirements, blocked-popup handling, and local iframe testing. Also covers user profile, authentication state, advanced access control, calling APIs with access tokens, audience, organizations, permissions, feature flags, claims, token refresh behaviour, full KindeProvider and useKindeAuth API references, and migrating from v4 to v5. Intended for frontend developers building React apps with Kinde."
 ---
 
 The Kinde React SDK allows developers to quickly and securely integrate a new or existing React application to the Kinde platform.
@@ -258,6 +258,74 @@ const handlePortalClick = async () => {
 
 <button onClick={handlePortalClick} type="button">Manage account</button>
 ```
+
+## Authentication in a popup window
+
+If your app runs inside an iframe — for example, an app embedded in a partner platform, a marketplace listing, or a dashboard widget — the SDK opens Kinde in a popup window instead of redirecting the page. This happens automatically. You don't need to change how you call `login()`, `register()` or `logout()`.
+
+The SDK detects that it is framed and, instead of setting `document.location`, opens a popup at your Kinde domain. When the user finishes authenticating, Kinde redirects the popup to your `redirectUri`. The SDK code running on that page posts the result back to the window that opened it, then closes the popup. Your app receives the result through the same `onSuccess` callback it would have received on a full-page redirect.
+
+Kinde's hosted authentication pages cannot themselves be embedded in an iframe — they send security headers that prevent it. The popup is what makes authentication work for a framed app: the user authenticates in a genuine top-level browser window, so Kinde's protections stay intact.
+
+<Aside type="warning">
+
+Popup authentication only works if your `redirectUri` points to a route **on the same origin as your app** that renders inside `KindeProvider`. The SDK verifies the origin of the message before accepting the result, and the code that posts the result is part of the provider. If your `redirectUri` is on a different origin, or points at a page that doesn't mount `KindeProvider`, the popup will complete authentication but your app will never receive the result.
+
+</Aside>
+
+### Set the popup size and position
+
+Use the `popupOptions` prop on `KindeProvider` to control the popup window. All four values are optional.
+
+```jsx
+// App.jsx
+<KindeProvider
+  clientId="your_kinde_client_id"
+  domain="https://yourbusiness.kinde.com"
+  redirectUri="https://yourapp.com/callback"
+  popupOptions={{
+    width: 600,
+    height: 700,
+  }}
+>
+  <Routes />
+</KindeProvider>
+```
+
+The popup defaults to 500 × 600 pixels, centred on the user's screen. Set `left` and `top` to position it yourself.
+
+### Handle a blocked popup
+
+Browsers block `window.open` when it isn't triggered by a user gesture. Always call `login()` or `register()` directly from a click handler — calling them from a `useEffect`, a timer, or after an `await` inside an async handler is likely to be blocked.
+
+When a popup is blocked, the SDK calls your `onError` callback with the error code `ERR_POPUP`:
+
+```jsx
+// App.jsx
+<KindeProvider
+  callbacks={{
+    onError: (error) => {
+      if (error.error === "ERR_POPUP") {
+        // Show your own "allow popups to sign in" message
+        setShowPopupHelp(true);
+      }
+    },
+  }}
+>
+  <Routes />
+</KindeProvider>
+```
+
+### Test popup authentication
+
+Popup mode only activates when the app is framed, so it won't trigger during normal local development. To test it, load your app inside an iframe on the same origin:
+
+```html
+<!-- test-frame.html, served from the same origin as your app -->
+<iframe src="http://localhost:3000" width="100%" height="800"></iframe>
+```
+
+Then add both the app URL and the callback URL to **Allowed callback URLs** in Kinde. See [Set callback and redirect URLs](/get-started/connect/callback-urls/).
 
 ## Test sign-up
 
@@ -1031,9 +1099,25 @@ Required: No
 
 Default: `false`
 
+### `popupOptions`
+
+Size and position of the popup window used for authentication when your app is running inside an iframe. Ignored when your app is not framed, because authentication then happens by redirecting the page. See [Authentication in a popup window](#authentication-in-a-popup-window).
+
+Type: `{ width?: number; height?: number; left?: number; top?: number }`
+
+Required: No
+
+Default: `{}` — the popup opens at 500 × 600 pixels, centred on the user's screen
+
+```jsx
+<KindeProvider popupOptions={{ width: 600, height: 700 }}>
+```
+
 ### **`redirectUri`**
 
 The URL that the user will be returned to after authentication.
+
+For popup authentication (when your app runs inside an iframe), this URL must be on the same origin as your app and must render inside `KindeProvider`. See [Authentication in a popup window](#authentication-in-a-popup-window).
 
 Type: `string`
 

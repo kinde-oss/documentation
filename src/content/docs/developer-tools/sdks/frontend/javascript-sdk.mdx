@@ -1,7 +1,7 @@
 ---
 page_id: 08415f77-cd58-498d-b3b2-d1cdda162153
 title: JavaScript SDK
-description: "Complete guide for the Kinde JavaScript (PKCE) SDK covering setup, authentication, getAccessToken() for API calls, invitations, the self-serve portal, background token refresh, organizations, permissions, feature flags, and API references."
+description: "Authenticate SPAs with the Kinde JavaScript PKCE SDK—login, iframe popup auth, tokens, refresh, orgs, permissions, and flags"
 sidebar:
   order: 3
 tableOfContents:
@@ -26,21 +26,16 @@ complexity: intermediate
 keywords:
   - JavaScript SDK
   - PKCE
-  - authentication
-  - login
-  - register
-  - logout
-  - organizations
-  - access tokens
+  - createKindeClient
   - getAccessToken
+  - popup authentication
+  - iframe
   - refresh tokens
-  - JWT
-  - portal
-  - invitations
-updated: 2026-07-14
+  - organizations
+updated: 2026-07-30
 featured: false
 deprecated: false
-ai_summary: Complete guide for the Kinde JavaScript (PKCE) SDK for single-page apps, covering setup with the starter kit or an existing project, createKindeClient configuration, login/register/logout flows, invitations, the self-serve portal, user profile helpers, and calling your API with getAccessToken() (getToken() is deprecated). Explains background access-token refresh on init, pre-expiry timers, tab focus, and multi-tab sync; session persistence via custom domains or is_dangerously_use_local_storage for local dev; organizations, permissions, feature flags, audience and scope; FAQs; and full createKindeClient and kindeClient API references.
+ai_summary: "Guide to the Kinde JavaScript PKCE SDK for single-page apps. Covers setup with the starter kit or an existing project, createKindeClient configuration, login, register, logout, invitations, and the self-serve portal. Documents automatic popup authentication when the app runs inside an iframe, including same-origin redirect_uri requirements and user-gesture guidance. Explains user profile helpers, calling your API with getAccessToken, background access-token refresh on init, pre-expiry timers, tab focus, and multi-tab sync, plus session persistence via custom domains or local storage for local development. Also covers organizations, permissions, feature flags, audience and scope, FAQs, and full createKindeClient and kindeClient API references. Intended for frontend developers building JavaScript SPAs with Kinde."
 ---
 
 Kinde JavaScript SDK for single-page JavaScript apps.
@@ -227,6 +222,24 @@ You can also pass options to sign the user out of every session, or override the
       redirectUrl: "https://yourapp.com",
     });
     ```
+
+### Authentication in a popup window
+
+If your app runs inside an iframe — an embedded dashboard, a marketplace app, or a partner integration — the SDK opens Kinde in a popup window instead of redirecting the framed page. This is automatic. You call `login()`, `register()` and `logout()` exactly as you would otherwise.
+
+When the user finishes authenticating, Kinde redirects the popup to your `redirect_uri`. The SDK on that page posts the result back to the window that opened it and closes the popup, then your `on_redirect_callback` fires in your app as usual.
+
+Kinde's hosted authentication pages cannot be embedded in an iframe themselves — they send security headers that prevent framing. The popup is what lets a framed app authenticate without weakening those protections.
+
+<Aside type="warning">
+
+Your `redirect_uri` must be on the **same origin** as the app that opened the popup, and it must load the page where you call `createKindeClient`. The SDK checks the opener's origin before posting the result. If the origins don't match, the popup finishes authenticating but your app never receives the result.
+
+</Aside>
+
+The popup opens at 500 × 600 pixels, centred on the user's screen. This is not configurable in this SDK. If you need to control the popup dimensions, use the [React SDK](/developer-tools/sdks/frontend/react-sdk/#set-the-popup-size-and-position), which exposes a `popupOptions` option.
+
+Browsers block popups that aren't opened in response to a user gesture, so call `login()` or `register()` directly from a click handler. When a popup can't be opened during sign-out, the SDK calls `on_error_callback` with the error `ERR_POPUP`.
 
 ### Self-serve portal
 
@@ -676,6 +689,8 @@ Type: `string` (required)
 ### `redirect_uri`
 
 The URL that the user will be returned to after authentication. This must match an allowed callback URL for the application in Kinde.
+
+For popup authentication (when your app runs inside an iframe), this URL must be on the same origin as your app and must load the page where you call `createKindeClient`. See [Authentication in a popup window](#authentication-in-a-popup-window).
 
 Type: `string` (required)
 
