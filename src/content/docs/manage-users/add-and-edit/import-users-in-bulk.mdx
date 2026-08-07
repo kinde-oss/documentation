@@ -69,7 +69,24 @@ For the full step-by-step workflow, including exporting, NDJSON conversion, hash
 The Firebase NDJSON import above is the simplest path, but you can also supply Firebase scrypt passwords through:
 
 - **Custom CSV import** — include the password columns described in [Prepare CSV files](#prepare-csv-files), with `hashing_method` set to `firebase-scrypt`. Each row needs the user's `hashed_password` and `salt`, plus the four project-level values (`signer_key`, `salt_separator`, `rounds`, and `mem_cost`) repeated on every row.
-- **Kinde Management API** — call [Set user password](/kinde-apis/management#tag/users/put/api/v1/users/{user_id}/password) with `hashing_method: firebase-scrypt` and the same fields. PBKDF2-specific fields (`iterations` and `variant`) are rejected for Firebase scrypt, and the Firebase scrypt fields are rejected for any other hashing method.
+- **Kinde Management API** — call [Set user password](/kinde-apis/management#tag/users/put/api/v1/users/{user_id}/password) with the Firebase password hash and parameters.
+
+For example:
+
+```json
+{
+  "hashed_password": "<firebase-password-hash>",
+  "hashing_method": "firebase-scrypt",
+  "salt": "<base64-user-salt>",
+  "signer_key": "<base64-signer-key>",
+  "salt_separator": "Bw==",
+  "rounds": 8,
+  "mem_cost": 14,
+  "is_temporary_password": false
+}
+```
+
+Replace the example values with the user's password hash and your Firebase project values. Set `is_temporary_password` to `false` so the user can keep their existing password. PBKDF2-specific fields (`iterations` and `variant`) are rejected for Firebase scrypt, and the Firebase scrypt fields are rejected for any other hashing method.
 
 Whichever path you use, the sign-in experience is the same: the first time an imported user signs in, Kinde verifies their password against the Firebase scrypt hash, then re-hashes it with bcrypt. Users keep their existing passwords and do not see a reset prompt.
 
