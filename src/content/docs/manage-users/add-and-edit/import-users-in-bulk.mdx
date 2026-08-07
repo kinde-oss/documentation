@@ -30,13 +30,16 @@ keywords:
   - user migration
   - password import
   - hashing methods
+  - firebase scrypt
+  - firebase password migration
+  - management api
   - organization assignment
   - external_organization_id
   - username case sensitivity
-updated: 2026-07-19
+updated: 2026-08-05
 featured: false
 deprecated: false
-ai_summary: "Guide to importing users in bulk to Kinde using UTF-8 CSV or NDJSON files up to 49MB. Covers file requirements, username case-insensitivity, and preparing data so users link to roles, permissions, organizations, feature flags, properties, identities, and API scopes. Includes the full NDJSON schema with single-line and readable examples, plus CSV preparation covering required fields (email or phone, external_organization_id), optional user data, and password columns for hashed_password, hashing_method (crypt, bcrypt, sha256, md5, wordpress), salt, salt_position, and salt_format. Explains assigning users to multiple organizations with different roles across separate lines or a follow-up file. Provides a high-level overview of migrating from Firebase Authentication with a link to the dedicated Firebase guide, and points Auth0 users to the Auth0 import guide. Documents the import steps in the Kinde admin, error handling and re-import behavior, impact on end-users, weak password handling, and why re-imports do not overwrite existing records. Intended for admins and developers managing large-scale user migrations."
+ai_summary: "Guide to importing users in bulk to Kinde using UTF-8 CSV or NDJSON files up to 49MB. Covers file requirements, username case-insensitivity, and preparing data so users link to roles, permissions, organizations, feature flags, properties, identities, and API scopes. Includes the full NDJSON schema and CSV preparation for user and password data. Supported CSV password hashes include crypt, bcrypt, sha256, md5, wordpress, and Firebase scrypt. Firebase scrypt imports require a per-user base64 salt and the project's signer key, salt separator, rounds, and memory cost; these passwords can also be supplied through the Management API. Explains Firebase and Auth0 migration paths, import steps, error handling, re-import behavior, and the end-user sign-in experience. Intended for admins and developers managing large-scale user migrations."
 ---
 
 You can import users in bulk, from CSV or JSON. If you are moving to Kinde from Auth0 or Firebase, see the dedicated migration guides ([Auth0](/manage-users/add-and-edit/import-users-from-auth0/), [Firebase](/get-started/switch-to-kinde/firebase-to-kinde/)) instead.
@@ -61,6 +64,32 @@ If you are migrating from Firebase Authentication, at a high level you will:
 
 For the full step-by-step workflow, including exporting, NDJSON conversion, hash parameters, and the Firebase-to-Kinde field mapping, see [Migrate to Kinde from Firebase Authentication](/get-started/switch-to-kinde/firebase-to-kinde/).
 
+### Other ways to bring Firebase passwords across
+
+The Firebase NDJSON import above is the simplest path, but you can also supply Firebase scrypt passwords through:
+
+- **Custom CSV import** — include the password columns described in [Prepare CSV files](#prepare-csv-files), with `hashing_method` set to `firebase-scrypt`. Each row needs the user's `hashed_password` and `salt`, plus the four project-level values (`signer_key`, `salt_separator`, `rounds`, and `mem_cost`) repeated on every row.
+- **Kinde Management API** — call [Set user password](/kinde-apis/management#tag/users/put/api/v1/users/{user_id}/password) with the Firebase password hash and parameters.
+
+For example:
+
+```json
+{
+  "hashed_password": "<firebase-password-hash>",
+  "hashing_method": "firebase-scrypt",
+  "salt": "<base64-user-salt>",
+  "signer_key": "<base64-signer-key>",
+  "salt_separator": "Bw==",
+  "rounds": 8,
+  "mem_cost": 14,
+  "is_temporary_password": false
+}
+```
+
+Replace the example values with the user's password hash and your Firebase project values. Set `is_temporary_password` to `false` so the user can keep their existing password. PBKDF2-specific fields (`iterations` and `variant`) are rejected for Firebase scrypt, and the Firebase scrypt fields are rejected for any other hashing method.
+
+Whichever path you use, the sign-in experience is the same: the first time an imported user signs in, Kinde verifies their password against the Firebase scrypt hash, then re-hashes it with bcrypt. Users keep their existing passwords and do not see a reset prompt.
+
 ## Before you import users
 
 - [Enable password authentication](/authenticate/authentication-methods/set-up-user-authentication/) before importing passwords
@@ -71,13 +100,13 @@ For the full step-by-step workflow, including exporting, NDJSON conversion, hash
 
 ## Cases in usernames
 
-Kinde treats usernames as case-insensitive. In other words, we ignore case. We do this because it eliminates the possibility of auth issues and fraud when two usernames are identical in every aspect except the case of one of their letters. 
+Kinde treats usernames as case-insensitive. In other words, we ignore case. We do this because it eliminates the possibility of auth issues and fraud when two usernames are identical in every aspect except the case of one of their letters.
 
 We are happy to support users choosing an aesthetically pleasing username combination, like `RosyRose` or `BuilderBob`. We just don't also support separate identities for `rosYrosE` and `BUilderbob`. Before importing users, we recommend checking that all usernames are unique in more than just case.
 
 ## Prepare NDJSON data
 
-Before importing, make sure that you set up data that you want user records to be linked to, e.g. roles, permissions, organizations. Organizations are linked based on the 'external_organization_id' field , the value of which needs to be added against the organization object with 'external_id' in your import file. 
+Before importing, make sure that you set up data that you want user records to be linked to, e.g. roles, permissions, organizations. Organizations are linked based on the 'external_organization_id' field , the value of which needs to be added against the organization object with 'external_id' in your import file.
 
 Using the NDJSON format you can import users with the following user data:
 
@@ -322,7 +351,7 @@ Example, but a bit easier to read.
 }
 ```
 
-## Prepare CSV files 
+## Prepare CSV files
 
 When exporting data from another auth system or your own system via CSV, the file needs to be set up with specific headings and formats for the data you are importing. These are detailed below.
 
@@ -335,7 +364,7 @@ If you are migrating from Auth0, see the **Prepare JSON data (for Auth0 imports)
 
 <Aside>
 
-There are special considerations if you are importing users who will share a phone number to authenticate via a mobile device. Contact support@kinde.com for advice on the best way to import users where the phone is the primary identity and numbers are shared. 
+There are special considerations if you are importing users who will share a phone number to authenticate via a mobile device. Contact support@kinde.com for advice on the best way to import users where the phone is the primary identity and numbers are shared.
 
 </Aside>
 
@@ -357,7 +386,7 @@ The more data that you include for import, the easier we can set up your users i
 - `role_key` - the role key for the role a user will be assigned on import. If the user is to be assigned more than one role, use a comma separated list.
 - `permission_key` - the permissions key for the permission a user will be assigned (that is not included in their role). If the user is to be assigned more than one permission, use a comma separated list.
 - `external_organization_id` - your supplied 'external_id' for the organization that you want the user to be imported into. Optional unless you are importing roles and permissions with user data. If the user belongs to more than one organization, use a comma separated list wrapped in double quotes. If left empty the user will be assigned to the default organization, if the 'Add users to this organization if no organization is specified' policy is enabled.
-  
+
   <Aside>
 
   Note that this is NOT the same as the **Organization code** in Kinde, which is a Kinde-supplied ID. You can define your ID in the organization 'external_id' field.
@@ -366,31 +395,40 @@ The more data that you include for import, the easier we can set up your users i
 
 ### Password data (optional)
 
-- `hashed_password` - the user’s password encrypted using a hashing method or algorithm.
-- `hashing_method` - the name of the algorithm used to encrypt the user’s password. Currently **crypt**, **bcrypt**, **sha256**, **md5**, and **wordpress** are supported. [Contact us](https://kinde-21631392.hs-sites.com/en-au/feature-request) if you need a different method.
-- `salt` - extra characters added to passwords to make them stronger
-- `salt_position` - position of salt in password string. E.g. prefix (before) or suffix (after).
-- `salt_format` - format of the salt, e.g. hex, string, etc.
+- `hashed_password` - the hashed password.
+- `hashing_method` - the algorithm used to hash the password. One of `bcrypt`, `crypt`, `md5`, `sha256`, `wordpress`, or `firebase-scrypt`.
+- `salt` - extra characters added to the password to make it stronger. See the table below for when this is required.
+- `salt_position` - position of the salt in the password string: `prefix` or `suffix`.
+- `salt_format` - format of the salt, e.g. `hex` or `string`.
+- `signer_key` - Firebase only. The base64-encoded signer key from your Firebase project's password hash parameters.
+- `salt_separator` - Firebase only. The base64-encoded salt separator from your Firebase project's password hash parameters.
+- `rounds` - Firebase only. The scrypt rounds value (1–16) from your Firebase project's password hash parameters.
+- `mem_cost` - Firebase only. The scrypt memory cost value (1–20) from your Firebase project's password hash parameters.
 
 <Aside title="bcrypt $2b variant support:">
 
-  Please note if you are importing bcrypt hashes with the $2b variant, Kinde will substitute this for the $2a variant. These are interchangeable as long as you were not running OpenBSD at the time the hashes were generated.
+Please note if you are importing bcrypt hashes with the $2b variant, Kinde will substitute this for the $2a variant. These are interchangeable as long as you were not running OpenBSD at the time the hashes were generated.
 
   </Aside>
 
   <Aside title="sha256 support:">
 
-  Provide the hash in hex format. Import the salt using the `salt` column. For the `salt_format`, specify how the salt should be interpreted: e.g. **hex** for a hex-encoded string (68656c6c6f for hello). By default, the salt is treated as a plain string, and escape sequences (like \n or \v) are treated as literal characters.
+Provide the hash in hex format. Import the salt using the `salt` column. For the `salt_format`, specify how the salt should be interpreted: e.g. **hex** for a hex-encoded string (68656c6c6f for hello). By default, the salt is treated as a plain string, and escape sequences (like \n or \v) are treated as literal characters.
 
   </Aside>
 
-  | Hashing method | Salt     | Salt position             |
-  | -------------- | -------- | ------------------------- |
-  | md5            | Optional | required if salt included |
-  | bcrypt         |          |                           |
-  | crypt          | Optional |                           |
-  | wordpress      | Optional |                           |
-  | sha256         | Optional | required if salt included |
+| Hashing method                                | Salt                        | Salt position             |
+| --------------------------------------------- | --------------------------- | ------------------------- |
+| `bcrypt`                                      | Optional                    | —                         |
+| `crypt`                                       | Optional                    | —                         |
+| `md5`                                         | Optional                    | Required if salt included |
+| `sha256`                                      | Optional                    | Required if salt included |
+| `wordpress`                                   | Optional                    | —                         |
+| [`firebase-scrypt`](#importing-from-firebase) | Required (base64, per user) | —                         |
+
+For `firebase-scrypt` passwords, every row must also include the `signer_key`, `salt_separator`, `rounds`, and `mem_cost` columns. These four values are the same for every user in a Firebase project. You can find them in the Firebase console under **Authentication > Users**, in the three-dots menu, as **Password hash parameters**.
+
+You can use the Firebase-style column names (`signerKey`, `saltSeparator`, and `memCost`) instead of the snake_case names if that is how your export is labelled.
 
 ### **Example simple csv import**
 
