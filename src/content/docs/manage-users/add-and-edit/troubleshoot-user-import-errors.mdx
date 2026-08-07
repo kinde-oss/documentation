@@ -30,10 +30,14 @@ keywords:
   - permission errors
   - password errors
   - csv validation
-updated: 2025-08-29
+  - ASP.NET Identity
+  - invalid password hash
+  - file encoding
+  - UTF-16
+updated: 2026-08-05
 featured: false
 deprecated: false
-ai_summary: Troubleshooting guide for user import errors including common issues, error resolution, password import problems, and data validation best practices.
+ai_summary: Troubleshooting guide for Kinde user imports, including duplicate or invalid records, password hash errors, ASP.NET Identity v2 validation, unsupported ASP.NET Core Identity v3 hashes, missing login identities, and UTF-8 or UTF-16 file encoding failures.
 ---
 
 When you import users in bulk from a file, Kinde checks to see if there are errors that will prevent a new user record from being created or updated.
@@ -70,6 +74,36 @@ The best appraoch is to fix errors in the file and then [import the users](/man
 When importing JSON passwords, Kinde will look for a user matching the ID or email address in the user details file. We will let you know if a match is not found, if the hashing algorithm is not supported, or related columns are incorrect.
 
 User’s whose passwords cannot be imported will be prompted to reset their password once you switch on the connection.
+
+### ASP.NET Identity password errors
+
+When you use the **ASP.NET Identity** import type or the `aspnet-identity-v2` hashing
+method, a password validation error prevents the entire row from being imported. Fix the
+file and re-import the row.
+
+- **The password hash is invalid** — `PasswordHash` must contain a valid
+  [ASP.NET Identity v2 hash](/get-started/switch-to-kinde/aspnet-identity-to-kinde/#which-hash-format-do-i-have).
+  V2 hashes are 68 base64 characters and decode to 49 bytes. ASP.NET Core Identity v3
+  hashes are longer and typically start with `AQAAAA`; Kinde cannot verify them. A value
+  can also become invalid if it is truncated or reformatted in a spreadsheet. To import
+  the user without a password, clear `PasswordHash`. They can then set a password when
+  they first sign in.
+- **The hashing configuration is invalid** — do not provide `salt`, `salt_position`,
+  `iterations`, or `variant` with `aspnet-identity-v2`. These values are embedded in the
+  hash, so clear the corresponding fields.
+- **The row has no login identity** — a row with a password must also have an email,
+  phone number, or username. Add a login identity or remove the password.
+
+### File encoding errors
+
+If the whole import fails before rows are processed, check the file encoding. Kinde
+accepts CSV and NDJSON files encoded as UTF-8 or UTF-16 with a byte order mark (BOM).
+Other encodings, including Windows-1252 and Latin-1, are rejected to prevent corrupted
+names and email addresses.
+
+Re-save the file as UTF-8 or BOM-marked UTF-16 and import it again. In SQL Server
+Management Studio, choose one of those encodings when saving the results. With `bcp`, use
+`-w` for UTF-16 or `-c -C 65001` for UTF-8.
 
 ### Bad data from previous provider
 

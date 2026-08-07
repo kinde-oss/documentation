@@ -2,7 +2,7 @@
 page_id: f6eaf29b-d8d9-4caf-bc1d-5319b6fb8ffc
 title: Bulk import users to Kinde
 sidebar:
-  order: 9
+  order: 10
   label: Bulk import
 tableOfContents:
   maxHeadingLevel: 3
@@ -35,10 +35,13 @@ keywords:
   - NDJSON import
   - firebase import
   - firebase scrypt
-updated: 2026-07-19
+  - ASP.NET Identity import
+  - ASP.NET Identity v2
+  - UTF-16 CSV
+updated: 2026-08-05
 featured: false
 deprecated: false
-ai_summary: "This guide explains how to bulk import users into Kinde using CSV or NDJSON files (49MB or less). It covers the full migration workflow: configuring your Kinde business with matching auth strategies, exporting users from providers like Auth0, Clerk, Supabase, Firebase, AWS Cognito, or Azure B2C, preparing a properly formatted file, and running the import via the Kinde dashboard. The guide details required and optional CSV columns including email, name, email verification status, organization IDs, roles, and permissions. It also covers migrating hashed passwords, with support for bcrypt, MD5, SHA256, crypt, and WordPress hashing methods, including salt configuration. Post-import guidance addresses handling new registrations and password changes during the migration window, recommending re-imports, forced password resets, or parallel API usage. The guide also notes that Kinde does not notify users on import, advising teams to plan their own communication strategy, and lists edge cases such as password changes mid-migration and how newly added authentication methods affect returning users."
+ai_summary: "Guide to bulk importing users into Kinde with CSV or NDJSON files up to 49MB. It covers provider exports, UTF-8 and UTF-16-with-BOM CSV requirements, supported user and organization fields, and password migration with bcrypt, MD5, SHA256, crypt, WordPress, PBKDF2, Firebase scrypt, and ASP.NET Identity v2 hashes. It lists the dedicated Auth0, FusionAuth, Firebase, and ASP.NET Identity import types, explains salt configuration, and covers re-imports, migration-window changes, and user communication."
 ---
 
 Export your users from your existing auth system, prepare a CSV, and import them into Kinde. Users with migrated password hashes can sign in immediately with no password reset required.
@@ -72,30 +75,31 @@ Export instructions vary by provider. Select yours:
 - [Firebase →](/get-started/switch-to-kinde/firebase-to-kinde/)
 - [AWS Cognito →](/get-started/switch-to-kinde/aws-cognito-to-kinde/)
 - [Azure B2C →](/get-started/switch-to-kinde/azure-b2c-to-kinde/)
+- [ASP.NET Identity →](/get-started/switch-to-kinde/aspnet-identity-to-kinde/)
 
 If you are migrating from your own system, prepare the data to match the format described below.
 
 ### 3. Prepare your CSV
 
-Import files must be 49MB or less. This applies to Custom CSV, Auth0 NDJSON, FusionAuth NDJSON, Custom NDJSON, and Firebase NDJSON imports. Format your export with the following columns.
+Import files must be 49MB or less. This applies to Custom CSV, Auth0 NDJSON, FusionAuth NDJSON, Custom NDJSON, Firebase NDJSON, and ASP.NET Identity CSV imports. CSV files must be encoded as UTF-8 or UTF-16 with a byte order mark (BOM). Format your export with the following columns.
 
 **Required column:**
 
-| Column | Notes |
-|--------|-------|
+| Column  | Notes                  |
+| ------- | ---------------------- |
 | `email` | Minimum required field |
 
 **Recommended columns:**
 
-| Column | Notes |
-|--------|-------|
-| `first_name`, `last_name` | User's name |
-| `email_verified` | `TRUE` or `FALSE` |
-| `id` | Your provider's user ID — helps match records during re-imports |
-| `phone` | International format, e.g. `+61555111555` |
+| Column                     | Notes                                                                   |
+| -------------------------- | ----------------------------------------------------------------------- |
+| `first_name`, `last_name`  | User's name                                                             |
+| `email_verified`           | `TRUE` or `FALSE`                                                       |
+| `id`                       | Your provider's user ID — helps match records during re-imports         |
+| `phone`                    | International format, e.g. `+61555111555`                               |
 | `external_organization_id` | Organization ID to import the user into. Comma-separate multiple values |
-| `role_key` | Role key(s) to assign. Comma-separate multiple values |
-| `permission_key` | Permission key(s) to assign. Comma-separate multiple values |
+| `role_key`                 | Role key(s) to assign. Comma-separate multiple values                   |
+| `permission_key`           | Permission key(s) to assign. Comma-separate multiple values             |
 
 <Aside>
 
@@ -107,24 +111,26 @@ Import files must be 49MB or less. This applies to Custom CSV, Auth0 NDJSON, Fus
 
 Include these if you're migrating hashed passwords:
 
-| Column | Notes |
-|--------|-------|
-| `hashed_password` | The hashed password string |
-| `hashing_method` | See supported methods below |
-| `salt` | Optional — extra characters added to strengthen the hash |
-| `salt_position` | `prefix` or `suffix` — required if salt is included |
-| `salt_format` | Format of the salt, e.g. `hex` or `string` |
+| Column            | Notes                                                    |
+| ----------------- | -------------------------------------------------------- |
+| `hashed_password` | The hashed password string                               |
+| `hashing_method`  | See supported methods below                              |
+| `salt`            | Optional — extra characters added to strengthen the hash |
+| `salt_position`   | `prefix` or `suffix` — required if salt is included      |
+| `salt_format`     | Format of the salt, e.g. `hex` or `string`               |
 
 **Supported hashing methods:**
 
-| Method | Salt | Salt position |
-|--------|------|---------------|
-| `bcrypt` | — | — |
-| `md5` | Optional | Required if salt included |
-| `sha256` | Optional | Required if salt included |
-| `crypt` | Optional | — |
-| `wordpress` | Optional | — |
-| `firebase-scrypt` | Required | — |
+| Method               | Salt                 | Salt position             |
+| -------------------- | -------------------- | ------------------------- |
+| `bcrypt`             | —                    | —                         |
+| `md5`                | Optional             | Required if salt included |
+| `sha256`             | Optional             | Required if salt included |
+| `crypt`              | Optional             | —                         |
+| `wordpress`          | Optional             | —                         |
+| `pbkdf2`             | Required (base64)    | —                         |
+| `firebase-scrypt`    | Required             | —                         |
+| `aspnet-identity-v2` | Embedded in the hash | —                         |
 
 <Aside title="bcrypt $2b variant">
 
@@ -138,6 +144,16 @@ Provide the hash in hex format. For `salt_format`, specify `hex` for a hex-encod
 
 </Aside>
 
+<Aside title="aspnet-identity-v2">
+
+Use the `PasswordHash` value from the ASP.NET Identity `AspNetUsers` table exactly as
+exported. The salt and other parameters are embedded in the hash, so do not include
+`salt`, `salt_position`, `iterations`, or `variant`. Rows containing those values are
+rejected. Kinde supports ASP.NET Identity v2 hashes, not ASP.NET Core Identity v3 hashes.
+See [Migrate to Kinde from ASP.NET Identity](/get-started/switch-to-kinde/aspnet-identity-to-kinde/).
+
+</Aside>
+
 **Check for errors before importing:**
 
 Review the CSV for missing or duplicate values. Kinde will report errors after import. Records that have already been imported without changes are skipped on re-import.
@@ -146,9 +162,11 @@ Review the CSV for missing or duplicate values. Kinde will report errors after i
 
 1. In Kinde, go to **Users**, then select **Import users**.
 2. Select your import type:
+
    - **Auth0** — for NDJSON files exported from Auth0
    - **FusionAuth** — for NDJSON files exported from FusionAuth
    - **Firebase** — for NDJSON files prepared from a Firebase Authentication export (`firebase auth:export`)
+   - **ASP.NET Identity** — for a CSV export of the `AspNetUsers` table
    - **Custom NDJSON** — for NDJSON files exported from other providers
    - **Custom CSV** — for all other providers
 
