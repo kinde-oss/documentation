@@ -1,7 +1,7 @@
 ---
 page_id: 02d02820-92da-4721-9a91-222c9b095869
 title: Use Kinde without an SDK
-description: "Integrate Kinde auth in any language using OAuth 2.0 and OpenID Connect—no SDK required. Covers flows, tokens, and route protection."
+description: "Build Kinde auth without an SDK using OAuth 2.0 and OpenID Connect—code flow, PKCE, tokens, and route protection"
 sidebar:
   order: 2
 tableOfContents:
@@ -18,7 +18,7 @@ topics:
   - developer-tools
   - oauth
   - openid-connect
-  - authentication
+  - pkce
 sdk: []
 languages:
   - javascript
@@ -27,16 +27,16 @@ complexity: advanced
 keywords:
   - authorization code flow
   - PKCE
+  - nonce
   - token exchange
   - JWT verification
   - refresh token
-  - OAuth scopes
+  - OpenID Connect
   - route protection
-  - callback URL
-updated: 2026-07-13
+updated: 2026-08-08
 featured: false
 deprecated: false
-ai_summary: "This guide explains how to integrate Kinde authentication into any language or framework without using an official SDK, relying on OAuth 2.0 and OpenID Connect standards. A nine-step quickstart walks through creating a Kinde application, configuring callback URLs, and implementing either the Authorization Code Flow for server-rendered back-end apps or Authorization Code Flow with PKCE for single-page and mobile public clients. It covers generating PKCE code verifiers and challenges, building authorization URLs, handling callbacks with state validation to prevent CSRF, exchanging authorization codes for tokens, and decoding the id_token for user profile data. Dedicated sections explain why each grant type is used and which app types they suit. The guide describes two-layer route protection combining frontend token expiry checks with backend RS256 JWT verification against the JWKS endpoint, silent access token refresh using refresh tokens, user sign-out via the Kinde logout endpoint, and generating self-serve portal links via the Account API. A full reference documents supported OAuth scopes and request parameters including prompt, login_hint, org_code, nonce, and audience. FAQs address why the Implicit Flow is not supported and when to use the userinfo endpoint versus decoding the id_token. Intended for developers building custom OAuth integrations."
+ai_summary: "Guide to integrating Kinde authentication in any language or framework without an official SDK, using OAuth 2.0 and OpenID Connect. A nine-step quickstart covers creating a Kinde application, configuring callback URLs and auth methods, discovering OpenID endpoints, and implementing either the Authorization Code Flow for backend apps or Authorization Code Flow with PKCE for SPAs and mobile clients. It walks through generating state and nonce values, building authorization URLs, validating callbacks, exchanging codes for tokens, and decoding the id_token while verifying the nonce claim. Further sections cover two-layer route protection with frontend expiry checks and backend RS256 JWT verification against JWKS, silent access token refresh, sign-out via the logout endpoint, and self-serve portal links via the Account API. Includes grant type guidance, OAuth scopes, and a full request parameter reference covering state, nonce, prompt, login_hint, org_code, audience, and more. FAQs explain why Implicit Flow is unsupported and when to use the userinfo endpoint. Intended for developers building custom OAuth integrations."
 ---
 
 Kinde is designed to help founders and developers build SaaS products by providing software infrastructure like authentication, feature flags, user management, and more.
@@ -97,22 +97,22 @@ We support connecting to Kinde through [our SDKs](/developer-tools/about/our-sdk
 
 These are the OpenID endpoints for Kinde, found at:
 
-`https://<YOUR_DOMAIN>/.well-known/openid-configuration`
+`<YOUR_DOMAIN>/.well-known/openid-configuration`
 
 <Aside>
-Replace `<YOUR_DOMAIN>` with either your custom domain (e.g., `auth.yourbusiness.com`) or your Kinde domain (e.g., `your_business.kinde.com`)
+Replace `<YOUR_DOMAIN>` with either your custom domain (e.g., `https://auth.yourbusiness.com`) or your Kinde domain (e.g., `https://your_business.kinde.com`)
 </Aside>
 
-- Authorization endpoint: `https://<YOUR_DOMAIN>/oauth2/auth`
-- Token endpoint: `https://<YOUR_DOMAIN>/oauth2/token`
-- Userinfo endpoint: `https://<YOUR_DOMAIN>/oauth2/v2/user_profile`
-- Logout endpoint: `https://<YOUR_DOMAIN>/logout`
+- Authorization endpoint: `<YOUR_DOMAIN>/oauth2/auth`
+- Token endpoint: `<YOUR_DOMAIN>/oauth2/token`
+- Userinfo endpoint: `<YOUR_DOMAIN>/oauth2/v2/user_profile`
+- Logout endpoint: `<YOUR_DOMAIN>/logout`
 
 **Other endpoints:**
 
-- JWKS URI: `https://<YOUR_DOMAIN>/.well-known/jwks`
-- Revocation endpoint: `https://<YOUR_DOMAIN>/oauth2/revoke`
-- Introspection endpoint: `https://<YOUR_DOMAIN>/oauth2/introspect`
+- JWKS URI: `<YOUR_DOMAIN>/.well-known/jwks`
+- Revocation endpoint: `<YOUR_DOMAIN>/oauth2/revoke`
+- Introspection endpoint: `<YOUR_DOMAIN>/oauth2/introspect`
 
 ### 6. Create the authorization request
 
@@ -121,29 +121,31 @@ Replace `<YOUR_DOMAIN>` with either your custom domain (e.g., `auth.yourbusiness
 
 <Tabs syncKey="auth-flow">
   <TabItem label="Backend application">
-    2. In your app, generate a random `state` value:
+    2. In your app, generate a random `state` value and a `nonce`:
 
         ```js title="Node.js example"
         import crypto from 'node:crypto';
 
         const state = crypto.randomBytes(32).toString('hex');
+        const nonce = crypto.randomBytes(32).toString('hex');
         ```
 
-        Store `state` in your server-side session — you will need it when the user returns to the callback URL.
+        Store `state` and `nonce` in your server-side session — you will need them when the user returns to the callback URL.
 
-    3. Send the user to Kinde's authorization endpoint with the state parameter included in the URL:
+    3. Send the user to Kinde's authorization endpoint with the `state` and `nonce` parameters included in the URL:
 
         ```http
-        GET https://<YOUR_DOMAIN>/oauth2/auth
+        GET <YOUR_DOMAIN>/oauth2/auth
         ?response_type=code
         &client_id=<your_kinde_client_id>
         &redirect_uri=<your_app_redirect_url>
         &scope=openid%20profile%20email
         &state=<your_random_state_value_min_8_characters>
+        &nonce=<your_random_nonce_value>
         ```
   </TabItem>
   <TabItem label="SPAs and mobile apps">
-    2. In your app, generate a random `state` value, a `code_verifier`, and derive a `code_challenge` from it:
+    2. In your app, generate a random `state` value, a `nonce`, a `code_verifier`, and derive a `code_challenge` from it:
 
         ```js title="Browser JavaScript example"
         function base64UrlEncode(buffer) {
@@ -164,6 +166,12 @@ Replace `<YOUR_DOMAIN>` with either your custom domain (e.g., `auth.yourbusiness
           b.toString(16).padStart(2, '0')
         ).join('');
 
+        const nonceBytes = new Uint8Array(32);
+        crypto.getRandomValues(nonceBytes);
+        const nonce = Array.from(nonceBytes, (b) =>
+          b.toString(16).padStart(2, '0')
+        ).join('');
+
         // 64 random bytes, base64url-encoded = 86-char code_verifier
         const verifierBytes = new Uint8Array(64);
         crypto.getRandomValues(verifierBytes);
@@ -177,17 +185,18 @@ Replace `<YOUR_DOMAIN>` with either your custom domain (e.g., `auth.yourbusiness
         const codeChallenge = base64UrlEncode(digest);
         ```
 
-        Store `state` and `code_verifier` in `sessionStorage` (for SPAs) and secure device storage (Keychain/Keystore) for mobile apps— you will need them when the user returns to the callback URL.
+        Store `state`, `nonce`, and `code_verifier` in `sessionStorage` (for SPAs) and secure device storage (Keychain/Keystore) for mobile apps— you will need them when the user returns to the callback URL.
 
-    3. Send the user to Kinde's authorization endpoint with the state and PKCE parameters included in the URL:
+    3. Send the user to Kinde's authorization endpoint with the `state`, `nonce`, and PKCE parameters included in the URL:
 
         ```http
-        GET https://<YOUR_DOMAIN>/oauth2/auth
+        GET <YOUR_DOMAIN>/oauth2/auth
         ?response_type=code
         &client_id=<your_kinde_client_id>
         &redirect_uri=<your_app_redirect_url>
         &scope=openid%20profile%20email
         &state=<your_random_state_value_min_8_characters>
+        &nonce=<your_random_nonce_value>
         &code_challenge=<code_challenge>
         &code_challenge_method=S256
         ```
@@ -216,7 +225,7 @@ Replace `<YOUR_DOMAIN>` with either your custom domain (e.g., `auth.yourbusiness
       3. Exchange the authorization `code` for tokens by making a POST request to the Kinde token endpoint:
 
           ```http
-          POST https://<YOUR_DOMAIN>/oauth2/token
+          POST <YOUR_DOMAIN>/oauth2/token
           Content-Type: application/x-www-form-urlencoded
 
           grant_type=authorization_code
@@ -230,7 +239,7 @@ Replace `<YOUR_DOMAIN>` with either your custom domain (e.g., `auth.yourbusiness
       3. Exchange the authorization `code` for tokens by making a POST request to the Kinde token endpoint with the `code_verifier` — no `client_secret` needed:
 
           ```http
-          POST https://<YOUR_DOMAIN>/oauth2/token
+          POST <YOUR_DOMAIN>/oauth2/token
           Content-Type: application/x-www-form-urlencoded
 
           grant_type=authorization_code
@@ -255,7 +264,7 @@ Replace `<YOUR_DOMAIN>` with either your custom domain (e.g., `auth.yourbusiness
 ### 8. Display user information
 
 1. Redirect the user to a protected page in your app
-2. Decode the `id_token` with any standard [JWT library](https://www.jwt.io/libraries), or if you are using JavaScript, use the [Kinde JavaScript library](/build/tokens/decode-jwts/)
+2. Decode the `id_token` with any standard [JWT library](https://www.jwt.io/libraries), or if you are using JavaScript, use the [Kinde JavaScript library](/build/tokens/decode-jwts/). Validate that the `nonce` claim matches the value you stored earlier to prevent replay attacks.
 3. Use the decoded claims to display in your app:
 
     ```json
@@ -265,6 +274,7 @@ Replace `<YOUR_DOMAIN>` with either your custom domain (e.g., `auth.yourbusiness
       "family_name": "Doe",
       "email": "jane@example.com",
       "picture": "https://gravatar.com/...",
+      "nonce": "<your_random_nonce_value>",
       "iat": 1716800000,
       "exp": 1716886400
     }
@@ -286,29 +296,31 @@ Complete the registration flow in your app and verify that you can sign in to a 
 The following link redirects the user to the Kinde sign-in page by default:
 
     ```http
-    GET https://<YOUR_DOMAIN>/oauth2/auth
+    GET <YOUR_DOMAIN>/oauth2/auth
     ?response_type=code
     &client_id=<your_kinde_client_id>
     &redirect_uri=<your_app_redirect_url>
     &scope=openid%20profile%20email
     &state=<your_random_state_value_min_8_characters>
+    &nonce=<your_random_nonce_value>
     ```
 
 To send the user to the sign-up page instead, add `prompt=create` to the URL:
 
     ```http
-    GET https://<YOUR_DOMAIN>/oauth2/auth
+    GET <YOUR_DOMAIN>/oauth2/auth
     ?response_type=code
     &client_id=<your_kinde_client_id>
     &redirect_uri=<your_app_redirect_url>
     &scope=openid%20profile%20email
     &state=<your_random_state_value_min_8_characters>
+    &nonce=<your_random_nonce_value>
     &prompt=create
     ```
 
 ### Handle successful auth for desktop and mobile apps
 
-If you offer mobile and desktop apps alongside a browser-based version, you'll need to handle the post-authentication browser state. Rather than leaving a hanging screen, you can show users a success page. To do this, add the `is_use_auth_success_page` parameter to the authorization URL. See the [Request parameters](/developer-tools/about/using-kinde-without-an-sdk/#request-parameters) section below.
+If you offer mobile and desktop apps alongside a browser-based version, you'll need to handle the post-authentication browser state. Rather than leaving a hanging screen, you can show users a success page. To do this, add the [`has_success_page`](/developer-tools/about/using-kinde-without-an-sdk/#has_success_page) parameter to the authorization URL.
 
 ### Protect a route with auth
 
@@ -330,7 +342,7 @@ function isTokenExpired(token) {
 // Run this check on every protected page load
 if (!accessToken || isTokenExpired(accessToken)) {
   window.location.href =
-    'https://<YOUR_DOMAIN>/oauth2/auth?response_type=code&client_id=<CLIENT_ID>&...';
+    '<YOUR_DOMAIN>/oauth2/auth?response_type=code&client_id=<CLIENT_ID>&...';
 }
 ```
 
@@ -357,8 +369,8 @@ function protectedRoute(req, res, next) {
 
   try {
     const payload = verifyJWT(token, {
-      jwksUri: 'https://<YOUR_DOMAIN>/.well-known/jwks',
-      issuer: 'https://<YOUR_DOMAIN>',
+      jwksUri: '<YOUR_DOMAIN>/.well-known/jwks',
+      issuer: '<YOUR_DOMAIN>',
     });
     req.user = payload; // access sub, org_code, scp, permissions
     next();
@@ -388,7 +400,7 @@ By default, access tokens expire after 24 hours. If you requested the `offline` 
 <Tabs syncKey="auth-flow">
   <TabItem label="Backend application">
     ```http
-    POST https://<YOUR_DOMAIN>/oauth2/token
+    POST <YOUR_DOMAIN>/oauth2/token
     Content-Type: application/x-www-form-urlencoded
 
     grant_type=refresh_token
@@ -399,7 +411,7 @@ By default, access tokens expire after 24 hours. If you requested the `offline` 
   </TabItem>
   <TabItem label="SPAs and mobile apps">
     ```http
-    POST https://<YOUR_DOMAIN>/oauth2/token
+    POST <YOUR_DOMAIN>/oauth2/token
     Content-Type: application/x-www-form-urlencoded
 
     grant_type=refresh_token
@@ -416,7 +428,7 @@ If no refresh token is available (i.e. `offline` scope was not requested), redir
 Always verify the `access_token` signature on your server before trusting any request. Kinde signs tokens with RS256 and publishes its public keys at the JWKS endpoint:
 
 ```text
-https://<YOUR_DOMAIN>/.well-known/jwks
+<YOUR_DOMAIN>/.well-known/jwks
 ```
 
 Most JWT libraries accept a JWKS URL directly — point your library at this URL and it will fetch and cache the correct public key automatically.
@@ -425,8 +437,8 @@ As part of verification, validate the following claims:
 
 | Claim | Expected value |
 | --- | --- |
-| `iss` | `https://<YOUR_DOMAIN>` |
-| `aud` | Your `client_id` (or your API audience if configured) |
+| `iss` | `<YOUR_DOMAIN>` |
+| `aud` | Your API audience if configured |
 | `exp` | Must be in the future |
 | `iat` | Must be in the past |
 
@@ -437,7 +449,7 @@ Reject any token that fails signature verification or has an unexpected claim va
 Call the Kinde Account API with the logged-in user's access token to generate a self-serve portal link for the user:
 
 ```javascript title="JavaScript example"
-const response = await fetch("/account_api/v1/portal_link", {
+const response = await fetch("<YOUR_DOMAIN>/account_api/v1/portal_link", {
   headers: {
     Authorization: `Bearer ${userAccessToken}`
   }
@@ -448,8 +460,8 @@ window.location = data.url;
 
 Optional parameters:
 
+- `subnav` – specify the portal section to open (e.g., `organization_details`, `profile`).
 - `return_url` – where to redirect the user after exiting the portal.
-- `sub_nav` – specify the portal section to open (e.g., `organization_billing`, `profile`).
 
 See: [Self-serve portal for users](/build/self-service-portal/self-serve-portal-for-users/).
 
@@ -461,7 +473,7 @@ To sign a user out:
 2. Redirect them to the Kinde logout endpoint with your logout URL:
 
     ```text
-    https://<YOUR_DOMAIN>/logout?redirect=<your_logout_url>
+    <YOUR_DOMAIN>/logout?redirect=<your_logout_url>
     ```
 
     This ends their Kinde session. They will need to authenticate again to receive new tokens.
@@ -477,6 +489,14 @@ The Authorization Code Flow is the standard way to sign users in when your app r
 ### PKCE extension
 
 The Authorization Code Flow with PKCE (Proof Key for Code Exchange) works the same way, but replaces the `client_secret` with a one-time cryptographic proof. Before redirecting the user to Kinde, your app generates a random `code_verifier` and sends a hashed version (`code_challenge`) in the authorization request. When exchanging the authorization code for tokens, your app sends the original `code_verifier` instead of a secret. Kinde verifies they match, proving that the same app that started the login is completing it. This matters because single-page apps (SPAs) and mobile apps are "public clients" — their code runs on the user's device, so a `client_secret` could be extracted and abused. PKCE gives you the security of the authorization code flow without needing a secret. Use PKCE for SPAs, native mobile apps, desktop apps, and any client that cannot keep a `client_secret` confidential.
+
+### Implicit flow (Not recommended)
+
+The Implicit Flow was originally created for browser-based apps that couldn't keep a secret — it returned the `access_token` directly in the URL fragment after login. That convenience came at a serious cost: tokens in URL fragments can leak through browser history, referrer headers, and server logs. The OAuth 2.0 Security Best Current Practice ([RFC 9700](https://datatracker.ietf.org/doc/html/rfc9700#name-implicit-grant)) now explicitly recommends against using the Implicit Flow for any new application.
+
+**What to use instead:** The Authorization Code Flow with PKCE is the correct choice for all public clients — including single-page apps and mobile apps — regardless of whether they can store a client secret. PKCE (Proof Key for Code Exchange) solves the same problem the Implicit Flow was trying to address, without the token-in-URL security exposure.
+
+If you are migrating an existing app from the Implicit Flow, replace the flow type `token` with `code` and add the `code_challenge` and `code_challenge_method` parameters to your authorization request. No client secret is required.
 
 ## OAuth 2.0 scopes for Kinde
 
@@ -503,6 +523,14 @@ Requests a `refresh_token` that can be used to silently refresh the `access_toke
     Kinde uses `offline` to request a refresh token. The OIDC specification defines this scope as `offline_access`, but Kinde does not support `offline_access` — using it will not return a refresh token and will not produce an error. Make sure to use `offline` exactly.
 
     </Aside>
+
+### `phone`
+
+Requests the `phone_number` and `phone_number_verified` claims in the `id_token`.
+
+### `address`
+
+Requests the `address` claim in the `id_token`.
 
 ## **Request parameters**
 
@@ -570,7 +598,7 @@ A base64url-encoded SHA-256 hash of the code verifier.
 
 Type: `string`
 
-Required: For PKCE
+Required: for public clients (e.g., SPAs and mobile apps)
 
 ### `code_challenge_method`
 
@@ -582,7 +610,7 @@ Required: For PKCE
 
 ### `prompt`
 
-Accepts `login`, `create`, or `none` to control which page users land on. By default, users are directed to the sign-in page.
+Accepts `login`, `create`, `consent`, `select_account`, or `none` to control which page users land on. By default, users are directed to the sign-in page.
 
 If you use `none`, Kinde will not show authentication screens to the user.
 
@@ -590,7 +618,7 @@ If you use `none`, Kinde will not show authentication screens to the user.
 - If the user does NOT have an active SSO session, this will redirect them to the callback URL with the following error:
 
   ```http
-  302 https://YOUR_CALLBACK_URL?
+  302 <YOUR_CALLBACK_URL>?
   error=login_required&
   error_description=User+authentication+is+required&
   state=YOUR_STATE
@@ -640,14 +668,6 @@ Type: `string`
 
 Required: No
 
-### `is_use_auth_success_page`
-
-Displays a sign-in success page following authentication. Recommended for browser authentication.
-
-Type: `boolean`
-
-Required: No
-
 ### `has_success_page`
 
 Shows a success page at the end of the authentication flow. Useful when the callback URL opens a native app rather than a web page.
@@ -688,7 +708,7 @@ Type: `string`
 
 Required: No
 
-### `workflow_deployment_id`
+### `deploy_id`
 
 The ID of a workflow deployment to test. When set, a password will be requested on login.
 
@@ -721,16 +741,6 @@ Type: `string`
 Required: No
 
 ## FAQs
-
-### Does Kinde support the Implicit Flow?
-
-No. Kinde does not support the OAuth 2.0 Implicit Flow, and this is by design.
-
-The Implicit Flow was originally created for browser-based apps that couldn't keep a secret — it returned the `access_token` directly in the URL fragment after login. That convenience came at a serious cost: tokens in URL fragments can leak through browser history, referrer headers, and server logs. The OAuth 2.0 Security Best Current Practice ([RFC 9700](https://datatracker.ietf.org/doc/html/rfc9700#name-implicit-grant)) now explicitly recommends against using the Implicit Flow for any new application.
-
-**What to use instead:** The Authorization Code Flow with PKCE is the correct choice for all public clients — including single-page apps and mobile apps — regardless of whether they can store a client secret. PKCE (Proof Key for Code Exchange) solves the same problem the Implicit Flow was trying to address, without the token-in-URL security exposure.
-
-If you are migrating an existing app from the Implicit Flow, replace the flow type with `code` and add the `code_challenge` and `code_challenge_method` parameters to your authorization request. No client secret is required.
 
 ### When should I use the userinfo endpoint instead of decoding the `id_token`?
 
