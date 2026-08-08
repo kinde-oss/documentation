@@ -12,11 +12,8 @@ topics:
   - developer-tools
   - account-api
   - access-tokens
-sdk:
-  - nextjs
-languages:
-  - typescript
-  - javascript
+sdk: []
+languages: []
 audience:
   - developers
 complexity: intermediate
@@ -29,7 +26,7 @@ keywords:
   - roles and permissions
   - browser-scoped token
   - self-serve portal
-updated: 2026-07-02
+updated: 2026-08-08
 featured: false
 deprecated: false
 ai_summary: "Overview of Kinde's Account API for retrieving user data from browser-scoped access tokens. Explains how the API uses a logged-in user's access token to fetch roles, permissions, profile information, billing entitlements, feature flags, and properties. Covers setup steps including obtaining an access token via a Kinde SDK or manual OAuth flow, and calling Account API endpoints with Bearer authentication. Describes common use cases such as gating features by billing entitlements, offloading large JWT claims, redirecting users to the self-serve portal, and accessing or revoking user sessions via the user_profile endpoint. Notes that most Account API data is read-only due to browser token security constraints, and points to the Kinde Management API for write operations. Intended for developers integrating user data access into frontend or full-stack applications."
@@ -39,7 +36,7 @@ Kinde's [Account API](https://docs.kinde.com/kinde-apis/frontend/) uses a user's
 
 <Aside title="Account API data is read-only">
 
-Most of the data you can access via the Account API is read-only (except for a few OAuth methods). Account API data is surfaced through a browser token, and passing data this way is less secure. If you want to do more with the API, check out the [Kinde Management API](/developer-tools/kinde-api/connect-to-kinde-api/).
+Most of the data you can access via the Account API is read-only (except for a few OAuth methods). Account API data is surfaced through a browser token, and passing data this way is less secure. If you want to do more with the API, check out the [Kinde Management API](/kinde-apis/management/).
 
 </Aside>
 
@@ -61,15 +58,18 @@ Kinde uses the logged-in user's access token to access the Account API.
 2. Call the relevant Account API endpoint:
 
     ```javascript title="JavaScript example"
-    fetch('https://<YOUR_DOMAIN>/account_api/v1/entitlements', {
+    fetch('<YOUR_DOMAIN>/account_api/v1/entitlements', {
       headers: {
         Authorization: `Bearer ${accessToken}`
       }
     })
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch(error => console.error('Error:', error));
     ```
 
     <Aside>
-    Replace `<YOUR_DOMAIN>` with either your [custom domain](/build/domains/pointing-your-domain/) (e.g., `auth.yourbusiness.com`) or your Kinde domain (`your_business.kinde.com`).
+    Replace `<YOUR_DOMAIN>` with either your [custom domain](/build/domains/pointing-your-domain/) (e.g., `https://auth.yourbusiness.com`) or your Kinde domain (`https://your_business.kinde.com`).
     </Aside>
 
 ## Use cases
