@@ -1,7 +1,7 @@
 ---
 page_id: 14aeb42e-8799-481c-88cf-62f521b33d5e
 title: Manage assets
-description: "Guide for managing design assets including Kinde-hosted favicons and logos, external assets, and Content Security Policy compliance for custom domains."
+description: "Use Kinde-hosted logos and favicons in custom pages, or serve your own assets under a CSP-safe custom domain"
 sidebar:
   order: 7
 relatedArticles:
@@ -19,24 +19,25 @@ languages:
 audience: developers
 complexity: intermediate
 keywords:
-  - design assets
   - favicons
   - logos
-  - external assets
+  - getLogoUrl
+  - getSVGFaviconUrl
   - CSP
-  - Content Security Policy
+  - custom domain
   - organization logos
-updated: 2024-01-15
+  - dark mode logo
+updated: 2026-07-14
 featured: false
 deprecated: false
-ai_summary: Guide for managing design assets including Kinde-hosted favicons and logos, external assets, and Content Security Policy compliance for custom domains.
+ai_summary: "Guide to managing design assets on Kinde custom pages. Covers referencing Kinde-hosted favicons and logos with helpers from the infrastructure package, including light, dark, and preference-based logo rendering, plus organization-specific logos via org code. Explains that external stylesheets, fonts, and images must be self-hosted, and that assets must share the same root domain as your custom domain to comply with Kinde Content Security Policy. Intended for developers building custom UI for Kinde-hosted pages."
 ---
 
-It is likely that your logos and favicons are managed in Kinde, but you may also manage externally hosted assets like stylesheets, fonts, and images.
+You can use logos and favicons managed in Kinde, or host stylesheets, fonts, and images externally.
 
-## Kinde hosted assets
+## Kinde-hosted assets
 
-Within your custom code you can reference assets which have been uploaded within the Kinde admin area. The Kinde infrastructure package ships with helper methods for accessing these:
+In your custom code, you can reference assets uploaded in the Kinde admin. The Kinde infrastructure package includes helpers for accessing them:
 
 ### Favicons
 
@@ -63,13 +64,13 @@ import {getLogoUrl, getDarkModeLogoUrl} from "@kinde/infrastructure";
 // Always use light logo
 <img
 	src={getLogoUrl()}
-	alt={event.context.widget.content.logoAlt}
+	alt={event.context.widget.content.logo_alt}
 />
 
 // Always use dark logo
 <img
 	src={getDarkModeLogoUrl()}
-	alt={event.context.widget.content.logoAlt}
+	alt={event.context.widget.content.logo_alt}
 />
 
 // User preference
@@ -80,28 +81,28 @@ import {getLogoUrl, getDarkModeLogoUrl} from "@kinde/infrastructure";
 	>
 	<img
 		src={getLogoUrl()}
-		alt={event.context.widget.content.logoAlt}
+		alt={event.context.widget.content.logo_alt}
 	/>
 </picture>
 ```
 
 ### Org logos
 
-Both logo functions accept the org code as an argument to return the relevant organization logo url:
+Both logo functions accept the org code as an argument to return the relevant organization logo URL:
 
 ```jsx
 // Pass org code in
 const {orgCode} = event.request.authUrlParams
 <img
 	src={getLogoUrl(orgCode)}
-	alt={event.context.widget.content.logoAlt}
+	alt={event.context.widget.content.logo_alt}
 />
 ```
 
-## External CSS files, fonts and images
+## External CSS files, fonts, and images
 
-We know you will want to use assets like stylesheets, fonts and images. Kinde does not currently offer hosting for these static assets and you will need to host them yourself.
+You can also use stylesheets, fonts, and images. Kinde does not host these static assets, so you need to host them yourself.
 
-Your root domain as well as any subdomains of that domain are added to our Content-Security-Policy (CSP) by default so to use your own assets and comply with Kinde’s CSP, the assets should be stored on servers that share the same domain as your custom domain.
+Your root domain and its subdomains are added to the Content Security Policy (CSP) by default. To use your own assets and comply with Kinde's CSP, store them on servers that share the same domain as your custom domain.
 
-For example, if you are using the custom domain `auth.myapp.com` you could host your external fonts, images and CSS files at `assets.myapp.com` and they would be accessible in your code.
+For example, if you use the custom domain `auth.myapp.com`, you can host fonts, images, and CSS at `assets.myapp.com` and access them in your code.
