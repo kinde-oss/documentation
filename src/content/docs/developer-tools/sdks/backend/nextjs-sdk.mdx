@@ -475,9 +475,11 @@ export const config = {
 }
 ```
 
-### Combining with other middleware
+### Combine with other middleware
 
-Next.js allows only one `proxy.ts` (or legacy `middleware.ts`) default export. To run other middleware alongside Kinde, nest that logic inside the `withAuth` callback rather than wrapping `withAuth` in a generic middleware chain utility. Those utilities usually treat `withAuth` like a plain `(req) => NextResponse` handler and can break redirects and session cookies.
+Next.js allows only one `proxy.ts` (or legacy `middleware.ts`) default export. To run other middleware alongside Kinde, nest that logic inside the `withAuth` callback.
+
+If you wrap `withAuth` in a generic middleware chain utility, it will treat `withAuth` like a plain `(req) => NextResponse` handler and can break redirects and session cookies.
 
 `withAuth` is a factory that owns authentication redirects, token refresh, and cookie writes. When your callback returns a `NextResponse`, Kinde copies any refreshed session cookies onto that response before returning it.
 
