@@ -513,7 +513,7 @@ Always return the `NextResponse` from your additional middleware so Kinde can me
 
 #### Middleware that must also run on public routes
 
-The `withAuth` callback runs only after a successful auth check on protected routes. It is not invoked for paths in `publicPaths` (Kinde returns early after optional token refresh). If other middleware must run on both public and protected routes — for example internationalization with next-intl — wrap `withAuth` and call that middleware for public paths yourself:
+The `withAuth` callback runs only after a successful auth check on protected routes. It is not invoked for paths in `publicPaths` (Kinde returns early after optional token refresh). If other middleware must run on both public and protected routes — for example internationalization with next-intl — still call `withAuth` on public paths so refresh can run, then merge any refreshed session cookies onto that middleware's response. Keep protected routes on `authProxy` so the callback runs after auth:
 
 ```ts
 // proxy.ts
@@ -534,14 +534,21 @@ const authProxy = withAuth(
   { publicPaths }
 );
 
-export default function proxy(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const isPublic = publicPaths.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`)
   );
 
   if (isPublic) {
-    return handleI18n(req);
+    // withAuth refreshes on public paths but skips the callback —
+    // copy any refreshed session cookies onto the i18n response.
+    const authRes = await authProxy(req);
+    const i18nRes = handleI18n(req);
+    authRes.cookies.getAll().forEach((cookie) => {
+      i18nRes.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return i18nRes;
   }
 
   return authProxy(req);
