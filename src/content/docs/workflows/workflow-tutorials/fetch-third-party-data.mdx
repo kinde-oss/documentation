@@ -1,9 +1,10 @@
 ---
 page_id: 4cb565d2-5c3b-47a1-8fc0-2f39879bcaf7
-title: Tutorial - Fetch third party data in workflows
+title: Fetch third party data in Kinde workflows
 description: Fetch third party data from your Kinde workflows
 sidebar:
   order: 2
+  label: Fetch third party data
 tableOfContents:
   maxHeadingLevel: 3
 relatedArticles:
@@ -49,17 +50,30 @@ ai_summary: "Learn how to call a third-party HTTP API from a Kinde workflow duri
 
 You can fetch third party data from your workflows and use within them.
 
-### What you need?
+## What you need
 
 - A [Kinde](https://app.kinde.com/register) account (Sign up for free)
-- A workflow Git repository connected to your Kinde account (use the [workflow base template](/workflows/getting-started/quick-start-guide/))
+- A workflow Git repository connected to your Kinde account (follow the [quick start guide](/workflows/getting-started/quick-start-guide/))
 - A third party data source such as a database or API
 
 ## Fetch third party data from the workflow
 
-### Basic example
+Use the Kinde `fetch` binding to get third party data:
 
-1. Add the following code to your `Workflow.ts` file:
+```typescript 
+const { data: userData } = await fetch(`https://my-website.com/api/user/some-user-id`, {
+    method: "GET",
+    responseFormat: "json",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+// use the userData as needed
+console.log(userData);
+```
+
+#### Full `Workflow.ts` file example
 
     ```typescript
     import {
@@ -111,11 +125,23 @@ You can fetch third party data from your workflows and use within them.
 
 Read more about the [kinde.fetch binding](/workflows/bindings/fetch-binding/).
 
-### Add environment variables
+## Add environment variables
+
+Offload sensitive or repetitive data to environment variables to avoid hardcoding them in the workflow.
 
 1. Go to **Kinde > Settings > Data management > Env variables** and add any environment variables you need to use in your workflow. (e.g., `API_URL`, `API_KEY`, etc.)
 
-2. Add the following sample code to your `Workflow.ts` file:
+2. Access environment variables in workflow with the helper method:
+
+    ```typescript
+    // import the helper method
+    import { getEnvironmentVariable } from "@kinde/infrastructure";
+
+    // access within the workflow
+    const apiKey = getEnvironmentVariable("API_KEY")?.value;
+    ```
+
+#### Full `Workflow.ts` file example
 
     ```typescript
     import {

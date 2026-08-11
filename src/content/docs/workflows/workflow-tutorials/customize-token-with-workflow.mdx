@@ -1,8 +1,9 @@
 ---
 page_id: 56db51a5-5542-4631-8bc6-36339a813a85
-title: Tutorial - Customize tokens using workflows
+title: Customize access and ID tokens using workflows
 sidebar:
   order: 1
+  label: Customize access and ID tokens
 tableOfContents:
   maxHeadingLevel: 3
 relatedArticles:
@@ -41,16 +42,28 @@ ai_summary: "This tutorial teaches developers how to customize Kinde access and 
 
 Use workflows to add or remove claims from Kinde's access or ID tokens.
 
-### What you need
+## What you need
 
 - A [Kinde](https://app.kinde.com/register) account (Sign up for free)
-- A workflow Git repository connected to your Kinde account (use the [workflow base template](/workflows/getting-started/quick-start-guide/))
+- A workflow Git repository connected to your Kinde account (follow the [quick start guide](/workflows/getting-started/quick-start-guide/))
 
 ## Customize the access token
 
 ### Add a custom claim
 
-1. Add the following code to your `Workflow.ts` file:
+Define the custom claim property you want to add to the access token, then update it with your custom value:
+
+    ```typescript
+    const accessToken = accessTokenCustomClaims<{
+      companyName: string,
+    }>()
+    
+    accessToken.companyName = "Acme Inc."
+    ```
+
+Full `Workflow.ts` file example:
+
+#### Add a custom claim to the access token
 
     ```typescript
     // Workflow.ts
@@ -89,7 +102,21 @@ The above code adds the `companyName` claim to the access token, with the value 
 
 ### Remove claims
 
-1. Add the following code to your `Workflow.ts` file:
+To remove claims from the access token, update the custom claim property to an empty array or object:
+
+```typescript
+const accessToken = accessTokenCustomClaims<{
+  permissions: string[],
+  feature_flags: Record<string, unknown>,
+}>()
+
+accessToken.permissions = []
+accessToken.feature_flags = {}
+```
+
+Full `Workflow.ts` file example:
+
+#### Remove `permissions` and `feature_flags` claims from the access token
 
     ```typescript
     // Workflow.ts
@@ -132,7 +159,21 @@ Take a look at the available access token claims in the [about access tokens](/b
 
 ## Customize the ID token
 
-1. Add the following code to your `Workflow.ts` file:
+Define the custom claim property you want to add to the ID token, then update it with your custom value:
+
+```typescript
+const idToken = idTokenCustomClaims<{
+  house: string,
+  name: string,
+}>()
+
+idToken.house = "Gryffindor"
+idToken.name = "Harry Potter"
+```
+
+Full `Workflow.ts` file example:
+
+#### Add a custom claim to the ID token 
 
     ```typescript
     // Workflow.ts
