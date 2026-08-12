@@ -420,6 +420,10 @@ The more data that you include for import, the easier we can set up your users i
 - `salt_position` — position of the salt in the password string, either `prefix` or
   `suffix`
 - `salt_format` — format of the salt, such as `hex` or `string`
+- `variant` — PBKDF2 only. The hashing variant used to derive the hash. Required for
+  `pbkdf2`.
+- `iterations` — PBKDF2 only. The iteration count (factor) used to derive the hash.
+  Optional for `pbkdf2`.
 - `signer_key` — Firebase only. The base64-encoded signer key from your Firebase project's
   password hash parameters.
 - `salt_separator` — Firebase only. The base64-encoded salt separator from your Firebase
@@ -457,6 +461,24 @@ Provide the hash in hex format and import the salt using the `salt` column. For
 `salt_format`, use `hex` for a hex-encoded string, such as `68656c6c6f` for `hello`. By
 default, Kinde treats the salt as a plain string and treats escape sequences such as `\n`
 or `\v` as literal characters.
+
+</Aside>
+
+<Aside title="pbkdf2 support">
+
+Provide the base64-encoded `salt` for each user, plus a `variant` column. Kinde supports
+these variants:
+
+- `salted-pbkdf2-hmac-sha256` (HMAC-SHA256, 256-bit)
+- `salted-pbkdf2-hmac-sha256-512` (HMAC-SHA256, 512-bit)
+- `salted-pbkdf2-hmac-sha512-512` (HMAC-SHA512, 512-bit)
+
+The `iterations` column is optional. If you leave it empty, Kinde verifies the hash using
+an iteration count of 24000. Set it explicitly if your system used a different factor,
+otherwise migrated users will not be able to sign in.
+
+Both columns are specific to PBKDF2. Rows that set them alongside `firebase-scrypt` or
+`aspnet-identity-v2` are rejected.
 
 </Aside>
 

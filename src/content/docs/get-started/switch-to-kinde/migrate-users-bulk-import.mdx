@@ -85,9 +85,9 @@ Import files must be 49MB or less. This applies to Custom CSV, Auth0 NDJSON, Fus
 
 **Required column:**
 
-| Column  | Notes                  |
-| ------- | ---------------------- |
-| `email` | Minimum required field |
+| Column             | Notes                                                          |
+| ------------------ | -------------------------------------------------------------- |
+| `email` or `phone` | At least one login identity is required. You can include both. |
 
 **Recommended columns:**
 
@@ -96,7 +96,7 @@ Import files must be 49MB or less. This applies to Custom CSV, Auth0 NDJSON, Fus
 | `first_name`, `last_name`  | User's name                                                             |
 | `email_verified`           | `TRUE` or `FALSE`                                                       |
 | `id`                       | Your provider's user ID — helps match records during re-imports         |
-| `phone`                    | International format, e.g. `+61555111555`                               |
+| `phone`                    | International format, e.g. `+61555111555`. Required if you omit `email` |
 | `external_organization_id` | Organization ID to import the user into. Comma-separate multiple values |
 | `role_key`                 | Role key(s) to assign. Comma-separate multiple values                   |
 | `permission_key`           | Permission key(s) to assign. Comma-separate multiple values             |
@@ -118,6 +118,8 @@ Include these if you're migrating hashed passwords:
 | `salt`            | Optional — extra characters added to strengthen the hash |
 | `salt_position`   | `prefix` or `suffix` — required if salt is included      |
 | `salt_format`     | Format of the salt, e.g. `hex` or `string`               |
+| `variant`         | PBKDF2 only — required. See below                        |
+| `iterations`      | PBKDF2 only — optional. See below                        |
 
 **Supported hashing methods:**
 
@@ -141,6 +143,15 @@ Kinde substitutes `$2b` with `$2a` on import. These are interchangeable unless t
 <Aside title="sha256">
 
 Provide the hash in hex format. For `salt_format`, specify `hex` for a hex-encoded salt (e.g. `68656c6c6f` for `hello`). By default, the salt is treated as a plain string.
+
+</Aside>
+
+<Aside title="pbkdf2">
+
+Include a base64-encoded `salt` and a `variant` of `salted-pbkdf2-hmac-sha256`,
+`salted-pbkdf2-hmac-sha256-512`, or `salted-pbkdf2-hmac-sha512-512`. `iterations` is
+optional and defaults to 24000. See
+[password data](/manage-users/add-and-edit/import-users-in-bulk/#password-data-optional).
 
 </Aside>
 
