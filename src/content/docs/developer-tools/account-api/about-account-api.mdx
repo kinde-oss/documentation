@@ -63,7 +63,12 @@ Kinde uses the logged-in user's access token to access the Account API.
         Authorization: `Bearer ${accessToken}`
       }
     })
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
     .then(data => console.log(data))
     .catch(error => console.error('Error:', error));
     ```
