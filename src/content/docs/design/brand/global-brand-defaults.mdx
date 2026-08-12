@@ -1,7 +1,7 @@
 ---
 page_id: 7b32cd0e-7af3-4d57-9c3c-4a37df3d14d1
 title: Set global brand defaults for Kinde hosted authentication pages
-description: "Brand Kinde-hosted auth pages with your logo, favicon, theme, and colors—applied instantly across apps with no redeploy"
+description: "Brand Kinde-hosted auth pages with your logo, theme, and colors—manage logos via dashboard or API"
 sidebar:
   order: 1
   label: Set global brand defaults
@@ -20,23 +20,25 @@ topics:
   - design
   - brand
   - customization
-sdk: []
-languages: []
+sdk:
+  - kinde-management-api
+languages:
+  - bash
 audience: developers
-complexity: beginner
+complexity: intermediate
 keywords:
   - global brand defaults
   - authentication page branding
   - logo upload
   - favicon
   - dark mode theme
-  - brand colors
   - global logo fallback
-  - avatar
-updated: 2026-07-22
+  - environment logo API
+  - Management API
+updated: 2026-08-12
 featured: false
 deprecated: false
-ai_summary: "Guide to setting global brand defaults for Kinde-hosted authentication pages in the Design > Global > Brand section of the Kinde dashboard. Covers uploading logos for light and dark mode (with size and format limits and the 120px resize constraint), making logos clickable via Application homepage URI, configuring SVG and fallback PNG favicons, uploading a custom avatar, choosing light, dark, or user-preference theme, and customizing page background, cards, buttons, input fields, and link colors. Also explains global logo fallback behavior when organizations have no logo, and links to organization branding and custom authentication pages. Changes apply immediately without redeploying application code. Intended for developers configuring authentication page branding."
+ai_summary: "Guide to setting global brand defaults for Kinde-hosted authentication pages in the Design > Global > Brand section of the Kinde dashboard. Covers uploading logos for light and dark mode with size and format limits and the 120px resize constraint, making logos clickable via Application homepage URI, configuring SVG and fallback PNG favicons, uploading a custom avatar, choosing light, dark, or user-preference theme, and customizing page background, cards, buttons, input fields, and link colors. Explains global logo fallback behavior when organizations have no logo. Also covers adding and deleting environment logos via the Kinde Management API using an M2M token with the update:environments scope. Changes apply immediately without redeploying. Intended for developers configuring authentication page branding."
 ---
 
 Authentication actions such as sign-up, sign-in, and password reset happen on Kinde-hosted pages. Set your brand defaults so your users never feel like they left your product.
@@ -182,7 +184,37 @@ Enable this when organizations should fall back to your business brand before sh
 2. Turn the setting on or off.
 3. Select **Save**.
 
-To upload logos per organization, see [Apply unique branding for an organization](/design/brand/apply-branding-for-an-organization/).
+To upload logos per organization, see [Set unique branding for an organization](/design/brand/apply-branding-for-an-organization/).
+
+## Manage global logo via the Kinde Management API
+
+Requires an M2M access token with the `update:environments` scope. See [get an access token for the Kinde Management API](/developer-tools/kinde-api/access-token-for-api/).
+
+### Add logo
+
+```bash
+curl --request PUT \
+  --url '<YOUR_DOMAIN>/api/v1/environment/logos/<TYPE>' \
+  --header 'Authorization: Bearer <M2M_ACCESS_TOKEN>' \
+  --form 'logo=@/path/to/logo.png'
+```
+
+<Aside>
+Replace `<YOUR_DOMAIN>` with either your [custom domain](/build/domains/pointing-your-domain/) (e.g. `https://auth.yourbusiness.com`) or your Kinde subdomain (e.g. `https://yourbusiness.kinde.com`).
+</Aside>
+
+- **For different logo variations**, set `<TYPE>` to `light` or `dark`.
+- **Use the `logo` form field** to upload a supported file type smaller than 1MB (SVG, PNG, JPG, WebP, or AVIF). Curl sets the multipart boundary automatically when you use `--form`.
+
+### Delete logo
+
+```bash
+curl --request DELETE \
+  --url '<YOUR_DOMAIN>/api/v1/environment/logos/<TYPE>' \
+  --header 'Authorization: Bearer <M2M_ACCESS_TOKEN>'
+```
+
+See the [Kinde Management API documentation](/kinde-apis/management#tag/environments/put/api/v1/environment/logos/{type}) for more details.
 
 ## Next steps
 

@@ -1,7 +1,7 @@
 ---
 page_id: f3e20936-d4da-4abc-8430-7620cae7fa6b
 title: Set unique branding for an organization
-description: "Brand each Kinde organization with its own logo, favicon, theme, and colors—overrides apply instantly without redeploy"
+description: "Brand each organization with its own logo, theme, and colors—manage logos via dashboard or API"
 sidebar:
   order: 2
   label: Set unique branding for orgs
@@ -19,23 +19,25 @@ topics:
   - design
   - brand
   - organizations
-sdk: []
-languages: []
+sdk:
+  - kinde-management-api
+languages:
+  - bash
 audience: developers
-complexity: beginner
+complexity: intermediate
 keywords:
   - organization branding
   - multi-tenancy branding
   - logo upload
   - favicon
   - organization avatar
-  - dark mode theme
-  - brand colors
   - reset branding
-updated: 2026-07-27
+  - organization logo API
+  - Management API
+updated: 2026-08-12
 featured: false
 deprecated: false
-ai_summary: "Guide to applying unique brand overrides for a Kinde organization so multi-tenant authentication pages such as sign-up, sign-in, and password reset match each tenant. Walks through Organizations > Brand in the Kinde dashboard, previewing and saving changes, and uploading logos for light and dark mode, including file size and format limits, the 120px resize constraint, and logo fallback to the org name or global business logo. Covers SVG and fallback PNG favicons, organization avatars for the self-serve portal, light, dark, or user-preference theme, and customizing page backgrounds, cards, buttons, input fields, and links. Also explains resetting all organization brand settings to global defaults. Changes apply immediately without redeploying. Intended for developers configuring per-organization authentication page branding."
+ai_summary: "Guide to applying unique brand overrides for a Kinde organization so multi-tenant authentication pages such as sign-up, sign-in, and password reset match each tenant. Walks through Organizations > Brand in the Kinde dashboard, previewing and saving changes, and uploading logos for light and dark mode, including file size and format limits, the 120px resize constraint, and logo fallback to the org name or global business logo. Covers SVG and fallback PNG favicons, organization avatars for the self-serve portal, light, dark, or user-preference theme, and customizing page backgrounds, cards, buttons, input fields, and links. Explains resetting all organization brand settings to global defaults. Also covers adding and deleting organization logos via the Kinde Management API using an M2M token with the update:organizations scope. Changes apply immediately without redeploying. Intended for developers configuring per-organization authentication page branding."
 ---
 
 If your business offers multi-tenancy using Kinde's [organizations](/build/organizations/multi-tenancy-using-organizations/) feature, you can apply brand overrides to modify the authentication pages such as sign-up, sign-in, and password reset.
@@ -164,3 +166,33 @@ If you want to revert to global styles for an organization scroll to the bottom 
 <Aside type="danger" title="This change is irreversible">
 Resetting will remove all design assets and color values.
 </Aside>
+
+## Manage organization logo via the Kinde Management API
+
+Requires an M2M access token with the `update:organizations` scope. See [get an access token for the Kinde Management API](/developer-tools/kinde-api/access-token-for-api/).
+
+### Add organization logo
+
+```bash
+curl --request POST \
+  --url '<YOUR_DOMAIN>/api/v1/organizations/<ORG_CODE>/logos/<TYPE>' \
+  --header 'Authorization: Bearer <M2M_ACCESS_TOKEN>' \
+  --form 'logo=@/path/to/logo.png'
+```
+
+<Aside>
+Replace `<YOUR_DOMAIN>` with either your [custom domain](/build/domains/pointing-your-domain/) (e.g. `https://auth.yourbusiness.com`) or your Kinde subdomain (e.g. `https://yourbusiness.kinde.com`).
+</Aside>
+
+- **For different logo variations**, set `<TYPE>` to `light` or `dark`.
+- **Use the `logo` form field** to upload a supported file type smaller than 1MB (SVG, PNG, JPG, WebP, or AVIF). Curl sets the multipart boundary automatically when you use `--form`.
+
+### Delete organization logo
+
+```bash
+curl --request DELETE \
+  --url '<YOUR_DOMAIN>/api/v1/organizations/<ORG_CODE>/logos/<TYPE>' \
+  --header 'Authorization: Bearer <M2M_ACCESS_TOKEN>'
+```
+
+See the [Kinde Management API documentation](/kinde-apis/management#tag/organizations/post/api/v1/organizations/{org_code}/logos/{type}) for more details.
