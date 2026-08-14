@@ -38,7 +38,7 @@ keywords:
   - free trial
   - annual pricing
 updated: 2026-07-01
-ai_summary: "Step-by-step guide to creating billing plans in the Kinde dashboard. Explains that all plans belong to a plan group scoped to users or organizations, and that charges and features can be reused across plans. Covers adding a plan with name, description, key, and default currency; configuring plan settings including the Ask for credit card toggle and trial period with trial length and credit card prompt timing; adding fixed charges with billing intervals and optional Offer as annual yearly pricing; creating free plans with a zero price; adding metered and unmetered features with flat or tiered graduated pricing; and verifying Stripe price sync status. Notes constraints such as credit card collection requirements for paid plans and trials, one annual charge per plan, and immutability of feature name, key, and type after creation. Intended for developers and product managers setting up SaaS subscription plans."
+ai_summary: "Step-by-step guide to creating billing plans in the Kinde dashboard. Explains that all plans belong to a plan group scoped to users or organizations, and that charges and features can be reused across plans. Covers adding a plan with name, description, key, and default currency; configuring plan settings including the Ask for credit card toggle, Collect tax automatically (use account setting, collect, or don’t collect), and trial period with trial length and credit card prompt timing; adding fixed charges with billing intervals and optional Offer as annual yearly pricing; creating free plans with a zero price; adding metered and unmetered features with flat or tiered graduated pricing; and verifying Stripe price sync status. Notes constraints such as credit card collection requirements for paid plans and trials, one annual charge per plan, and immutability of feature name, key, and type after creation. Intended for developers and product managers setting up SaaS subscription plans."
 ---
 
 Once you’ve got a plan strategy along with a plan feature list, prices, and details, you’re ready to create plans in Kinde.
@@ -52,9 +52,9 @@ You can define a charge or feature once and reuse it across plans. For example, 
 
 1. Go to **Billing > Plans**
 2. Select **Add plan**, a window opens
-    
+
     ![Add plans window](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/a8a237d5-c242-45dc-453e-a7ad66e33a00/public)
-    
+
 3. Choose whether the plan is for **Organizations** or **Users**, or select the **Group** the plan belongs to. Only one of these options will appear. You cannot change these selections later.
 4. Give the plan a **Name** (e.g., `Free`) and a **Description**. This is the name that will also appear in the pricing table (if you use one).
 5. Give your plan a **Key** (e.g., `free_plan`) for referencing in your code. This cannot be changed after a plan is published.
@@ -76,7 +76,7 @@ This toggle controls whether users must enter credit card details when subscribi
 - **Enabled (default)**: Users will be prompted to enter their payment details during signup via a secure Stripe payment form.
 - **Disabled**: Users can subscribe without providing payment information and proceed directly to your application.
 
-    ![Ask for credit card toggle](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4c118f78-9f3a-49f4-a681-df79c127b400/socialsharingimage)
+    ![Ask for credit card toggle](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d0380c04-a3ab-4663-d83b-061a00a9dc00/socialsharingimage)
 
     <Aside type="warning">
 
@@ -91,6 +91,30 @@ This toggle controls whether users must enter credit card details when subscribi
 | Reduce signup friction for a free tier | Disable—let users try your product without entering payment details |
 | Capture payment info for easier upgrades | Enable—collect card details upfront for seamless plan transitions |
 | Offer a free trial that converts to paid | Enable—required when trial period is enabled; payment details are collected before the trial ends |
+
+### Collect tax automatically
+
+This setting controls whether Stripe Tax with automatic collection is applied when customers subscribe to the plan.
+
+1. Open the plan you want to configure.
+2. Scroll to the **Plan settings** section.
+3. Under **Collect tax automatically**, choose an option.
+
+    ![Collect tax in kinde plan setting](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/89124387-09c6-473f-06d7-2eb7ac797900/socialsharingimage)
+
+#### Tax collection options reference
+
+| Option | Behavior |
+| --- | --- |
+| **Use account setting** (default) | Follows **Collect tax automatically** on **Settings > Environment > Billing** |
+| **Collect** | Always enable Stripe Tax for subscriptions to this plan |
+| **Don’t collect** | Never enable Stripe Tax for subscriptions to this plan |
+
+The account setting is off by default. Turn it on in **Settings > Environment > Billing** if most plans should collect tax, then override only the plans that differ.
+
+Stripe still needs Stripe Tax configured (for example tax registrations) in the Stripe Dashboard. Until a customer has a billing country—such as during a trial before a card is added—tax may temporarily use your Stripe account’s registered address.
+
+Select **Save draft** or **Publish** to apply your changes.
 
 ### Configure trial period
 
@@ -109,7 +133,7 @@ In the **Trials** section:
 3. Set **Ask for credit card before trial ends (days)** (default: 3, minimum: 0). This must be less than the trial length. This controls when the customer is asked to provide payment details before the trial expires.
 4. Select **Save draft** or **Publish** to apply your changes.
 
-    ![Trial period settings](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/eb377c66-a42f-4759-a7ef-a3eea3dce800/socialsharingimage)
+    ![Trial period settings](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/41cfe0e1-4d3c-4148-41de-7d3db0884300/socialsharingimage)
 
 #### How trials work at runtime
 
@@ -132,14 +156,14 @@ In the **Trials** section:
 A fixed charge is a recurring charge such as base price or subscription fee. You can set **billing intervals** (daily, weekly, monthly, or yearly) and optionally **offer the charge as annual** with a custom yearly price when customers choose yearly billing.
 
 1. In **Fixed charges**, select **Add charge**.
-    1. If the charge exists, select **Use existing feature** then select it from the list. 
-        
+    1. If the charge exists, select **Use existing feature** then select it from the list.
+
         <Aside>
-        
+
         You only need to create a new charge if the item is unique. For reusable items such as ‘Base price’, select the existing charge but change the line item description and price for each plan.
-        
+
         </Aside>
-        
+
     2. If this is a new charge, give it a name (e.g., `Base subscription fee`). If you’ll reuse this charge across plans, choose a generic name. This cannot be changed later.
 2. Add a **Line item description**. This appears on the customer invoice, so might be more specific than the name, e.g. `Base subscription - Pro plan`.
 3. Set the **Price**. (You may be asked to set a default currency if you haven’t already).
@@ -160,7 +184,7 @@ Repeat for each fixed charge you want to add, or start adding features.
 
 ### Offer annual pricing
 
-To give customers a yearly option at a fixed annual price, turn on **Offer as annual** and set the **Annual price**. 
+To give customers a yearly option at a fixed annual price, turn on **Offer as annual** and set the **Annual price**.
 
     <Aside>
     Only one fixed charge per plan can be offered as annual.
@@ -178,39 +202,39 @@ Features describe the individual functions or entitlements that users get with t
 
 <Aside type="warning">
 
-You cannot change the Name, the Key or the Type of feature once you have created it. If you make an error, delete the feature and add a new one. 
+You cannot change the Name, the Key or the Type of feature once you have created it. If you make an error, delete the feature and add a new one.
 
 </Aside>
 
 1. Select **Add feature**.
-    
+
     ![Add feature window](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ceb95ba9-1c03-4ae7-89f9-275ab3185100/public)
-    
+
 2. To add a new feature, select **New unmetered** or **New metered**, then select **Next**. The **Add feature** window opens.
 3. Enter a **Feature name**. Be sure to use something generic if you plan to use this feature again, e.g. `Included seats`.
 4. Enter a **Description**.
-5. Enter a **Key** for referencing the feature. 
-6. If you selected an unmetered feature, select **Save**. You’re done. Repeat from step 1 to add more features. 
+5. Enter a **Key** for referencing the feature.
+6. If you selected an unmetered feature, select **Save**. You’re done. Repeat from step 1 to add more features.
 7. If you selected a metered feature, complete the rest of the details:
-    
+
     ![Add feature window, select units](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/de016f2c-2477-4abd-9a2d-00e7c3e99300/public)
-    
-8. Enter the **Maximum units** allowed on the plan. Leave blank if there is no limit. 
+
+8. Enter the **Maximum units** allowed on the plan. Leave blank if there is no limit.
 9. Enter the **Unit measurement** name, e.g. `license`, `MAU`
-10. If the item is separately chargeable, select a **Pricing model**. 
-    
+10. If the item is separately chargeable, select a **Pricing model**.
+
     ![Add feature window, tiered prices](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/80ea9a38-e6ac-479f-9697-f04e237d4d00/public)
-    
+
 11. Add a **Line item description**. This appears on the customer invoice, so might be more specific than the name, e.g. `Additional licenses for Pro (5)`.
 12. For a flat unit price, enter the price and select **Save**. You’re finished.
-13. For tiered pricing, select **Tiered - Graduated** and define each tier with unit numbers and add the price per unit. 
+13. For tiered pricing, select **Tiered - Graduated** and define each tier with unit numbers and add the price per unit.
 14. Select **Add tier** to add a different price for higher unit tiers. For example, units might cost $10 each for quantities 1–10, and $9 per unit for 11 or more.
-    
+
     Ensure the tiered unit amounts don’t overlap—for example, 1–10, 11–20, 21–30. To set a limitless upper tier (e.g., 11+), use a very high number such as 1–10, 11–1,000,000. Graduated unit fields can’t be left blank.
-    
+
 15. Select **Save.**
 16. In the **Plan** window, select **Save** to commit your changes.
-17. Repeat for each feature you want to add to the plan. Then repeat this procedure for each plan. 
+17. Repeat for each feature you want to add to the plan. Then repeat this procedure for each plan.
 
 ## Price sync status
 
