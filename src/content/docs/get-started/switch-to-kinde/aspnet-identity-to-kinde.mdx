@@ -11,33 +11,32 @@ relatedArticles:
   - f6eaf29b-d8d9-4caf-bc1d-5319b6fb8ffc
   - e89d246a-5cdf-4993-9cee-94b31ec27583
   - fbdb6a7c-d01d-49ca-8d7f-c4b49bab83f5
-description: Export ASP.NET Identity users and v2 password hashes from SQL Server and import them into Kinde without requiring a password reset.
+description: "Export ASP.NET Identity users and v2 hashes from SQL Server and import into Kinde—users keep their existing password, no reset required"
 topics:
   - get-started
   - switch-to-kinde
 sdk: []
 languages:
   - sql
+  - bash
   - csv
 audience:
   - developers
   - admins
 complexity: intermediate
 keywords:
-  - ASP.NET Identity migration
-  - ASP.NET Identity v2
-  - migrate from ASP.NET Identity
+  - asp.net identity migration
+  - asp.net identity to kinde
+  - migrate from asp.net identity
   - AspNetUsers
   - PBKDF2
   - password hash migration
-  - SQL Server user export
-  - CSV import
-  - UTF-16 CSV
+  - csv import
   - bulk user import
-updated: 2026-08-05
+updated: 2026-08-15
 featured: false
 deprecated: false
-ai_summary: "Step-by-step guide for migrating users from ASP.NET Identity 2.x on the .NET Framework to Kinde. It explains how to identify supported v2 PBKDF2-HMAC-SHA1 password hashes, distinguish unsupported ASP.NET Core Identity v3 hashes, export the AspNetUsers table with SQL Server Management Studio or bcp, and import UTF-8 or UTF-16 CSV through the dedicated ASP.NET Identity import type. The guide documents accepted column names, identity and phone handling, empty passwords, re-import behavior, first-sign-in bcrypt rehashing, and setting individual ASP.NET Identity v2 hashes through the Management API."
+ai_summary: "Step-by-step guide for migrating users from ASP.NET Identity 2.x on the .NET Framework to Kinde. User details and v2 PBKDF2-HMAC-SHA1 password hashes are exported from the AspNetUsers table as UTF-8 or UTF-16 CSV and imported together through Users, Import users, ASP.NET Identity, so most users keep their existing password. Covers identifying supported v2 hashes versus unsupported ASP.NET Core Identity v3 hashes, exporting with SQL Server Management Studio or bcp, accepted column names in PascalCase, lowercase, or snake_case, and how email, username, and E.164 phone identities are treated. Documents empty passwords, literal NULL values, username case sensitivity, the 49MB file limit, and that roles, organizations, and external logins in AspNetUserLogins are not imported. Also covers first-sign-in bcrypt rehashing, re-import behavior, and setting individual aspnet-identity-v2 hashes through the Management API. Intended for developers and admins moving authentication from ASP.NET Identity to Kinde."
 ---
 
 Migrate your users from ASP.NET Identity to Kinde. ASP.NET Identity has no built-in
@@ -56,24 +55,13 @@ password with no reset required.
 
 ## Key considerations
 
-- **ASP.NET Identity v2 password hashes are supported** — these are the hashes produced
-  by ASP.NET Identity 2.x on the .NET Framework. The salt and other parameters are
-  embedded in each hash, so there is nothing extra to configure.
-- **ASP.NET Core Identity v3 hashes are not supported** — ASP.NET Core uses v3 hashes by
-  default, which Kinde cannot verify. Check
-  [which hash format you have](#which-hash-format-do-i-have) before exporting.
-- **CSV format** — files must be 49MB or less and encoded as UTF-8 or UTF-16 with a byte
-  order mark (BOM). Split larger exports into batches, or
-  [contact support](https://kinde.com/support) for help.
-- **Email, username, and phone identities** — the importer reads identity columns from
-  `AspNetUsers`. External logins such as Google, Microsoft, and Facebook are stored in
-  `AspNetUserLogins` and are not included.
-- **Organizations, roles, and permissions are not imported** — ASP.NET Identity roles
-  are stored in `AspNetRoles` and `AspNetUserRoles`. Use a
-  [Custom CSV import](/manage-users/add-and-edit/import-users-in-bulk/) or a follow-up
-  import to bring across roles, permissions, or organizations.
-- **Username case sensitivity** — Kinde treats usernames as case-insensitive. Check that
-  usernames remain unique when letter casing is ignored.
+- **Password hash support** — v2 hashes from ASP.NET Identity 2.x on the .NET Framework are supported; v3 hashes are not. See [which hash format do I have?](#which-hash-format-do-i-have).
+- **CSV format** — files must be encoded as UTF-8 or UTF-16 with a byte
+  order mark (BOM). Maximum file size is 49MB. Split larger exports into batches.
+- **Email, username, and phone identities** — the importer reads identity columns from `AspNetUsers`. External logins such as Google, Microsoft, and Facebook are stored in `AspNetUserLogins` and are not included.
+- **Organizations, roles, and permissions are not imported** — ASP.NET Identity roles are stored in `AspNetRoles` and `AspNetUserRoles`. Use a
+  [Custom CSV import](/manage-users/add-and-edit/import-users-in-bulk/) or a follow-up import to bring across roles, permissions, or organizations.
+- **Username case sensitivity** — Kinde treats usernames as case-insensitive. Check that usernames remain unique when letter casing is ignored.
 
 ## Which hash format do I have?
 
@@ -96,47 +84,47 @@ value before importing. They can then set a password the first time they sign in
 
 ### 1. Export users from ASP.NET Identity
 
-Run this query against your ASP.NET Identity database:
+There are two ways to export users from ASP.NET Identity:
 
-```sql
-SELECT
-  Id,
-  Email,
-  EmailConfirmed,
-  UserName,
-  PhoneNumber,
-  PhoneNumberConfirmed,
-  PasswordHash
-FROM dbo.AspNetUsers;
-```
+- SQL Server Management Studio
+- `bcp` command-line tool
 
-If you extended `AspNetUsers` with name columns, include `FirstName` and `LastName` too.
+#### SQL Server Management Studio
 
-Choose an export method:
+1. Go to **Tools > Options > Query Results > SQL Server > Results to Grid** and turn on **Include column headers when copying or saving the results**.
+2. Open a new query window so the header setting applies.
+3. Run this query against your ASP.NET Identity database:
 
-- **SQL Server Management Studio** — run the query, right-click the results grid, and
-  select **Save Results As**. Before exporting, go to **Tools > Options > Query Results >
-  SQL Server > Results to Grid** and turn on **Include column headers when copying or
-  saving the results**. Open a new query window after changing the setting. Save the file
-  as UTF-8 or UTF-16 with a BOM; available encoding options depend on your SSMS version.
-- **bcp** — use `queryout`, set a comma field terminator, and choose `-w` for UTF-16 or
-  `-c -C 65001` for UTF-8. For example:
+    ```sql
+    SELECT
+      Id,
+      Email,
+      EmailConfirmed,
+      UserName,
+      PhoneNumber,
+      PhoneNumberConfirmed,
+      PasswordHash
+    FROM dbo.AspNetUsers;
+    ```
+    <Aside>
+    If you extended `AspNetUsers` with name columns, include `FirstName` and `LastName` too.
+    </Aside>
 
-  ```bash
-  bcp "SELECT Id, Email, EmailConfirmed, UserName, PhoneNumber, PhoneNumberConfirmed, PasswordHash FROM dbo.AspNetUsers" queryout users.csv -w -t, -T -S server-name -d database-name
-  ```
+4. Right-click the results grid and select **Save Results As**.
+5. Save the file as UTF-8 or UTF-16 with a BOM. Available encoding options depend on your SSMS version.
 
-  `bcp` does not add column headers or quote values that contain commas or line breaks.
-  Add the header row using the same encoding as the data. If your selected fields can
-  contain delimiters, use SSMS or another CSV-aware export tool instead.
+#### `bcp` command-line tool
 
-<Aside>
+1. Open a command prompt.
+2. Run `bcp` with `queryout`, a comma field terminator, and `-w` for UTF-16 or `-c -C 65001` for UTF-8. For example:
 
-Check for literal `NULL` text in the exported file. Kinde treats `NULL` in the
-`PasswordHash` column as no password, but in other columns it is treated as a value and
-can cause validation errors. Replace those values with empty fields before importing.
+    ```bash
+    bcp "SELECT Id, Email, EmailConfirmed, UserName, PhoneNumber, PhoneNumberConfirmed, PasswordHash FROM dbo.AspNetUsers" queryout users.csv -w -t, -T -S server-name -d database-name
+    ```
 
-</Aside>
+    <Aside>
+    `bcp` does not add column headers or quote values that contain commas or line breaks. Add the header row using the same encoding as the data. If your selected fields can contain delimiters, use SSMS or another CSV-aware export tool instead.
+    </Aside>
 
 Kinde reads these columns:
 
@@ -167,23 +155,26 @@ a1b2c3d4-0003,lliu@company.com,True,lliu@company.com,,False,
 
 #### How identities are treated on import
 
-`UserName` commonly contains the user's email address. Kinde creates a separate username
-identity only when `UserName` differs from `Email`, preventing duplicate identities for
-the same value.
-
-Phone numbers are imported only when they use E.164 format, with a leading `+` and
-country code. ASP.NET Identity does not enforce a format on `PhoneNumber`, so
-national-format numbers such as `0555 111 555` are skipped. Normalize them before export
-if you want to import them.
-
-Users with an empty `PasswordHash`, which commonly includes external-login users, are
-imported without a password. They can set one or sign in another way when they first
-visit.
+- `UserName` commonly contains the user's email address. Kinde creates a separate username
+  identity only when `UserName` differs from `Email`, preventing duplicate identities for
+  the same value.
+- Phone numbers are imported only when they use E.164 format, with a leading `+` and
+  country code. ASP.NET Identity does not enforce a format on `PhoneNumber`, so
+  national-format numbers such as `0555 111 555` are skipped. Normalize them before export
+  if you want to import them.
+- Users with an empty `PasswordHash`, including many external-login users, are imported
+  without a password. They can set one or sign in another way when they first sign in.
+- Kinde treats `NULL` in the `PasswordHash` column as no password, but in other columns it
+  is treated as a value and can cause validation errors. Check for literal `NULL` text in
+  the exported file and replace those values with empty fields before importing.
 
 ### 2. Import into Kinde
 
 1. In Kinde, go to **Users**, then select **Import users**.
 2. Select **ASP.NET Identity**.
+
+    ![import from asp.net identity](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/39ecb54c-4de6-44d2-7f2c-359d901b4b00/socialsharingimage)
+
 3. Follow the on-screen prompts to upload your CSV file (49MB or less).
 4. Review any [import errors](/manage-users/add-and-edit/troubleshoot-user-import-errors/)
    reported after import. Fix the file and re-import to resolve them.
@@ -225,8 +216,8 @@ Importing users and passwords together should mean your users do not notice anyt
 when they next sign in. The first time an imported user signs in, Kinde verifies the
 password against the ASP.NET Identity hash and re-hashes it with bcrypt. However:
 
-- If a user changes their password after the export and during the migration, they will
-  need to reset their password in Kinde.
+- If a user changes their password after the export and while the migration is in
+  progress, they will need to reset their password in Kinde.
 - If you set up a new authentication method, such as passwordless, users will be prompted
   to use it on sign-in.
 - If you add or remove roles or permissions, users may gain or lose access to parts of
