@@ -1,7 +1,7 @@
 ---
 page_id: 4cb565d2-5c3b-47a1-8fc0-2f39879bcaf7
 title: Fetch third party data in Kinde workflows
-description: Fetch third party data from your Kinde workflows
+description: "Call external APIs from Kinde workflows, map responses into token claims, and store secrets in environment variables"
 sidebar:
   order: 2
   label: Fetch third party data
@@ -18,62 +18,111 @@ app_context:
 topics:
   - "workflows"
   - "workflow-tutorials"
-  - "third-party-integrations"
   - "fetch-binding"
   - "environment-variables"
-  - "user-token-generation"
-  - "custom-claims"
 sdk: "kinde infrastructure"
 languages:
-  - "TypeScript"
-  - "JavaScript"
+  - "typescript"
+  - "javascript"
 audience:
   - "developers"
 complexity: "intermediate"
 keywords:
-  - "third party API"
-  - "external API"
   - "kinde.fetch"
-  - "HTTP GET"
+  - "secureFetch"
+  - "third-party API"
+  - "custom claims"
+  - "environment variables"
+  - "user token generation"
   - "workflow bindings"
-  - "access token custom claims"
-  - "UserTokenGeneration"
-  - "getEnvironmentVariable"
-  - "kinde.env"
-  - "API key"
-  - "Workflow.ts"
-updated: 2026-04-21
+  - "responseFormat"
+updated: 2026-08-16
 featured: false
 deprecated: false
-ai_summary: "Learn how to call a third-party HTTP API from a Kinde workflow during user token generation and map the response into access token custom claims. The tutorial uses `@kinde/infrastructure` (`onUserTokenGeneratedEvent`, `accessTokenCustomClaims`, `fetch`) with bindings `kinde.fetch`, `url`, and `kinde.accessToken`, reads the signed-in user from `event.context.user.id`, handles failed responses, and parses JSON into typed claims. It also shows storing secrets in Kinde env vars (**Settings > Data management > Env variables**), adding the `kinde.env` binding, and using `getEnvironmentVariable` (for example `API_KEY`) in headers such as `Authorization: Bearer`. Pointers link to the fetch binding and environment variable docs."
+ai_summary: "Tutorial for developers on calling third-party HTTP APIs from Kinde workflows during user token generation and adding the response as access token custom claims. Explains why kinde.fetch exists in the secure workflow runtime, how it differs from browser or Node fetch, and that the url binding is required with the infrastructure helper. Covers GET requests with the fetch helper and low-level kinde.fetch with response.ok checks, encrypted POST requests with kinde.secureFetch and workflow encryption keys, and storing API keys in Kinde environment variables with kinde.env and getEnvironmentVariable. Prerequisites are a Kinde account, a connected workflow Git repository, and a third-party API or data source."
 ---
 
-You can fetch third party data from your workflows and use within them.
+You can fetch third-party data in your workflows and use it in your logic.
 
 ## What you need
 
 - A [Kinde](https://app.kinde.com/register) account (Sign up for free)
 - A workflow Git repository connected to your Kinde account (follow the [quick start guide](/workflows/getting-started/quick-start-guide/))
-- A third party data source such as a database or API
+- A third-party data source such as a database or API
 
-## Fetch third party data from the workflow
+## About the Kinde fetch binding
 
-Use the Kinde `fetch` binding to get third party data:
+Workflows run in a secure, restricted JavaScript runtime—not Node.js. Network access is off by default. The [`kinde.fetch`](/workflows/bindings/fetch-binding/) binding is how you opt in to outbound HTTP so your workflow can call external APIs (including the Kinde Management API).
 
-```typescript 
-const { data: userData } = await fetch(`https://my-website.com/api/user/some-user-id`, {
-    method: "GET",
-    responseFormat: "json",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+It is not the same as the browser or Node `fetch` API. Use the Kinde helper from `@kinde/infrastructure` (or the low-level `kinde.fetch` API), and declare the binding in `workflowSettings` before you call it.
 
-// use the userData as needed
-console.log(userData);
+What you get with `kinde.fetch`:
+
+- Outbound HTTP from the workflow (typically GET and POST)
+- A `responseFormat` option (for example `"json"`) so the response is parsed for you
+- A typed helper that returns `{ data }` when you import `fetch` from `@kinde/infrastructure`
+- Requires the [`url`](/workflows/bindings/url-binding/) binding (used under the hood by the helper)
+
+For sensitive request bodies (such as passwords), use [`kinde.secureFetch`](/workflows/bindings/secure-fetch-binding/) instead so the payload is encrypted.
+
+Minimal example:
+
+```typescript
+import { fetch } from "@kinde/infrastructure";
+
+// In workflowSettings.bindings: { "kinde.fetch": {}, url: {} }
+
+const { data } = await fetch("https://api.example.com/status", {
+  method: "GET",
+  responseFormat: "json",
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+console.log(data);
 ```
 
-#### Full `Workflow.ts` file example
+## Fetch third-party data
+
+1. Import the `fetch` helper from `@kinde/infrastructure`:
+    ```typescript
+    import { fetch } from "@kinde/infrastructure";
+    ```
+
+2. Add `kinde.fetch` and `url` bindings to the workflow settings:
+    ```typescript
+    bindings: {
+      "kinde.fetch": {},
+      url: {},
+    },
+    ```
+
+3. Call `fetch` to get the third-party data, and check that the response is OK before using it:
+
+    ```typescript 
+    const { data: userData } = await fetch(`https://my-website.com/api/user/some-user-id`, {
+        method: "GET",
+        responseFormat: "json",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+    if (!userData) {
+      console.error("Failed to fetch user data");
+      return;
+    }
+
+    // use the userData as needed
+    console.log(userData);
+    ```
+
+    The infrastructure `fetch` helper returns `{ data }` only. To check HTTP status (for example `response.ok`), call the low-level `kinde.fetch` API instead—see the full example below.
+
+4. Combine the fetched data with your workflow logic as needed.
+
+Full `Workflow.ts` file example:
 
     ```typescript
     import {
@@ -81,7 +130,6 @@ console.log(userData);
       accessTokenCustomClaims,
       WorkflowSettings,
       WorkflowTrigger,
-      fetch,
     } from "@kinde/infrastructure";
 
     export const workflowSettings: WorkflowSettings = {
@@ -103,35 +151,123 @@ console.log(userData);
       }>();
       
       const loggedInUserId = event.context.user.id;
-      const { data: userData } = await fetch(`https://my-website.com/api/user/${loggedInUserId}`, {
+      const response = await kinde.fetch(`https://my-website.com/api/user/${loggedInUserId}`, {
         method: "GET",
         responseFormat: "json",
         headers: {
           "Content-Type": "application/json",
         },
       });
+
+      if (!response.ok) {
+        console.error("Failed to fetch user data");
+        return;
+      }
       
-      accessToken.lifetime_subscriber = userData.lifetime_subscriber || false;
+      accessToken.lifetime_subscriber = response.json?.lifetime_subscriber || false;
     }
     ```
 
-    The code fetches the user data from the third party data source and stores it in the access token. **GET** is appropriate for a read-only lookup by user ID, matching the [kinde.fetch](/workflows/bindings/fetch-binding/) examples. If you need to send sensitive data in the request body, use **POST** and consider [`kinde.secureFetch`](/workflows/bindings/secure-fetch-binding/) instead.
+    The code fetches the user data from the third-party data source and stores it in the access token. If the request is not OK, it logs the failure and exits without setting the claim. **GET** is appropriate for a read-only lookup by user ID, matching the [kinde.fetch](/workflows/bindings/fetch-binding/) examples.
 
-**Required bindings:**
+## Use the secure fetch
 
-    - `kinde.fetch`: to fetch the third party data
-    - `url`: required for Kinde to use fetch under the hood
-    - `kinde.accessToken`: to update the the access token
+If you need to send sensitive data in the request body to a backend you control, use the `kinde.secureFetch` binding instead of `kinde.fetch`.
 
-Read more about the [kinde.fetch binding](/workflows/bindings/fetch-binding/).
+1. Create an encryption key in Kinde. Go to **Workflow > Encryption keys** and select **Add encryption key**.
 
-## Add environment variables
+2. Add `kinde.secureFetch` and `url` bindings to the workflow settings:
+    ```typescript
+    bindings: {
+      "kinde.secureFetch": {},
+      url: {},
+    },
+    ```
 
-Offload sensitive or repetitive data to environment variables to avoid hardcoding them in the workflow.
+3. Call the low-level `kinde.secureFetch` API and check that the response is OK before using it:
 
-1. Go to **Kinde > Settings > Data management > Env variables** and add any environment variables you need to use in your workflow. (e.g., `API_URL`, `API_KEY`, etc.)
+    ```typescript
+    const response = await kinde.secureFetch(`https://my-website.com/api/user/some-user-id`, {
+        method: "POST",
+        responseFormat: "json",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: {
+          name: "John Doe",
+        },
+      });
 
-2. Access environment variables in workflow with the helper method:
+    if (!response.ok) {
+      console.error("Failed to fetch user data");
+      return;
+    }
+    ```
+
+4. Decode the response body in your backend using the encryption key. Learn more about the [encryption key](/workflows/manage-workflows/encrypt-decrypt-workflows/).
+
+Full `Workflow.ts` file example:
+```typescript
+import {
+  onUserTokenGeneratedEvent,
+  accessTokenCustomClaims,
+  WorkflowSettings,
+  WorkflowTrigger,
+} from "@kinde/infrastructure";
+
+export const workflowSettings: WorkflowSettings = {
+  id: "addThirdPartyDataToAccessToken",
+  name: "Add third party data to access token",
+  trigger: WorkflowTrigger.UserTokenGeneration,
+  bindings: {
+    "kinde.accessToken": {},
+    "kinde.secureFetch": {},
+    url: {},
+  },
+};
+
+export default async function FetchThirdPartyDataWorkflow(
+  event: onUserTokenGeneratedEvent
+) {
+  const accessToken = accessTokenCustomClaims<{
+    lifetime_subscriber: boolean;
+  }>();
+
+  const loggedInUserId = event.context.user.id;
+  const response = await kinde.secureFetch(`https://my-website.com/api/user/${loggedInUserId}`, {
+    method: "POST",
+    responseFormat: "json",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: {
+      name: "John Doe",
+    },
+  });
+
+  if (!response.ok) {
+    console.error("Failed to fetch user data");
+    return;
+  }
+
+  accessToken.lifetime_subscriber = response.json?.lifetime_subscriber || false;
+}
+```
+
+## Use environment variables
+
+Store sensitive or repetitive values in environment variables instead of hardcoding them in the workflow.
+
+1. Go to **Kinde > Settings > Data management > Env variables** and add any environment variables you need in your workflow (for example, `API_URL` or `API_KEY`). Learn more about [environment variables and secrets](/workflows/configuration/environment-variables-and-secrets/).
+
+2. Add the `kinde.env` binding to the workflow settings:
+    ```typescript
+    bindings: {
+      "kinde.env": {},
+    },
+    ```
+
+3. Access environment variables in the workflow with the helper method:
 
     ```typescript
     // import the helper method
@@ -141,7 +277,7 @@ Offload sensitive or repetitive data to environment variables to avoid hardcodin
     const apiKey = getEnvironmentVariable("API_KEY")?.value;
     ```
 
-#### Full `Workflow.ts` file example
+Full `Workflow.ts` file example:
 
     ```typescript
     import {
@@ -149,7 +285,6 @@ Offload sensitive or repetitive data to environment variables to avoid hardcodin
       accessTokenCustomClaims,
       WorkflowSettings,
       WorkflowTrigger,
-      fetch,
       getEnvironmentVariable,
     } from "@kinde/infrastructure";
 
@@ -179,7 +314,7 @@ Offload sensitive or repetitive data to environment variables to avoid hardcodin
       }
       
       const loggedInUserId = event.context.user.id;
-      const { data: userData } = await fetch(`https://my-website.com/api/user/${loggedInUserId}`, {
+      const response = await kinde.fetch(`https://my-website.com/api/user/${loggedInUserId}`, {
         method: "GET",
         responseFormat: "json",
         headers: {
@@ -187,13 +322,18 @@ Offload sensitive or repetitive data to environment variables to avoid hardcodin
           "Content-Type": "application/json",
         },
       });
+
+      if (!response.ok) {
+        console.error("Failed to fetch user data");
+        return;
+      }
       
-      accessToken.lifetime_subscriber = userData.lifetime_subscriber || false;
+      accessToken.lifetime_subscriber = response.json?.lifetime_subscriber || false;
     }
     ```
 
-**Required additional binding:**
+## Learn more
 
-- `kinde.env`: to access the environment variables
-
-Read more about the [environment variables and secrets](/workflows/configuration/environment-variables-and-secrets/).
+- [Kinde fetch binding](/workflows/bindings/fetch-binding/)
+- [Kinde environment variables and secrets](/workflows/configuration/environment-variables-and-secrets/)
+- [Workflow encryption keys](/workflows/manage-workflows/encrypt-decrypt-workflows/)
