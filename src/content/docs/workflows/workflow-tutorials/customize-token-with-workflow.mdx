@@ -9,20 +9,19 @@ tableOfContents:
 relatedArticles:
   - 62fafade-5d33-4f85-9fd2-712c533db3d0
   - f499ebb0-d7f5-4244-bf92-6bf0f6082b62
-description: Customize access and ID tokens in Kinde using workflows
+description: "Add custom claims to Kinde access, ID, and M2M tokens with workflows, or drop unused claims to keep JWTs small"
 topics:
   - "workflows"
-  - "example-workflows"
-  - "authentication"
+  - "workflow-tutorials"
+  - "custom-claims"
   - "tokens"
-  - "bindings"
 sdk: "kinde infrastructure"
 app_context:
   - m: ["Workflows", "Git repo"]
   - s: "User token generation"
 languages:
-  - "TypeScript"
-  - "JavaScript"
+  - "typescript"
+  - "javascript"
 audience:
   - "developers"
 complexity: "intermediate"
@@ -30,17 +29,18 @@ keywords:
   - "custom claims"
   - "access token"
   - "ID token"
-  - "user token generation"
+  - "M2M token"
   - "JWT claims"
+  - "user token generation"
   - "token customization"
-  - "workflow bindings"
-updated: "2026-04-17"
+  - "prohibited claims"
+updated: "2026-08-15"
 featured: false
 deprecated: false
-ai_summary: "This tutorial teaches developers how to customize Kinde access and ID tokens using workflows that run when a user token is generated. It walks through TypeScript examples in Workflow.ts using the User token generation trigger, workflowSettings (including failurePolicy behavior), required bindings, and helper APIs from @kinde/infrastructure. For access tokens, you bind kinde.accessToken and url, then use accessTokenCustomClaims with typed shapes to inject custom string claims or replace bulky built-in claims such as permissions and feature_flags with empty values to reduce token size for APIs. For ID tokens, you bind kinde.idToken and url, then use idTokenCustomClaims to add new claims or change existing ones such as name. The doc clarifies you may not be able to remove or modify every default claim. A glossary explains that kinde.m2mToken is needed for M2M token edits and lists prohibited claims workflows cannot touch, split into common, access-only, ID-only, and M2M-only restrictions covering standard JWT metadata fields. Prerequisites are a Kinde account and the connected workflow repo from the quick start. The page points to about-access-tokens and about-id-tokens for complete claim catalogs."
+ai_summary: "Tutorial for developers on customizing Kinde access tokens, ID tokens, and M2M tokens using workflows. Shows how to add typed custom claims with accessTokenCustomClaims, idTokenCustomClaims, and m2mTokenClaims from the Kinde infrastructure library. Access and ID token examples use the UserTokenGeneration trigger with kinde.accessToken or kinde.idToken bindings; M2M examples use M2MTokenGeneration and kinde.m2mToken. Includes a pattern for replacing bulky built-in access token claims such as permissions and feature_flags with empty values to reduce token size for API calls. A glossary lists required token bindings and prohibited claims that workflows cannot modify, grouped into common JWT fields plus access-only, ID-only, and M2M-only restrictions. Prerequisites are a Kinde account and a connected workflow Git repository from the quick start. Links to about-access-tokens and about-id-tokens for full claim catalogs."
 ---
 
-Use workflows to customize access tokens, ID tokens and M2M tokens.
+Use workflows to customize access tokens, ID tokens, and M2M tokens.
 
 ## What you need
 
@@ -49,9 +49,21 @@ Use workflows to customize access tokens, ID tokens and M2M tokens.
 
 ## Customize the access token
 
-### Add a custom claim
+1. Add the access token binding to the workflow settings:
 
-Define the custom claim property you want to add to the access token, then update it with your custom value:
+    ```typescript
+    bindings: {
+      "kinde.accessToken": {}
+    },
+    ```
+
+2. Use the `UserTokenGeneration` trigger (alias for [`user:token_generation`](/workflows/example-workflows/user-token-generation/)):
+
+    ```typescript
+    trigger: WorkflowTrigger.UserTokenGeneration,
+    ```
+
+3. Define the custom claim and set its value:
 
     ```typescript
     const accessToken = accessTokenCustomClaims<{
@@ -62,8 +74,6 @@ Define the custom claim property you want to add to the access token, then updat
     ```
 
 Full `Workflow.ts` file example:
-
-#### Add a custom claim to the access token
 
     ```typescript
     // Workflow.ts
@@ -98,11 +108,11 @@ Full `Workflow.ts` file example:
     }
     ```
 
-The above code adds the `companyName` claim to the access token, with the value `Acme Inc.`.
+This code adds the `companyName` claim to the access token with the value `Acme Inc.`.
 
-### Remove claims
+### Remove `permissions` and `feature_flags` claims from the access token
 
-To remove claims from the access token, update the custom claim property to an empty array or object:
+To remove claims from the access token, set them to an empty array or object:
 
 ```typescript
 const accessToken = accessTokenCustomClaims<{
@@ -116,7 +126,6 @@ accessToken.feature_flags = {}
 
 Full `Workflow.ts` file example:
 
-#### Remove `permissions` and `feature_flags` claims from the access token
 
     ```typescript
     // Workflow.ts
@@ -153,27 +162,39 @@ Full `Workflow.ts` file example:
     }
     ```
 
-The above code removes the `permissions` and `feature_flags` claims from the access token, replacing them with an empty array and object respectively. This is useful for reducing the size of access tokens that are used in API calls.
+This code replaces `permissions` with an empty array and `feature_flags` with an empty object. This reduces the size of access tokens used in API calls.
 
-Take a look at the available access token claims in the [about access tokens](/build/tokens/about-access-tokens/) doc. You may not be able to remove every default claim. See the [prohibited claims](#prohibited-claims) section for more information.
+See the available access token claims in [about access tokens](/build/tokens/about-access-tokens/). You may not be able to remove every default claim. See [prohibited claims](#prohibited-claims).
 
 ## Customize the ID token
 
-Define the custom claim property you want to add to the ID token, then update it with your custom value:
+1. Add the ID token binding to the workflow settings:
 
-```typescript
-const idToken = idTokenCustomClaims<{
-  house: string,
-  name: string,
-}>()
+    ```typescript
+    bindings: {
+      "kinde.idToken": {}
+    },
+    ```
 
-idToken.house = "Gryffindor"
-idToken.name = "Harry Potter"
-```
+2. Use the `UserTokenGeneration` trigger (alias for [`user:token_generation`](/workflows/example-workflows/user-token-generation/)):
+
+    ```typescript
+    trigger: WorkflowTrigger.UserTokenGeneration,
+    ```
+
+3. Define the custom claim and set its value:
+
+    ```typescript
+    const idToken = idTokenCustomClaims<{
+      house: string,
+      name: string,
+    }>()
+
+    idToken.house = "Gryffindor"
+    idToken.name = "Harry Potter"
+    ```
 
 Full `Workflow.ts` file example:
-
-#### Add a custom claim to the ID token 
 
     ```typescript
     // Workflow.ts
@@ -210,9 +231,9 @@ Full `Workflow.ts` file example:
     }
     ```
 
-The above code adds a custom `house` claim to the ID token and updates the `name` claim as shown.
+This code adds a custom `house` claim to the ID token and updates the `name` claim.
 
-Take a look at the available ID token claims in the [about ID tokens](/build/tokens/about-id-tokens/) doc. You may not be able to modify every default claim. See the [prohibited claims](#prohibited-claims) section for more information.
+See the available ID token claims in [about ID tokens](/build/tokens/about-id-tokens/). You may not be able to modify every default claim. See [prohibited claims](#prohibited-claims).
 
 ## Customize the M2M token
 
@@ -224,13 +245,13 @@ Take a look at the available ID token claims in the [about ID tokens](/build/tok
     },
     ```
 
-2. Import and use the `M2MTokenGeneration` trigger (alias for [`m2m:token_generation`](/workflows/example-workflows/m2m-token-generation-workflow/)):
+2. Use the `M2MTokenGeneration` trigger (alias for [`m2m:token_generation`](/workflows/example-workflows/m2m-token-generation-workflow/)):
 
     ```typescript
     trigger: WorkflowTrigger.M2MTokenGeneration,
     ```
 
-2. Define the custom claim property you want to add to the M2M token, then update it with your custom value:
+3. Define the custom claim and set its value:
 
     ```typescript
     const m2mToken = m2mTokenClaims<{
@@ -259,6 +280,7 @@ Full `Workflow.ts` file example:
       trigger: WorkflowTrigger.M2MTokenGeneration,
       bindings: {
         "kinde.m2mToken": {}
+        url: {}, // required for URL parameters
       },
     }
     
@@ -272,6 +294,10 @@ Full `Workflow.ts` file example:
       m2mToken.name = "Agent Smith"
     }
     ```
+
+This code adds the `name` claim to the M2M token with the value `Agent Smith`.
+
+You may not be able to modify every default claim. See [prohibited claims](#prohibited-claims).
 
 ## Glossary
 
@@ -287,7 +313,7 @@ The workflow examples on this page also declare the native `url` binding (for UR
 
 ### Prohibited claims
 
-You can't modify the following token claims:
+You cannot modify the following token claims:
 
 **Common prohibited claims:**
 
