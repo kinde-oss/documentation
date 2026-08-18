@@ -144,6 +144,7 @@ Kinde returns the user to `redirectUri` with an authorization code in the query 
 
 1. Read the token with `useKindeToken()`.
 2. Build the connection inside `useMemo`, with the token as a dependency.
+3. Render a sign-in control until the token is available.
 
 Mount `SpacetimeDBProvider` only once the token exists. `SpacetimeDBProvider` keys its pooled connection on the URI and module name, and ignores the builder once a connection is live — so a connection opened before sign-in will not pick the token up afterwards.
 
@@ -151,11 +152,13 @@ Mount `SpacetimeDBProvider` only once the token exists. `SpacetimeDBProvider` ke
 
 ```tsx
 import { useMemo } from 'react';
+import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { SpacetimeDBProvider } from 'spacetimedb/react';
 import { DbConnection } from './module_bindings';
 import { useKindeToken } from './KindeTokenProvider';
 
 export default function App() {
+  const { isLoading, login } = useKindeAuth();
   const token = useKindeToken();
 
   const connectionBuilder = useMemo(
@@ -171,8 +174,12 @@ export default function App() {
     [token]
   );
 
+  if (isLoading) {
+    return <p>Loading…</p>;
+  }
+
   if (!token) {
-    return <p>Sign in to continue.</p>;
+    return <button onClick={() => login()}>Sign in</button>;
   }
 
   return (
@@ -183,9 +190,11 @@ export default function App() {
 }
 ```
 
-## Step 6: Add signed-in UI and sign out (optional)
+Check `isLoading` before `token`. Because `forceChildrenRender` renders your app while Kinde initializes, `token` is still `null` on the first render even for a user who is already signed in — without the loading branch they would see the sign-in button flash before their session resolves.
 
-`useKindeAuth` exposes the signed-in user along with `login`, `register`, and `logout`:
+## Step 6: Add user details and sign out (optional)
+
+Your app can now sign users in. `useKindeAuth` also exposes the signed-in user, along with `register` and `logout`, if you want a fuller set of controls:
 
 ```tsx
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
