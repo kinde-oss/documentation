@@ -1,13 +1,14 @@
 ---
 page_id: 37e847e2-b6c7-4cf1-86d3-7c607b2bffbd
 title: Manage Kinde configuration as code across environments
-description: Learn how to manage Kinde configurations as code across environments using the Kinde Management API and a JavaScript seeding script.
+description: Learn how to manage Kinde configurations as code across environments using the Kinde Management API, a JavaScript seeding script, or the Kinde Terraform provider.
 sidebar:
   order: 8
   label: Kinde config as code
 tableOfContents:
   maxHeadingLevel: 3
 relatedArticles:
+  - f6886655-e356-4abb-bf0a-6d69d9503178
   - 50284476-2442-414c-af20-01ed3ef4ca4e
   - 51899f7f-3436-46e0-9a1b-6ecc3603a0df
   - 6bf993fc-a195-4836-8eaf-133812be8876
@@ -36,17 +37,17 @@ keywords:
   - infrastructure as code
   - terraform
   - terraform provider
-  - kinde community provider
+  - kinde-oss/kinde
   - github actions
   - ci automation
   - workflow dispatch
   - local-exec
   - null_resource
   - terraform workspaces
-updated: 2026-05-15
+updated: 2026-08-21
 featured: false
 deprecated: false
-ai_summary: "This guide explains how to manage Kinde configuration as code across multiple environments — development, staging, and production — so you never have to manually recreate settings. It covers three approaches: a JavaScript seeding script, Terraform Infrastructure as Code, and a GitHub Actions CI workflow. The seed script uses the Kinde Management API with M2M app credentials to create applications with redirect and logout URLs, environment variables, feature flags, APIs and scopes, and roles with permissions — all driven by per-environment JSON config files. For Terraform, the guide covers two options: using a community Kinde Terraform provider to declare resources directly in HCL, or invoking the Node seed script via a null_resource local-exec provisioner using Terraform workspaces. The GitHub Actions section shows how to configure a workflow_dispatch workflow that lets you trigger seeding for any environment using GitHub repository secrets. The guide includes expected terminal output for each approach, screenshots for verifying results in the Kinde dashboard, and FAQs on limitations, what resources to manage as code, and how to create additional Kinde environments."
+ai_summary: "This guide explains how to manage Kinde configuration as code across multiple environments — development, staging, and production — so you never have to manually recreate settings. It covers three approaches: a JavaScript seeding script, Terraform Infrastructure as Code, and a GitHub Actions CI workflow. The seed script uses the Kinde Management API with M2M app credentials to create applications with redirect and logout URLs, environment variables, feature flags, APIs and scopes, and roles with permissions — all driven by per-environment JSON config files. For Terraform, the guide covers two options: using the Kinde Terraform provider (kinde-oss/kinde) to declare resources directly in HCL, or invoking the Node seed script via a null_resource local-exec provisioner using Terraform workspaces for settings the provider does not cover yet. The GitHub Actions section shows how to configure a workflow_dispatch workflow that lets you trigger seeding for any environment using GitHub repository secrets. The guide includes expected terminal output for each approach, screenshots for verifying results in the Kinde dashboard, and FAQs on limitations, what resources to manage as code, and how to create additional Kinde environments."
 ---
 
 Kinde environments are isolated — configuration doesn’t automatically carry over between dev, staging, and production. This guide shows you how to treat your Kinde setup like infrastructure: define it once as JSON, then use a JavaScript seeding script with the Kinde Management API to apply it consistently across environments.
@@ -421,15 +422,17 @@ Kinde environments are isolated — configuration doesn’t automatically carry 
 
 ## Terraform IaC
 
-If you prefer to use Terraform as Infrastructure as Code, there are two options you can consider:
+If you prefer to manage Kinde with Terraform, there are two options. You can combine them: use the provider for the resources it supports, and the seed script for everything else.
 
-### Option 1: Terraform with Kinde community provider
+### Option 1: Kinde Terraform provider
 
-There is a community [Terraform provider for Kinde](https://registry.terraform.io/providers/axatol/kinde/0.0.1/docs/resources/api). It supports configuring the provider with domain and audience, and you can alias providers per environment. Treat it as community software, pin versions, and verify resource coverage in non-prod first.
+Kinde maintains a [Terraform provider](https://registry.terraform.io/providers/kinde-oss/kinde/latest) that manages applications, APIs, connections, organizations, users, roles, and permissions directly in HCL. For the full setup, the scopes each resource needs, and how to import existing configuration, see [Manage Kinde with the Terraform provider](/developer-tools/guides/terraform-provider/).
 
-1. Enable the following additional scopes to your M2M application:
+The example below creates the same Orders API as the seed script.
+
+1. Grant your M2M application the scopes for the resources you manage. For this example:
+    - `create:apis`
     - `read:apis`
-    - `update:apis`
     - `delete:apis`
 
 2. Create the following files with the bash command:
@@ -444,8 +447,8 @@ There is a community [Terraform provider for Kinde](https://registry.terraform.i
     terraform {
       required_providers {
         kinde = {
-          source  = "axatol/kinde"
-          version = "0.0.1"
+          source  = "kinde-oss/kinde"
+          version = "~> 0.1"
         }
       }
     }
@@ -465,17 +468,19 @@ There is a community [Terraform provider for Kinde](https://registry.terraform.i
 5. Enter the following code in `variables.tf` and save changes.
 
     ```hcl
-    variable kinde_domain {}
-    variable kinde_audience {}
-    variable kinde_client_id {}
-    variable kinde_client_secret {}
+    variable "kinde_domain" {}
+    variable "kinde_audience" {}
+    variable "kinde_client_id" {}
+    variable "kinde_client_secret" {
+      sensitive = true
+    }
     ```
 
 6. Enter the following code in `main.tf` and save changes.
 
     ```hcl
     resource "kinde_api" "orders" {
-      name   = "Orders API"
+      name     = "Orders API"
       audience = "orders"
     }
     ```
@@ -486,7 +491,7 @@ There is a community [Terraform provider for Kinde](https://registry.terraform.i
     terraform init
     ```
     
-8. Create environment variables with the following bash command.
+8. Create environment variables with the following bash command. The domain must include `https://`.
     
     ```bash
     export TF_VAR_kinde_domain="https://<your_kinde_domain>.kinde.com"
@@ -513,9 +518,10 @@ You will see a success message.
 
       # kinde_api.orders will be created
       + resource "kinde_api" "orders" {
-          + audience = "orders"
-          + id       = (known after apply)
-          + name     = "Orders API"
+          + audience          = "orders"
+          + id                = (known after apply)
+          + is_management_api = (known after apply)
+          + name              = "Orders API"
         }
 
     Plan: 1 to add, 0 to change, 0 to destroy.
@@ -532,13 +538,13 @@ You will see a success message.
 
 This will create an Orders API in your Kinde environment.
 
-From here, add the resources that the provider currently supports and split values by workspace or `tfvars` files. Use Terraform workspaces or separate states to keep environments isolated.
+From here, add the other resources the provider supports — applications, connections, organizations, users, roles, and permissions — and split values by workspace or `tfvars` files. Use Terraform workspaces or separate states to keep environments isolated.
 
 If you pass providers down to modules, remember provider alias rules in Terraform.
 
 ### Option 2: Terraform with seed script
 
-If the provider’s resource coverage is not yet enough, you can still keep everything in Terraform by invoking the Node seed in `local-exec`. This preserves a single IaC entry point.
+For settings the provider does not manage yet — such as environment variables, feature flags, and API scopes — you can still keep a single Terraform entry point by invoking the Node seed script from a `null_resource` with `local-exec`.
 
 1. Inside your original scripts directory, initialize Terraform with the command.
     
