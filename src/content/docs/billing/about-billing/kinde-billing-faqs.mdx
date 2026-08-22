@@ -1,7 +1,7 @@
 ---
 page_id: 3fb38a43-e37f-4e25-a56b-acb3ea4a6d98
 title: Top questions about Kinde billing
-description: "Top answers on Kinde billing—pricing models, Stripe, trials, tax, plan design, pricing tables, and self-serve portals"
+description: "Answers on Kinde billing—Pay annually, mixed-interval plans, Stripe, trials, tax, pricing tables, and self-serve"
 sidebar:
   order: 4
 relatedArticles:
@@ -25,16 +25,16 @@ audience:
   - support
 complexity: beginner
 keywords:
+  - Pay annually
+  - mixed-interval pricing
   - pricing models
-  - metered features
-  - plan groups
   - free trial
   - Stripe Tax
   - self-serve portal
+  - next invoice
   - billing webhooks
-  - entitlements
-ai_summary: "Short answers to common questions about setting up and running Kinde billing. Covers choosing pricing models, metered versus unmetered features, plan groups for B2B and B2C, draft versus published plans, free plans without card collection, and free trial configuration. Explains Stripe integration topics including automatic tax and VAT via Stripe Tax, connected account provisioning, In progress connection status, and testing in non-production. Covers plan design for upgrades, tiered usage pricing, upgrade and downgrade policies, pricing table conversion tips, and when to show pricing during signup. Describes the self-serve portal for reducing support load, org billing permissions such as org write billing, and generating one-time portal links via SDK or Management API. Also covers syncing entitlements with the Account and Management APIs, webhook handling, billing URL parameters, Stripe price sync troubleshooting, known limitations, launch migration practices, and churn reduction. Intended for developers, product managers, and business owners."
-updated: 2026-08-10
+ai_summary: "Short answers to common questions about setting up and running Kinde billing. Covers choosing pricing models, metered versus unmetered features, plan groups for B2B and B2C, draft versus published plans, free plans without card collection, and free trial configuration. Explains Stripe integration topics including automatic tax and VAT via Stripe Tax, connected account provisioning, In progress connection status, and testing in non-production. Covers plan design for upgrades, tiered usage pricing, upgrade and downgrade policies, Pay annually on self-serve plan changes, mixed yearly and monthly fixed charges on one plan, Next invoice behavior, pricing table conversion tips, and when to show pricing during signup. Describes the self-serve portal for reducing support load, org billing permissions such as org write billing, and generating one-time portal links via SDK or Management API. Also covers syncing entitlements with the Account and Management APIs, webhook handling, billing URL parameters, Stripe price sync troubleshooting, billing discrepancy checks, known limitations, launch migration practices, and churn reduction. Intended for developers, product managers, business owners, and support."
+updated: 2026-08-22
 ---
 
 Here are short answers to the most common billing questions. Click any question to expand the answer.
@@ -174,6 +174,20 @@ Define upgrade and downgrade policies that are predictable for both your team an
 ## User experience
 
 <details>
+<summary><strong>Can customers choose annual pricing when they change plans in the self-serve portal?</strong></summary>
+
+Yes. If at least one plan card on the pricing table offers annual pricing, customers see **Pay annually** on plan selection. It starts off (monthly / standard prices). Turning it on shows annual or mixed amounts and continues the plan change with annual prices selected. Customers cannot use this toggle to switch monthly ↔ annual on their **current** plan—only when moving to a different plan.
+[Build a pricing table](/billing/billing-user-experience/plan-selection/#how-customers-choose-annual-pricing) | [Upgrade and downgrade methods](/billing/manage-subscribers/upgrade-downgrade-methods/)
+</details>
+
+<details>
+<summary><strong>Can one plan bill some charges yearly and others monthly?</strong></summary>
+
+Yes. Offer annual on one fixed charge and keep other fixed charges on their own interval (for example monthly). Customers who choose **Pay annually** see a breakdown such as `$100 / year + $3 / month`. **Next invoice** reflects the next real charge date for those items, not a monthly-normalized average of the whole plan.
+[Create billing plans](/billing/manage-plans/create-plans/#offer-annual-pricing) | [The Kinde billing model](/billing/about-billing/kinde-billing-model/#billing-and-invoice-cycles)
+</details>
+
+<details>
 <summary><strong>How do I create effective Kinde pricing tables for conversion?</strong></summary>
 
 Keep pricing tables concise. In most cases, 3-4 tiers are enough. Highlight a recommended plan, emphasize user outcomes, and clearly distinguish feature and usage limits by tier. For complex products, consider a custom pricing-table design with clearer grouping and language.
@@ -252,8 +266,8 @@ If "price not synced" appears, confirm the plan is published because only publis
 <details>
 <summary><strong>What should I do when customers report billing discrepancies?</strong></summary>
 
-Start by reviewing billing history in the organization portal to verify charge timing and amounts. Check for plan changes, proration events, metered overages, and payment retries. Many discrepancy reports are timing-related invoice expectations rather than calculation errors. If an error remains, escalate with detailed billing context.
-[Billing history access](/manage-your-account/profile-and-plan/view-kinde-plan/) | [Support resources](/build/self-service-portal/self-serve-portal-for-orgs/)
+Start by reviewing billing history in the organization portal to verify charge timing and amounts. Check for plan changes, proration events, metered overages, and payment retries. Many discrepancy reports are timing-related invoice expectations rather than calculation errors—for example, on mixed annual + monthly plans, **Next invoice** often shows only the sooner charge, not a monthly-normalized average of the whole plan. If an error remains, escalate with detailed billing context.
+[Billing and invoice cycles](/billing/about-billing/kinde-billing-model/#billing-and-invoice-cycles) | [Billing history access](/manage-your-account/profile-and-plan/view-kinde-plan/) | [Support resources](/build/self-service-portal/self-serve-portal-for-orgs/)
 </details>
 
 <details>

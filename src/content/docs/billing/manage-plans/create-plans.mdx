@@ -13,7 +13,7 @@ relatedArticles:
 app_context:
   - m: billing
   - s: plans
-description: "Create and publish Kinde billing plans with fixed charges, metered features, tiered pricing, trials, and annual billing options"
+description: "Create Kinde billing plans with Offer as annual, mixed-interval charges, pricing preview, trials, and tax"
 featured: false
 deprecated: false
 topics:
@@ -30,15 +30,15 @@ audience:
 complexity: intermediate
 keywords:
   - create plans
-  - plan groups
-  - fixed charges
+  - Offer as annual
+  - mixed-interval pricing
   - billing interval
+  - Preview annual pricing
   - metered features
-  - tiered pricing
   - free trial
   - annual pricing
-updated: 2026-07-01
-ai_summary: "Step-by-step guide to creating billing plans in the Kinde dashboard. Explains that all plans belong to a plan group scoped to users or organizations, and that charges and features can be reused across plans. Covers adding a plan with name, description, key, and default currency; configuring plan settings including the Ask for credit card toggle, Collect tax automatically (use account setting, collect, or don’t collect), and trial period with trial length and credit card prompt timing; adding fixed charges with billing intervals and optional Offer as annual yearly pricing; creating free plans with a zero price; adding metered and unmetered features with flat or tiered graduated pricing; and verifying Stripe price sync status. Notes constraints such as credit card collection requirements for paid plans and trials, one annual charge per plan, and immutability of feature name, key, and type after creation. Intended for developers and product managers setting up SaaS subscription plans."
+updated: 2026-08-22
+ai_summary: "Step-by-step guide to creating billing plans in the Kinde dashboard. Explains that all plans belong to a plan group scoped to users or organizations, and that charges and features can be reused across plans. Covers adding a plan with name, description, key, and default currency; configuring plan settings including the Ask for credit card toggle, Collect tax automatically (use account setting, collect, or don’t collect), and trial period with trial length and credit card prompt timing; adding fixed charges with billing intervals; offering one charge per plan as annual at a custom yearly price while other charges keep their own intervals (mixed-interval pricing); previewing annual versus standard totals in the Pricing sidebar without changing the draft; creating free plans with a zero price; adding metered and unmetered features with flat or tiered graduated pricing; and verifying Stripe price sync status. Notes constraints such as credit card collection requirements for paid plans and trials, Offer as annual only on non-yearly base intervals, one annual charge per plan, and immutability of feature name, key, and type after creation. Intended for developers and product managers setting up SaaS subscription plans."
 ---
 
 Once you’ve got a plan strategy along with a plan feature list, prices, and details, you’re ready to create plans in Kinde.
@@ -176,6 +176,7 @@ After entering the charge name and price, configure how often the fixed charge i
 2. Choose **Day**, **Week**, **Month**, or **Year**. The default is **Month**.
       - The interval you select determines how often Stripe bills the customer for this fixed charge.
       - If you select **Year** as the billing interval, the separate **Offer as annual** toggle does not apply—yearly billing is already the interval. The **Offer as annual** toggle is only available for non-yearly intervals (Day, Week, Month), where you can add an optional yearly price on top of the base interval.
+      - You can add more than one fixed charge on a plan with different intervals (mixed-interval pricing). See [Offer annual pricing](#offer-annual-pricing).
 
 3. (Optional) To bill this charge yearly at a custom price, turn on **Offer as annual**. See [Offer annual pricing](#offer-annual-pricing) below for details.
 4. Select **Save** or **Save draft** to commit your changes.
@@ -186,11 +187,40 @@ Repeat for each fixed charge you want to add, or start adding features.
 
 To give customers a yearly option at a fixed annual price, turn on **Offer as annual** and set the **Annual price**.
 
-    <Aside>
-    Only one fixed charge per plan can be offered as annual.
-    </Aside>
+Only **one** fixed charge per plan can use **Offer as annual**. Other fixed charges on the same plan keep the billing interval you set for them (for example monthly).
 
-    ![Offer as annual pricing](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6e5a440f-88f8-4af7-5ab2-a28dd0f58900/socialsharingimage)
+When a customer turns on **Pay annually** during sign-up or a self-serve plan change:
+
+- The charge with **Offer as annual** bills at the annual price once per year.
+- Any other fixed charges continue on their own interval.
+
+That combination is a **mixed-interval** plan. Customers see each charge with its own interval—for example `$100 AUD / year + $3 AUD / month`—instead of a single collapsed total.
+
+<Aside>
+
+If you select **Year** as the billing interval for a charge, yearly billing is already the interval. **Offer as annual** applies only when the base interval is Day, Week, or Month.
+
+</Aside>
+
+![Offer as annual pricing](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6e5a440f-88f8-4af7-5ab2-a28dd0f58900/socialsharingimage)
+
+### Preview annual pricing on the plan
+
+On the plan details page, the **Pricing** sidebar shows how the plan will look to customers.
+
+1. Open the plan.
+2. In the **Pricing** sidebar, if at least one fixed charge offers annual pricing, turn on **Preview annual pricing** (default is off).
+3. Review the standard total versus the annual total (including any monthly remainder for mixed plans).
+
+    <img src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f2d36e05-31c0-4dd2-6acd-f72b8acc9a00/socialsharingimage" alt="annual pricing preview" width="300" />
+This toggle is preview-only. It does not change the draft, and it does not affect Save draft or Publish.
+
+Fixed charge cards also show:
+
+- The standard amount with its interval (for example `$10 AUD / month`).
+- An **Annual option** line when **Offer as annual** is set (for example `$100 AUD / year`).
+
+Recurring metered feature rates show the interval after the unit label (for example `$5 AUD per unit / month`). Period-to-date usage totals on subscription views do not include an interval—they are amounts so far in the cycle, not rates.
 
 ### Free plans
 
