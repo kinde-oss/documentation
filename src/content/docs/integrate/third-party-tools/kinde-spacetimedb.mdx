@@ -4,6 +4,8 @@ title: Integrate SpacetimeDB with Kinde
 description: Authenticate SpacetimeDB users with a Kinde-issued ID token in a React app, with no server-side configuration.
 sidebar:
   order: 15
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - f3dcba7f-fa4f-4ea1-a470-f03af04ba347
   - 820ec3ab-2b80-4331-937c-644da9f8b339
@@ -31,11 +33,13 @@ Kinde is an OpenID Connect provider, so SpacetimeDB can authenticate your users 
 - A working SpacetimeDB project. If you don't have one, follow the [React Quickstart Guide](https://spacetimedb.com/docs/sdks/typescript/react-quickstart).
 - A [Kinde](https://kinde.com) account.
 
-## Step 1: Install the Kinde React SDK
+## Quickstart
+
+### 1. Install the Kinde React SDK
 
 <PackageManagers pkg="@kinde-oss/kinde-auth-react" />
 
-## Step 2: Set up your Kinde application
+### 2. Set up your Kinde application
 
 1. In the [Kinde dashboard](https://app.kinde.com), add a **Front-end and mobile** application and select **React** as the SDK. For the full walkthrough, see [Kinde React SDK](/developer-tools/sdks/frontend/react-sdk/).
 2. On the application's **Details** page, copy the **Client ID** and **Domain** from **App keys**. Both are public values that ship to the browser.
@@ -43,7 +47,7 @@ Kinde is an OpenID Connect provider, so SpacetimeDB can authenticate your users 
 
 These URLs must match exactly what your app sends. If your dev server starts on a different port, Kinde rejects the sign-in with a `redirect_uri` mismatch before authenticating.
 
-## Step 3: Create a KindeTokenProvider component
+### 3. Create a KindeTokenProvider component
 
 This component:
 
@@ -106,7 +110,7 @@ export function KindeTokenProvider({ children }: { children: ReactNode }) {
 
 Use `getIdToken()` rather than `getAccessToken()`. SpacetimeDB derives a user's `Identity` from the token's `iss` and `sub` claims, and both tokens carry those — but unless you request an audience, Kinde leaves the access token's `aud` claim empty, while the ID token always carries one. If you want to check the audience in your module, the ID token gives you something to check by default.
 
-## Step 4: Add the providers in main.tsx
+### 4. Add the providers in main.tsx
 
 <Aside type="info" title="Remove the existing SpacetimeDBProvider">
 Don't forget to remove any existing `SpacetimeDBProvider` from `main.tsx`. The connection is created in `App.tsx` instead, once the token is available.
@@ -140,7 +144,7 @@ createRoot(document.getElementById('root')!).render(
 
 Kinde returns the user to `redirectUri` with an authorization code in the query string, and the SDK completes the exchange when that page mounts. No dedicated callback route is required. `forceChildrenRender` renders your app while Kinde initializes, so you can drive your UI from `isLoading` instead of showing a blank page.
 
-## Step 5: Use the ID token in App.tsx
+### 5. Use the ID token in App.tsx
 
 1. Read the token with `useKindeToken()`.
 2. Build the connection inside `useMemo`, with the token as a dependency.
@@ -192,7 +196,7 @@ export default function App() {
 
 Check `isLoading` before `token`. Because `forceChildrenRender` renders your app while Kinde initializes, `token` is still `null` on the first render even for a user who is already signed in — without the loading branch they would see the sign-in button flash before their session resolves.
 
-## Step 6: Add user details and sign out (optional)
+### 6. Add user details and sign out (optional)
 
 Your app can now sign users in. `useKindeAuth` also exposes the signed-in user, along with `register` and `logout`, if you want a fuller set of controls:
 
@@ -222,5 +226,7 @@ function AuthControls() {
   );
 }
 ```
+
+## Next steps
 
 Your users are now authenticated with Kinde, and `ctx.sender` in your module is an `Identity` derived from their Kinde `iss` and `sub` claims — stable across devices and sessions. SpacetimeDB verifies the token's signature against Kinde's public keys, but it does not decide *which* issuers or audiences your module accepts. To check those claims, and to authorize what a signed-in user may do, see [Using Auth Claims](https://spacetimedb.com/docs/core-concepts/authentication/usage/).
