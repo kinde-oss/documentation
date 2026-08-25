@@ -1,7 +1,7 @@
 ---
 page_id: 7eaa79ab-49be-4e00-be2a-54950de661e5
 title: Integrate SpacetimeDB with Kinde
-description: Authenticate SpacetimeDB users with a Kinde-issued ID token in a React app, with no server-side configuration.
+description: "Authenticate SpacetimeDB users with Kinde in minutes. Pass a Kinde ID token to your React app's connection, with no auth server to run."
 sidebar:
   order: 15
 tableOfContents:
@@ -12,18 +12,27 @@ relatedArticles:
 topics:
   - integrate
   - third-party-tools
+  - oauth
 sdk:
-  - React.js
+  - react
 languages:
-  - bash
   - typescript
+  - tsx
+  - bash
 audience:
   - developers
 complexity: intermediate
 keywords:
   - spacetimedb
   - openid connect
-  - react
+  - ID token
+  - react authentication
+  - real-time database
+  - JWT verification
+updated: 2026-08-25
+featured: false
+deprecated: false
+ai_summary: "Guide to authenticating SpacetimeDB users with Kinde in a React application. SpacetimeDB accepts any OpenID Connect issuer, so a Kinde-issued ID token authenticates users with no server-side configuration. The quickstart covers installing the Kinde React SDK, creating a Kinde front-end application and setting callback and logout URLs for a Vite dev server, and building a KindeTokenProvider component that waits for Kinde to initialize, fetches the ID token with getIdToken, and exposes it to the app through React context. It explains why the ID token is used rather than the access token: both carry the iss and sub claims that SpacetimeDB derives a user Identity from, but the access token has an empty aud claim unless an audience is requested. Later steps wrap the app in KindeProvider and KindeTokenProvider in main.tsx, use forceChildrenRender so UI can be driven from isLoading, build the SpacetimeDB connection inside useMemo, and mount SpacetimeDBProvider only once a token exists. An optional step adds user details and sign out. Prerequisites are a working SpacetimeDB project and a Kinde account. Intended for developers adding authentication to real-time SpacetimeDB applications."
 ---
 
 Kinde is an OpenID Connect provider, so SpacetimeDB can authenticate your users from a Kinde-issued ID token with no server-side configuration. This guide shows you how to obtain that token in a React app and pass it to your SpacetimeDB connection.
@@ -230,3 +239,10 @@ function AuthControls() {
 ## Next steps
 
 Your users are now authenticated with Kinde, and `ctx.sender` in your module is an `Identity` derived from their Kinde `iss` and `sub` claims — stable across devices and sessions. SpacetimeDB verifies the token's signature against Kinde's public keys, but it does not decide *which* issuers or audiences your module accepts. To check those claims, and to authorize what a signed-in user may do, see [Using Auth Claims](https://spacetimedb.com/docs/core-concepts/authentication/usage/).
+
+## Resources
+
+- [SpacetimeDB React Quickstart](https://spacetimedb.com/docs/sdks/typescript/react-quickstart)
+- [SpacetimeDB Using Auth Claims](https://spacetimedb.com/docs/core-concepts/authentication/usage/)
+- [Kinde React SDK](/developer-tools/sdks/frontend/react-sdk/)
+- [Callback URLs](/get-started/connect/callback-urls/)
