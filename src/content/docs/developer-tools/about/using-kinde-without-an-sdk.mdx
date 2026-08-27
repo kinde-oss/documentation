@@ -31,7 +31,12 @@ keywords:
   - access tokens
   - scopes
   - request parameters
-updated: 2026-03-19
+  - step-up authentication
+  - acr_values
+  - max_age
+  - amr
+  - auth_time
+updated: 2026-08-27
 featured: false
 deprecated: false
 ai_summary: Comprehensive guide for integrating with Kinde without SDKs using OAuth 2.0 and OpenID Connect standards including authorization flows, token exchange, and request parameters.
@@ -156,6 +161,23 @@ The following scopes can be requested from Kinde.
 
 There are a few useful additional parameters that Kinde supports in the authorization URL.
 
+### `acr_values`
+
+Request a minimum authentication context. Kinde recognises two values:
+
+- `mfa` - the user must complete a second factor
+- `phr` - the user must complete a phishing-resistant factor (a passkey)
+
+If the user's session already meets the requested context, Kinde issues tokens without prompting. If it does not, Kinde steps the user up - it asks only for the additional factor rather than making them sign in again from scratch.
+
+Accepts a space-separated list; the highest context requested is applied. Values are case-insensitive. Unrecognised values are ignored.
+
+If the requested context cannot be met - for example `phr` for a user with no usable passkey - Kinde returns an error to your callback rather than issuing a token that does not satisfy the request. See [Step-up authentication](#step-up-authentication).
+
+Type: `string`
+
+Required: No
+
 ### `audience`
 
 The `audience` claim for the JWT. This can be used to protect your APIs and resource servers.
@@ -231,6 +253,18 @@ Required: No
 ### `login_hint`
 
 When your project knows which user it is trying to authenticate, it can provide their email in this parameter as a hint to Kinde. Passing this hint pre-fills the email box on the sign up and sign-in screens.
+
+Type: `string`
+
+Required: No
+
+### `max_age`
+
+The maximum age, in seconds, of the user's last authentication. If the user authenticated longer ago than this, Kinde asks them to authenticate again before issuing tokens.
+
+Use `max_age=0` to require re-authentication on every request.
+
+A value Kinde cannot read as a non-negative number is treated as requiring re-authentication.
 
 Type: `string`
 
@@ -359,6 +393,76 @@ Defines which pricing table to show in billing flow
 Type: String
 
 Required: No
+
+## **Step-up authentication**
+
+Kinde implements [RFC 9470](https://datatracker.ietf.org/doc/html/rfc9470) step-up authentication. Your app or API can require a stronger authentication context for sensitive operations, and Kinde will collect only what is missing.
+
+### **How a step-up works**
+
+1. Your app sends the user to `/oauth2/auth` with `acr_values`, and optionally `max_age`.
+2. If the user's session already satisfies the request, Kinde issues tokens straight away.
+3. If it does not, Kinde prompts for the additional factor only - a one-time code by default, or a passkey when `phr` is requested - then returns to your callback.
+
+Because the user keeps their session throughout, a step-up does not sign them out of your other applications.
+
+### **Authentication claims**
+
+When you request a context, the tokens carry three claims:
+
+| Claim       | Meaning                                                                                                                                                                                         |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `acr`       | The context that was met: `mfa` or `phr`. Omitted when the user authenticated with a single factor.                                                                                             |
+| `amr`       | The methods that were used, as an array.                                                                                                                                                        |
+| `auth_time` | When the user last actively authenticated, as seconds since the Unix epoch. Always present on the ID token; present on the access token when Kinde can establish it. Read it from the ID token. |
+
+`acr` is deliberately absent for a single-factor login. A single factor is the baseline every authenticated session meets, so there is nothing for your app to act on - read `amr` if you need to know what was used. Treat an absent `acr` as "neither `mfa` nor `phr`", never as a failure.
+
+`amr` values you may see:
+
+| Value                               | Method                                                                   |
+| ----------------------------------- | ------------------------------------------------------------------------ |
+| `pwd`                               | Password                                                                 |
+| `passkey`                           | Passkey, with the user verified by the device                            |
+| `pop`                               | Passkey, where the device confirmed presence but did not verify the user |
+| `email`, `sms`                      | A one-time code used as the _first_ factor (passwordless sign-in)        |
+| `otp:email`, `otp:sms`              | A one-time code used as a _second_ factor                                |
+| `totp`                              | Authenticator app                                                        |
+| `step_up:email_otp`                 | A one-time code to the address on the user's profile                     |
+| `mfa`                               | Recovery code                                                            |
+| Provider name, for example `google` | A social or enterprise connection                                        |
+
+### **When the context cannot be met**
+
+If the user cannot satisfy the request - no usable passkey for a `phr` request, or no second factor available for `mfa` - Kinde redirects to your callback with an error rather than issuing a token that does not meet it:
+
+```jsx
+302 https://YOUR_CALLBACK_URL?
+error=unmet_authentication_requirements&
+error_description=The+requested+authentication+context+could+not+be+met&
+state=YOUR_STATE
+```
+
+Handle this as a definite answer, not a transient failure. Retrying the same request will produce the same error.
+
+If you combine `acr_values` with `prompt=none`, Kinde cannot show a screen to collect the extra factor, so it returns `login_required` instead. Send the user through an interactive request to complete the step-up.
+
+### **Discovery**
+
+The contexts Kinde can return are advertised at `https://<your_kinde_subdomain>.kinde.com/.well-known/openid-configuration`:
+
+```jsx
+"acr_values_supported": ["mfa", "phr"],
+"claims_supported": ["aud", "exp", "iat", "iss", "sub", "acr", "amr", "auth_time"]
+```
+
+<Aside type="warning" title="What the mfa context does and does not assert">
+
+`acr: "mfa"` means two factors were presented and accepted under your environment's MFA policy. It does not assert that the two factors are independent of one another - for example, a user who signs in with a social provider and then receives a one-time code at that same mailbox has proven one channel twice.
+
+If you need the second factor to be independent of the first, as some payments and regulated workloads do, request `phr`. A passkey cannot be compromised by breaching the account that provided the first factor.
+
+</Aside>
 
 ## **Verifying the Kinde access token**
 
