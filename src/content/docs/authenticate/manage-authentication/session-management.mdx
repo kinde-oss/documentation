@@ -26,7 +26,7 @@ keywords:
   - session cookies
   - inactivity timeout
   - browser session
-updated: 2026-04-13
+updated: 2026-08-28
 ---
 
 You can manage Kinde authenticated sessions via your application settings. An authenticated session (or SSO session) is the period during which Kinde treats the user as signed in. You can define whether a session persists after the browser is closed, and how much time can elapse before prompting a user to re-authenticate.
@@ -47,6 +47,20 @@ If you want, you can [change session settings for an organization](/authenticate
 4. In the **SSO sessions** section, decide on the policy for session cookies. A persistent session leaves the cookie active when the browser is closed. A non-persistent session is terminated when the browser window closes (unless the limitations listed above apply). 
 5. In the **Session inactivity timeout** section, set how long a session can be inactive before prompting re-authentication. This setting is applied in seconds - where 3,600 seconds is one hour; 86,400 seconds is one day.
 6. When you're finished, select **Save**.
+
+## End a user's sessions from your backend
+
+The session settings above control how long a session lasts on its own. You can also end a user's sessions on demand from your own backend, using the Management API. This is useful when an admin deactivates an account, when you detect suspicious activity, or when you want a "sign out everywhere" control in your app.
+
+Call `DELETE /api/v1/users/{user_id}/sessions` using an M2M application with the `delete:user_sessions` scope. See the [Management API reference](/kinde-apis/management#tag/users) for request and response details.
+
+This ends the user's SSO sessions and invalidates their refresh tokens immediately. Access tokens their app already holds remain valid until they expire, because those are validated locally by your API rather than checked against Kinde on each request. For how to narrow that window, see [What revocation does and doesn't do](/build/tokens/configure-tokens/#what-revocation-does-and-doesnt-do).
+
+<Aside>
+
+Ending sessions does not delete or suspend the user. They can sign in again straight away. To prevent sign-in entirely, [suspend or delete the user](/manage-users/access-control/delete-or-suspend-users/).
+
+</Aside>
 
 ## What counts as activity for SSO session inactivity?
 

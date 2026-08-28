@@ -6,6 +6,7 @@ sidebar:
 relatedArticles:
   - cb91d7a1-7306-4c58-9635-b0fe1b913b38
   - 556c9ce6-477b-4a31-9ce1-75f612eb3740
+  - b5f45f88-93ff-4323-a57f-bfdc0b52878a
 app_context:
   - m: user
     s: details
@@ -29,7 +30,8 @@ keywords:
   - admin permissions
   - user management
   - self sign up
-updated: 2026-03-26
+  - session revocation
+updated: 2026-08-28
 featured: false
 deprecated: false
 ai_summary: Guide to deleting or suspending users in Kinde including suspension, restoration, and permanent deletion options for access control.
@@ -69,6 +71,20 @@ For details on suspending an organization, see [Add and manage organizations](/b
    2. Select the second option to completely remove the user record from Kinde, including access and all subscriber lists.
 5. Select **Delete user**. When the user tries to sign in, they will be prompted to sign up (if self-sign-up is allowed in your business).
 
+## What happens to sessions and tokens
+
+When you suspend or delete a user, Kinde immediately ends their authenticated sessions and invalidates their refresh tokens. The user cannot sign in again, and any attempt to refresh their tokens fails with `invalid_grant`.
+
+Access tokens the user's app already holds are not affected, and remain valid until they expire. Access tokens are self-contained JWTs that your API validates locally, so there is nothing for Kinde to withdraw once one has been issued.
+
+This matters if you rely on deletion to cut off access instantly. Until the user's access token expires, your API will still accept it. To narrow that window, shorten your access token lifetime. See [What revocation does and doesn't do](/build/tokens/configure-tokens/#what-revocation-does-and-doesnt-do).
+
+<Aside>
+
+This applies whether you delete or suspend the user in the Kinde admin area or through the Management API.
+
+</Aside>
+
 ## Can I block users by email, username, or phone number?
 
 Kinde does not have a built-in blocklist for specific email addresses, usernames, or phone numbers. Suspending or deleting a user removes their existing account, but does not prevent someone from signing up again with the same identifier if self-sign-up is enabled.
@@ -78,6 +94,8 @@ To block access for accounts created with a specific identifier (after sign-up),
 - **Workflows** — Use a [post-authentication workflow](/workflows/example-workflows/workflow-user-post-auth/) to check the authenticating user's email, username, or phone number against a blocklist stored in an environment variable or external data source. If matched, the workflow can deny access using the `deny` action.
 - **Webhooks** — Subscribe to the `user.created` event via [webhooks](/integrate/webhooks/about-webhooks/). When a new user signs up with a blocked identifier, call the [Management API](/kinde-apis/management#tag/users/patch/api/v1/user) to suspend or delete them as soon as the event is processed.
 - **Management API** — React to sign-up events and use the [`PATCH /api/v1/user`](/kinde-apis/management#tag/users/patch/api/v1/user) endpoint to suspend users whose identifiers match your blocklist.
+
+The same expiry window applies to these workarounds. Suspending or deleting a user in response to a webhook stops them getting new tokens, but an access token already issued during sign-up stays valid until it expires — see [What happens to sessions and tokens](#what-happens-to-sessions-and-tokens) above.
 
 <Aside type="warning">
 
