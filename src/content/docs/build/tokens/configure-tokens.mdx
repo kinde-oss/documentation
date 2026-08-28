@@ -30,7 +30,9 @@ keywords:
   - refresh tokens
   - access tokens
   - ID tokens
-updated: 2026-04-03
+  - revocation
+  - session revocation
+updated: 2026-08-28
 featured: false
 deprecated: false
 ai_summary: Comprehensive guide for configuring token and session expiry times including security best practices, token lifetime management, and risk mitigation strategies for different token types.
@@ -97,6 +99,34 @@ To revoke a previously issued token, you need to make a POST request to the `/oa
 Ensure to set the Content-Type header to `application/x-www-form-urlencoded`. 
 
 Upon successful revocation, you will receive a 200 status code indicating that the token was successfully revoked. For more information and example code snippets, see [revoke tokens](https://docs.kinde.com/kinde-apis/frontend/#tag/oauth/post/oauth2/revoke).
+
+To end all of a specific user's sessions from your backend rather than revoking one token at a time, see [End a user's sessions from your backend](/authenticate/manage-authentication/session-management/#end-a-users-sessions-from-your-backend).
+
+## What revocation does and doesn't do
+
+Revoking a token or ending a user's sessions takes effect immediately for everything Kinde holds server-side. It does not reach access tokens that have already been issued.
+
+| What you revoke | Effect |
+| --- | --- |
+| SSO (authenticated) session | Ends immediately. The user must sign in again to start a new session. |
+| Refresh token | Invalidated immediately. The next refresh attempt fails with `invalid_grant`. |
+| Access token already held by an app | **Remains valid until it expires.** |
+
+This is a property of JWTs, not a Kinde limitation. Access tokens are self-contained and signed, so your API validates them locally against Kinde's public keys, checking the signature, issuer, audience, and expiry. That check never calls Kinde, which is what makes it fast and keeps Kinde out of your request path. The trade-off is that no identity provider can reach into a token that has already been handed out.
+
+In practice, a revoked user can no longer obtain new tokens, but an access token they already hold keeps working until `exp`. With the default 24 hour access token lifetime, that window can be up to 24 hours.
+
+### Close the window
+
+**Shorten the access token lifetime.** This is the control to reach for. The window is exactly the access token lifetime, so lowering it is the most direct fix. A 5 to 15 minute access token paired with refresh tokens means a revoked user loses access within minutes, because their next refresh fails. See [Set token lifetimes](/build/tokens/configure-tokens/#set-token-lifetimes) above.
+
+<Aside>
+
+Shortening the access token lifetime increases the number of refresh calls your app makes. Test the value you choose against your traffic before rolling it out broadly.
+
+</Aside>
+
+**Check live state, very sparingly.** The `/oauth2/introspect` endpoint validates a token against current session state, so it reflects revocation immediately. It also puts Kinde back in your request path, which is the thing local JWT validation exists to avoid. Reserve it for a small number of genuinely high-value actions where a short token lifetime is not enough on its own. Do not use it for routine request authorization.
 
 ## Token security
 
