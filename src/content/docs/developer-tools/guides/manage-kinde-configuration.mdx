@@ -422,7 +422,7 @@ Kinde environments are isolated — configuration doesn’t automatically carry 
 
 ## Terraform IaC
 
-If you prefer to manage Kinde with Terraform, there are two options. You can combine them: use the provider for the resources it supports, and the seed script for everything else.
+If you prefer to manage Kinde with Terraform, there are two options. You can combine them, but give every resource exactly one owner: let Terraform manage applications, APIs, connections, organizations, users, roles, and permissions, and limit the seed script to settings the provider does not support yet — environment variables, feature flags, and API scopes. If both tools create the same resource types, you get duplicates and drift. When combining, remove the sections the provider owns (such as `application`, `apis`, and `roles`) from your seed config files.
 
 ### Option 1: Kinde Terraform provider
 
@@ -448,7 +448,7 @@ The example below creates the same Orders API as the seed script.
       required_providers {
         kinde = {
           source  = "kinde-oss/kinde"
-          version = "~> 0.1"
+          version = "~> 0.1.0"
         }
       }
     }

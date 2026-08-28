@@ -73,7 +73,7 @@ Manage your Kinde business as code — applications, APIs, connections, organiza
 
 ### 1. Create an M2M application
 
-The provider authenticates as a machine to machine (M2M) application.
+The provider authenticates as a machine-to-machine (M2M) application.
 
 1. In Kinde, go to **Settings > Applications**, add a **Machine to Machine** application, and authorize it for the **Kinde Management API**. See the [quick start guide](/developer-tools/kinde-api/connect-to-kinde-api/) for the full steps.
 2. Grant the following scopes, which cover the permission and role created in this quickstart:
@@ -97,7 +97,7 @@ terraform {
   required_providers {
     kinde = {
       source  = "kinde-oss/kinde"
-      version = "~> 0.1"
+      version = "~> 0.1.0"
     }
   }
 }
@@ -115,8 +115,10 @@ Export your M2M credentials as environment variables. Include the `https://` sch
 export KINDE_DOMAIN="https://<your_subdomain>.kinde.com"
 export KINDE_AUDIENCE="https://<your_subdomain>.kinde.com/api"
 export KINDE_CLIENT_ID="<your_m2m_client_id>"
-export KINDE_CLIENT_SECRET="<your_m2m_client_secret>"
+read -rs KINDE_CLIENT_SECRET && export KINDE_CLIENT_SECRET
 ```
+
+The `read -rs` prompt keeps the client secret out of your shell history — paste the secret when prompted. In CI, inject all four values from your secret store.
 
 With the environment variables set, the provider block can be empty.
 
@@ -238,7 +240,7 @@ output "web_app_client_id" {
 }
 ```
 
-Application `type` is one of `reg` (back end web app), `spa` (single page app), or `m2m` (machine to machine). Changing `name` or `type` forces a replacement, which issues a new client ID and secret — the URIs are updatable in place.
+Application `type` is one of `reg` (back-end web app), `spa` (single-page app), or `m2m` (machine-to-machine). Changing `name` or `type` forces a replacement, which issues a new client ID and secret — the URIs are updatable in place.
 
 ## Add users to organizations and assign roles
 
@@ -359,7 +361,7 @@ Full schema documentation for every resource and data source is on the [Terrafor
 - **`kinde_role` requires a `description`.** The Management API cannot unset a description once it is set, so the provider requires one to avoid state drift.
 - **`kinde_user` restrictions.** `is_suspended` cannot be `true` when creating a user — create the user first, then update it. `organization_code` is sent only on create.
 - **Large lists are read in full.** Roles, permissions, and other list endpoints are paginated by the provider, so nothing is silently truncated.
-- **Failed creates roll back.** If a multi-step create fails part way, for example a user is added to an organization but a role assignment fails, the provider removes what it created.
+- **Create rollback is best effort and resource-scoped.** If a single resource's multi-step create fails part way — for example, `kinde_organization_user` adds the membership but one of its `roles` fails — the provider attempts to remove what that resource created. It does not span resources: a failed `kinde_user_role` does not remove the membership it depends on. After an apply error, run `terraform plan` to see what exists before resuming or destroying.
 - **Rate limits apply.** The provider calls the Management API, so large applies are subject to [API rate limits](/developer-tools/kinde-api/api-rate-limits/).
 
 ## Import existing resources
@@ -425,9 +427,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
       - run: terraform init
-      - run: terraform plan -var-file="${{ inputs.environment }}.tfvars"
-      - run: terraform apply -auto-approve -var-file="${{ inputs.environment }}.tfvars"
+      - run: terraform plan -out=tfplan -var-file="${{ inputs.environment }}.tfvars"
+      - run: terraform apply tfplan
 ```
+
+The `environment` input selects the matching GitHub environment, so its protection rules — such as required reviewers on `prod` — gate the job. Saving the plan with `-out` and applying that file means the apply executes exactly the plan that was produced, not a recomputed one.
 
 For how to create additional Kinde environments, see [Manage Kinde environments](/build/environments/environments/).
 
@@ -435,7 +439,7 @@ For how to create additional Kinde environments, see [Manage Kinde environments]
 
 ### What can't the provider manage yet?
 
-Environment variables, feature flags, API scopes, and business or environment settings are not covered in the current release. Use the [Management API seed script](/developer-tools/guides/manage-kinde-configuration/) for those, or open an issue on the [provider repository](https://github.com/kinde-oss/terraform-provider-kinde/issues) to request a resource.
+Environment variables, feature flags, API scopes, and business or environment settings are not covered in the current release. Use the [Management API seed script](/developer-tools/guides/manage-kinde-configuration/) for those, or open an issue on the [provider repository](https://github.com/kinde-oss/terraform-provider-kinde/issues) to request a resource. If you run the seed script alongside Terraform, keep Terraform as the only owner of applications, APIs, connections, organizations, users, roles, and permissions, and limit the seed script to the settings listed above — two owners for the same resource create duplicates and drift.
 
 ### Which Terraform versions are supported?
 
