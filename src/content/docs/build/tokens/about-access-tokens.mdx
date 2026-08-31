@@ -1,18 +1,20 @@
 ---
 page_id: d8069575-dfef-421d-8f3a-8f3efe9ad2f3
 title: Access tokens
-description: Comprehensive guide to Kinde access tokens including standard JWT claims, Kinde-specific claims like organization codes and feature flags, and token behavior during refresh operations.
+description: "Inspect Kinde access token claims, lifetimes, and refresh behavior so you can authorize APIs with confidence"
 sidebar:
   order: 2
 relatedArticles:
   - 5a248c6f-c1ae-480a-95c3-d3c69c81598d
   - cf687bce-9732-4b67-9da5-580953c8549f
+tableOfContents:
+  maxHeadingLevel: 3
 app_context:
   - m: application_details
     s: tokens
 topics:
+  - build
   - tokens
-  - authentication
   - oauth
 sdk: []
 languages:
@@ -22,17 +24,17 @@ audience: developers
 complexity: intermediate
 keywords:
   - access tokens
-  - JWT
+  - JWT claims
   - OAuth 2.0
-  - token claims
   - feature flags
   - permissions
-  - organization claims
+  - token refresh
+  - token expiry
   - billing trial
-updated: 2026-08-28
+updated: 2026-08-31
 featured: false
 deprecated: false
-ai_summary: Comprehensive guide to Kinde access tokens including standard JWT claims, Kinde-specific claims like organization codes and feature flags, and token behavior during refresh operations.
+ai_summary: "Reference for Kinde access tokens as JWTs used to authenticate users and pass authorization data to APIs. Documents an example token and standard claims including aud, azp, exp, iat, iss, jti, scp, and sub, plus custom claims via Properties. Covers Kinde-specific claims: org_code, feature_flags with type and value short codes, permissions, billing trial fields has_trial_period and trial_expires_on, external provider ID, and Microsoft Entra ID ext_ claims. Explains refresh_token grant behavior: Kinde may return an unexpired access token unless it was revoked, the user signed out via logout, or the token expired. FAQ covers removing claims with the user token generation workflow, the default 24-hour access token lifetime, and that revocation, session end, or user deletion does not shorten already-issued access tokens. Intended for developers implementing authorization."
 ---
 
 Access tokens are a secure way of authenticating users and passing information about a user to a system.
@@ -145,18 +147,6 @@ Access tokens are a secure way of authenticating users and passing information a
 
   ```
 
-## Can I remove claims to reduce token size?
-
-Yes. Kinde automatically populates the access token with claims like `permissions`, `feature_flags`, and `org_code`. If your app handles this data another way — or you want to keep JWTs small and free of client-readable claims — you can strip any of these from the token at generation time using the [user token generation workflow](/workflows/example-workflows/user-token-generation/#reduce-token-size).
-
-The workflow fires whenever a token is issued and gives you full control over what goes into the final token. You can also use it to retrieve data from the [Kinde Management API](/kinde-apis/management/) server-side instead of embedding it in the JWT.
-
-## How long does an access token last?
-
-Access tokens have a default lifetime of **24 hours (86,400 seconds)**. You can change this in **Settings > Environment > Applications > [your app] > Tokens**. Kinde does not recommend extending the access token lifetime beyond 1 day, as access tokens are the most exposed token type and a longer lifetime increases the window of risk if one is compromised.
-
-For a comparison of all token default lifetimes, see [Configure token and session expiry](/build/tokens/configure-tokens/). Note that revoking a token, ending a session, or deleting a user does not shorten the lifetime of an access token that has already been issued — see [What revocation does and doesn't do](/build/tokens/configure-tokens/#what-revocation-does-and-doesnt-do).
-
 ## Behaviour of Access Tokens on refresh
 
 When you use the `refresh_token` grant to refresh an access token, Kinde will return an existing access token if that existing access token is not expired. You will get a completely new access token if one (or more) of the following conditions are met:
@@ -164,3 +154,18 @@ When you use the `refresh_token` grant to refresh an access token, Kinde will re
 - You revoke your existing access token
 - Your user has signed out of their session, and your application has called the logout function in Kinde
 - Your existing access token has expired.
+
+
+## FAQ
+
+### Can I remove claims to reduce token size?
+
+Yes. Kinde automatically populates the access token with claims like `permissions`, `feature_flags`, and `org_code`. If your app handles this data another way — or you want to keep JWTs small and free of client-readable claims — you can strip any of these from the token at generation time using the **user token generation workflow** - see [Remove claims](/workflows/workflow-tutorials/customize-token-with-workflow/#remove-claims).
+
+The workflow fires whenever a token is issued and gives you full control over what goes into the final token. You can also use it to retrieve data from the [Kinde Management API](/kinde-apis/management/) server-side instead of embedding it in the JWT.
+
+### How long does an access token last?
+
+Access tokens have a default lifetime of **24 hours (86,400 seconds)**. You can change this in **Settings > Environment > Applications > [your app] > Tokens**. Kinde does not recommend extending the access token lifetime beyond 1 day, as access tokens are the most exposed token type and a longer lifetime increases the window of risk if one is compromised.
+
+For a comparison of all token default lifetimes, see [Configure token and session expiry](/build/tokens/configure-tokens/). Note that revoking a token, ending a session, or deleting a user does not shorten the lifetime of an access token that has already been issued — see [What revocation does and doesn't do](/build/tokens/configure-tokens/#what-revocation-does-and-doesnt-do).
