@@ -30,10 +30,13 @@ keywords:
   - revoke invitation
   - management api
   - organization invites scopes
-updated: 2026-08-28
+  - rate limits
+  - error codes
+  - is_sent
+updated: 2026-09-01
 featured: false
 deprecated: false
-ai_summary: "Guide to inviting people into a Kinde organization from your own application using the Kinde Management API. Covers prerequisites including switching on Allow invitations and selecting an Invite application with a valid Application login URI at environment policy level, and setting up an M2M application with the create:organization_invites, read:organization_invites, and delete:organization_invites scopes. Documents creating an invitation with POST to the organization invites endpoint using email, first name, last name, an array of role keys, and the send_email flag which defaults to false, meaning Kinde creates the invitation without emailing anyone unless you opt in. Explains using the returned invite_link to deliver invitations from your own email templates or in-app notifications, and how Kinde resolves the sender when it sends the email itself, preferring the organization sender then the environment email provider. Also covers listing invitations with pending-only default filtering, include_accepted and include_revoked, sort options and next_token pagination, retrieving a single invitation, and revoking an invitation. Notes that there is no resend endpoint and that organizations managed by directory sync cannot receive invitations."
+ai_summary: "Guide to inviting people into a Kinde organization from your own application using the Kinde Management API. Covers prerequisites including switching on Allow invitations and selecting an Invite application with a valid Application login URI at environment policy level, enabling organization-level sign-up because organizations do not accept sign-ups by default, and setting up an M2M application with the create:organization_invites, read:organization_invites, and delete:organization_invites scopes. Documents creating an invitation with POST to the organization invites endpoint using email (max 254 characters), first name and last name (max 64 characters each), a JSON array of role keys, and the send_email flag which defaults to false. Notes that a 201 response does not guarantee email delivery: is_sent true means the email was queued, not delivered, and there are no invitation webhook events — user.created or accepted_on is the signal that someone joined. Explains that Kinde's invitation email uses your sender, logo, and colours but the wording is fixed, not editable in the email content editor, and not translatable, so delivering invite_link yourself is the route to full copy control. Also covers per-organization rate limits of 100 invitations per rolling 24 hours and 500 outstanding invitations, listing with pending-only default filtering, retrieving a single invitation, and revoking an invitation which does not expire automatically and looks expired to the invitee. Documents create-endpoint error codes including FEATURE_DISABLED, EMAIL_ALREADY_IN_USE, EMAIL_ALREADY_INVITED, ORGANIZATION_DIRECTORY_PROVIDED, and the two rate-limit codes."
 ---
 
 You can invite people to join one of your organizations, instead of adding them manually or waiting for them to sign up. Kinde creates the invitation, optionally emails it, and returns an invitation link you can deliver yourself.
@@ -48,6 +51,8 @@ There are two ways to invite people:
 Invitations are switched off by default. Go to **Settings > Environment > Policies**, switch on **Allow invitations**, and choose the **Invite application** that invitation links should open. The application you choose needs an **Application login URI**, otherwise invitation links are blocked and the invitee sees an error.
 
 For details on both settings, see [Set global access policies](/build/set-up-options/access-policies/).
+
+The organization you're inviting people into also needs to be accepting sign-ups. Organizations don't accept sign-ups by default, so check this on any organization you're inviting people into. See [Manage user sign up to organizations](/build/organizations/allow-user-signup-org/).
 
 <Aside>
 
@@ -84,11 +89,13 @@ curl -X POST 'https://<your_kinde_domain>/api/v1/organization/org_1ccfb819462/in
   }'
 ```
 
-At least one role is required. In the request body, `roles` takes an array of role **keys**, not role names.
+At least one role is required. In the request body, `roles` must be a JSON array of role **keys**, not role names — a bare string is rejected (`ROLES_INVALID_FORMAT`). `email` is limited to 254 characters. `first_name` and `last_name` are limited to 64 characters each.
 
 <Aside type="warning">
 
 `send_email` defaults to `false`. If you leave it out, Kinde creates the invitation but doesn't email anyone — it's up to you to deliver the `invite_link` from the response. Set `send_email` to `true` if you want Kinde to send the invitation email.
+
+The invitation email uses your sender, logo, and colours, but the wording is fixed. It isn't editable in the email content editor, isn't translatable, and the subject currently mentions Kinde. Use `send_email: false` and deliver `invite_link` yourself if you need full control of the copy.
 
 </Aside>
 
@@ -120,9 +127,26 @@ The invitation details are returned under an `invite` key. Note that in the resp
 }
 ```
 
+<Aside type="warning">
+
+A `201` doesn't guarantee an email went out. Check `is_sent` on the response when you pass `send_email: true`. `is_sent: true` means the email was queued for delivery, not that it was delivered.
+
+There are no invitation webhook events. The reliable signal that someone joined is the `user.created` webhook, or `accepted_on` being set on a later GET. See [About webhooks](/integrate/webhooks/about-webhooks/).
+
+</Aside>
+
 Use `invite_link` when you want to deliver the invitation from your own product — in your own email template, in an in-app notification, or as a link an admin can copy and share.
 
 See [Create organization invite](/kinde-apis/management#tag/organizations/post/api/v1/organization/{org_code}/invites) for the full request and response reference.
+
+## Rate limits
+
+Invitations are limited per organization:
+
+- **100 invitations** per rolling 24-hour window. The error code is `INVITE_LIMIT_DAILY_REACHED`.
+- **500 outstanding invitations** at any time. Outstanding means neither accepted nor revoked. The error code is `INVITE_LIMIT_ACTIVE_REACHED`.
+
+Accepting or revoking an invitation frees up capacity against the outstanding limit. These limits matter most if you're bulk-inviting from your own portal.
 
 ## Send the invitation email from your own domain
 
@@ -132,7 +156,7 @@ If you set `send_email` to `true`, Kinde chooses the sender in this order:
 2. Your environment's configured email provider. See [Customize email sender](/get-started/connect/customize-email-sender/).
 3. Kinde's default sender.
 
-The invitation email also uses your branding, including your logo.
+The invitation email uses your branding — sender name and address, logo, and colours. The wording is fixed. It isn't editable in the email content editor, isn't translatable, and the subject currently mentions Kinde. If you need full control of the copy, set `send_email` to `false` and deliver the `invite_link` yourself.
 
 ## List invitations for an organization
 
@@ -153,7 +177,9 @@ See [Get organization invites](/kinde-apis/management#tag/organizations/get/api/
 
 ## Get a single invitation
 
-To check the status of one invitation, request it by its code. The response tells you whether the invitation was sent (`is_sent`), accepted (`accepted_on`), or revoked (`is_revoked`).
+To check the status of one invitation, request it by its code. The response tells you whether the invitation was queued (`is_sent`), accepted (`accepted_on`), or revoked (`is_revoked`).
+
+There are no invitation webhook events. The signal that someone joined is the `user.created` webhook, or `accepted_on` being set on a later GET. See [About webhooks](/integrate/webhooks/about-webhooks/).
 
 ```bash
 curl 'https://<your_kinde_domain>/api/v1/organization/org_1ccfb819462/invites/inv_abc123def456' \
@@ -164,7 +190,9 @@ See [Get organization invite](/kinde-apis/management#tag/organizations/get/api/v
 
 ## Revoke an invitation
 
-Revoking an invitation marks it as revoked and prevents it being accepted.
+Revoking an invitation marks it as revoked and prevents it being accepted. Invitations don't expire automatically — they stay valid until they're accepted or revoked.
+
+Someone opening a revoked invitation link sees an expired-invitation message, not a revoked one.
 
 ```bash
 curl -X DELETE 'https://<your_kinde_domain>/api/v1/organization/org_1ccfb819462/invites/inv_abc123def456' \
@@ -181,13 +209,35 @@ See [Delete organization invite](/kinde-apis/management#tag/organizations/delete
 
 ## What the invited person sees
 
-When someone opens their invitation link, they land on the sign-up screen for your invite application with their details prefilled and their email address locked. Invited users can complete sign-up even when **Allow self sign-up** is switched off for the environment, which is what lets you run an invitation-only product.
+When someone opens their invitation link, they land on the sign-up screen for your invite application with their details prefilled and their email address locked. An invitation bypasses the environment-level **Allow self sign-up** setting, so you can run an invitation-only product. The organization still needs to be accepting sign-ups, though — if it isn't, invited users are blocked when they try to accept. Organizations don't accept sign-ups by default, so check this on any organization you're inviting people into. See [Manage user sign up to organizations](/build/organizations/allow-user-signup-org/).
 
 Once they sign up, they join the organization with the roles from the invitation, plus any roles that are automatically assigned to new members of that organization.
 
 For the full experience, including the messages shown when an invitation can't be used, see [Invited user sign-up experience](/authenticate/custom-configurations/invited-user-experience/).
 
-## When you can't invite someone
+## Errors
 
-- **Organizations managed by directory sync** can't receive invitations. Add the user in your identity provider instead and let the change sync through.
-- **People who are already members** of the organization, or who already have a pending invitation for it, are rejected. Revoke the existing invitation first if you need to change the roles attached to it.
+If a create request fails, the response includes a `code` you can switch on.
+
+| Code                              | Means                                                            |
+| --------------------------------- | ---------------------------------------------------------------- |
+| `FEATURE_DISABLED`                | **Allow invitations** is switched off for the environment        |
+| `CODE_IS_REQUIRED`                | No organization code supplied                                    |
+| `ORGANIZATION_INVALID`            | The organization code doesn't match an organization              |
+| `ORGANIZATION_DIRECTORY_PROVIDED` | The organization is managed by directory sync                    |
+| `EMAIL_REQUIRED`                  | No email address supplied                                        |
+| `EMAIL_INVALID`                   | The email address isn't valid                                    |
+| `EMAIL_TOO_LONG`                  | Email address is over 254 characters                             |
+| `FIRST_NAME_TOO_LONG`             | First name is over 64 characters                                 |
+| `LAST_NAME_TOO_LONG`              | Last name is over 64 characters                                  |
+| `EMAIL_ALREADY_IN_USE`            | That email already belongs to a member of the organization       |
+| `EMAIL_ALREADY_INVITED`           | That email already has a pending invitation for the organization |
+| `ROLES_REQUIRED`                  | No roles supplied — at least one is required                     |
+| `INVALID_ROLES`                   | One or more role keys don't exist                                |
+| `ROLES_INVALID_FORMAT`            | `roles` wasn't a JSON array of role-key strings                  |
+| `INVITE_LIMIT_DAILY_REACHED`      | See [Rate limits](#rate-limits)                                  |
+| `INVITE_LIMIT_ACTIVE_REACHED`     | See [Rate limits](#rate-limits)                                  |
+
+Organizations managed by directory sync return `ORGANIZATION_DIRECTORY_PROVIDED`. Add the user in your identity provider instead and let the change sync through.
+
+People who are already members return `EMAIL_ALREADY_IN_USE`. People who already have a pending invitation return `EMAIL_ALREADY_INVITED`. Revoke the existing invitation first if you need to change the roles attached to it.
