@@ -1,9 +1,7 @@
 ---
 page_id: c93d0dc2-adad-4bb3-9618-6dc2109d5aa8
 title: Top questions about Kinde authentication
-description: >-
-  A collection of the top questions and answers about how to set up and
-  configure Kinde authentication for your user's needs.
+description: "Get clear answers on Kinde auth setup—methods, social and SSO, MFA, iframes and popups, sessions, tokens, and troubleshooting"
 sidebar:
   order: 4
 relatedArticles:
@@ -12,32 +10,26 @@ relatedArticles:
   - 43e8aa2d-76a4-4445-ae90-84d3f1a55fcb
 featured: false
 deprecated: false
-ai_summary: >
-  A collection of the top questions and answers about how to set up and
-  configure Kinde authentication for your user's needs.
 topics:
-  - authentication
-  - enterprise auth
-  - SSO
-  - social sign-in
-  - authentication issues
-  - user access control
-  - user access
-  - user authentication
+  - authenticate
+  - about-auth
+sdk: []
+languages: []
 audience:
-  - frontend-developer
+  - developer
+  - product-manager
 complexity: beginner
 keywords:
-  - login
-  - sign in
+  - authentication FAQ
   - popup
-  - error
-  - sessions
-  - tokens
-  - auth
-  - forgot password
+  - iframe
+  - MFA
+  - SAML
+  - social sign-in
   - password reset
-updated: 2026-03-26
+  - sessions
+updated: 2026-07-30
+ai_summary: "FAQ covering common Kinde authentication questions for developers and product teams. Explains how to choose auth methods, password versus passwordless, account linking, per-app and organization requirements, multi-domain sessions, and why hosted auth pages cannot be embedded in a modal or iframe while framed apps can authenticate via React and JavaScript SDK popups. Covers social sign-in, enterprise SAML and Entra ID, MFA, username auth, device authorization, custom pages, developer integration questions, troubleshooting for codes and sessions, security best practices, and advanced custom authentication. Links out to detailed setup guides throughout. Intended for frontend developers and product managers configuring or troubleshooting Kinde auth."
 ---
 
 Here are concise answers to common authentication questions. Select a question to expand the answer.
@@ -96,7 +88,15 @@ Use multi-domain authentication to maintain sign-in sessions across domains and 
 <details>
 <summary><strong>Can I embed Kinde authentication inside a modal or iframe in my application?</strong></summary>
 
-No. Kinde uses redirect-based OAuth 2.0 flows rather than inline embeddable authentication. Users are redirected to Kinde (or your custom domain) to sign in and then redirected back to your app. Embedding the auth flow in a modal or iframe is not supported.
+Kinde's hosted authentication pages cannot be embedded in an iframe or an in-page modal. Kinde uses redirect-based OAuth 2.0 flows, and the hosted pages send strict CSP and security headers that prevent them from being framed. This is deliberate — it protects your users from clickjacking and credential theft.
+
+If **your application** runs inside an iframe, that is supported. The React and JavaScript SDKs detect that they are framed and open Kinde in a popup window rather than redirecting the framed page. The user authenticates in a genuine top-level window, and the SDK returns the result to your app automatically.
+
+- [React SDK — Authentication in a popup window](/developer-tools/sdks/frontend/react-sdk/#authentication-in-a-popup-window)
+- [JavaScript SDK — Authentication in a popup window](/developer-tools/sdks/frontend/javascript-sdk/#authentication-in-a-popup-window)
+
+If you want authentication to feel native to your app, build [custom sign-up and sign-in pages](/authenticate/custom-configurations/custom-authentication-pages/) instead. You control the styling and layout, while Kinde continues to host the security-critical steps such as password entry, code verification, and MFA.
+
 [Set callback and redirect URLs](/get-started/connect/callback-urls/)
 </details>
 
