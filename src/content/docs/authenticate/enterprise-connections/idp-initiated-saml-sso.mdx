@@ -42,7 +42,7 @@ keywords:
   - RelayState
   - connection_id
   - client_id
-updated: 2026-08-25
+updated: 2026-09-01
 ---
 
 In this guide, you'll learn how to configure IdP-initiated SSO in Kinde, including setting up the SAML connection, configuring RelayState, configuring your Identity Provider, and testing both SP-initiated and IdP-initiated authentication flows.
@@ -212,6 +212,7 @@ The route you point RelayState at is responsible for turning the parameters it r
 1. **Read `connection_id` from the incoming query string** and pass it to your Kinde SDK's login method. Most SDKs accept this as `connectionId`. If you are not using an SDK, see [`connection_id`](/developer-tools/about/using-kinde-without-an-sdk/) in our guide to using Kinde without an SDK.
 2. **Let the SDK build the authorization URL.** The SDK adds the callback URL, `state`, and PKCE parameters where applicable. These are what allow Kinde to complete the login and return the user to your application.
 3. **Pass `org_code` too, if the connection is organization-level.** Most SDKs accept this as `orgCode`. Your route needs to preserve the value from the incoming request and forward it.
+4. **Pass `login_hint` through as well, if it is present.** If **Use IdP email as login hint** is switched on for the connection (Step 2), Kinde appends the user's email to the RelayState redirect as a `login_hint` query parameter. Forward it to your SDK's login method (most SDKs accept this as `loginHint`) so the IdP can skip account selection on the second hop.
 
 <Aside type="warning">
 
