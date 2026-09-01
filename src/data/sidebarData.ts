@@ -274,7 +274,7 @@ const sidebarData = [
     description: "Integrate your brand, and update content for pages and screens",
     icon: "brand",
     collapsed: true,
-    cardLink: "/design/brand/apply-branding-for-an-organization/",
+    cardLink: "/design/brand/global-brand-defaults/",
     items: [
       {label: "Brand", autogenerate: {directory: "design/brand"}, collapsed: false},
       {label: "Page layout", autogenerate: {directory: "design/pages"}, collapsed: false},
