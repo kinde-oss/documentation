@@ -36,7 +36,7 @@ keywords:
 updated: 2026-09-01
 featured: false
 deprecated: false
-ai_summary: "Guide to inviting people into a Kinde organization from your own application using the Kinde Management API. Covers prerequisites including switching on Allow invitations and selecting an Invite application with a valid Application login URI at environment policy level, enabling organization-level sign-up because organizations do not accept sign-ups by default, and setting up an M2M application with the create:organization_invites, read:organization_invites, and delete:organization_invites scopes. Documents creating an invitation with POST to the organization invites endpoint using email (max 254 characters), first name and last name (max 64 characters each), a JSON array of role keys, and the send_email flag which defaults to false. Notes that a 201 response does not guarantee email delivery: is_sent true means the email was queued, not delivered, and there are no invitation webhook events — user.created or accepted_on is the signal that someone joined. Explains that Kinde's invitation email uses your sender, logo, and colours but the wording is fixed, not editable in the email content editor, and not translatable, so delivering invite_link yourself is the route to full copy control. Also covers per-organization rate limits of 100 invitations per rolling 24 hours and 500 outstanding invitations, listing with pending-only default filtering, retrieving a single invitation, and revoking an invitation which does not expire automatically and looks expired to the invitee. Documents create-endpoint error codes including FEATURE_DISABLED, EMAIL_ALREADY_IN_USE, EMAIL_ALREADY_INVITED, ORGANIZATION_DIRECTORY_PROVIDED, and the two rate-limit codes."
+ai_summary: "Guide to inviting people into a Kinde organization from your own application using the Kinde Management API. Covers prerequisites including switching on Allow invitations and selecting an Invite application with a valid Application login URI at environment policy level, enabling organization-level sign-up because organizations do not accept sign-ups by default, and setting up an M2M application with the create:organization_invites, read:organization_invites, and delete:organization_invites scopes. Documents creating an invitation with POST to the organization invites endpoint using email (max 254 characters), first name and last name (max 64 characters each), a JSON array of role keys, and the send_email flag which defaults to false. Notes that a 201 response does not guarantee email delivery: is_sent true means the email was queued, not delivered, and there are no invitation webhook events — user.created, user.updated, or accepted_on is the signal that someone joined. Explains that Kinde's invitation email uses your sender, logo, and colours but the wording is fixed, not editable in the email content editor, and not translatable, so delivering invite_link yourself is the route to full copy control. Also covers per-organization rate limits of 100 invitations per rolling 24 hours and 500 outstanding invitations, listing with pending-only default filtering, retrieving a single invitation, and revoking an invitation which does not expire automatically and looks expired to the invitee. Documents create-endpoint error codes including FEATURE_DISABLED, EMAIL_ALREADY_IN_USE, EMAIL_ALREADY_INVITED, ORGANIZATION_DIRECTORY_PROVIDED, and the two rate-limit codes."
 ---
 
 You can invite people to join one of your organizations, instead of adding them manually or waiting for them to sign up. Kinde creates the invitation, optionally emails it, and returns an invitation link you can deliver yourself.
@@ -89,7 +89,7 @@ curl -X POST 'https://<your_kinde_domain>/api/v1/organization/org_1ccfb819462/in
   }'
 ```
 
-At least one role is required. In the request body, `roles` must be a JSON array of role **keys**, not role names — a bare string is rejected (`ROLES_INVALID_FORMAT`). `email` is limited to 254 characters. `first_name` and `last_name` are limited to 64 characters each.
+At least one role is required. In the request body, `roles` must be a JSON array of role **keys**, not role names — a bare string is rejected (`ROLES_INVALID_FORMAT`). If a role requires an assignment permission, the caller — or the user the token represents — must hold that permission. On Kinde-hosted plans, assigning roles other than `owner` and `admin` also requires the `extended_roles` entitlement. `email` is limited to 254 characters. `first_name` and `last_name` are limited to 64 characters each.
 
 <Aside type="warning">
 
@@ -131,7 +131,7 @@ The invitation details are returned under an `invite` key. Note that in the resp
 
 A `201` doesn't guarantee an email went out. Check `is_sent` on the response when you pass `send_email: true`. `is_sent: true` means the email was queued for delivery, not that it was delivered.
 
-There are no invitation webhook events. The reliable signal that someone joined is the `user.created` webhook, or `accepted_on` being set on a later GET. See [About webhooks](/integrate/webhooks/about-webhooks/).
+There are no invitation webhook events. The reliable signal that someone joined is `user.created` when a new account is created, `user.updated` when an existing user is added to the organization, or `accepted_on` being set on a later GET. See [About webhooks](/integrate/webhooks/about-webhooks/).
 
 </Aside>
 
@@ -152,7 +152,7 @@ Accepting or revoking an invitation frees up capacity against the outstanding li
 
 If you set `send_email` to `true`, Kinde chooses the sender in this order:
 
-1. The organization's sender name and email, if you've set them for that organization. See [Customize email sender for an organization](/build/organizations/email-sender-organization/).
+1. The organization's sender name and email, if you've set them for that organization. An organization-specific sender address also needs a [custom SMTP email provider](/get-started/connect/customize-email-sender/) with provider details configured for that address. See [Customize email sender for an organization](/build/organizations/email-sender-organization/).
 2. Your environment's configured email provider. See [Customize email sender](/get-started/connect/customize-email-sender/).
 3. Kinde's default sender.
 
@@ -179,7 +179,7 @@ See [Get organization invites](/kinde-apis/management#tag/organizations/get/api/
 
 To check the status of one invitation, request it by its code. The response tells you whether the invitation was queued (`is_sent`), accepted (`accepted_on`), or revoked (`is_revoked`).
 
-There are no invitation webhook events. The signal that someone joined is the `user.created` webhook, or `accepted_on` being set on a later GET. See [About webhooks](/integrate/webhooks/about-webhooks/).
+There are no invitation webhook events. The signal that someone joined is `user.created` when a new account is created, `user.updated` when an existing user is added to the organization, or `accepted_on` being set on a later GET. See [About webhooks](/integrate/webhooks/about-webhooks/).
 
 ```bash
 curl 'https://<your_kinde_domain>/api/v1/organization/org_1ccfb819462/invites/inv_abc123def456' \
