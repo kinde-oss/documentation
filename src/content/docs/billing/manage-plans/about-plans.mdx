@@ -6,10 +6,12 @@ sidebar:
 relatedArticles:
   - bd6757e3-81d5-48d6-89c8-dd4c222ac647
   - 100f75f1-a0a4-459f-874f-da127f2d0615
+tableOfContents:
+  maxHeadingLevel: 3
 app_context:
   - m: billing
   - s: plans
-description: "Design Kinde billing plans—plan groups, fixed and metered pricing, trials, tax settings, and draft vs published lifecycle"
+description: "Design Kinde billing plans, plan groups, mixed-interval charges, trials, tax, and draft vs published"
 featured: false
 deprecated: false
 topics:
@@ -27,14 +29,14 @@ complexity: intermediate
 keywords:
   - plan groups
   - fixed charges
+  - mixed-interval pricing
+  - annual pricing
   - metered features
-  - unmetered features
   - free trial
-  - Collect tax automatically
+  - collect tax automatically
   - draft plans
-  - price synced
-ai_summary: "Conceptual overview of billing plans in Kinde for structuring product features and charging customers. Explains plan groups for users or organizations, pricing table constraints, and the parts of a plan including profile details and settings such as Ask for credit card, Collect tax automatically with account or plan-level Stripe Tax options, and configurable free trial periods. Covers pricing building blocks: fixed charges with daily weekly monthly or yearly intervals and optional annual pricing, metered features for usage-based entitlements including unit tiered and included allowances such as MAU, and unmetered features for feature gating. Describes reusing a shared pool of features and charges across plans with plan-specific prices and limits. Explains draft versus published states, Stripe price sync status, current limitations including no custom billing cycle changes and no per-subscription add-ons or discounts, and that plan versioning is not yet available. Intended for developers, product managers, and business owners designing SaaS pricing."
-updated: 2026-08-10
+ai_summary: "Conceptual overview of billing plans in Kinde for structuring product features and charging customers. Explains plan groups for users or organizations, pricing table constraints, and the parts of a plan including profile details and settings such as Ask for credit card, Collect tax automatically with account or plan-level Stripe Tax options, and configurable free trial periods. Covers pricing building blocks: fixed charges with daily weekly monthly or yearly intervals, optional annual pricing on one charge per plan, and mixed-interval totals such as yearly plus monthly; metered features for usage-based entitlements including unit tiered and included allowances such as MAU; and unmetered features for feature gating. Describes reusing a shared pool of features and charges across plans with plan-specific prices and limits. Explains draft versus published states, Stripe price sync status, current limitations including no custom billing cycle changes and no per-subscription add-ons or discount. Intended for developers, product managers, and business owners designing SaaS pricing."
+updated: 2026-08-30
 ---
 
 Plans enable you to structure your app features and charge your customers for using your services. Kinde supports both basic and more advanced plans for SaaS services. Here’s some examples:
@@ -53,11 +55,11 @@ These are known limitations that we are actively working on to add.
 
 ## About plan groups
 
-Plan groups are a collection of related plans, tied to either users or organizations. 
+Plan groups are a collection of related plans, tied to either users or organizations.
 
-- You can create as many plan groups as you need. 
+- You can create as many plan groups as you need.
 - Each group can only contain plans for users OR plans for orgs.
-- You can create multiple pricing tables for one plan group (but only one is the default). 
+- You can create multiple pricing tables for one plan group (but only one is the default).
 - Only one plan group can be included in a pricing table.
 
 For more information see [add and manage plan groups](/billing/manage-plans/add-manage-plan-groups/)
@@ -86,16 +88,26 @@ Depending how you manage plans and feature provisioning in your application, pla
 
 When you set up a plan, you can include a mixture of any of these options:
 
-- **Fixed charges** – A recurring charge that does not change and is invoiced in advance. You can set the billing interval (daily, weekly, monthly, or yearly) and optionally offer one charge per plan as annual at a custom yearly price.
-- **Metered features** - usage-based entitlements that define what and how much users’ access, and what they pay to access it. These might be per unit, per tier, or non-chargeable. Such as included and additional MAU.
-- **Unmetered features** - things included in a plan that users don’t pay for separately. Unmetered features are generally used to gate feature access. E.g. X feature is not available on the Free plan, but is on a higher tier plan.
+#### Fixed charges
+
+A recurring charge that does not change and is invoiced in advance. You can set the billing interval to daily, weekly, monthly, or yearly (the default is monthly).
+
+- **Mixed-interval pricing:** Each plan can have more than one fixed charge, billed at different intervals. Customers are charged at mixed intervals, such as `$100 / year + $3 / month`. See [Mixed-interval pricing](/billing/manage-plans/create-plans/#mixed-interval-pricing).
+- **Annual pricing:** You can offer annual pricing on one fixed charge per plan, at a custom yearly price. For example, a platform fee of $10/month, or $100/year if paid annually (a $20 saving per year). See [Offer annual pricing](/billing/manage-plans/create-plans/#offer-annual-pricing).
+
+#### Features
+
+Bill customers for additional features they can access. Features can be:
+
+- **Metered:** Users pay based on the usage limits you set. Pricing can be per unit, per tier, or non-chargeable. For example, $10 per 1 million API calls, then $25 for up to the next 5 million API calls, and so on.
+- **Unmetered:** The user either has access to the feature or not. There is no usage limit. Unmetered features are typically used to gate feature access. For example, custom domain support or custom themes.
 
 ## Example plan features
 
 | Feature             | Price                        | Pricing model             |
 | ------------------- | ---------------------------- | ------------------------- |
 | Access to x feature | N/A                          | Unmetered                 |
-| Subscription        | $ 20 / month or yearly       | Fixed charge              |
+| Subscription        | $20 / month, or yearly (optional annual offer); can combine with other fixed charges on different intervals | Fixed charge              |
 | Interaction         | $x per interaction           | Metered / tiered          |
 | Storage/Usage       | $x per GB                    | Metered / units or tiered |
 | MAU                 | x included                   | Metered / non-chargeable  |
@@ -109,7 +121,7 @@ Kinde structures plans so that they can share a pool of features and charges tha
 
 For example, you only need to define the item ‘Base price’ once, and then you define the price when you add it to each individual plan.
 
-Similarly, features that are inclusions, such as support hours included, just create one metered feature. Then set the limits of the feature differently for each plan level. E.g. Free plan one hour, Pro plan gets 2 hours, etc. 
+Similarly, features that are inclusions, such as support hours included, just create one metered feature. Then set the limits of the feature differently for each plan level. E.g. Free plan one hour, Pro plan gets 2 hours, etc.
 
 ![Model of how you can use the same feature or charge across plans](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/190e7ba8-ba26-4fb6-57b4-a4d6b9fec700/public)
 

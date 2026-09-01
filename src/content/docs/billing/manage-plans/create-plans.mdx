@@ -13,14 +13,14 @@ relatedArticles:
 app_context:
   - m: billing
   - s: plans
-description: "Create and publish Kinde billing plans with fixed charges, metered features, tiered pricing, trials, and annual billing options"
+description: "Set up Kinde plans — fixed charges, mixed intervals, annual pricing, trials, tax, and usage-based features"
 featured: false
 deprecated: false
 topics:
   - billing
   - manage-plans
   - plans
-  - tiered-pricing
+  - mixed-interval-pricing
 sdk: []
 languages: []
 audience:
@@ -29,16 +29,16 @@ audience:
   - business-owner
 complexity: intermediate
 keywords:
-  - create plans
-  - plan groups
   - fixed charges
+  - mixed-interval pricing
+  - offer as annual
   - billing interval
   - metered features
   - tiered pricing
   - free trial
-  - annual pricing
-updated: 2026-07-01
-ai_summary: "Step-by-step guide to creating billing plans in the Kinde dashboard. Explains that all plans belong to a plan group scoped to users or organizations, and that charges and features can be reused across plans. Covers adding a plan with name, description, key, and default currency; configuring plan settings including the Ask for credit card toggle, Collect tax automatically (use account setting, collect, or don’t collect), and trial period with trial length and credit card prompt timing; adding fixed charges with billing intervals and optional Offer as annual yearly pricing; creating free plans with a zero price; adding metered and unmetered features with flat or tiered graduated pricing; and verifying Stripe price sync status. Notes constraints such as credit card collection requirements for paid plans and trials, one annual charge per plan, and immutability of feature name, key, and type after creation. Intended for developers and product managers setting up SaaS subscription plans."
+  - Stripe Tax
+updated: 2026-08-29
+ai_summary: "Step-by-step guide to creating billing plans in the Kinde dashboard. Explains that all plans belong to a plan group scoped to users or organizations, and that charges and features can be reused across plans. Covers adding a plan with name, description, key, and default currency; configuring plan settings including the Ask for credit card toggle, Collect tax automatically (use account setting, collect, or do not collect), and trial period with trial length and credit card prompt timing; adding fixed charges with daily, weekly, monthly, or yearly billing intervals; offering one charge per plan as annual at a custom yearly price while other charges keep their own intervals (mixed-interval pricing); previewing annual versus standard totals in the Pricing sidebar without changing the draft; creating free plans with a zero price; adding metered and unmetered features with flat or tiered graduated pricing; and verifying Stripe price sync status. Notes constraints such as credit card collection requirements for paid plans and trials, Offer as annual only on non-yearly base intervals, one annual charge per plan, and that feature name, key, and type cannot be changed after creation. Intended for developers, product managers, and business owners setting up SaaS subscription plans."
 ---
 
 Once you’ve got a plan strategy along with a plan feature list, prices, and details, you’re ready to create plans in Kinde.
@@ -58,7 +58,7 @@ You can define a charge or feature once and reuse it across plans. For example, 
 3. Choose whether the plan is for **Organizations** or **Users**, or select the **Group** the plan belongs to. Only one of these options will appear. You cannot change these selections later.
 4. Give the plan a **Name** (e.g., `Free`) and a **Description**. This is the name that will also appear in the pricing table (if you use one).
 5. Give your plan a **Key** (e.g., `free_plan`) for referencing in your code. This cannot be changed after a plan is published.
-6. Select a **Default currency**. This field only appears if one has not been set. You can change this later in **Settings > Billing**, but only before any of your plans are published.
+6. Select a **Default currency**. This field only appears if one has not been set. You can change this later in **Settings > Environment > Billing**, but only before any of your plans are published.
 7. Select **Save**
 
 ## Configure plan settings
@@ -68,29 +68,6 @@ After creating a plan, you can configure additional settings that control the su
 1. Open the plan you want to configure.
 2. Scroll to the **Plan settings** section.
 3. Configure the available options:
-
-### Ask for credit card
-
-This toggle controls whether users must enter credit card details when subscribing to the plan.
-
-- **Enabled (default)**: Users will be prompted to enter their payment details during signup via a secure Stripe payment form.
-- **Disabled**: Users can subscribe without providing payment information and proceed directly to your application.
-
-    ![Ask for credit card toggle](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d0380c04-a3ab-4663-d83b-061a00a9dc00/socialsharingimage)
-
-    <Aside type="warning">
-
-    This option can only be disabled for plans that have no charges. If your plan includes any pricing (fixed charges or metered/usage-based billing), credit card collection is always required.
-
-    </Aside>
-
-### When to use each setting
-
-| Your Goal | Recommended Setting |
-|-----------|---------------------|
-| Reduce signup friction for a free tier | Disable—let users try your product without entering payment details |
-| Capture payment info for easier upgrades | Enable—collect card details upfront for seamless plan transitions |
-| Offer a free trial that converts to paid | Enable—required when trial period is enabled; payment details are collected before the trial ends |
 
 ### Collect tax automatically
 
@@ -115,6 +92,29 @@ The account setting is off by default. Turn it on in **Settings > Environment > 
 Stripe still needs Stripe Tax configured (for example tax registrations) in the Stripe Dashboard. Until a customer has a billing country—such as during a trial before a card is added—tax may temporarily use your Stripe account’s registered address.
 
 Select **Save draft** or **Publish** to apply your changes.
+
+### Ask for credit card
+
+This toggle controls whether users must enter credit card details when subscribing to the plan.
+
+- **Enabled (default)**: Users will be prompted to enter their payment details during signup via a secure Stripe payment form.
+- **Disabled**: Users can subscribe without providing payment information and proceed directly to your application.
+
+    ![Ask for credit card toggle](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d0380c04-a3ab-4663-d83b-061a00a9dc00/socialsharingimage)
+
+    <Aside type="warning">
+
+    This option can only be disabled for plans with no paid charges. A fixed charge priced at `0` does not count as a paid charge, so you can disable the toggle on a free plan that uses a $0 price. Credit card collection is always required if the plan has any positive-price fixed charge or chargeable metered (usage-based) billing.
+
+    </Aside>
+
+### When to use each setting
+
+| Your Goal | Recommended Setting |
+|-----------|---------------------|
+| Reduce signup friction for a free tier | Disable—let users try your product without entering payment details |
+| Capture payment info for easier upgrades | Enable—collect card details upfront for seamless plan transitions |
+| Offer a free trial that converts to paid | Enable—required when trial period is enabled; payment details are collected before the trial ends |
 
 ### Configure trial period
 
@@ -151,50 +151,97 @@ In the **Trials** section:
 | Days before trial end to prompt for credit card | How many days before trial expiry the customer is prompted for payment details | 3 | Must be ≥ 0 and less than the trial length |
 
 
-## Add a subscription fee or fixed charge to a plan
+## Add fixed charge (subscription fee) to a plan
 
-A fixed charge is a recurring charge such as base price or subscription fee. You can set **billing intervals** (daily, weekly, monthly, or yearly) and optionally **offer the charge as annual** with a custom yearly price when customers choose yearly billing.
+A fixed charge is a recurring amount that does not change with usage and is billed in advance. You can pick a billing interval of **daily, weekly, monthly**, or **yearly**.
 
 1. In **Fixed charges**, select **Add charge**.
-    1. If the charge exists, select **Use existing feature** then select it from the list.
+    1. If the charge already exists, select **Use existing feature**, then select it from the list.
 
         <Aside>
 
-        You only need to create a new charge if the item is unique. For reusable items such as ‘Base price’, select the existing charge but change the line item description and price for each plan.
+        You only need to create a new charge if the item is unique. For reusable items such as **Base price**, select the existing charge but change the line item description and price for each plan.
 
         </Aside>
 
-    2. If this is a new charge, give it a name (e.g., `Base subscription fee`). If you’ll reuse this charge across plans, choose a generic name. This cannot be changed later.
-2. Add a **Line item description**. This appears on the customer invoice, so might be more specific than the name, e.g. `Base subscription - Pro plan`.
-3. Set the **Price**. (You may be asked to set a default currency if you haven’t already).
+    2. If this is a new charge, give it a name (e.g., `Platform fee`). If you’ll reuse this charge across plans, choose a generic name. This cannot be changed later.
+2. Add a **Line item description**. This appears on the customer invoice, so it might be more specific than the name, e.g. `Acme platform subscription, starter plan`.
+3. Set the **Price**. You may be asked to set a default currency if you haven’t already.
+
+You can add more than one fixed charge per plan, each with a different interval (monthly, daily, and so on). See [Mixed-interval pricing](#mixed-interval-pricing) for details.
 
 ### Set the billing interval
 
 After entering the charge name and price, configure how often the fixed charge is billed:
 
-1. Use the **Billing interval** dropdown.
+1. Open the **Billing interval** dropdown.
 2. Choose **Day**, **Week**, **Month**, or **Year**. The default is **Month**.
-      - The interval you select determines how often Stripe bills the customer for this fixed charge.
-      - If you select **Year** as the billing interval, the separate **Offer as annual** toggle does not apply—yearly billing is already the interval. The **Offer as annual** toggle is only available for non-yearly intervals (Day, Week, Month), where you can add an optional yearly price on top of the base interval.
 
-3. (Optional) To bill this charge yearly at a custom price, turn on **Offer as annual**. See [Offer annual pricing](#offer-annual-pricing) below for details.
-4. Select **Save** or **Save draft** to commit your changes.
+    ![billing interval dropdown with offer as annual toggle](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ac461fc4-88e8-4760-ba44-29191e28fa00/socialsharingimage)
+
+      - The interval you select determines how often Stripe bills the customer for this fixed charge.
+      - The **Offer as annual** toggle is only available for non-yearly intervals (**Day**, **Week**, **Month**). If you select **Year**, the **Offer as annual** toggle does not apply. Selecting **Year** already bills annually. See [Offer annual pricing](#offer-annual-pricing) below for details.
+
+          ![yearly interval disables the offer as annual toggle](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/bd551d7b-254d-45e4-f3b5-fda44885de00/socialsharingimage)
+
+3. Select **Save** or **Save draft**.
 
 Repeat for each fixed charge you want to add, or start adding features.
 
 ### Offer annual pricing
 
-To give customers a yearly option at a fixed annual price, turn on **Offer as annual** and set the **Annual price**.
+To give customers a yearly option at a fixed annual price:
 
-    <Aside>
-    Only one fixed charge per plan can be offered as annual.
-    </Aside>
+1. Set a **Price** (e.g., `10`).
+2. Select a non-yearly **Billing interval** (**Day**, **Week**, or **Month**).
+3. Turn on **Offer as annual**.
+4. Set the **Annual price** (e.g., `100`).
+5. Select **Save**.
 
-    ![Offer as annual pricing](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6e5a440f-88f8-4af7-5ab2-a28dd0f58900/socialsharingimage)
+    ![set annual pricing](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/50fd2c8f-e341-4bdd-088b-64db8504c100/socialsharingimage)
 
-### Free plans
+<Aside>
 
-To create a free plan, set the **Price** to `0.00`. This ensures the plan is added to Stripe, and is included on the pricing table as a free plan.
+If you have multiple fixed charges on the plan, only **one** fixed charge can use **Offer as annual**. Other fixed charges on the same plan keep the billing interval you set for them (for example, monthly).
+
+</Aside>
+
+When a customer turns on **Pay annually** during sign-up or a self-serve plan change:
+
+- The charge with **Offer as annual** bills at the annual price once per year.
+- Any other fixed charges continue on their own interval.
+
+
+### Mixed-interval pricing
+
+You can add more than one fixed charge on a plan with different intervals. For example, a license fee of $100/year, a platform fee of $10/month, and a support fee of $3/week. The combination is a **mixed-interval** plan. Each charge is billed and displayed with its own interval — for example `$100 AUD / year + $10 AUD / month + $3 AUD / week`—instead of a single collapsed total.
+
+<img src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/375708dd-72f4-41fd-5040-89454d58b400/socialsharingimage" fetchpriority="low" loading="lazy" decoding="async" alt="mixed-interval charges" width="500px" />
+
+### Preview annual pricing on the plan
+
+On the plan details page, the **Pricing** sidebar shows how the plan will look to customers.
+
+1. Open the plan.
+2. In the **Pricing** sidebar, if at least one fixed charge offers annual pricing, turn on **Preview annual pricing**. The toggle is off by default.
+3. Review the standard total versus the annual total (including any monthly remainder for mixed plans).
+
+    <img src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7482263e-2e57-404b-898c-bfee57f0ce00/socialsharingimage" fetchpriority="low" loading="lazy" decoding="async" alt="annual pricing preview" width="300px" />
+
+This toggle is preview-only. It does not change the draft, and it does not affect **Save draft** or **Publish**.
+
+Fixed charge cards also show:
+
+- The standard amount with its interval (for example `$10 AUD / month`).
+- An **Annual option** line when **Offer as annual** is set (for example `$100 AUD / year`).
+
+Recurring metered feature rates show the interval after the unit label (for example `$5 AUD per unit / month`). Period-to-date usage totals on subscription views do not include an interval. They are amounts so far in the cycle, not rates.
+
+### Create a free plan
+
+To create a free plan, add a fixed charge with a **Price** of `0`. Do not add any positive-price fixed charges or chargeable metered features.
+
+The `0` price ensures the plan is added to Stripe and included on the pricing table as a free plan. It does not require card collection: disable **Ask for credit card** if you want users to subscribe without payment details. See [Ask for credit card](#ask-for-credit-card).
 
 ## Add features (entitlements) to a plan
 
