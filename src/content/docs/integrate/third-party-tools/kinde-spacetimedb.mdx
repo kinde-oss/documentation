@@ -4,8 +4,6 @@ title: Integrate SpacetimeDB with Kinde
 description: "Authenticate SpacetimeDB users with Kinde in minutes. Pass a Kinde ID token to your React app's connection, with no auth server to run."
 sidebar:
   order: 15
-tableOfContents:
-  maxHeadingLevel: 3
 relatedArticles:
   - f3dcba7f-fa4f-4ea1-a470-f03af04ba347
   - 820ec3ab-2b80-4331-937c-644da9f8b339
@@ -260,6 +258,37 @@ The above code:
 4. Renders a **Sign out** control that ends the Kinde session and returns the user to your `logoutUri`.
 
 The `user` object is populated from the ID token claims, so `givenName`, `familyName`, `email`, and `picture` are available on the client with no extra API call. Which fields are filled in depends on what the user's identity provider returned and what you collect at sign-up, so treat each one as optional.
+
+Then render `AuthControls` in `App.tsx`, in place of the sign-in button from step 5:
+
+```tsx
+import { AuthControls } from './AuthControls';
+// ... other imports
+
+export default function App() {
+  const { isLoading } = useKindeAuth();
+  const token = useKindeToken();
+
+  // ... connectionBuilder
+
+  if (isLoading) {
+    return <p>Loading…</p>;
+  }
+
+  if (!token) {
+    return <AuthControls />;
+  }
+
+  return (
+    <SpacetimeDBProvider connectionBuilder={connectionBuilder}>
+      <AuthControls />
+      {/* Your app */}
+    </SpacetimeDBProvider>
+  );
+}
+```
+
+`AuthControls` now renders the sign-in control, so `App` no longer needs `login` from `useKindeAuth`. Rendering it in both branches gives signed-out users a way in, and signed-in users their details and a **Sign out** control.
 
 ## Next steps
 
