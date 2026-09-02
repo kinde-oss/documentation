@@ -1,0 +1,307 @@
+---
+page_id: 7eaa79ab-49be-4e00-be2a-54950de661e5
+title: Integrate SpacetimeDB with Kinde
+description: "Authenticate SpacetimeDB users with Kinde in minutes. Pass a Kinde ID token to your React app's connection, with no auth server to run."
+sidebar:
+  order: 15
+relatedArticles:
+  - f3dcba7f-fa4f-4ea1-a470-f03af04ba347
+  - 820ec3ab-2b80-4331-937c-644da9f8b339
+topics:
+  - integrate
+  - third-party-tools
+  - oauth
+sdk:
+  - react
+languages:
+  - typescript
+  - tsx
+  - bash
+audience:
+  - developers
+complexity: intermediate
+keywords:
+  - spacetimedb
+  - openid connect
+  - ID token
+  - react authentication
+  - real-time database
+  - JWT verification
+updated: 2026-08-27
+featured: false
+deprecated: false
+ai_summary: "Guide to authenticating SpacetimeDB users with Kinde in a React application. SpacetimeDB accepts any OpenID Connect issuer, so a Kinde-issued ID token authenticates users with no server-side configuration. The guide covers installing the Kinde React SDK, creating a Kinde front-end application and setting callback and logout URLs for a Vite dev server, and building a KindeTokenProvider component that waits for Kinde to initialize, fetches the ID token with getIdToken, and exposes it to the app through React context. It explains why the ID token is used rather than the access token: both carry the iss and sub claims that SpacetimeDB derives a user Identity from, but the access token has an empty aud claim unless an audience is requested. Later steps wrap the app in KindeProvider and KindeTokenProvider in main.tsx, use forceChildrenRender so UI can be driven from isLoading, build the SpacetimeDB connection inside useMemo, and mount SpacetimeDBProvider only once a token exists. The final step displays user information from the ID token and adds sign out. Prerequisites are a Kinde account and a working SpacetimeDB project. Intended for developers adding authentication to real-time SpacetimeDB applications."
+---
+
+Kinde is an OpenID Connect provider, so SpacetimeDB can authenticate your users from a Kinde-issued ID token with no server-side configuration. This guide shows you how to obtain that token in a React app and pass it to your SpacetimeDB connection.
+
+## What you need
+
+- A [Kinde](https://kinde.com) account (Sign up for free)
+- A working SpacetimeDB project. If you don't have one, follow the [React Quickstart Guide](https://spacetimedb.com/docs/quickstarts/react/).
+
+## Step 1: Install the Kinde React SDK
+
+<PackageManagers pkg="@kinde-oss/kinde-auth-react" />
+
+## Step 2: Set up your Kinde application
+
+1. Sign in to your [Kinde dashboard](https://app.kinde.com) and select **Add application**.
+2. Enter a name for the application, for example `My SpacetimeDB React App`.
+3. Select **Front-end and mobile** as the application type, then select **Save**.
+4. On the **Quick start** page, select **React** from the list of Front-end SDKs, then select **Save**.
+5. On the application's **Details** page, copy the **Client ID** and **Domain** from **App keys**. Both are public values that ship to the browser.
+6. On the same page, set the callback and logout URLs to your Vite dev server origin, `http://localhost:5173`. Learn more about [callback URLs](/get-started/connect/callback-urls/).
+
+These URLs must match exactly what your app sends. If your dev server starts on a different port, Kinde rejects the sign-in with a `redirect_uri` mismatch before authenticating.
+
+## Step 3: Create a KindeTokenProvider component
+
+Create a `KindeTokenProvider.tsx` file with the following code:
+
+```tsx
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
+import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
+
+const KindeTokenContext = createContext<string | null>(null);
+
+export function useKindeToken(): string | null {
+  return useContext(KindeTokenContext);
+}
+
+export function KindeTokenProvider({ children }: { children: ReactNode }) {
+  const { isLoading, isAuthenticated, getIdToken } = useKindeAuth();
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (!isAuthenticated) {
+      setToken(null);
+      return;
+    }
+
+    let cancelled = false;
+    getIdToken()
+      .then(idToken => {
+        if (!cancelled) setToken(idToken ?? null);
+      })
+      .catch(err => {
+        console.error('Failed to get Kinde ID token:', err);
+        if (!cancelled) setToken(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoading, isAuthenticated, getIdToken]);
+
+  return (
+    <KindeTokenContext.Provider value={token}>
+      {children}
+    </KindeTokenContext.Provider>
+  );
+}
+```
+
+The above code:
+
+1. Waits for Kinde to finish initializing, so it doesn't request a token too early.
+2. Fetches the ID token with `getIdToken()` once the user is signed in.
+3. Clears the token when the user signs out.
+4. Exposes the token to the rest of your app through React context, which you read with the `useKindeToken()` hook.
+
+Use `getIdToken()` rather than `getAccessToken()`. SpacetimeDB derives a user's `Identity` from the token's `iss` and `sub` claims, and both tokens carry those — but unless you request an audience, Kinde leaves the access token's `aud` claim empty, while the ID token always carries one. If you want to check the audience in your module, the ID token gives you something to check by default.
+
+<Aside type="warning" title="The sample doesn't restrict who can connect">
+SpacetimeDB verifies the token's signature, but it accepts any OpenID Connect issuer. Until your module checks the `iss` and `aud` claims in a `clientConnected` reducer, a signature-valid token from another provider connects too. See [Using Auth Claims](https://spacetimedb.com/docs/core-concepts/authentication/usage/).
+</Aside>
+
+## Step 4: Add the providers in main.tsx
+
+<Aside type="warning" title="Remove the existing SpacetimeDBProvider">
+Don't forget to remove any existing `SpacetimeDBProvider` from `main.tsx`. The connection is created in `App.tsx` instead, once the token is available.
+</Aside>
+
+Update `main.tsx` with the following code:
+
+```tsx
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { KindeProvider } from '@kinde-oss/kinde-auth-react';
+import { KindeTokenProvider } from './KindeTokenProvider';
+import App from './App';
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <KindeProvider
+      clientId="<YOUR_KINDE_CLIENT_ID>"
+      domain="<YOUR_KINDE_DOMAIN>"
+      redirectUri={window.location.origin}
+      logoutUri={window.location.origin}
+      forceChildrenRender
+    >
+      <KindeTokenProvider>
+        <App />
+      </KindeTokenProvider>
+    </KindeProvider>
+  </StrictMode>
+);
+```
+
+The above code:
+
+1. Wraps your app in `KindeProvider`, using the **Client ID** and **Domain** you copied in step 2.
+2. Sets `redirectUri` and `logoutUri` to your dev server origin, matching the URLs you saved in Kinde.
+3. Wraps `App` in `KindeTokenProvider`, so the ID token is available anywhere in your component tree.
+
+Kinde returns the user to `redirectUri` with an authorization code in the query string, and the SDK completes the exchange when that page mounts. No dedicated callback route is required. `forceChildrenRender` renders your app while Kinde initializes, so you can drive your UI from `isLoading` instead of showing a blank page.
+
+## Step 5: Use the ID token in App.tsx
+
+Update `App.tsx` with the following code:
+
+```tsx
+import { useMemo } from 'react';
+import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
+import { SpacetimeDBProvider } from 'spacetimedb/react';
+import { DbConnection } from './module_bindings';
+import { useKindeToken } from './KindeTokenProvider';
+
+export default function App() {
+  const { isLoading, login } = useKindeAuth();
+  const token = useKindeToken();
+
+  const connectionBuilder = useMemo(
+    () =>
+      DbConnection.builder()
+        .withUri('<YOUR SPACETIMEDB URL>')
+        .withDatabaseName('<YOUR SPACETIMEDB MODULE NAME>')
+        .withToken(token ?? undefined)
+        .onConnect((_conn, identity) =>
+          console.log('Connected as:', identity.toHexString())
+        )
+        .onConnectError((_ctx, err) => console.log('Connection error:', err)),
+    [token]
+  );
+
+  if (isLoading) {
+    return <p>Loading…</p>;
+  }
+
+  if (!token) {
+    return <button type="button" onClick={() => login()}>Sign in</button>;
+  }
+
+  return (
+    <SpacetimeDBProvider connectionBuilder={connectionBuilder}>
+      {/* Your app */}
+    </SpacetimeDBProvider>
+  );
+}
+```
+
+The above code:
+
+1. Reads the ID token with `useKindeToken()`.
+2. Builds the SpacetimeDB connection inside `useMemo`, with the token as a dependency.
+3. Shows a loading state while Kinde resolves the session.
+4. Renders a sign-in control until a token is available.
+5. Mounts `SpacetimeDBProvider` only once the token exists.
+
+`SpacetimeDBProvider` keys its pooled connection on the URI and module name, and ignores the builder once a connection is live — so a connection opened before sign-in never picks the token up afterwards. That is why it is mounted only after the token exists.
+
+Check `isLoading` before `token`. Because `forceChildrenRender` renders your app while Kinde initializes, `token` is still `null` on the first render even for a user who is already signed in — without the loading branch they would see the sign-in button flash before their session resolves.
+
+## Step 6: Add user details and sign out
+
+Your app can now sign users in, but users still need a way to see who they are signed in as and to sign out again. `useKindeAuth` exposes the signed-in `user`, along with `register` and `logout`, for a fuller set of controls.
+
+Create an `AuthControls.tsx` file with the following code:
+
+```tsx
+import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
+
+export function AuthControls() {
+  const { isLoading, isAuthenticated, user, login, register, logout } =
+    useKindeAuth();
+
+  if (isLoading) return <span>Loading…</span>;
+
+  if (!isAuthenticated) {
+    return (
+      <>
+        <button type="button" onClick={() => login()}>Sign in</button>
+        <button type="button" onClick={() => register()}>Sign up</button>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {user?.picture && <img src={user.picture} alt="" width={32} height={32} />}
+      <span>{user?.givenName} {user?.familyName}</span>
+      <span>{user?.email}</span>
+      <button type="button" onClick={() => logout()}>Sign out</button>
+    </>
+  );
+}
+```
+
+The above code:
+
+1. Shows a loading state while Kinde resolves the session.
+2. Renders **Sign in** and **Sign up** controls when nobody is signed in.
+3. Displays the signed-in user's picture, name, and email.
+4. Renders a **Sign out** control that ends the Kinde session and returns the user to your `logoutUri`.
+
+The `user` object is populated from the ID token claims, so `givenName`, `familyName`, `email`, and `picture` are available on the client with no extra API call. Which fields are filled in depends on what the user's identity provider returned and what you collect at sign-up, so treat each one as optional.
+
+Then render `AuthControls` in `App.tsx`, in place of the sign-in button from step 5:
+
+```tsx
+import { AuthControls } from './AuthControls';
+// ... other imports
+
+export default function App() {
+  const { isLoading } = useKindeAuth();
+  const token = useKindeToken();
+
+  // ... connectionBuilder
+
+  if (isLoading) {
+    return <p>Loading…</p>;
+  }
+
+  if (!token) {
+    return <AuthControls />;
+  }
+
+  return (
+    <SpacetimeDBProvider connectionBuilder={connectionBuilder}>
+      <AuthControls />
+      {/* Your app */}
+    </SpacetimeDBProvider>
+  );
+}
+```
+
+`AuthControls` now renders the sign-in control, so `App` no longer needs `login` from `useKindeAuth`. Rendering it in both branches gives signed-out users a way in, and signed-in users their details and a **Sign out** control.
+
+## Next steps
+
+Your users are now authenticated with Kinde, and `ctx.sender` in your module is an `Identity` derived from their Kinde `iss` and `sub` claims — stable across devices and sessions. SpacetimeDB verifies the token's signature against Kinde's public keys, but it does not decide *which* issuers or audiences your module accepts. To check those claims, and to authorize what a signed-in user may do, see [Using Auth Claims](https://spacetimedb.com/docs/core-concepts/authentication/usage/).
+
+Now that sign-in works, you might want to explore:
+
+- [Manage users](/manage-users/about/) — view, add, and edit the users of your SpacetimeDB app from the Kinde dashboard.
+- [User permissions](/manage-users/roles-and-permissions/user-permissions/) — assign roles and permissions you can check before letting a user call a reducer.
+- [Multi-tenancy using organizations](/build/organizations/multi-tenancy-using-organizations/) — separate your users into organizations, each with its own members and settings.
+- [Multi-factor authentication](/authenticate/multi-factor-auth/about-multi-factor-authentication/) — add a second factor to sign-in.
+- [Feature flags](/releases/about/about-feature-flags/) — roll features out to a subset of users without redeploying your module.
