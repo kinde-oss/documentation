@@ -134,6 +134,8 @@ Kinde supports the PKCE extension, in which case the `code_challenge` and `co
 
 Before PKCE (see above) this was the method used by applications that were unable to store secrets securely. This flow has security implications and Kinde does not support it for this reason.
 
+The implicit flow hands tokens straight to the browser, where they can be read from the address bar, browser history, or a `Referer` header, and it gives the authorization server no way to check that the app redeeming them is the app that started the flow. Requests that ask for it are rejected - see [`response_type`](#response_type) for the error you get back. The same applies to the hybrid flows, which also return a token in the redirect.
+
 ## OAuth 2.0 scopes
 
 The following scopes can be requested from Kinde.
@@ -290,7 +292,19 @@ Required: Yes
 
 ### `response_type`
 
-Should always be `code`. Kinde does not support the implicit flow as it has shown to be unsecure.
+Must be `code`. Kinde does not support the implicit flow as it has shown to be unsecure.
+
+Any other value - including `token`, `id_token`, `id_token token`, and the hybrid combinations `code id_token`, `code token` and `code id_token token` - is rejected:
+
+```json
+400 Bad Request
+{
+  "error": "unsupported_response_type",
+  "error_description": "The authorization server does not support obtaining a token using this method. Kinde supports response_type 'code' only; 'token' is not supported."
+}
+```
+
+The rejection is also recorded against your application, so you can see it in the errors list for that application in Kinde.
 
 Type: `string`
 
