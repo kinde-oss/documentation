@@ -63,7 +63,7 @@ ai_summary: "The Kinde Terraform provider (kinde-oss/kinde on the Terraform Regi
 
 Manage your Kinde business as code — applications, APIs, connections, organizations, users, roles, and permissions — with the [Kinde Terraform provider](https://registry.terraform.io/providers/kinde-oss/kinde/latest) ([source on GitHub](https://github.com/kinde-oss/terraform-provider-kinde)).
 
-### What you need
+## What you need
 
 - A [Kinde](/get-started/guides/first-things-first/) account with **Admin** or **Engineer** access (Sign up for free)
 - [Terraform](https://developer.hashicorp.com/terraform/install) version 1.0 or higher
@@ -90,33 +90,33 @@ The provider authenticates as a machine-to-machine (M2M) application.
 
 ### 2. Install the provider
 
-Add the provider to your configuration, then initialize the working directory.
+1. Add the provider to your configuration file `versions.tf`, then initialize the working directory.
 
-```hcl title="versions.tf"
-terraform {
-  required_providers {
-    kinde = {
-      source  = "kinde-oss/kinde"
-      version = "~> 0.1.0"
-    }
-  }
-}
-```
+   ```hcl title="versions.tf"
+   terraform {
+     required_providers {
+       kinde = {
+         source  = "kinde-oss/kinde"
+         version = "~> 0.1.0"
+       }
+     }
+   }
+   ```
 
-```bash
-terraform init
-```
+   ```bash
+   terraform init
+   ```
 
 ### 3. Configure authentication
 
-Export your M2M credentials as environment variables. Include the `https://` scheme in the domain. The audience is your domain followed by `/api`.
+1. Export your M2M credentials with the following terminal command. Include the `https://` scheme in the domain. The audience is your domain followed by `/api`.
 
-```bash
-export KINDE_DOMAIN="https://<your_subdomain>.kinde.com"
-export KINDE_AUDIENCE="https://<your_subdomain>.kinde.com/api"
-export KINDE_CLIENT_ID="<your_m2m_client_id>"
-read -rs KINDE_CLIENT_SECRET && export KINDE_CLIENT_SECRET
-```
+   ```bash
+   export KINDE_DOMAIN="https://<your_subdomain>.kinde.com"
+   export KINDE_AUDIENCE="https://<your_subdomain>.kinde.com/api"
+   export KINDE_CLIENT_ID="<your_m2m_client_id>"
+   read -rs KINDE_CLIENT_SECRET && export KINDE_CLIENT_SECRET
+   ```
 
 The `read -rs` prompt keeps the client secret out of your shell history — paste the secret when prompted. In CI, inject all four values from your secret store.
 
@@ -128,35 +128,39 @@ provider "kinde" {}
 
 ### 4. Create a permission and a role
 
-```hcl title="main.tf"
-resource "kinde_permission" "read_billing" {
-  name        = "Read billing"
-  key         = "read:billing"
-  description = "Grants read access to billing"
-}
+1. Add the following code to `main.tf` to create a permission and a role.
 
-resource "kinde_role" "finance" {
-  name        = "Finance"
-  key         = "finance"
-  description = "Finance team role"
-  permissions = [kinde_permission.read_billing.id]
-}
-```
+   ```hcl title="main.tf"
+   resource "kinde_permission" "read_billing" {
+     name        = "Read billing"
+     key         = "read:billing"
+     description = "Grants read access to billing"
+   }
 
-### 5. Apply
+   resource "kinde_role" "finance" {
+     name        = "Finance"
+     key         = "finance"
+     description = "Finance team role"
+     permissions = [kinde_permission.read_billing.id]
+   }
+   ```
 
-```bash
-terraform apply
-```
+### 5. Run the code
 
-```text title="Terminal output"
-kinde_permission.read_billing: Creating...
-kinde_permission.read_billing: Creation complete after 1s [id=<permission_id>]
-kinde_role.finance: Creating...
-kinde_role.finance: Creation complete after 1s [id=<role_id>]
+1. Apply your configuration with the following terminal command.
 
-Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
-```
+   ```bash
+   terraform apply
+   ```
+
+   ```text title="Terminal output"
+   kinde_permission.read_billing: Creating...
+   kinde_permission.read_billing: Creation complete after 1s [id=<permission_id>]
+   kinde_role.finance: Creating...
+   kinde_role.finance: Creation complete after 1s [id=<role_id>]
+
+   Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
+   ```
 
 ### 6. Verify in Kinde
 
@@ -221,67 +225,96 @@ Terraform state is not encrypted by default. Values such as an application's `cl
 
 </Aside>
 
-## Manage applications
+## Create an application
 
 Register an application with its callback URLs. Kinde issues the client ID and secret, which you can reference as outputs.
 
-```hcl title="applications.tf"
-resource "kinde_application" "web" {
-  name          = "Web app"
-  type          = "reg"
-  login_uri     = "https://example.com/oauth/login"
-  homepage_uri  = "https://example.com"
-  logout_uris   = ["https://example.com/oauth/logout"]
-  redirect_uris = ["https://example.com/oauth/callback"]
-}
+1. Grant the following scopes on the M2M application that authenticates the provider:
 
-output "web_app_client_id" {
-  value = kinde_application.web.client_id
-}
-```
+   ```text
+   create:applications read:applications update:applications delete:applications
+   ```
 
-Application `type` is one of `reg` (back-end web app), `spa` (single-page app), or `m2m` (machine-to-machine). Changing `name` or `type` forces a replacement, which issues a new client ID and secret — the URIs are updatable in place.
+   See [Required scopes](#required-scopes) for the full list.
+
+2. Add the following code to `applications.tf` to create a regular web application.
+
+   ```hcl title="applications.tf"
+   resource "kinde_application" "web" {
+     name          = "Web app"
+     type          = "reg"
+     login_uri     = "https://example.com/oauth/login"
+     homepage_uri  = "https://example.com"
+     logout_uris   = ["https://example.com/oauth/logout"]
+     redirect_uris = ["https://example.com/oauth/callback"]
+   }
+
+   output "web_app_client_id" {
+     value = kinde_application.web.client_id
+   }
+   ```
+
+Application types:
+
+- `reg` back-end web app
+- `spa` single-page app
+- `m2m` machine-to-machine
+
+Changing `name` or `type` forces a replacement, which issues a new client ID and secret — the URIs are updatable in place.
 
 ## Add users to organizations and assign roles
 
 Memberships and role assignments are separate resources. Because a role can only be assigned to a user who is already a member of the organization, declare the ordering with `depends_on`.
 
-```hcl title="organizations.tf"
-resource "kinde_organization" "acme" {
-  name = "Acme"
-}
+1. Grant the following scopes on the M2M application that authenticates the provider:
 
-resource "kinde_user" "jane" {
-  first_name = "Jane"
-  last_name  = "Doe"
+   ```text
+   create:organizations read:organizations update:organizations delete:organizations
+   create:users read:users update:users delete:users create:user_identities read:user_identities
+   create:organization_users read:organization_users update:organization_users delete:organization_users
+   create:organization_user_roles read:organization_user_roles delete:organization_user_roles
+   ```
 
-  identities = [
-    {
-      type  = "email"
-      value = "jane@example.com"
-    }
-  ]
-}
+   This example also uses the `finance` role from the [quickstart](#quickstart), so keep the role scopes enabled. See [Required scopes](#required-scopes) for the full list.
 
-resource "kinde_organization_user" "jane_acme" {
-  organization_code = kinde_organization.acme.code
-  user_id           = kinde_user.jane.id
+2. Add the following code to `organizations.tf` to create an organization, add a user, and assign a role.
 
-  # kinde_user_role manages role assignments for this membership.
-  lifecycle {
-    ignore_changes = [roles]
-  }
-}
+   ```hcl title="organizations.tf"
+   resource "kinde_organization" "acme" {
+     name = "Acme"
+   }
 
-resource "kinde_user_role" "jane_finance" {
-  organization_code = kinde_organization.acme.code
-  user_id           = kinde_user.jane.id
-  role_id           = kinde_role.finance.id
+   resource "kinde_user" "jane" {
+     first_name = "Jane"
+     last_name  = "Doe"
 
-  # A user must be a member of the organization before roles can be assigned.
-  depends_on = [kinde_organization_user.jane_acme]
-}
-```
+     identities = [
+       {
+         type  = "email"
+         value = "jane@example.com"
+       }
+     ]
+   }
+
+   resource "kinde_organization_user" "jane_acme" {
+     organization_code = kinde_organization.acme.code
+     user_id           = kinde_user.jane.id
+
+     # kinde_user_role manages role assignments for this membership.
+     lifecycle {
+       ignore_changes = [roles]
+     }
+   }
+
+   resource "kinde_user_role" "jane_finance" {
+     organization_code = kinde_organization.acme.code
+     user_id           = kinde_user.jane.id
+     role_id           = kinde_role.finance.id
+
+     # A user must be a member of the organization before roles can be assigned.
+     depends_on = [kinde_organization_user.jane_acme]
+   }
+   ```
 
 Choose one way to manage roles for a membership:
 
