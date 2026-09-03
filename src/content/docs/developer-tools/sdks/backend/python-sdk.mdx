@@ -30,7 +30,7 @@ keywords:
   - environment variables
   - callback URLs
   - session management
-updated: 2026-01-23
+updated: 2026-09-03
 featured: false
 deprecated: false
 ai_summary: Complete guide for Python SDK including Flask and FastAPI integration, OAuth configuration, environment variables, and session management for Python 3.9+ applications.
@@ -322,8 +322,8 @@ async def lambda_handler(event, context):
         
         # Check authentication
         if event.get('path') == '/user':
-            if await oauth.is_authenticated(event):
-                user_info = await oauth.get_user_info(event)
+            if oauth.is_authenticated():
+                user_info = await oauth.get_user_info_async()
                 return {
                     'statusCode': 200,
                     'body': json.dumps(user_info)
@@ -507,7 +507,7 @@ def logout():
 def get_user():
     """Get the current user's information."""
     try:
-        if not oauth.is_authenticated(request):
+        if not oauth.is_authenticated():
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
@@ -515,7 +515,7 @@ def get_user():
                 return redirect(login_url)
             finally:
                 loop.close()
-        return oauth.get_user_info(request)
+        return oauth.get_user_info()
     except Exception as e:
         return f"Failed to get user info: {str(e)}", 400
 ```
@@ -568,10 +568,10 @@ async def logout(request: Request):
 @app.get("/user")
 async def get_user(request: Request):
     """Get the current user's information."""
-    if not await oauth.is_authenticated(request):
+    if not oauth.is_authenticated():
         url = await oauth.login()
         return RedirectResponse(url=url)
-    return await oauth.get_user_info(request)
+    return oauth.get_user_info()
 ```
 
 **Using AsyncOAuth client with FastAPI (for more control):**
@@ -666,7 +666,7 @@ def logout():
 def get_user():
     """Get the current user's information.""
     try:
-        if not oauth.is_authenticated(request):
+        if not oauth.is_authenticated():
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
@@ -675,7 +675,7 @@ def get_user():
             finally:
                 loop.close()
         
-        return oauth.get_user_info(request)
+        return oauth.get_user_info()
     except Exception as e:
         return f"Failed to get user info: {str(e)}", 400
 ```
@@ -711,9 +711,9 @@ async def logout(request: Request):
 
 @app.get("/user")
 async def get_user(request: Request):
-    if not oauth.is_authenticated(request):
+    if not oauth.is_authenticated():
         return RedirectResponse(url=await oauth.login())
-    return oauth.get_user_info(request)
+    return oauth.get_user_info()
 ```
 
 The manual implementation gives you more control over the authentication flow and allows you to add custom logic like session management, error handling, and logging. Note that Flask requires special handling of async methods using `asyncio` since it doesn't natively support async/await like FastAPI does.
@@ -730,137 +730,66 @@ The manual implementation gives you more control over the authentication flow an
 
 ## User permissions
 
-The Kinde Python SDK provides a simple way to check user permissions in your application. The API supports both sync and async patterns depending on your client type.
-
-### With OAuth client (Framework-based)
-
-```python
-from kinde_sdk.auth.oauth import OAuth
-from flask import request
-import asyncio
-
-oauth = OAuth(framework="flask", app=app)
-
-# Async pattern (required for OAuth client)
-def check_permission_sync():
-    loop = asyncio.get_event_loop()
-    permission = loop.run_until_complete(
-        oauth.get_permission("create:todos", request)
-    )
-    return permission["isGranted"]
-
-# In FastAPI (native async)
-@app.get("/todos")
-async def create_todo(request: Request):
-    permission = await oauth.get_permission("create:todos", request)
-    if not permission["isGranted"]:
-        raise HTTPException(status_code=403, detail="Permission denied")
-    # Create todo logic...
-```
-
-### With AsyncOAuth client (Native async)
-
-```python
-from kinde_sdk.auth.async_oauth import AsyncOAuth
-
-oauth = AsyncOAuth()
-
-# Native async pattern
-async def check_permission():
-    permission = await oauth.get_permission("create:todos")
-    if permission["isGranted"]:
-        print(f"User has permission in organization: {permission['orgCode']}")
-        return True
-    return False
-
-# Get all permissions
-async def get_all_permissions():
-    all_permissions = await oauth.get_permissions()
-    print(f"User belongs to organization: {all_permissions['orgCode']}")
-    print("User permissions:", all_permissions["permissions"])
-    return all_permissions
-```
-
-### With SmartOAuth client (Context-aware)
-
-```python
-from kinde_sdk.auth.smart_oauth import SmartOAuth
-
-oauth = SmartOAuth()
-
-# Works in async context
-async def async_check():
-    permission = await oauth.get_permission("create:todos")
-    return permission["isGranted"]
-
-# Works in sync context (if available)
-def sync_check():
-    permission = oauth.get_permission("create:todos")
-    return permission["isGranted"]
-```
+The Kinde Python SDK provides a simple way to check user permissions in your application. Permission checks use the `permissions` helper from `kinde_sdk.auth`. It reads the signed-in user's session directly, so it works the same way whichever OAuth client (`OAuth`, `AsyncOAuth`, or `SmartOAuth`) you use. You still create an OAuth client for your framework as usual; the helper reads the user session that client manages. Its methods are async.
 
 ### Checking permissions
 
+```python
+from kinde_sdk.auth import permissions
+
+# Check a single permission
+permission = await permissions.get_permission("create:todos")
+if permission["isGranted"]:
+    print(f"User can create todos in organization: {permission['orgCode']}")
+
+# Get all permissions for the current user
+all_permissions = await permissions.get_permissions()
+print(f"User belongs to organization: {all_permissions['orgCode']}")
+print("User permissions:", all_permissions["permissions"])
+```
+
+`get_permission` returns a dict with `permissionKey`, `orgCode`, and `isGranted`. `get_permissions` returns a dict with `orgCode` and a `permissions` list. If the user is not authenticated, the helpers do not raise: `isGranted` is `False` and `permissions` is an empty list.
+
 ### Practical examples
 
-Here's how to use permissions in your application with different client types:
+**Example 1: Permission check in FastAPI**
 
-**Example 1: Permission check in FastAPI (OAuth client)**
+FastAPI routes are async, so you can await the helper directly:
 
 ```python
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException
 from kinde_sdk.auth.oauth import OAuth
+from kinde_sdk.auth import permissions
 
 app = FastAPI()
 oauth = OAuth(framework="fastapi", app=app)
 
 @app.post("/todos")
-async def create_todo(request: Request, todo_data: dict):
-    permission = await oauth.get_permission("create:todos", request)
+async def create_todo(todo_data: dict):
+    permission = await permissions.get_permission("create:todos")
     if not permission["isGranted"]:
         raise HTTPException(status_code=403, detail="Permission denied")
     # Create todo logic here...
     return {"message": "Todo created"}
 
 @app.get("/todos")
-async def list_todos(request: Request):
-    permission = await oauth.get_permission("read:todos", request)
+async def list_todos():
+    permission = await permissions.get_permission("read:todos")
     if not permission["isGranted"]:
         raise HTTPException(status_code=403, detail="Permission denied")
     # List todos logic...
     return {"todos": []}
 ```
 
-**Example 2: Permission check with AsyncOAuth client**
+**Example 2: Permission check in Flask**
+
+Flask routes are synchronous, so run the async helper with `asyncio`:
 
 ```python
-from kinde_sdk.auth.async_oauth import AsyncOAuth
-
-oauth = AsyncOAuth()
-
-async def create_todo_handler(request):
-    permission = await oauth.get_permission("create:todos")
-    if not permission["isGranted"]:
-        return {"error": "Permission denied"}, 403
-    
-    org_code = permission.get("orgCode")
-    # Create todo with organization context
-    return {"message": "Todo created", "org_code": org_code}
-
-async def get_all_user_permissions():
-    all_permissions = await oauth.get_permissions()
-    return {
-        "org_code": all_permissions["orgCode"],
-        "permissions": all_permissions["permissions"]
-    }
-```
-
-**Example 3: Permission-based conditional rendering (Flask)**
-
-```python
-from flask import Flask, request, render_template
-from kinde_sdk.auth.oauth import OAuth
 import asyncio
+from flask import Flask, render_template
+from kinde_sdk.auth.oauth import OAuth
+from kinde_sdk.auth import permissions
 
 app = Flask(__name__)
 oauth = OAuth(framework="flask", app=app)
@@ -869,16 +798,38 @@ oauth = OAuth(framework="flask", app=app)
 def dashboard():
     loop = asyncio.get_event_loop()
     can_create = loop.run_until_complete(
-        oauth.get_permission("create:todos", request)
+        permissions.get_permission("create:todos")
     )["isGranted"]
-    
+
     can_delete = loop.run_until_complete(
-        oauth.get_permission("delete:todos", request)
+        permissions.get_permission("delete:todos")
     )["isGranted"]
-    
-    return render_template("dashboard.html", 
-                         can_create=can_create, 
+
+    return render_template("dashboard.html",
+                         can_create=can_create,
                          can_delete=can_delete)
+```
+
+**Example 3: Organization context**
+
+```python
+from kinde_sdk.auth import permissions
+
+async def create_todo_handler():
+    permission = await permissions.get_permission("create:todos")
+    if not permission["isGranted"]:
+        return {"error": "Permission denied"}, 403
+
+    org_code = permission.get("orgCode")
+    # Create todo with organization context
+    return {"message": "Todo created", "org_code": org_code}
+
+async def get_all_user_permissions():
+    all_permissions = await permissions.get_permissions()
+    return {
+        "org_code": all_permissions["orgCode"],
+        "permissions": all_permissions["permissions"]
+    }
 ```
 
 ### Common permission patterns
@@ -887,140 +838,117 @@ Here are some common permission patterns you might use:
 
 ```python
 # Resource-based permissions
-"create:todos
-"read:todos
-"update:todos
-"delete:todos
+"create:todos"
+"read:todos"
+"update:todos"
+"delete:todos"
 
 # Feature-based permissions
-"can:export_data
-"can:manage_users
-"can:view_analytics
+"can:export_data"
+"can:manage_users"
+"can:view_analytics"
 
 # Organization-based permissions
-"org:manage_members
-"org:view_billing
-"org:update_settings
+"org:manage_members"
+"org:view_billing"
+"org:update_settings"
 ```
 
 For more information about setting up permissions in Kinde, see [User permissions](/manage-users/roles-and-permissions/user-permissions/).
 
 ## Feature flags
 
-The Kinde Python SDK provides a simple way to access feature flags from your application. Feature flags support both sync and async patterns.
+The Kinde Python SDK provides a simple way to access feature flags from your application. Feature flags are read with the `feature_flags` helper from `kinde_sdk.auth`. Like the permissions helper, it reads the signed-in user's session directly, works with any OAuth client, and its methods are async.
 
-### With OAuth client (Framework-based)
+### Getting feature flags
 
 ```python
-from kinde_sdk.auth.oauth import OAuth
-from flask import request
-import asyncio
+from kinde_sdk.auth import feature_flags
 
+# Get a string feature flag
+theme_flag = await feature_flags.get_flag("theme", default_value="light")
+print(f"Current theme: {theme_flag.value}")
+
+# Get a boolean feature flag with default value
+dark_mode = await feature_flags.get_flag("is_dark_mode", default_value=False)
+if dark_mode.value:
+    print("Dark mode is enabled")
+
+# Get a numeric feature flag
+competitions_limit = await feature_flags.get_flag("competitions_limit", default_value=3)
+print(f"User can create up to {competitions_limit.value} competitions")
+
+# Get all feature flags
+all_flags = await feature_flags.get_all_flags()
+for code, flag in all_flags.items():
+    print(f"{code}: {flag.value} ({flag.type})")
+```
+
+`get_flag` returns a `FeatureFlag` object with `code`, `type` (`"string"`, `"boolean"`, or `"integer"`), `value`, and `is_default`. If the flag is not set for the user, or the user is not authenticated, `value` is the `default_value` you passed and `is_default` is `True`. `get_all_flags` returns a dict mapping flag codes to `FeatureFlag` objects.
+
+### Practical examples
+
+**Example 1: Conditional feature rendering (FastAPI)**
+
+```python
+from fastapi import FastAPI
+from kinde_sdk.auth.oauth import OAuth
+from kinde_sdk.auth import feature_flags
+
+app = FastAPI()
+oauth = OAuth(framework="fastapi", app=app)
+
+@app.get("/competitions/create-button")
+async def render_create_button():
+    can_create = await feature_flags.get_flag("create_competition", default_value=False)
+    if can_create.value:
+        return {"html": "<button>Create Competition</button>"}
+    return {"html": ""}
+```
+
+**Example 2: Theme configuration (Flask)**
+
+Flask routes are synchronous, so run the async helper with `asyncio`:
+
+```python
+import asyncio
+from flask import Flask
+from kinde_sdk.auth.oauth import OAuth
+from kinde_sdk.auth import feature_flags
+
+app = Flask(__name__)
 oauth = OAuth(framework="flask", app=app)
 
-# Async pattern (required for OAuth client)
-def get_theme_sync():
+@app.route("/settings")
+def get_settings():
     loop = asyncio.get_event_loop()
-    theme_flag = loop.run_until_complete(
-        oauth.get_flag("theme", request, default_value="light")
+    theme = loop.run_until_complete(
+        feature_flags.get_flag("theme", default_value="light")
     )
-    return theme_flag.value
-
-# In FastAPI (native async)
-@app.get("/settings")
-async def get_settings(request: Request):
-    theme = await oauth.get_flag("theme", request, default_value="light")
-    dark_mode = await oauth.get_flag("is_dark_mode", request, default_value=False)
+    dark_mode = loop.run_until_complete(
+        feature_flags.get_flag("is_dark_mode", default_value=False)
+    )
     return {
         "theme": theme.value,
         "dark_mode": dark_mode.value
     }
 ```
 
-### With AsyncOAuth client (Native async)
-
-```python
-from kinde_sdk.auth.async_oauth import AsyncOAuth
-
-oauth = AsyncOAuth()
-
-# Native async pattern
-async def get_feature_flags():
-    # Get a string feature flag
-    theme_flag = await oauth.get_flag("theme", default_value="light")
-    print(f"Current theme: {theme_flag.value}")
-    
-    # Get a boolean feature flag with default value
-    dark_mode = await oauth.get_flag("is_dark_mode", default_value=False)
-    if dark_mode.value:
-        print("Dark mode is enabled")
-    
-    # Get a numeric feature flag
-    competitions_limit = await oauth.get_flag("competitions_limit", default_value=3)
-    print(f"User can create up to {competitions_limit.value} competitions")
-    
-    return {
-        "theme": theme_flag.value,
-        "dark_mode": dark_mode.value,
-        "limit": competitions_limit.value
-    }
-```
-
-### Getting feature flags
-
-To get a specific feature flag value:
-
-### Practical examples
-
-Here's how to use feature flags in your application with different client types:
-
-**Example 1: Conditional feature rendering (FastAPI with OAuth)**
-
-```python
-from fastapi import FastAPI, Request
-from kinde_sdk.auth.oauth import OAuth
-
-app = FastAPI()
-oauth = OAuth(framework="fastapi", app=app)
-
-@app.get("/competitions/create-button")
-async def render_create_button(request: Request):
-    can_create = await oauth.get_flag("create_competition", request, default_value=False)
-    if can_create.value:
-        return {"html": "<button>Create Competition</button>"}
-    return {"html": ""}
-```
-
-**Example 2: Theme configuration (AsyncOAuth)**
-
-```python
-from kinde_sdk.auth.async_oauth import AsyncOAuth
-
-oauth = AsyncOAuth()
-
-async def get_user_theme():
-    theme = await oauth.get_flag("theme", default_value="light")
-    dark_mode = await oauth.get_flag("is_dark_mode", default_value=False)
-    return {
-        "theme": theme.value,
-        "is_dark_mode": dark_mode.value
-    }
-```
-
 **Example 3: Feature limits with validation (FastAPI)**
 
 ```python
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException
 from kinde_sdk.auth.oauth import OAuth
+from kinde_sdk.auth import feature_flags
 
 app = FastAPI()
 oauth = OAuth(framework="fastapi", app=app)
 
 @app.post("/competitions")
-async def create_competition(request: Request, competition_data: dict):
-    limit_flag = await oauth.get_flag("competitions_limit", request, default_value=3)
-    current_count = await get_user_competition_count(request)
-    
+async def create_competition(competition_data: dict):
+    limit_flag = await feature_flags.get_flag("competitions_limit", default_value=3)
+    current_count = await get_user_competition_count()  # Your implementation
+
     if current_count >= limit_flag.value:
         raise HTTPException(
             status_code=403,
@@ -1030,16 +958,13 @@ async def create_competition(request: Request, competition_data: dict):
     return {"message": "Competition created"}
 ```
 
-**Example 4: Type-safe flag access (AsyncOAuth)**
+**Example 4: Inspecting all flags**
 
 ```python
-from kinde_sdk.auth.async_oauth import AsyncOAuth
-
-oauth = AsyncOAuth()
+from kinde_sdk.auth import feature_flags
 
 async def get_all_flags():
-    # Get all feature flags
-    all_flags = await oauth.get_all_flags()
+    all_flags = await feature_flags.get_all_flags()
     result = {}
     for code, flag in all_flags.items():
         result[code] = {
@@ -1048,16 +973,6 @@ async def get_all_flags():
             "is_default": flag.is_default
         }
     return result
-
-# Type-specific getters
-async def get_boolean_flag(flag_name: str, default: bool = False):
-    return await oauth.get_boolean_flag(flag_name, default_value=default)
-
-async def get_string_flag(flag_name: str, default: str = ""):
-    return await oauth.get_string_flag(flag_name, default_value=default)
-
-async def get_integer_flag(flag_name: str, default: int = 0):
-    return await oauth.get_integer_flag(flag_name, default_value=default)
 ```
 
 ### Feature flag types
@@ -1103,83 +1018,46 @@ test_group = await feature_flags.get_flag("ab_test_group", default_value="contro
 
 ## Claims
 
-The Kinde Python SDK provides a simple way to access user claims from your application. Claims support both sync and async patterns.
-
-### With OAuth client (Framework-based)
-
-```python
-from kinde_sdk.auth.oauth import OAuth
-from flask import request
-import asyncio
-
-oauth = OAuth(framework="flask", app=app)
-
-# Async pattern (required for OAuth client)
-def get_user_name_sync():
-    loop = asyncio.get_event_loop()
-    claim = loop.run_until_complete(
-        oauth.get_claim("given_name", request, token_type="id_token")
-    )
-    return claim["value"]
-
-# In FastAPI (native async)
-@app.get("/profile")
-async def get_profile(request: Request):
-    given_name = await oauth.get_claim("given_name", request, token_type="id_token")
-    family_name = await oauth.get_claim("family_name", request, token_type="id_token")
-    email = await oauth.get_claim("email", request, token_type="id_token")
-    return {
-        "name": f"{given_name['value']} {family_name['value']}",
-        "email": email["value"]
-    }
-```
-
-### With AsyncOAuth client (Native async)
-
-```python
-from kinde_sdk.auth.async_oauth import AsyncOAuth
-
-oauth = AsyncOAuth()
-
-# Native async pattern
-async def get_claims():
-    # Get the audience claim from the access token
-    aud_claim = await oauth.get_claim("aud")
-    print(f"Token audience: {aud_claim['value']}")
-    
-    # Get the given_name claim from the ID token
-    name_claim = await oauth.get_claim("given_name", token_type="id_token")
-    print(f"User's given name: {name_claim['value']}")
-    
-    return {
-        "audience": aud_claim["value"],
-        "name": name_claim["value"]
-    }
-```
+The Kinde Python SDK provides a simple way to access user claims from your application. Claims are read with the `claims` helper from `kinde_sdk.auth`. Like the other helpers, it reads the signed-in user's session directly, works with any OAuth client, and its methods are async.
 
 ### Getting claims
 
-To get a specific claim from the user's tokens:
+```python
+from kinde_sdk.auth import claims
+
+# Get the audience claim from the access token
+aud_claim = await claims.get_claim("aud")
+print(f"Token audience: {aud_claim['value']}")
+
+# Get the given_name claim from the ID token
+name_claim = await claims.get_claim("given_name", token_type="id_token")
+print(f"User's given name: {name_claim['value']}")
+
+# Get all claims from a token
+all_claims = await claims.get_all_claims()
+id_token_claims = await claims.get_all_claims(token_type="id_token")
+```
+
+`get_claim` returns a dict with `name` and `value`. If the claim is missing or the user is not authenticated, `value` is `None`. `get_all_claims` returns the token's claims as a dict. Both accept `token_type="access_token"` (the default) or `token_type="id_token"`.
 
 ### Practical examples
 
-Here's how to use claims in your application with different client types:
-
-**Example 1: Accessing user information (FastAPI with OAuth)**
+**Example 1: Accessing user information (FastAPI)**
 
 ```python
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from kinde_sdk.auth.oauth import OAuth
+from kinde_sdk.auth import claims
 
 app = FastAPI()
 oauth = OAuth(framework="fastapi", app=app)
 
 @app.get("/profile")
-async def get_user_profile(request: Request):
-    given_name = await oauth.get_claim("given_name", request, token_type="id_token")
-    family_name = await oauth.get_claim("family_name", request, token_type="id_token")
-    email = await oauth.get_claim("email", request, token_type="id_token")
-    
+async def get_user_profile():
+    given_name = await claims.get_claim("given_name", token_type="id_token")
+    family_name = await claims.get_claim("family_name", token_type="id_token")
+    email = await claims.get_claim("email", token_type="id_token")
+
     if given_name["value"] and family_name["value"]:
         return {
             "name": f"{given_name['value']} {family_name['value']}",
@@ -1188,68 +1066,88 @@ async def get_user_profile(request: Request):
     return None
 ```
 
-**Example 2: Token validation (AsyncOAuth)**
+**Example 2: Accessing user information (Flask)**
+
+Flask routes are synchronous, so run the async helper with `asyncio`:
 
 ```python
-from fastapi import HTTPException
-from kinde_sdk.auth.async_oauth import AsyncOAuth
+import asyncio
+from flask import Flask
+from kinde_sdk.auth.oauth import OAuth
+from kinde_sdk.auth import claims
 
-oauth = AsyncOAuth()
+app = Flask(__name__)
+oauth = OAuth(framework="flask", app=app)
 
-async def validate_token():
-    aud_claim = await oauth.get_claim("aud")
-    if not aud_claim["value"] or "api.yourapp.com" not in aud_claim["value"]:
-        raise HTTPException(status_code=401, detail="Invalid token audience")
-    return {"message": "Access granted"}
-
-@app.get("/api/protected")
-async def protected_endpoint():
-    return await validate_token()
-```
-
-**Example 3: Getting all claims (AsyncOAuth)**
-
-```python
-from kinde_sdk.auth.async_oauth import AsyncOAuth
-
-oauth = AsyncOAuth()
-
-async def get_all_user_claims():
-    # Get all claims from the access token
-    all_claims = await oauth.get_all_claims()
-    access_token_data = {}
-    for claim_name, claim_value in all_claims.items():
-        access_token_data[claim_name] = claim_value
-    
-    # Get all claims from the ID token
-    id_token_claims = await oauth.get_all_claims(token_type="id_token")
-    id_token_data = {}
-    for claim_name, claim_value in id_token_claims.items():
-        id_token_data[claim_name] = claim_value
-    
+@app.route("/profile")
+def get_profile():
+    loop = asyncio.get_event_loop()
+    given_name = loop.run_until_complete(
+        claims.get_claim("given_name", token_type="id_token")
+    )
+    email = loop.run_until_complete(
+        claims.get_claim("email", token_type="id_token")
+    )
     return {
-        "access_token": access_token_data,
-        "id_token": id_token_data
+        "name": given_name["value"],
+        "email": email["value"]
     }
 ```
 
-**Example 4: Organization context (FastAPI)**
+**Example 3: Token validation (FastAPI)**
 
 ```python
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException
 from kinde_sdk.auth.oauth import OAuth
+from kinde_sdk.auth import claims
+
+app = FastAPI()
+oauth = OAuth(framework="fastapi", app=app)
+
+@app.get("/api/protected")
+async def protected_endpoint():
+    aud_claim = await claims.get_claim("aud")
+    if not aud_claim["value"] or "api.yourapp.com" not in aud_claim["value"]:
+        raise HTTPException(status_code=401, detail="Invalid token audience")
+    return {"message": "Access granted"}
+```
+
+**Example 4: Getting all claims**
+
+```python
+from kinde_sdk.auth import claims
+
+async def get_all_user_claims():
+    # Get all claims from the access token
+    access_token_claims = await claims.get_all_claims()
+
+    # Get all claims from the ID token
+    id_token_claims = await claims.get_all_claims(token_type="id_token")
+
+    return {
+        "access_token": access_token_claims,
+        "id_token": id_token_claims
+    }
+```
+
+**Example 5: Organization context (FastAPI)**
+
+```python
+from fastapi import FastAPI
+from kinde_sdk.auth.oauth import OAuth
+from kinde_sdk.auth import claims
 
 app = FastAPI()
 oauth = OAuth(framework="fastapi", app=app)
 
 @app.get("/organization-info")
-async def get_org_info(request: Request):
-    org_code = await oauth.get_claim("org_code", request)
-    org_name = await oauth.get_claim("org_name", request)
-    
+async def get_org_info():
+    org_code = await claims.get_claim("org_code")
+    org_name = await claims.get_claim("org_name")
+
     return {
         "org_code": org_code["value"],
-        "org_name": org_name["value"] if org_name else None
+        "org_name": org_name["value"]
     }
 ```
 
@@ -1259,10 +1157,10 @@ Here are some common claims you might want to access:
 
 ```python
 # User Information (ID Token)
-"given_name
-"family_name
-"email
-"picture
+"given_name"
+"family_name"
+"email"
+"picture"
 
 # Token Information (Access Token)
 "aud"           # Audience
@@ -1271,12 +1169,10 @@ Here are some common claims you might want to access:
 "iat"           # Issued at time
 
 # Organization Information
-"org_code
-"org_name
-"org_id
+"org_code"
+"org_name"
+"org_id"
 ```
-
-
 
 ## Organizations
 
@@ -1502,6 +1398,8 @@ management.organizations_api.delete_organization_invite(
 
 **Using the Management API in a FastAPI route:**
 
+Declare routes that call the Management API with `def` rather than `async def`. The client is synchronous, and FastAPI runs sync routes in a threadpool, so the blocking HTTP call doesn't stall the event loop. If a route must be `async def`, offload the call with `await asyncio.to_thread(...)` instead.
+
 ```python
 from fastapi import FastAPI
 from kinde_sdk.management import ManagementClient
@@ -1514,8 +1412,8 @@ management = ManagementClient(
 )
 
 @app.get("/organizations")
-async def list_organizations():
-    # The management call itself is synchronous
+def list_organizations():
+    # Sync route: FastAPI runs this in a threadpool
     return management.organizations_api.get_organizations()
 ```
 
@@ -1536,7 +1434,7 @@ management = ManagementClient(
 )
 
 @app.get("/users/{user_id}")
-async def get_user(user_id: str):
+def get_user(user_id: str):
     try:
         return management.users_api.get_user_data(id=user_id)
     except NotFoundException:
