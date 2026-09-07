@@ -1,21 +1,26 @@
 ---
 page_id: 6bf993fc-a195-4836-8eaf-133812be8876
-title: About scopes and Kinde API access
-description: "Comprehensive guide to M2M scopes for Kinde API access, including scope examples and management procedures"
+title: Kinde Management API Scopes
+description: "M2M scopes control which Kinde Management API endpoints an application can access. Learn how to configure and request scopes."
 sidebar:
-  order: 4
+  order: 8
+  label: "API Scopes"
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 51899f7f-3436-46e0-9a1b-6ecc3603a0df
   - 50284476-2442-414c-af20-01ed3ef4ca4e
   - 601dd8c5-6ee1-474f-ad36-201e65280462
 app_context:
-  - m: settings
-    s: applications
-  - m: user
+  - m: api_details
+    s: scopes
+  - m: application_details
     s: apis
 topics:
   - developer-tools
   - kinde-api
+  - authentication
+  - authorization
 sdk: []
 languages:
   - shell
@@ -24,37 +29,44 @@ audience:
   - admins
 complexity: intermediate
 keywords:
-  - scopes
-  - jwt
-  - api access
-  - permissions
+  - m2m scopes
+  - machine to machine
+  - jwt scopes
+  - scope claim
+  - api access control
   - read:users
-  - write:users
+  - update:users
   - read:roles
-  - write:roles
-updated: 2024-01-15
+  - update:roles
+  - create:organizations
+  - feature flags
+  - environment variables
+  - webhooks
+  - connections
+  - permissions
+  - client credentials
+updated: 2026-05-02
 featured: false
 deprecated: false
-ai_summary: Comprehensive guide to M2M scopes for Kinde API access, including scope examples and management procedures
+ai_summary: "Scopes in the Kinde Management API are JWT claims that control which endpoints a machine-to-machine (M2M) application can access. Each scope follows a verb:resource pattern — for example, read:users or update:roles — and is assigned when you authorize an M2M application in your Kinde dashboard. By default, a token request returns all scopes enabled for that application, but you can request a subset by passing a scope parameter in the token request body. This is useful for limiting what a specific token can do, reducing your attack surface. The page covers how to add, update, and manage scopes via Settings > Applications, and includes a reference table of the most commonly used scopes grouped by resource type: users, organizations, organization users, roles, permissions, applications, feature flags, environments, connections, and webhooks. The general guidance is to enable only the minimum scopes an application requires."
 ---
 
-The Kinde management API uses JSON Web Tokens (JWTs) to authenticate requests. The token’s scopes claim indicates which endpoints can be accessed when calling the API.
+The Kinde management API uses JSON Web Tokens (JWTs) to authenticate requests. The `scope` claim in a token controls which API endpoints the application can access.
 
 ## Example scopes
 
-- `read:users` for fetching user details.
-- `write:users` for modifying user details.
-- `read:roles` or `write:roles` for managing roles.
+- `read:users` — read user details
+- `update:users` — update user details
+- `read:roles` — read roles
+- `update:roles` — update roles
 
-You can select scopes when you authorize a new application or you can add scopes to an existing application. We recommend adding as few scopes as you need, to maintain API security.
+Scopes are assigned when you authorize an M2M application and can be updated at any time. Enable only what you need — fewer scopes means a smaller attack surface.
 
-## Request scopes in the body of an access token request
+## Request a subset of scopes
 
-By default token requests for an authorized application will return all the scopes enabled below. You can also optionally ask for a subset of enabled scopes to be returned by including them in the body of the access token request. You might do this to add more security to access requests, or because you want your users to be very specific about scopes in their requests.
+By default, a token request returns all scopes enabled for that application. To limit the scopes in a token, include a `scope` parameter in the request body. This is useful when you want tighter control over what a specific token can access.
 
-Example request
-
-```
+```bash
 curl --request POST \
   --url 'https://<your_subdomain>.kinde.com/oauth2/token' \
   --header 'content-type: application/x-www-form-urlencoded' \
@@ -65,12 +77,111 @@ curl --request POST \
   --data 'scope=read:users update:users'
 ```
 
-## Add or modify scopes for accessing the Kinde Management API
+## Add or update scopes on an M2M application
 
-Follow this procedure if you already have an application and you experience a scope error, if you want to add scopes for an application, or remove scopes to tighten security.
+Use this if you're seeing a scope error, need to grant additional access, or want to restrict what an application can do.
 
-1. Go to **Settings > Applications** and select the relevant M2M application.
+1. Go to **Settings > Applications** and select the relevant M2M application.
 2. On the left, select **APIs**.
-3. Select the three dots next to the Kinde management API, then choose **Manage scopes**. 
-4. Select the scopes you want to include in the token. For maximum security only enable the minimum scopes you require. 
+3. Select the three dots next to the Kinde management API, then choose **Manage scopes**.
+4. Select the scopes to include in the token. Enable only the minimum scopes required.
 5. Select **Save**.
+
+## Available scopes
+
+These are the most commonly used scopes. Your Kinde dashboard shows the full list when you configure an M2M application.
+
+### Users
+
+| Scope | Description |
+|---|---|
+| `read:users` | Read user details |
+| `create:users` | Create users |
+| `update:users` | Update user details |
+| `delete:users` | Delete users |
+
+### Organizations
+
+| Scope | Description |
+|---|---|
+| `read:organizations` | Read organizations |
+| `create:organizations` | Create organizations |
+| `update:organizations` | Update organizations |
+| `delete:organizations` | Delete organizations |
+
+### Organization users
+
+| Scope | Description |
+|---|---|
+| `read:organization_users` | Read users in an organization |
+| `create:organization_users` | Add users to an organization |
+| `update:organization_users` | Update organization user details |
+| `delete:organization_users` | Remove users from an organization |
+
+### Roles
+
+| Scope | Description |
+|---|---|
+| `read:roles` | Read roles |
+| `create:roles` | Create roles |
+| `update:roles` | Update roles |
+| `delete:roles` | Delete roles |
+| `read:organization_user_roles` | Read roles assigned to organization users |
+| `create:organization_user_roles` | Assign roles to organization users |
+| `delete:organization_user_roles` | Remove roles from organization users |
+
+### Permissions
+
+| Scope | Description |
+|---|---|
+| `read:permissions` | Read permissions |
+| `create:permissions` | Create permissions |
+| `update:permissions` | Update permissions |
+| `delete:permissions` | Delete permissions |
+
+### Applications
+
+| Scope | Description |
+|---|---|
+| `read:applications` | Read application details |
+| `create:applications` | Create applications |
+| `update:applications` | Update application details |
+| `delete:applications` | Delete applications |
+
+### Feature flags
+
+| Scope | Description |
+|---|---|
+| `read:feature_flags` | Read feature flags |
+| `create:feature_flags` | Create feature flags |
+| `update:feature_flags` | Update feature flags |
+| `delete:feature_flags` | Delete feature flags |
+
+### Environments
+
+| Scope | Description |
+|---|---|
+| `read:environments` | Read environment details |
+| `update:environments` | Update environment settings |
+| `read:environment_variables` | Read environment variables |
+| `create:environment_variables` | Create environment variables |
+| `update:environment_variables` | Update environment variables |
+| `delete:environment_variables` | Delete environment variables |
+
+### Connections
+
+| Scope | Description |
+|---|---|
+| `read:connections` | Read connection details |
+| `create:connections` | Create connections |
+| `update:connections` | Update connections |
+| `delete:connections` | Delete connections |
+
+### Webhooks
+
+| Scope | Description |
+|---|---|
+| `read:webhooks` | Read webhooks |
+| `create:webhooks` | Create webhooks |
+| `update:webhooks` | Update webhooks |
+| `delete:webhooks` | Delete webhooks |
