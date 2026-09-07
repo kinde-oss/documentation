@@ -1,7 +1,7 @@
 ---
 page_id: 815f10b0-7bd2-407a-9ac2-9fb582862a5b
 title: Secure your API using scopes
-description: "Guide to creating, importing, and managing custom API scopes for granular access control, including OpenAPI spec imports"
+description: "Create and import custom API scopes—manually or from OpenAPI—and authorize them for apps, API keys, and MCP"
 sidebar:
   order: 5
 tableOfContents:
@@ -11,9 +11,11 @@ relatedArticles:
   - 51899f7f-3436-46e0-9a1b-6ecc3603a0df
   - 6bf993fc-a195-4836-8eaf-133812be8876
   - 5d4c3b2a-1e0f-4a9b-8c7d-5e4f3a2b1c0d
+  - edb34665-0eda-47a1-b8e1-89f705c6ac87
 topics:
   - developer-tools
   - your-apis
+  - openapi
 sdk: []
 languages:
   - shell
@@ -23,18 +25,17 @@ audience:
 complexity: intermediate
 keywords:
   - custom scopes
-  - api security
-  - granular control
-  - permissions
-  - authorization
-  - scope management
   - openapi import
-  - openapi spec
-  - scope generation
-updated: 2026-06-05
+  - mcp tools
+  - api security
+  - granular permissions
+  - scope management
+  - m2m scopes
+  - authorize applications
+updated: 2026-07-15
 featured: false
 deprecated: false
-ai_summary: "This guide covers custom API scopes in Kinde for granular access control over your own registered APIs. Custom scopes require Kinde Plus or higher and do not apply to the Kinde Management API. Scopes define permissions included in access tokens and let you move beyond broad read or write permissions to fine-grained names such as read:userprofile or write:roles. You can add scopes manually from the Scopes tab or automatically import them by uploading OpenAPI 3.x or Swagger 2 specs. Kinde generates one scope per supported HTTP operation using a method and normalized path naming pattern, with descriptions taken from operation summaries when available. The guide explains managing imports, including syncing updated specs, viewing import logs, and deleting imports without affecting manually added scopes. You also learn how to authorize applications and toggle which scopes each app can request, edit scope descriptions, and safely delete scopes that may cause breaking changes if in use. It covers requesting a subset of enabled scopes in M2M token calls for tighter security, the permissions required for OpenAPI import actions, and assigning scopes to API keys."
+ai_summary: "Guide to custom API scopes in Kinde for granular access control on your registered APIs. Custom scopes require Kinde Plus or higher and do not apply to the Kinde Management API. Covers adding scopes manually or importing them from OpenAPI 3.x or Swagger 2 specs, including how Kinde names scopes from HTTP method and path, handles long names and reserved scopes, and takes descriptions from operation summaries. Explains MCP tool generation from imported operations, tool naming from operationId or method/path, and how re-imports refresh tools on MCP connections. Also covers managing imports and logs, authorizing scopes for applications, editing and deleting scopes, requesting a subset of scopes in M2M token calls, required Management API permissions for OpenAPI actions, and assigning scopes to API keys."
 ---
 
 <Aside type="upgrade">
@@ -120,6 +121,20 @@ If a generated scope name would exceed 64 characters, Kinde shortens it and appe
 The scope **description** is taken from the operation's `summary` field when present. If there is no summary, Kinde uses `operationId`, or falls back to the HTTP method and path (for example, `GET /users/{userId}`).
 
 Reserved scope names (such as `openid`, `profile`, and `offline_access`) are skipped and not imported.
+
+### MCP tool generation
+
+When you import an OpenAPI spec, each operation that becomes a scope also gets an MCP tool record. Those tools are used by [MCP connections for your APIs](/mcp-servers/add-mcp-connection/).
+
+#### Tool names
+
+- Prefer a sanitized OpenAPI `operationId` when present.
+- Otherwise Kinde generates a name from the API name, method, and path (for example `orders_get_orders_id`).
+- If two operations would share the same tool name, Kinde adds a method/path suffix so names stay unique within the spec.
+
+#### Re-imports
+
+Re-uploading a spec refreshes tool metadata for the new import. MCP connections authorized to that API pick up the updated tools. Existing connection URLs do not change.
 
 ### Manage imports
 

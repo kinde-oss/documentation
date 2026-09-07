@@ -11,14 +11,17 @@ relatedArticles:
   - f6eaf29b-d8d9-4caf-bc1d-5319b6fb8ffc
   - b338980f-7dd6-4ba5-90aa-330247a45536
   - e89d246a-5cdf-4993-9cee-94b31ec27583
-description: Export users from Firebase Authentication and import them into Kinde. Firebase uses SCRYPT password hashing which Kinde does not currently support, so plan for a passwordless or new-password flow.
+description: Migrate users from Firebase Authentication to Kinde with NDJSON import and scrypt password migration, so users keep their existing password.
 topics:
   - get-started
   - switch-to-kinde
+  - user-management
+  - authentication
 sdk: []
 languages:
   - bash
-  - csv
+  - json
+  - ndjson
 audience:
   - developers
   - admins
@@ -32,32 +35,34 @@ keywords:
   - firebase cli
   - user import
   - scrypt
+  - firebase scrypt
   - scrypt password
   - password migration
-  - csv import
-  - csv column mapping
+  - password hash parameters
+  - ndjson import
+  - ndjson conversion
+  - jq
   - bulk import
   - authentication migration
-  - passwordless migration
-updated: 2026-05-05
+updated: 2026-07-19
 featured: false
 deprecated: false
-ai_summary: "Step-by-step guide for migrating users from Firebase Authentication to Kinde using a bulk CSV import. Firebase uses the SCRYPT hashing algorithm, which Kinde does not currently support, so password migration is not possible — users will need to sign in via a passwordless method or reset their password on first login. The drip-feed migration approach is also not applicable for Firebase. The guide covers: exporting users with the Firebase CLI using firebase auth:export users.json --format=json; mapping Firebase JSON fields to Kinde's CSV format, including localId to id, emailVerified to email_verified, and omitting passwordHash, salt, createdAt, disabled, and providerUserInfo; adding first_name, last_name, and phone manually if available from other sources; and uploading the prepared CSV via Users > Import users > Custom CSV in Kinde. It is recommended to enable at least one passwordless sign-in option in Kinde before cutover to ensure a smooth first sign-in for migrated users. Links to the bulk import guide for the full CSV field reference covering organizations, roles, and permissions."
+ai_summary: "Step-by-step guide for migrating users from Firebase Authentication to Kinde using a native NDJSON import. Kinde supports Firebase's modified scrypt password hashes, so migrated users can sign in with their existing password on first login, with no reset required, as long as you supply your Firebase project's hash parameters (signer key, salt separator, rounds, and memory cost) on the import confirmation screen. The guide covers exporting users with the Firebase CLI, converting the JSON array to NDJSON with jq, optionally enriching each user object with an organizations array and disabled or userDisabled status, and uploading via Users, Import users, Firebase. It documents the supported field mapping (localId, email, emailVerified, displayName split into first and last name, phoneNumber, passwordHash, salt, disabled, organizations) and the fields not imported automatically (providerUserInfo, custom claims, photoUrl, createdAt, lastSignedInAt). Drip-feed migration does not apply to Firebase because scrypt verification happens during sign-in migration. Intended for developers and admins moving authentication from Firebase to Kinde."
 ---
 
-Migrate your users from Firebase Authentication to Kinde. The process involves exporting user data from Firebase and importing into Kinde.
+Migrate your users from Firebase Authentication to Kinde. The process involves exporting user data from Firebase, converting it to NDJSON, and importing into Kinde. Kinde supports Firebase's modified `scrypt` password hashes, so migrated users can sign in with their existing password.
 
 ### What you need
 
-- A Kinde account with **Admin** access 
-- Kinde account configured to match your current auth provider - see [before you migrate](/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/#before-you-migrate)
+- A Kinde account with **Admin** access
+- A Kinde account configured to match your current auth provider - see [before you migrate](/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/#before-you-migrate)
 - Firebase account with user export permissions
 
 ## Key considerations
 
-- **SCRYPT passwords cannot be migrated** — Firebase uses the SCRYPT hashing algorithm, which Kinde does not currently support for import. Users will need to sign in via a new method (passwordless or social) or reset their password on first sign-in.
-- **Drip-feed is not applicable** — because Firebase's SCRYPT hashes cannot be verified against a standard API, the drip-feed workflow approach is not available for Firebase migrations.
-- **Recommended approach** — enable at least one passwordless option in Kinde before cutover, so users have a frictionless first sign-in. If password continuity is critical, [submit a feature request](https://updates.kinde.com/) to prioritize SCRYPT support.
+- **Hash parameters are required for password migration** — if your export includes `passwordHash` and `salt`, you must enter your Firebase project's hash parameters when you confirm the import in Kinde. You will find the instructions in this guide.
+- **Drip-feed is not applicable** — Firebase scrypt verification is handled during sign-in migration, not via a drip-feed API workflow.
+- **Organizations must exist in Kinde first** — assign users to organizations by including an `organizations` array on each user object. Each organization must already exist in Kinde with a matching `external_id` (provided ID).
 
 ## Migration guide
 
@@ -69,48 +74,131 @@ Make sure you have the [Firebase CLI](https://firebase.google.com/docs/cli) inst
 firebase auth:export users.json --format=json
 ```
 
-This exports user records including email addresses, display names, UIDs, and hashed passwords. For full details, see the [Firebase Auth CLI documentation](https://firebase.google.com/docs/cli/auth).
+This exports user records including email addresses, display names, UIDs, hashed passwords, and salts. For full details, see the [Firebase Auth CLI documentation](https://firebase.google.com/docs/cli/auth).
 
-### 2. Map Firebase fields to Kinde's CSV format
+Firebase typically writes a JSON **array** of user objects (or an object with a `users` array). Kinde cannot import that file as-is — convert it to NDJSON in the next step.
 
-Rename the fields in your Firebase JSON export to match what Kinde expects, then save as a CSV. The only required column is `email` — everything else is optional but recommended.
+### 2. Convert the export to NDJSON
 
-| Firebase field | Rename to | Notes |
-|---|---|---|
-| `email` | `email` | Required — primary sign-in identifier |
-| `emailVerified` | `email_verified` | `TRUE` or `FALSE` |
-| `localId` | `id` | Keep as Firebase UID — helps match records on re-import |
-| first name (if available) | `first_name` |  |
-| last name (if available) | `last_name` |  |
-| phone number (if available) | `phone` |  |
-| `passwordHash` | — | Omit — Firebase uses SCRYPT, which Kinde does not support for import |
-| `salt` | — | Omit |
-| `createdAt` | — | Omit |
-| `disabled` | — | Omit |
-| `providerUserInfo` | — | Omit |
+Kinde accepts a `.ndjson` file with **one user object per line**.
 
-For the full list of supported CSV fields — including organizations, roles, and permissions — see [Prepare your CSV](/get-started/switch-to-kinde/migrate-users-bulk-import/#3-prepare-your-csv) in the bulk import guide.
+Use the [jq command-line JSON processor tool](https://jqlang.org/) to convert the export to NDJSON.
+
+If your export is a JSON array:
+
+```bash
+jq -c '.[]' users.json > users.ndjson
+```
+
+If your export is an object with a `users` array:
+
+```bash
+jq -c '.users[]' users.json > users.ndjson
+```
+
+Your file should look like this (each user on its own line):
+
+```ndjson title="users.ndjson"
+{"email":"user@example.com","localId":"firebase-uid-abc123","emailVerified":true,"displayName":"Alex Smith","passwordHash":"...","salt":"..."}
+{"email":"other@example.com","localId":"firebase-uid-def456","emailVerified":true,"passwordHash":"...","salt":"..."}
+```
 
 <Aside>
 
-Kinde will not duplicate users with existing email addresses. If a user already exists in Kinde, the import skips them unless their data has changed.
+The file extension must be `.ndjson`. Rename the file if needed before uploading.
 
 </Aside>
 
-### 3. Import into Kinde
+### 3. (Optional) Enrich the NDJSON for organizations and status
 
-1. In Kinde, go to **Users**, then select **Import users**.
-2. Select **Custom CSV**.
-3. Follow the on-screen prompts to upload your file.
-4. Review any errors reported after import. Fix the CSV and re-import to resolve them.
+Firebase does not export organization membership. If you use Kinde organizations, add an `organizations` array to each user object before import. Organizations must already exist in Kinde with a matching external ID.
 
-See the [bulk import guide](/get-started/switch-to-kinde/migrate-users-bulk-import/) to learn more.
+- `disabled` (Firebase's usual field) or `userDisabled` — when `true`, the user is imported as **suspended** in Kinde. If neither field is present, the user is active.
 
-### 4. Test the migration
+Example of one line (pretty-printed here for readability — keep it as a single line in the `.ndjson` file):
 
-1. Sign in to Kinde with a user from your Firebase export.
+```json
+{
+  "email": "user@example.com",
+  "localId": "firebase-uid-abc123",
+  "emailVerified": true,
+  "displayName": "Alex Smith",
+  "passwordHash": "...",
+  "salt": "...",
+  "disabled": false,
+  "organizations": [
+    { "external_id": "org_abc001" }
+  ]
+}
+```
+
+You can also include `roles` and `permissions` arrays on each organization object, using the same role and permission keys configured in Kinde.
+
+### 4. Get the hash parameters from Firebase (for password migration)
+
+<Aside>
+Hash parameters are only required when your export includes password hashes. Users without `passwordHash` can still be imported without password migration.
+</Aside>
+
+1. Sign in to your [Firebase console](https://console.firebase.google.com/)
+2. In your project dashboard, go to **Product categories > Security > Authentication > Users**.
+
+    ![firebase console authentication users page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/e6e45d4b-b389-4331-ab4d-2ad5b9de7700/socialsharingimage)
+3. Select the **three dots menu** next to the user table, then select **Password hash parameters**. A dialog appears.
+
+    ![firebase password hash parameters dialog](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/343b28cb-721c-4fde-5fdb-30ad257be400/socialsharingimage)
+4. Copy the parameters and save them securely. You need them to import into Kinde.
+
+### 5. Import into Kinde
+
+1. In Kinde, go to **Users**, then select **Import users**. A dialog appears.
+2. Select **Firebase**.
+
+    ![firebase import option in kinde import users screen](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/5b6b2c74-278a-4828-dea6-4ea16276ed00/socialsharingimage)
+3. Upload your `.ndjson` file (49MB or less).
+4. On the confirmation screen, enter the Firebase **password hash parameters** you copied in the previous step.
+   - **Signer key (base64)** (`base64_signer_key`)
+   - **Salt separator (base64)** (`base64_salt_separator`)
+   - **Rounds** (`rounds`)
+   - **Memory cost** (`mem_cost`)
+
+    ![firebase password hash parameters form in kinde import confirmation](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/5b742545-bec7-4e73-ea0c-b40d82f9be00/socialsharingimage)
+5. Select **Import** and wait for the import to complete.
+6. Review any errors reported after import. Fix the NDJSON file and re-import to resolve them.
+
+### 6. Test the migration
+
+1. Sign in to your application with a migrated user's email and existing password.
 2. Verify the user can access your application.
-3. Notify users of any changes to their sign-in experience before going live. 
+3. Confirm organization membership and profile details where applicable.
+
+## Supported Firebase fields
+
+Kinde maps the following fields from each NDJSON user object:
+
+| Firebase field | Imported as | Notes |
+|---|---|---|
+| `localId` | User `id` (provided ID) | Used to match records on re-import |
+| `email` | Email identity | Required for email/password users |
+| `emailVerified` | Email verified status | `true` / `false` |
+| `displayName` | `first_name` / `last_name` | Split on the first space |
+| `phoneNumber` | Phone identity | Imported if present |
+| `passwordHash` | Migrated password hash | Requires hash parameters at confirm |
+| `salt` | Per-user salt | Required with `passwordHash` |
+| `disabled` / `userDisabled` | Suspended status | `true` → suspended in Kinde |
+| `organizations` | Organization membership | Optional — see step 3 above |
+
+## Unsupported fields
+
+The following Firebase fields are **not** imported automatically:
+
+- `providerUserInfo` (social / federated identities)
+- `customAttributes` / custom claims
+- `photoUrl`, `createdAt`, `lastSignedInAt`
+
+If you need social identities or custom claims, configure the relevant connections in Kinde and use the API or a follow-up process after import.
+
+For the full list of supported fields and hashing methods, see the [bulk import guide](/get-started/switch-to-kinde/migrate-users-bulk-import/).
 
 ## Get support
 
