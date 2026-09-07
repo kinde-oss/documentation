@@ -66,6 +66,8 @@ export default defineConfig({
       "/integrate/third-party-tools/kinde-shopify/",
     "/get-started/guides/start-with-starter-kit/":
       "/get-started/guides/byo-code/",
+    "/manage-your-account/business-information/change-your-business-time-zone/":
+      "/manage-your-account/business-information/update-your-details/",
     
     // Section-level redirects to prevent 404s when users truncate URLs
     "/authenticate/":
@@ -243,7 +245,7 @@ export default defineConfig({
     
     // Manage your account section subfolder redirects
     "/manage-your-account/business-information/":
-      "/manage-your-account/business-information/change-your-business-time-zone/",
+      "/manage-your-account/business-information/update-your-details/",
     "/manage-your-account/profile-and-plan/":
       "/manage-your-account/profile-and-plan/change-kinde-plan/",
     "/manage-your-account/your-data/":
