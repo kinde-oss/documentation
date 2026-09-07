@@ -1,9 +1,10 @@
 ---
 page_id: b3081ca1-2aa1-45e3-a42f-5295aac49bc3
-title: Set callback and redirect URLs
+title: Set callback and redirect URLs in Kinde applications
 sidebar:
   order: 2
-description: Guide to setting up callback and redirect URLs for Kinde authentication including troubleshooting, wildcard usage, and security considerations.
+  label: Set callback URLs
+description: "Set callback and logout redirect URLs in Kinde for OAuth flows—SDK paths, wildcard rules, Management API updates, and error troubleshooting"
 relatedArticles:
   - 684fc526-a338-4a67-9af6-742a39b66aff
   - 6c70b7ae-1b1b-43bb-bea1-9b3ec88dd082
@@ -16,92 +17,135 @@ app_context:
 topics:
   - get-started
   - connect
-sdk: []
+  - callback-urls
+  - oauth
+sdk:
+  - nextjs
+  - react
+  - tanstack-start
+  - kinde-management-api
 languages: []
 audience:
   - developers
   - admins
 complexity: intermediate
 keywords:
-  - callback urls
-  - redirect urls
-  - logout redirect
-  - wildcards
-  - security
-  - troubleshooting
-  - management api
-updated: 2024-01-15
+  - callback url
+  - redirect uri
+  - logout redirect url
+  - allowed callback url
+  - wildcard callback urls
+  - invalid callback url
+  - kinde management api
+  - vercel preview urls
+updated: 2026-07-19
 featured: false
 deprecated: false
-ai_summary: Guide to setting up callback and redirect URLs for Kinde authentication including troubleshooting, wildcard usage, and security considerations.
+ai_summary: "Guide to configuring allowed callback URLs and logout redirect URLs for Kinde applications. Explains how to add redirect URIs in Settings > Environment > Applications, including allowed callback URLs and allowed logout redirect URLs, with notes on trailing spaces, multiple URLs, and silent logout limitations. Lists common callback paths for the Next.js, React, and TanStack Start SDKs, plus custom endpoints when not using an SDK. Covers wildcard callback URL syntax and limitations for subdomains and platforms such as Vercel, security guidance for non-production use, and managing dynamic URLs via the Kinde Management API callbacks endpoint including Vercel preview deployments. Includes FAQs on regex support, distinguishing sign-in from sign-up on the callback, and troubleshooting invalid callback URL errors including Client ID and environment variable mismatches. Intended for developers and admins connecting apps to Kinde."
 ---
 
-For authentication to work, you need to add callback URLs into your app.
+When a user signs in with Kinde, they are redirected back to your app after authentication. Callback URLs—also known as redirect URIs—tell Kinde exactly which URLs it is allowed to send users to, and you must register them in your Kinde application before auth will work. Kinde only redirects to URLs you have explicitly allowlisted, so if the URL in your code does not match one registered in Kinde, authentication fails with an invalid callback URL error. You will also need to configure allowed logout redirect URLs so users are sent to the right place when they sign out.
 
-- An **Allowed callback URL** (also known as a redirect URI) is the web address where a user is sent after they authenticate.
-- An **Allowed logout redirect URL** is where the user is redirected when they sign out - sometimes these are the same as the allowed callback URLs.
+## Add callback URLs in Kinde
+
+1. Sign in to your Kinde dashboard, go to **Settings > Environment > Applications**.
+2. Select **View details** on your target application.
+3. On the **Details** page, scroll down to the **Callback URLs** section and enter the following:
+    - **Allowed callback URL** (also known as a redirect URI): the web address where a user is sent after they authenticate (e.g., `https://[YOUR_SERVER_URL]/kinde_callback`)
+    - **Allowed logout redirect URL**: where the user is redirected when they sign out. This is sometimes the same as the allowed callback URL (e.g., `https://[YOUR_SERVER_URL]`)
+
+    <Aside type="warning">
+    Make sure the callback URLs do not have a trailing space.
+    </Aside>
+
+    ![callback urls in kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/756f4dfc-bfcb-448a-b249-975f32cce000/socialsharingimage)
+
+    <Aside>
+    You can add multiple callback URLs. Add each URL on a new line.
+    </Aside>
+
+4. Select **Save**.
 
 Kinde's OAuth flow requires a redirect to the logout endpoint to end the session. Silent logout (ending the session without any redirect to a logout page) is not supported.
 
-## Set callback URLs
+<Aside>
+Make sure to also add the callback URLs and logout redirect URLs within your codebase if you are using [Kinde without an SDK](/developer-tools/about/using-kinde-without-an-sdk/).
+</Aside>
 
-1. In Kinde, go to **Settings** > **Applications**.
-2. View the details of an application.
-3. In the **Allowed callback URLs** section, enter a callback URL. For example `https://[YOUR_SERVER_URL]/kinde_callback`. Make sure the callback URL does not have a trailing space.
-4. In the **Allowed logout redirect URLs** field, enter a redirect URL. For example, enter your website address or the URL for a custom logout screen. Make sure you also register the redirect URL in your application settings.
+## Common SDK callback URLs
 
-## Can allowed callback URLs be regex?
+If you are using a Kinde SDK, the callback URLs use a specific path generated by the SDK. See your chosen [Kinde SDK](/developer-tools/about/our-sdks/) documentation. Here are callback URLs for popular SDKs:
 
-No, Kinde does not support regex patterns for allowed callback URLs. You can use wildcards instead.
+- [Kinde Next.js SDK](/developer-tools/sdks/backend/nextjs-sdk/): `https://[YOUR_SERVER_URL]/api/auth/kinde_callback`
+- [Kinde React SDK](/developer-tools/sdks/frontend/react-sdk/): `https://[YOUR_SERVER_URL]`
+- [Kinde TanStack Start React SDK](/developer-tools/sdks/backend/tsr-sdk/): `https://[YOUR_SERVER_URL]/api/auth/callback`
+
+If you are using [Kinde without an SDK](/developer-tools/about/using-kinde-without-an-sdk/), register a custom callback endpoint such as `https://[YOUR_SERVER_URL]/callback` or `https://[YOUR_SERVER_URL]/auth/callback`.
 
 ## Wildcards in callback URLs
 
-You can use wildcards in the Kinde callback URLs.
+### Usage example
 
-This is helpful if you have multiple subdomains, for example. Just replace the subdomain with an asterisk `*` — for example `https://*.mybusiness.com/callback`.
+You can use wildcards in Kinde callback URLs. This is helpful if you have multiple subdomains. For example, replace the subdomain with an asterisk `*`:
+```text
+https://*.mybusiness.com/callback
+```
 
-<Aside type="warning">
+<Aside type="warning" title="Development only">
 
 We recommend using wildcards only for non-production purposes, as they present increased security risk.
 
 </Aside>
 
-### Wildcard limitations
+### Limitations
 
-- Root level domains are **not** allowed (`*.com` is not allowed).
+- Root-level domains are **not** allowed (`*.com` is not allowed).
 - Only a single wildcard is allowed per callback (`https://*.*.hello.com` is not allowed).
 - Wildcards are only allowed with `http` or `https` URL protocols (`*.hello.com`, `service:jmx:rmi://[host[:port]][urlPath]` are **not** allowed).
-- Wildcard has to be in the leftmost subdomain (`https://*.hello.com` is allowed, `https://hello.*.com` is **not** allowed).
-- Wildcards with prefixes and suffixes are allowed (`https://prefix-*-suffix.hello.com`)
-- A URL with a valid wildcard **will not** match a URL with more than one subdomain level in place of the wildcard. (`https://*.hello.com` will **not** work with `https://sub1.sub2.hello.com`)
+- The wildcard must be in the leftmost subdomain (`https://*.hello.com` is allowed, `https://hello.*.com` is **not** allowed).
+- Wildcards with prefixes and suffixes are allowed (`https://prefix-*-suffix.hello.com`).
+- A URL with a valid wildcard **will not** match a URL with more than one subdomain level in place of the wildcard (`https://*.hello.com` will **not** work with `https://sub1.sub2.hello.com`).
 - Certain well-known shared hosting domains require a suffix or prefix for the wildcard (`*.vercel.app` is **not** allowed as this opens up anyone to authenticate on the Vercel platform, but `*something.vercel.app` is allowed as this will lock callbacks to your team or personal account).
 - Wildcards are not supported as part of a URL path (`https://sub1.sub2.hello.com/*` is not allowed). You can use the post-login redirect (available in several SDKs) to achieve dynamic navigation after authentication.
 
-## Alternative methods of securing dynamic callbacks
+### Using Kinde Management API
 
-A more secure way of managing dynamic wildcards is to integrate with the Kinde Management API and manage them via API calls. This way you can be sure only allowed callbacks are authenticating against your Kinde instance.
+A more secure way to manage dynamic callback URLs is to integrate with the Kinde Management API and manage them via API calls. This ensures only allowed callbacks can authenticate against your Kinde instance.
 
-If your application lives in a [GitHub](https://github.com/) repository connected to [Vercel](https://vercel.com/), refer to [this section](/developer-tools/sdks/backend/nextjs-sdk/#working-with-preview-urls) on how to add wildcard callback URLs via the Kinde API.
+If your application lives in a [GitHub](https://github.com/) repository connected to [Vercel](https://vercel.com/), see [this section](/developer-tools/sdks/backend/nextjs-sdk/#working-with-preview-urls) on adding callback URLs via the Kinde API.
 
-You can also use our [callbacks endpoint](/kinde-apis/management#tag/callbacks) in our Management API to add specific callbacks at the relevant point in your deployment.
+You can also use the [callbacks endpoint](/kinde-apis/management#tag/callbacks) in the Management API to add specific callbacks at the relevant point in your deployment.
 
-## Distinguishing callback activity as sign in or sign up
+## FAQs
 
-Kinde does not currently provide the ability to distinguish between a sign in and new registration, when the user lands on the callback URL.
+### Can allowed callback URLs be regex?
 
-We recommend that you map the Kinde user IDs to your internal users. Then when the token from Kinde gets verified,
+No, Kinde does not support regex patterns for allowed callback URLs. You can use wildcards instead.
 
-- if the user doesn't exist: continues with **sign up** flow
-- if the user does exist: continues with **sign in** flow
+### Can I distinguish callback activity as sign-in or sign-up?
 
-We don't include this information in the token because it's possible to create a user via an API, or in the admin UI (via custom import).
+Kinde does not currently provide the ability to distinguish between sign-in and new registration when the user lands on the callback URL.
 
+We recommend mapping Kinde user IDs to your internal users. When the token from Kinde is verified:
 
-## Troubleshoot ‘Invalid callback URL’
+- if the user doesn't exist: continue with the **sign-up** flow
+- if the user does exist: continue with the **sign-in** flow
 
-A common error reported by new users is that they receive an ‘invalid callback URL’ message when testing their connection. If you get this error, check the following:
+We don't include this information in the token because it's possible to create a user via an API or in the admin UI (via custom import).
 
-- Make sure there are no spaces before or after the callback URL in your Kinde application.
+## Troubleshoot invalid callback URL errors
+
+**Error message**
+```text
+Invalid callback URL. 
+Looks like the allowed callback URLs in your Kinde application don't include the one below.
+```
+
+**Solution**
+
+Go to the **Details** page of your Kinde application and check the **Callback URLs** section:
+
+- Make sure there are no spaces before or after the callback URL, and no forward slashes at the end of the callback URL.
 - Ensure the callback URL in your code exactly matches the callback URL in your Kinde application.
 - The Client ID in your code must exactly match the Client ID in your Kinde application.
-- If you’re testing with a cloud hosting solution, such as Vercel, redeploy your application each time you update the environment variables.
+- If you're testing with a cloud hosting solution such as Vercel, redeploy your application each time you update the environment variables.
