@@ -1,56 +1,58 @@
 ---
 page_id: 1c180220-a98c-42b7-8707-3b95a1ecb4e5
-title: Custom sign-up and sign-in pages
+title: Use custom sign-up and sign-in screens with Kinde
 sidebar:
   order: 3
+  title: Custom sign-up and sign-in screens
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 6b84e778-0459-43c7-843c-c124b1f7a12e
   - 26e55a64-13dd-4c7b-b9ad-e7595903ddc8
   - 776166a5-eebd-42be-a695-36eaafba0823
   - 8b9376c4-308c-4eaa-a990-606fb8bbf770
-description: >-
-  Step-by-step guide to creating custom authentication pages while maintaining
-  Kinde's security for verification and MFA processes.
+description: "Build custom sign-up and sign-in screens in your app—Kinde still hosts OTP, MFA, and verification"
 featured: false
 deprecated: false
 topics:
   - authenticate
-sdk:
-  - react
-  - nextjs
+  - custom-configurations
+  - connection-id
+sdk: []
 languages:
   - javascript
   - jsx
 audience:
   - developer
   - frontend-developer
-complexity: advanced
+complexity: intermediate
 keywords:
-  - custom authentication pages
-  - connection ID
-  - login_hint
-  - social auth
-  - email auth
-  - phone auth
-  - enterprise auth
-updated: 2025-01-16
+  - connectionId
+  - loginHint
+  - custom sign-in
+  - custom sign-up
+  - social authentication
+  - phone authentication
+  - enterprise SSO
+ai_summary: "Guide to building custom sign-up and sign-in pages in your application while Kinde continues to host secure verification steps. Explains enabling Use your own sign-up and sign-in screens per application, copying each auth method Connection ID from Settings > Environment > Authentication, and passing connectionId to login or register in the React SDK. Covers social, email, phone, and enterprise (Entra ID or SAML) button examples, including loginHint for email and phone in phone:number:country format. Notes which screens remain on Kinde: password or OTP, MFA, organization switcher, and account creation when no user is found. Links to global brand defaults and customize-with-code for hosted page styling. Intended for developers and frontend developers integrating custom auth UI with Kinde."
+updated: 2026-08-18
 ---
 
-You can host your own custom sign up and sign in pages to use with Kinde. Integrate your own designs for the initial sign up and sign in page, and still get the security of Kinde’s auth (and verification) process.
+You can use your own custom sign-up and sign-in pages as part of your application design and let Kinde handle security.
 
-This gives you the best of both worlds: the security of hosted auth, and the ability to customize the initial sign-up experience for your users.
+This gives you the security of hosted auth, plus the ability to customize the initial sign-up experience for your users.
 
 <Aside title="Customizing the entire authentication experience">
 
-Bring your own HTML / CSS and JavaScript to our hosted pages [with Kinde's custom UI feature](/design/customize-with-code/customize-with-css-html/).
+Bring your own HTML, CSS, and JavaScript to our hosted pages [with Kinde's custom UI feature](/design/customize-with-code/customize-with-css-html/).
 
 </Aside>
 
-## Custom sign in for social authentication
+## How it works
 
-If you only allow users to sign up and sign in with social authentication - such as Google or Apple - then you can achieve a headless-type experience.
+### Custom social authentication flow
 
-Users sign up or sign in from your custom screen, then get pushed straight through to the social provider’s account selection screen. For example:
+Design your custom social sign-in buttons and attach the Kinde connection ID. When the user selects the button, they are taken to the social provider's native sign-in experience. After the authorization, the user is redirected back to your application.
 
 <img
   src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/20ed27ab-5a0a-47b5-b66e-025013c60400/public"
@@ -62,11 +64,9 @@ Users sign up or sign in from your custom screen, then get pushed straight throu
   decoding="async"
 />
 
-## Custom sign in for email authentication
+### Custom email authentication flow
 
-If you allow email sign up and sign in, the initial Kinde screen can be bypassed, but the Kinde code verification screen will still appear before sign in is completed.
-
-When a user signs up (say, via email), they do this in fields on your custom sign in screen. Then for verification, they see Kinde’s verification code screen. After that, it’s all you again.
+For email authentication, use your own form field to collect the email, then send the user to Kinde by passing the email in the `loginHint` parameter. You can do the same for phone connections. The user is taken directly to the Kinde verification screen. After the authentication, the user is redirected back to your application.
 
 <img
   src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b08b9164-775c-4de7-669e-87ebaa329200/public"
@@ -78,114 +78,256 @@ When a user signs up (say, via email), they do this in fields on your custom sig
   decoding="async"
 />
 
-## Screens that remain securely hosted by Kinde
+## Enable custom sign-up and sign-in pages
 
-This feature lets you to bypass Kinde’s initial sign in screens, but the following screens are still hosted by Kinde and are part of our secure auth experience.
+### 1. Switch on the custom auth option for your application
 
-- Enter password or One-time password (OTP) screens (see example above)
-- Multi-factor authentication screens
-- The organization switcher (if you support multiple organizations)
-- The screen where users can choose to create an account if one was not found
+<Aside>
+Custom sign-up and sign-in pages are enabled on a per-application basis. Switch the option on for each application you want to use it with.
+</Aside>
 
-## Step 1: Switch on the custom auth option for your application
+1. Go to your Kinde dashboard and select **View details** on the application you want to switch on custom auth for.
+2. Scroll down to the **Authentication experience** section and switch on **Use your own sign-up and sign-in screens**.
 
-1. Go to **Settings** > **Applications**.
-2. Select **View details** on the application you want to switch on custom auth for.
-3. Scroll down and switch on the **Use your own sign-up and sign-in screens** option in the **Authentication experience** section.
-4. Select **Save**.
+    ![use your own custom sign-up and sign-in screens](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/eaca7395-118d-4ef6-fc2d-affbd2284600/socialsharingimage)
+3. Select **Save**.
 
-## Step 2: Get the auth method connection ID
+### 2. Get the auth method connection ID
 
-Each authentication type you have set up in Kinde has a unique **Connection ID** attached to it. You need to add this connection ID to your screen design code, so that the Kinde screens get bypassed when users interact.
+Each authentication type you have set up in Kinde has a unique **Connection ID**. Add this connection ID to your screen design code so that the Kinde screens are bypassed when users interact.
 
-1. Go to **Settings > Authentication.**
-2. Select **Configure** on the relevant authentication method tile. For example, the **Google** tile under the **Social connections** section.
-3. Copy the **Connection ID** and paste it somewhere you can access later.
-4. Select **Save** or **Cancel**.
-5. Repeat for each authentication method you want to be included on your custom sign in screen.
+1. Go to your Kinde dashboard and select **Settings**.
+2. Go to **Environment > Authentication**.
+3. Select **Configure** on the relevant authentication method tile. For example, the **Google** tile under the **Social connections** section.
+4. Copy the **Connection ID** and paste it somewhere you can access later.
 
-## Step 3: Add the Connection ID to your design code
+    ![google connection ID](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8794abf6-7cf9-4cbe-015a-7c02061de800/socialsharingimage)
+5. Select **Save** or **Cancel**.
+6. Repeat for each authentication method you want to include.
 
-There are different steps depending on the authentication method you use. Update your code for all that apply.
+### 3. Add the Connection ID to your code
 
-### Social sign in
+1. Design your custom sign-up and sign-in pages with custom button elements.
 
-Add the `connectionId` to the auth url. Here is an example using React:
+    ```html title="HTML example"
+    <h2>Sign in page</h2>
+    <button>Sign in with Email</button>
+    <button>Sign in with Google</button>
+    ```
+
+2. Add the `connectionId` property to the `login` or `register` methods for each auth button in your relevant SDK.
+
+    ```jsx title="React example"
+    import { useState } from "react";
+    import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+
+    export default function CustomAuthButtons() {
+      const { login, register } = useKindeAuth();
+      const [email, setEmail] = useState("");
+
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() =>
+              login({
+                connectionId: "conn_6a95dec504d34dc286dc80e8df9f6099"
+              })
+            }
+          >
+            Sign in with Google
+          </button>
+
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@yourbusiness.com"
+          />
+          <button
+            type="button"
+            onClick={() =>
+              register({
+                connectionId: "conn_e5f80aa5258e4685bf629b38003ee954",
+                loginHint: email
+              })
+            }
+          >
+            Sign up with Email
+          </button>
+        </>
+      );
+    }
+    ```
+
+**Other SDK options:**
+
+- [Android](/developer-tools/sdks/native/android-sdk/#bypass-the-kinde-initial-login-page)
+- [iOS](/developer-tools/sdks/native/ios-sdk/#bypass-the-kinde-initial-login-page)
+
+See the following section for other examples.
+
+## Auth button examples
+
+### Social sign-in
+
+Add the `connectionId` to the auth URL. Here is an example using React:
 
 ```jsx
-<button
-  onClick={() =>
-    login({
-      connectionId: "conn_6a95dec504d34dc286dc80e8df9f6099"
-    })
-  }
->
-  Sign in with Google
-</button>
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+
+export default function SocialSignIn() {
+  const { login } = useKindeAuth();
+
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        login({
+          connectionId: "conn_6a95dec504d34dc286dc80e8df9f6099"
+        })
+      }
+    >
+      Sign in with Google
+    </button>
+  );
+}
 ```
 
-You can now test if it works by signing in to your project or app.
+When clicked, the user is taken to the Google sign-in page.
 
-### Email sign in
+### Email sign-in
 
-Add the `connectionId` and `loginHint` params to the auth url.
-
-The `login_hint` enables you to pre-populate the email for the user, skipping the step where they have to enter their identity/email. It also tells us where to send their one time password for passwordless verification.
-
-Here is an example using React.
-
-```jsx
-<button
-  onClick={() =>
-    login({
-      connectionId: "conn_e5f80aa5258e4685bf629b38003ee954",
-      loginHint: "dave@kinde.com"
-    })
-  }
->
-  Sign in with email
-</button>
-```
-
-You can now test if it works by signing in to your project or app.
-
-### Phone sign in
-
-Add `connectionId` and `loginHint` params to the auth url.
-
-The `loginHint` enables you to pre-populate the phone for the user, skipping the step where they have to enter their phone number. It also tells us where to send their one time password for passwordless verification.
-
-The `loginHint` needs to be in one of these formats `phone:<intl_number>:<country_code>` or `phone:<+intl_number>:<country_code>`. The ‘+’ symbol is optional, as long as the country code is included.
+Add the `connectionId` and `loginHint` parameters to the auth URL. For the `loginHint` parameter contract, see [React SDK `login` arguments](/developer-tools/sdks/frontend/react-sdk/#login).
 
 Here is an example using React:
 
 ```jsx
-<button
-    onClick={() =>
-      login({
-          connectionId: "conn_e1d49977648149a2a32fde844f1ff9e5"
-          loginHint: "phone:+61466043123:au"
-      })
-    }
->
-    Sign in with phone
-</button>
+import { useState } from "react";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+
+export default function EmailSignIn() {
+  const { login, register } = useKindeAuth();
+  const [email, setEmail] = useState("");
+
+  return (
+    <>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="you@yourbusiness.com"
+      />
+      <button
+        type="button"
+        onClick={() =>
+          login({
+            connectionId: "conn_e5f80aa5258e4685bf629b38003ee954",
+            loginHint: email
+          })
+        }
+      >
+        Sign in with email
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          register({
+            connectionId: "conn_e5f80aa5258e4685bf629b38003ee954",
+            loginHint: email
+          })
+        }
+      >
+        Sign up with email
+      </button>
+    </>
+  );
+}
 ```
 
-You can now test if it works by signing in to your project or app.
+When clicked, the user is taken to the Kinde verification screen.
 
-### Enterprise sign in (Entra ID or SAML)
+### Phone sign-in
 
-Add the `connectionId` to the auth url. This takes the user directly to the enterprise authentication process. Here is an example using React:
+Add the `connectionId` and `loginHint` parameters to the auth URL. For the `loginHint` parameter contract, see [React SDK `login` arguments](/developer-tools/sdks/frontend/react-sdk/#login).
+
+Here is an example using React:
 
 ```jsx
-<button
-  onClick={() =>
-    login({
-      connectionId: "conn_6a95dec504d34dc286dc80e8df9f6099"
-    })
-  }
->
-  Sign in to [project name]
-</button>
+import { useState } from "react";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+
+export default function PhoneSignIn() {
+  const { login } = useKindeAuth();
+  const [phone, setPhone] = useState("");
+
+  return (
+    <>
+      <input
+        type="tel"
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        placeholder="+61466043123"
+      />
+      <button
+        type="button"
+        onClick={() =>
+          login({
+            connectionId: "conn_e1d49977648149a2a32fde844f1ff9e5",
+            loginHint: `phone:${phone}:au`
+          })
+        }
+      >
+        Sign in with phone
+      </button>
+    </>
+  );
+}
 ```
+
+When clicked, the user is taken to the Kinde verification screen.
+
+### Enterprise sign-in (Entra ID or SAML)
+
+Add the `connectionId` to the auth URL. This takes the user directly to the enterprise authentication process. Here is an example using React:
+
+```jsx
+import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+
+export default function EnterpriseSignIn() {
+  const { login } = useKindeAuth();
+
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        login({
+          connectionId: "conn_a1b2c3d4e5f64789a0b1c2d3e4f50607"
+        })
+      }
+    >
+      Sign in with enterprise
+    </button>
+  );
+}
+```
+
+When clicked, the user is taken to the enterprise authentication process.
+
+## Screens that remain securely hosted by Kinde
+
+This feature lets you bypass Kinde’s initial sign-in screens, but the following screens are still hosted by Kinde and are part of the secure auth experience.
+
+- Enter password or one-time password (OTP) screens
+- Multi-factor authentication screens
+- The organization switcher (if you support multiple organizations)
+- The screen where users can choose to create an account if one was not found
+
+    <img src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/96ec47b2-ec12-48b2-2c1c-ca65f15a3900/socialsharingimage" alt="kinde custom sign-in otp verification screen"
+     width="400px" loading="lazy" decoding="async" fetchpriority="low" />
+
+To customize the Kinde-hosted part of the authentication experience, use either of the following options:
+
+- [Set global brand defaults](/design/brand/global-brand-defaults/) - Use your own logo, favicon, page background, and button colors.
+- [Customize with code](/design/customize-with-code/customize-with-css-html/) - Bring your own HTML/CSS code to fully customize the auth experience.
+
