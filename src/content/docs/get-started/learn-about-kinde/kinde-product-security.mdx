@@ -6,10 +6,11 @@ sidebar:
 relatedArticles:
   - c53c9254-7bbb-4d58-b949-3ccdc3cd3dee
   - 162a0888-6b7f-439e-9ba2-7b2c491fc95b
-description: Comprehensive overview of Kinde's security practices including XSS protection, CSRF prevention, bot detection, password standards, and TLS enforcement.
+description: "See how Kinde protects auth with XSS and CSRF defenses, bot detection, clickjacking prevention, password hashing, TLS, and WAF"
 topics:
   - get-started
   - learn-about-kinde
+  - security
 sdk: []
 languages: []
 audience:
@@ -18,20 +19,18 @@ audience:
   - business owners
 complexity: intermediate
 keywords:
-  - security
-  - xss protection
-  - csrf protection
+  - product security
+  - clickjacking
+  - CSRF
+  - XSS
   - bot detection
   - credential stuffing
-  - clickjacking
-  - password security
-  - tls
-  - waf
-  - rate limiting
-updated: 2024-01-15
+  - password hashing
+  - WAF
+updated: 2026-07-30
 featured: false
 deprecated: false
-ai_summary: Comprehensive overview of Kinde's security practices including XSS protection, CSRF prevention, bot detection, password standards, and TLS enforcement.
+ai_summary: "Overview of Kinde product security practices for authentication and platform protection. Explains callback URL origin checks to help prevent XSS, bot detection including CAPTCHA and traffic analysis, credential stuffing defenses via WAF and account lockout, CSRF protections using the state parameter, and clickjacking prevention on hosted auth pages with CSP and framing headers. Notes that React and JavaScript SDKs open auth in a popup when the customer app is iframed so those protections stay intact. Also covers enforced password standards, bcrypt password hashing, rate limits and throttling for denial-of-service mitigation, device fingerprinting against session hijacking, TLS version and cipher requirements, XSS and CSP controls for third-party scripts, and WAF blocking of malicious traffic. Intended for developers, admins, and business owners evaluating Kinde security."
 ---
 
 Here’s some of the practices, standards, and methods we use to keep your data, and user’s data secure. 
@@ -58,9 +57,11 @@ Kinde protects against [CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cro
 
 ## Hosted auth pages prevent clickjacking
 
-To prevent [clickjacking](https://cheatsheetseries.owasp.org/cheatsheets/Clickjacking_Defense_Cheat_Sheet.html) attacks where a user’s personal information or credentials may be stolen by hidden iFrames, use Kinde’s hosted pages for authentication. Hosted pages have protections in place such as such as strict CSP and security headers to prevent itself from being embedded as an iFrame.
+To prevent [clickjacking](https://cheatsheetseries.owasp.org/cheatsheets/Clickjacking_Defense_Cheat_Sheet.html) attacks, where a user's personal information or credentials may be stolen by hidden iFrames, use Kinde's hosted pages for authentication. Hosted pages have protections in place such as strict CSP and security headers to prevent them from being embedded as an iFrame.
 
 Kinde controls and hosts the authentication pages, so the risk for protecting pages is assumed by Kinde rather than you.
+
+If your own application runs inside an iframe, our [React](/developer-tools/sdks/frontend/react-sdk/#authentication-in-a-popup-window) and [JavaScript](/developer-tools/sdks/frontend/javascript-sdk/#authentication-in-a-popup-window) SDKs open authentication in a popup window so the user authenticates in a top-level browser window. This keeps these protections intact.
 
 ## Enforced password standards
 
