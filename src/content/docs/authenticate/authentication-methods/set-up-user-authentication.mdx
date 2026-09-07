@@ -1,8 +1,11 @@
 ---
 page_id: 720fcdda-daa6-4dff-ad2d-177af555e6bb
-title: Select authentication options
+title: Set up authentication methods in Kinde
 sidebar:
   order: 1
+  label: Set up auth methods
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 318ccfa9-c7f0-40d9-a2ad-814e4e400af7
   - 98f6868a-7871-4ece-ba9c-2a7b21d1b322
@@ -18,85 +21,147 @@ app_context:
     s: mfa
   - m: settings
     s: mfa
-description: >-
-  Comprehensive guide to configuring all authentication methods in Kinde
-  including email, phone, username, social, and enterprise connections.
+description: "Enable passwordless, password, social, enterprise, and custom auth for your Kinde apps—from one dashboard."
 featured: false
 deprecated: false
 topics:
   - authenticate
-sdk: []
+  - authentication-methods
+  - passwordless
+  - enterprise-connections
+sdk:
+  - kinde-management-api
 languages: []
 audience:
   - developer
   - product-manager
 complexity: beginner
 keywords:
-  - authentication setup
-  - email auth
-  - phone auth
-  - username auth
-  - social auth
-  - enterprise auth
-  - SAML
-  - OAuth
-updated: 2025-01-16
+  - set up authentication
+  - passwordless authentication
+  - email authentication
+  - social sign-in
+  - enterprise authentication
+  - custom OAuth
+  - custom SAML
+  - management API
+ai_summary: "Comprehensive guide to configuring authentication methods in Kinde at the environment level. Explains how to set different authentication requirements per application and per organization. Covers passwordless authentication including email one-time passcode (OTP), phone sign-in, and username plus code, with notes on default email code availability, SMS testing limits, and email requirements for username sign-up. Documents password authentication via email and password and username and password, including the constraint that email code and email password cannot be enabled on the same app simultaneously. Describes enabling social connections such as Google, Facebook, and LinkedIn, and enterprise connections such as Microsoft Entra ID and Google Workspace, with links to provider-specific setup guides. Covers custom authentication through Custom OAuth 2.0 and Custom SAML connections. Includes step-by-step dashboard instructions under Settings, Environment, Authentication for configuring connections and assigning methods to applications. Also references the Kinde Management API for listing, adding, retrieving, and updating social and enterprise connections programmatically. Intended for developers and product managers."
+updated: 2026-06-11
 ---
 
 Kinde supports many authentication options that let you control how users access your applications.
 
-You can set different authentication requirements for different applications, and also for different organizations (if you use [organizations](/build/organizations/add-and-manage-organizations/)).
+You can set different authentication requirements for different applications and for different organizations (if you use [organizations](/build/organizations/add-and-manage-organizations/)).
 
 Set up all your required authentication methods at the Environment level first.
 
-## Switch on **email authentication**
+1. Go to **Settings > Environment > Authentication**.
+2. Follow the instructions below for your preferred authentication method:
 
-1. Go to **Settings > Environment > Authentication**.
-2. Select **Configure** on the **Email** tile in either the **Passwordless** or **Password** section.
-3. In the window that appears, switch the authentication option on or off for each application you have. Note that you **cannot** use passwordless and password authentication for the same app.
-4. Select **Save**.
+## Passwordless authentication
 
-## Switch on phone authentication
+### Email + code
 
-You can allow users to authenticate using their phone number as their sign in identity. For full details, see [Set up phone authentication](/authenticate/authentication-methods/phone-authentication/).
+A user enters their email address and Kinde sends a one-time passcode (OTP) to that address.
 
-1. Go to **Settings > Environment > Authentication**.
-2. In the **Passwordless** section, select **Configure** on the **Phone** tile.
-3. In the window that appears, switch the authentication option on or off for each application you have.
-4. Select **Save**.
+<Aside>
+Email + code is enabled by default for all new Kinde businesses.
+</Aside>
 
-## Switch on username + password authentication
+1. Under the **Passwordless connections** section > **Email + code**, select **Configure**.
+2. In the popup that appears, enable the applications that will use this authentication method.
+3. Select **Save**.
 
-You can allow users to authenticate using a username as their sign-in identity. They will still need to provide an email on sign-up, but will be able to sign in with a username-password combination from then on. Learn more about using [usernames for auth](/authenticate/authentication-methods/username-authentication/).
+### Phone
 
-1. Go to **Settings > Environment > Authentication**.
-2. In the **Password** section, select **Configure** on the **Username** tile.
-3. In the window that appears, switch the authentication option on or off for each application you have.
-4. Select **Save**.
+You can allow users to authenticate using their phone number as their sign-in identity.
 
-## Switch on username + passwordless authentication
+<Aside>
+Kinde includes 10 free SMS messages per month for testing. You need to set up a third-party SMS service to send SMS messages to your users. Learn more about [phone authentication](/authenticate/authentication-methods/phone-authentication/).
+</Aside>
 
-You can allow users to authenticate using a username as their sign-in identity. They will still need to provide an email on sign-up, but will be able to sign in with a username-OTP combination from then on. Learn more about using [passwordless auth](/authenticate/authentication-methods/passwordless-authentication/).
+1. Under the **Passwordless connections** section > **Phone**, select **Configure**.
+2. In the popup that appears, enable the applications that will use this authentication method.
+3. Select **Save**.
 
-1. Go to **Settings > Environment > Authentication**.
-2. In the **Passwordless** section, select **Configure** on the **Username + code** tile.
-3. In the window that appears, switch the authentication option on or off for each application you have.
-4. Select **Save**.
+### Username + code
 
-## Switch on **social authentication**
+You can allow users to authenticate using a username as their sign-in identity.
 
-1. Go to **Settings > Environment > Authentication**.
-2. In the **Social connections** section, select **Add connection**.
-3. In the window that appears, select the social apps you want and then select **Save**.
-4. You need to set up the connection to each social app you chose, see [Add social sign in](/authenticate/social-sign-in/add-social-sign-in/).
+<Aside>
+When using the username authentication method, users must still provide an email on sign-up. This provides a way to receive the OTP. Learn more about [username authentication](/authenticate/authentication-methods/username-authentication/).
+</Aside>
 
-## Use enterprise or custom authentication
+1. Under the **Passwordless connections** section > **Username + code**, select **Configure**.
+2. In the popup that appears, enable the applications that will use this authentication method.
+3. Select **Save**.
 
-Follow the instructions for the relevant authentication method. See:
+## Password authentication
 
-- [Microsoft Entra ID](/authenticate/enterprise-connections/azure/) (was Azure AD)
-- [SAML](/authenticate/enterprise-connections/custom-saml/)
+### Email + password
+
+<Aside type="warning">
+You cannot enable both **Email + code** and **Email + password** authentication for the same app at the same time. Disable one of them before enabling the other.
+</Aside>
+
+1. Under the **Password connections** section > **Email + password**, select **Configure**.
+2. In the popup that appears, enable the applications that will use this authentication method.
+3. Select **Save**.
+
+### Username
+
+Users authenticate with a username and password.
+
+<Aside>
+When using the username authentication method, users must still provide an email on sign-up. This provides a way to recover their account if they forget their password. Learn more about [username authentication](/authenticate/authentication-methods/username-authentication/).
+</Aside>
+
+1. Under the **Password connections** section > **Username**, select **Configure**.
+2. In the popup that appears, enable the applications that will use this authentication method.
+3. Select **Save**.
+
+## Social authentication
+
+You can allow users to authenticate using social profiles such as Google, Facebook, LinkedIn, etc.
+
+1. Under the **Social connections** section, select **Add connection**.
+2. In the popup that appears, select the social apps you want.
+3. Select **Save**.
+4. Set up the connection for each social app you selected. 
+
+See the [list of social sign-in providers supported by Kinde](/authenticate/social-sign-in/add-social-sign-in/).
+
+## Enterprise authentication
+
+You can allow users to authenticate using enterprise profiles such as Microsoft Entra ID, Google Workspace, etc.
+
+1. Under the **Enterprise connections** section, select **Add connection**.
+2. In the popup that appears, select the enterprise app you want.
+3. Select **Save**.
+4. Set up the connection for each enterprise app you selected. 
+
+See the [list of enterprise sign-in providers supported by Kinde](/authenticate/enterprise-connections/about-enterprise-connections/).
+
+## Custom authentication
+
+Kinde supports the following custom authentication methods:
+
+### Custom OAuth 2.0
+
+1. Under the **Social connections** section, select **Add connection**.
+2. In the popup that appears, select **Custom OAuth 2.0**, then select **Next**.
+3. Configure the connection details, then select **Save**.
+
+Read the full guide to setting up [custom OAuth 2.0 connections](/authenticate/custom-configurations/custom-oauth2-connection/).
+
+### Custom SAML
+
+1. Under the **Enterprise connections** section, select **Add connection**.
+2. In the popup that appears, select **Custom SAML**, then select **Next**.
+3. Configure the connection details, then select **Save**.
+
+Read the full guide to setting up [custom SAML connections](/authenticate/enterprise-connections/custom-saml/).
 
 ## Add and manage social and enterprise connections via API
 
-Use [Kinde’s management API](/kinde-apis/management#tag/connections) to manage social and enterprise connections. You can view a list of connections, add a new connection, identify a connection, and update existing connections.
+Use [Kinde’s management API](/kinde-apis/management#tag/connections) to manage social and enterprise connections. You can list connections, add new connections, retrieve connection details, and update existing connections.
