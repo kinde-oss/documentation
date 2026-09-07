@@ -178,6 +178,13 @@ const sdkList: SDK[] = [
     type: "Back end"
   },
   {
+    name: "Terraform",
+    link: "/developer-tools/guides/terraform-provider/",
+    icon: "terraform",
+    iconWidth: "24",
+    type: "Back end"
+  },
+  {
     name: "Angular",
     link: "https://github.com/luukhaijes/kinde-angular",
     icon: "angular",
