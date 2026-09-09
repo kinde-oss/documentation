@@ -1,0 +1,214 @@
+---
+page_id: c00a7687-2d59-427d-b8a4-f2f05d29a7f2
+title: Add and configure a SAML application
+description: "Connect a third-party tool so your team can sign in to it with Kinde as the SAML identity provider."
+sidebar:
+  order: 2
+  label: Add a SAML application
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - 9b92bbc7-f738-48e2-ab36-571cc3b4a57f
+  - f36bce4a-52bb-4785-865b-6b33356f9838
+  - 6c70b7ae-1b1b-43bb-bea1-9b3ec88dd082
+app_context:
+  - m: settings
+    s: applications
+topics:
+  - workforce-identity
+  - applications
+  - configuration
+sdk: []
+languages: []
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - SAML application
+  - service provider
+  - ACS URL
+  - SP entity ID
+  - IdP metadata
+  - attribute mapping
+  - single logout
+  - Test SSO
+updated: 2026-09-09
+featured: false
+deprecated: false
+ai_summary: "Step-by-step guide to connecting a third-party tool as a SAML application in Kinde, with Kinde acting as the identity provider. Covers adding an application from the catalog or as Generic SAML, entering service provider details (SP entity ID, ACS URL, Name ID format and source) or importing SP metadata, copying Kinde's IdP metadata into the third-party tool, mapping user attributes to SAML attribute names, choosing authentication methods, restricting access by role, setting session lifetime (default 86400 seconds, max 30 days) and SAML assertion validity (default 3600 seconds, max 24 hours), signing and encryption settings, configuring single logout via the SP logout callback URL, testing with Test SSO, making the application visible in the self-serve portal, and deleting an application. Includes troubleshooting for access denied errors, empty signing certificates, rejected assertions, and missing portal tiles."
+---
+
+Add a SAML application to let your team sign in to a third-party tool using Kinde as the identity provider. For background, see [Workforce identity in Kinde](/workforce-identity/).
+
+<Aside type="upgrade">
+
+Workforce identity is available on the [Kinde Scale plan](https://kinde.com/pricing/). Separate plans for workforce identity are coming soon.
+
+</Aside>
+
+Connecting an application involves an exchange of details in both directions. You tell Kinde where to send assertions, and you tell the third-party tool to trust Kinde.
+
+## Add an application
+
+1. Go to **Settings > Environment > Applications** and select the **Workforce identity** tab.
+2. Select **Add application**.
+3. Choose your application from the catalog. If your tool is not listed, choose **Generic SAML**.
+4. Kinde creates the application and opens its **Details** page.
+
+## Configure the service provider details
+
+On the **Details** tab, fill in the values the third-party tool expects. If the catalog entry includes a setup guide, you will see example values and a link to the vendor's own documentation. Use the examples as a guide only, because your real values usually include your own account or tenant identifier.
+
+1. In **Service provider (SP) configuration**, enter the **SP entity ID**. This is the entity ID configured in the third-party application.
+2. Enter the **Assertion Consumer Service (ACS) URL**. This is where Kinde posts the SAML response.
+3. Check the **Name ID format**. Kinde defaults to the email address format, which suits most applications.
+4. Choose the **Name ID source**, which is the Kinde user field sent as the SAML NameID. Choose **Email** or **User ID**. Email is the default.
+5. Select **Save**.
+
+If your tool publishes a metadata file, you can save time by selecting **Import SP metadata** and supplying the metadata URL or XML. Kinde fills in the entity ID, ACS URL and certificates for you.
+
+<Aside>
+
+Use **User ID** as the Name ID source when people's email addresses may change. Email addresses are easier to read in the third-party tool, but if someone's address changes, the tool may treat them as a new person.
+
+</Aside>
+
+### Optional display name
+
+Under **Application**, set a **Display name** to override the catalog name in your application list. This is useful when you connect more than one instance of the same tool.
+
+## Give the third-party tool Kinde's details
+
+Open the **IdP metadata** tab. It holds the values the third-party tool needs so that it trusts Kinde.
+
+| Value               | What it is                                                          |
+| ------------------- | ------------------------------------------------------------------- |
+| IdP metadata URL    | A single URL many tools can import to configure everything at once  |
+| IdP entity ID       | Kinde's unique identifier for this connection                       |
+| Single sign-on URL  | Where the tool sends its authentication requests                    |
+| Single logout URL   | Where the tool sends logout requests, if you have configured logout |
+| Signing certificate | Used by the tool to verify assertions signed by Kinde               |
+
+Copy these into the third-party tool's SAML settings, or paste the metadata URL if the tool supports importing.
+
+<Aside>
+
+Kinde generates the signing certificate for an application the first time it is actually used. If the certificate field is empty, select **Test SSO** on this tab, or complete a real sign-in through the application, and the certificate will be created.
+
+</Aside>
+
+## Map user attributes
+
+Most applications need more than a NameID. On the **Attribute mapping** tab, map Kinde user fields to the SAML attribute names your tool expects.
+
+1. Go to the **Attribute mapping** tab.
+2. Select a Kinde source field. You can map standard profile fields and any user properties you have defined.
+3. Enter the **SAML attribute name** exactly as the service provider expects it.
+4. Select **Add mapping** to add more.
+5. Select **Save**.
+
+Check the service provider's SAML documentation for the attribute names it requires. Names are usually case sensitive and must match exactly.
+
+<Aside>
+
+User property values are the same across organizations. Organization-specific role claims are not supported yet.
+
+</Aside>
+
+## Choose authentication methods
+
+On the **Authentication** tab, choose which of your authentication connections can be used to sign in to this application. This lets you require a stronger method for sensitive tools than you allow elsewhere.
+
+You need connections permissions to change this tab.
+
+## Restrict access by role
+
+By default, anyone who can sign in to Kinde can sign in to an enabled application. To narrow that:
+
+1. Go to the **Access control** tab.
+2. Turn on **Enable role-based access control**.
+3. Select the **Allowed roles**. Only organization members holding one of these roles can sign in.
+4. Select **Save**.
+
+You need at least one role defined for your business before you can turn this on.
+
+<Aside type="warning">
+
+Role-based access control is evaluated within an organization. If Kinde cannot determine which organization someone is signing in from, access is denied. Test the sign-in path you expect people to use after turning this on.
+
+</Aside>
+
+## Set session and assertion lifetimes
+
+The **Sessions** tab controls two separate timers.
+
+**Session lifetime** is how long since the person last actually authenticated before this application requires a fresh sign-in, even if their browser session is still active. The default is 86400 seconds, which is 24 hours. The maximum is 30 days.
+
+**SAML authentication validity period** is the expiry window written into each issued assertion, which the service provider checks when it receives one. The default is 3600 seconds, which is one hour. The maximum is 24 hours.
+
+These are different things. Session lifetime governs how often people must sign in again. Assertion validity governs how long a single assertion stays acceptable to the service provider, and generally should be left short.
+
+To require a fresh sign-in on every launch regardless of session lifetime, turn on **Force re-authentication** in the **Security** section of the **Details** tab.
+
+## Secure the connection
+
+The **Security** section of the **Details** tab holds the signing and encryption settings.
+
+- **Sign assertion** is on by default and should stay on. It lets the service provider verify the assertion came from Kinde.
+- **Encrypt assertion** is off by default. Turn it on if the service provider requires encrypted assertions, and paste its **SP encryption certificate**. The certificate is required when encryption is enabled.
+- **SP signing certificate** verifies signed requests coming from the application, such as logout requests. Provide it when the tool publishes a signing certificate separate from its encryption certificate.
+
+## Configure single logout
+
+To support single logout, set the **SP logout callback URL** in the **Security** section. This is the third-party application's endpoint where Kinde sends the logout response. Leave it blank to use the RelayState from each logout request.
+
+<Aside type="warning">
+
+The SP logout callback URL is the third-party application's endpoint, not Kinde's single logout URL. Kinde's own single logout URL is on the **IdP metadata** tab and belongs in the third-party tool's configuration.
+
+</Aside>
+
+Set the **Single logout binding** to match what the service provider expects.
+
+## Test the connection
+
+1. Go to the **IdP metadata** tab.
+2. Select **Test SSO**.
+
+Kinde signs you in and runs a real SAML sign-in to the application, so you can confirm the connection before rolling it out. **Test SSO** appears once both the SP entity ID and the ACS URL are set.
+
+## Make the application available to your team
+
+Once the connection works, decide who sees it.
+
+1. On the **Details** tab, under **Settings**, confirm **Enabled** is on.
+2. Turn on **Show on self-serve portal** to give organization members a tile that opens the application.
+3. Optionally use **Limit to organizations** to restrict the tile to chosen organizations. Leave every box unchecked to allow all organizations.
+4. Select **Save**.
+
+For the tile to appear, the **Applications** module must also be enabled for your self-serve portal. See [Enable self-service portal for users](/build/self-service-portal/self-serve-portal-for-users/).
+
+People can also sign in by going to the third-party tool directly, which does not depend on the portal setting.
+
+## Delete an application
+
+1. Go to **Settings > Environment > Applications** and select the **Workforce identity** tab.
+2. Open the application and select **Delete**.
+3. Confirm the deletion.
+
+<Aside type="danger">
+
+Deleting a SAML application is a destructive action which cannot be reversed. Its configuration, attribute mappings, access rules and session records are removed, and anyone using it loses access.
+
+</Aside>
+
+## Troubleshooting
+
+**People cannot sign in and see an access denied message.** Check the **Access control** tab. If role-based access control is on, confirm the person holds one of the allowed roles in the organization they are signing in from.
+
+**The signing certificate field is empty.** The certificate is generated on first use. Select **Test SSO**, or complete a real sign-in.
+
+**The service provider rejects the assertion.** Confirm the SP entity ID and ACS URL match the tool exactly, and that the attribute names on the **Attribute mapping** tab match what the tool expects, including case.
+
+**The tile does not appear in the self-serve portal.** Confirm **Show on self-serve portal** is on, that the person's organization is allowed under **Limit to organizations**, and that the **Applications** portal module is enabled.
