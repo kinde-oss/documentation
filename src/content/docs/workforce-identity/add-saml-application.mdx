@@ -49,48 +49,49 @@ Workforce identity is available on the [Kinde Scale plan](https://kinde.com/pric
 
 Connecting an application involves an exchange of details in both directions. You tell Kinde where to send assertions, and you tell the third-party tool to trust Kinde.
 
-## Add an application
+## Quickstart
 
-1. Go to **Settings > Environment > Applications** and select the **Workforce identity** tab.
+### 1. Create an application
+
+1. Sign in to your Kinde dashboard, and go to **Settings > Environment > Applications** and select the **Workforce identity** tab.
 2. Select **Add application**.
-3. Choose your application from the catalog. If your tool is not listed, choose **Generic SAML**.
+3. Choose your application from the catalog. If your tool is not listed, choose **SAML application**.
 4. Kinde creates the application and opens its **Details** page.
 
-## Configure the service provider details
+### 2. Configure app details
 
-On the **Details** tab, fill in the values the third-party tool expects. If the catalog entry includes a setup guide, you will see example values and a link to the vendor's own documentation. Use the examples as a guide only, because your real values usually include your own account or tenant identifier.
+1. Set a **Display name** to override the catalog name in your application list. This is useful when you connect more than one instance of the same tool.
 
-1. In **Service provider (SP) configuration**, enter the **SP entity ID**. This is the entity ID configured in the third-party application.
-2. Enter the **Assertion Consumer Service (ACS) URL**. This is where Kinde posts the SAML response.
-3. Check the **Name ID format**. Kinde defaults to the email address format, which suits most applications.
-4. Choose the **Name ID source**, which is the Kinde user field sent as the SAML NameID. Choose **Email** or **User ID**. Email is the default.
-5. Select **Save**.
+<Aside title="Import metadata to auto configure settings">
 
-If your tool publishes a metadata file, you can save time by selecting **Import SP metadata** and supplying the metadata URL or XML. Kinde fills in the entity ID, ACS URL and certificates for you.
-
-<Aside>
-
-Use **User ID** as the Name ID source when people's email addresses may change. Email addresses are easier to read in the third-party tool, but if someone's address changes, the tool may treat them as a new person.
+If your tool publishes a metadata file, you can save time by selecting **Import SP metadata** and supplying the metadata URL or XML. Kinde fills in the entity ID, ACS URL and certificates for you. Select **Save** to apply the settings.
 
 </Aside>
 
-### Optional display name
+2. In **Service provider (SP) configuration**, enter the **SP entity ID**. This is the entity ID configured in the third-party application.
+3. Enter the **Assertion Consumer Service (ACS) URL**. This is where Kinde posts the SAML response.
+4. Check the **Name ID format**. Kinde defaults to the email address format, which suits most applications.
+5. Choose the **Name ID source**, which is the Kinde user field sent as the SAML NameID. Choose **Email** or **User ID**. Email is the default.
 
-Under **Application**, set a **Display name** to override the catalog name in your application list. This is useful when you connect more than one instance of the same tool.
+    <Aside>
 
-## Give the third-party tool Kinde's details
+    Use **User ID** as the Name ID source when people's email addresses may change. Email addresses are easier to read in the third-party tool, but if someone's address changes, the tool may treat them as a new person.
 
-Open the **IdP metadata** tab. It holds the values the third-party tool needs so that it trusts Kinde.
+    </Aside>
 
-| Value               | What it is                                                          |
-| ------------------- | ------------------------------------------------------------------- |
-| IdP metadata URL    | A single URL many tools can import to configure everything at once  |
-| IdP entity ID       | Kinde's unique identifier for this connection                       |
-| Single sign-on URL  | Where the tool sends its authentication requests                    |
-| Single logout URL   | Where the tool sends logout requests, if you have configured logout |
-| Signing certificate | Used by the tool to verify assertions signed by Kinde               |
+6. Select **Save**.
 
-Copy these into the third-party tool's SAML settings, or paste the metadata URL if the tool supports importing.
+
+### 3. Get Kinde IDP metadata
+
+1. Go to the **Kinde IdP metadata** tab. And copy the **IdP metadata URL**. If your tool supports auto-configuration, use this URL to import all of Kinde's details at once.
+
+2. For manual configuration, copy the following values into the third-party tool's SAML settings:
+
+    - **IdP entity ID**: Kinde's unique identifier for this connection
+    - **Single sign-on URL**: Where the tool sends its authentication requests
+    - **Single logout URL**: Where the tool sends logout requests, if you have configured logout
+    - **Signing certificate**: Used by the tool to verify assertions signed by Kinde
 
 <Aside>
 
@@ -98,7 +99,7 @@ Kinde generates the signing certificate for an application the first time it is 
 
 </Aside>
 
-## Map user attributes
+### 4. Map user attributes
 
 Most applications need more than a NameID. On the **Attribute mapping** tab, map Kinde user fields to the SAML attribute names your tool expects.
 
@@ -116,13 +117,31 @@ User property values are the same across organizations. Organization-specific ro
 
 </Aside>
 
-## Choose authentication methods
+### 5. Choose authentication methods
 
-On the **Authentication** tab, choose which of your authentication connections can be used to sign in to this application. This lets you require a stronger method for sensitive tools than you allow elsewhere.
+1. Go to the **Authentication** tab.
+2. Choose which of your authentication connections can be used to sign in to this application. This lets you require a stronger method for sensitive tools than you allow elsewhere.
 
 You need connections permissions to change this tab.
 
-## Restrict access by role
+### 6. Test the connection
+
+<Aside>
+
+**Test SSO** button appears once both the **SP entity ID** and the **ACS URL** are set.
+
+</Aside>
+
+1. Go to the **Kinde IdP metadata** tab.
+2. Scroll down to the end of the page and under **Test this connection**, select **Test SSO**.
+
+    ![sample application test sso](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/33eb4c6b-de81-4024-dd76-38e3c5a59800/socialsharingimage)
+
+Kinde signs you in and runs a real SAML sign-in to the application, so you can confirm the connection before rolling it out. 
+
+## Advanced configuration
+
+### Restrict access by role
 
 By default, anyone who can sign in to Kinde can sign in to an enabled application. To narrow that:
 
@@ -139,7 +158,7 @@ Role-based access control is evaluated within an organization. If Kinde cannot d
 
 </Aside>
 
-## Set session and assertion lifetimes
+### Set session and assertion lifetimes
 
 The **Sessions** tab controls two separate timers.
 
@@ -151,7 +170,7 @@ These are different things. Session lifetime governs how often people must sign 
 
 To require a fresh sign-in on every launch regardless of session lifetime, turn on **Force re-authentication** in the **Security** section of the **Details** tab.
 
-## Secure the connection
+### Secure the connection
 
 The **Security** section of the **Details** tab holds the signing and encryption settings.
 
@@ -159,7 +178,7 @@ The **Security** section of the **Details** tab holds the signing and encryption
 - **Encrypt assertion** is off by default. Turn it on if the service provider requires encrypted assertions, and paste its **SP encryption certificate**. The certificate is required when encryption is enabled.
 - **SP signing certificate** verifies signed requests coming from the application, such as logout requests. Provide it when the tool publishes a signing certificate separate from its encryption certificate.
 
-## Configure single logout
+### Configure single logout
 
 To support single logout, set the **SP logout callback URL** in the **Security** section. This is the third-party application's endpoint where Kinde sends the logout response. Leave it blank to use the RelayState from each logout request.
 
@@ -170,13 +189,6 @@ The SP logout callback URL is the third-party application's endpoint, not Kinde'
 </Aside>
 
 Set the **Single logout binding** to match what the service provider expects.
-
-## Test the connection
-
-1. Go to the **IdP metadata** tab.
-2. Select **Test SSO**.
-
-Kinde signs you in and runs a real SAML sign-in to the application, so you can confirm the connection before rolling it out. **Test SSO** appears once both the SP entity ID and the ACS URL are set.
 
 ## Make the application available to your team
 
