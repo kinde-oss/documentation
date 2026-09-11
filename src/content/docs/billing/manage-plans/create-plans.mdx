@@ -13,7 +13,7 @@ relatedArticles:
 app_context:
   - m: billing
   - s: plans
-description: "Set up Kinde plans — fixed charges, mixed intervals, annual pricing, trials, tax, and usage-based features"
+description: "Set up Kinde plans — fixed charges, mixed intervals, annual pricing, trials, tax, usage-based features, and one-time charges"
 featured: false
 deprecated: false
 topics:
@@ -37,15 +37,16 @@ keywords:
   - tiered pricing
   - free trial
   - Stripe Tax
-updated: 2026-08-29
-ai_summary: "Step-by-step guide to creating billing plans in the Kinde dashboard. Explains that all plans belong to a plan group scoped to users or organizations, and that charges and features can be reused across plans. Covers adding a plan with name, description, key, and default currency; configuring plan settings including the Ask for credit card toggle, Collect tax automatically (use account setting, collect, or do not collect), and trial period with trial length and credit card prompt timing; adding fixed charges with daily, weekly, monthly, or yearly billing intervals; offering one charge per plan as annual at a custom yearly price while other charges keep their own intervals (mixed-interval pricing); previewing annual versus standard totals in the Pricing sidebar without changing the draft; creating free plans with a zero price; adding metered and unmetered features with flat or tiered graduated pricing; and verifying Stripe price sync status. Notes constraints such as credit card collection requirements for paid plans and trials, Offer as annual only on non-yearly base intervals, one annual charge per plan, and that feature name, key, and type cannot be changed after creation. Intended for developers, product managers, and business owners setting up SaaS subscription plans."
+  - one-time charges
+updated: 2026-09-07
+ai_summary: "Step-by-step guide to creating billing plans in the Kinde dashboard. Explains that all plans belong to a plan group scoped to users or organizations, and that charges, features, and one-time charges can be reused across plans. Covers adding a plan with name, description, key, and default currency; configuring plan settings including the Ask for credit card toggle, Collect tax automatically (use account setting, collect, or do not collect), and trial period with trial length and credit card prompt timing; adding fixed charges with daily, weekly, monthly, or yearly billing intervals; offering one charge per plan as annual at a custom yearly price while other charges keep their own intervals (mixed-interval pricing); previewing annual versus standard totals in the Pricing sidebar without changing the draft; creating free plans with a zero price; adding metered and unmetered features with flat or tiered graduated pricing; adding one-time charges with flat or package pricing, optional metering, and expiry; and verifying Stripe price sync status. Notes constraints such as credit card collection requirements for paid plans and trials, that priced one-time charges alone do not require a card at signup, Offer as annual only on non-yearly base intervals, one annual charge per plan, that subscribers cannot purchase one-time charges yet, and that feature name, key, and type cannot be changed after creation. Intended for developers, product managers, and business owners setting up SaaS subscription plans."
 ---
 
 Once you’ve got a plan strategy along with a plan feature list, prices, and details, you’re ready to create plans in Kinde.
 
 All plans must belong to a plan group. A plan group can contain only user plans or only organization plans—not both. When you create your first plan, Kinde automatically creates a default group based on the plan type you select and adds the plan to it.
 
-You can define a charge or feature once and reuse it across plans. For example, a **Base price** charge can be set to `0.00` in a **free plan**, `10.00` in a **Plus plan**, and `25.00` in a **Pro plan**.
+You can define a charge, feature, or one-time charge once and reuse it across plans. For example, a **Base price** charge can be set to `0.00` in a **free plan**, `10.00` in a **Plus plan**, and `25.00` in a **Pro plan**.
 
 
 ## Add a plan
@@ -104,7 +105,7 @@ This toggle controls whether users must enter credit card details when subscribi
 
     <Aside type="warning">
 
-    This option can only be disabled for plans with no paid charges. A fixed charge priced at `0` does not count as a paid charge, so you can disable the toggle on a free plan that uses a $0 price. Credit card collection is always required if the plan has any positive-price fixed charge or chargeable metered (usage-based) billing.
+    Disabling this option is blocked by a positive-price fixed charge, chargeable metered (usage-based) billing, or an enabled trial period. A fixed charge priced at `0` does not require payment details, so you can disable the toggle on a free plan that uses a $0 price. Priced one-time charges alone do not require payment details at signup.
 
     </Aside>
 
@@ -243,6 +244,8 @@ To create a free plan, add a fixed charge with a **Price** of `0`. Do not add an
 
 The `0` price ensures the plan is added to Stripe and included on the pricing table as a free plan. It does not require card collection: disable **Ask for credit card** if you want users to subscribe without payment details. See [Ask for credit card](#ask-for-credit-card).
 
+Priced one-time charges on a plan do not by themselves require customers to enter payment details when they subscribe. Payment collection for signup still follows your fixed charges and chargeable recurring metered features, plus the **Ask for credit card** setting in **Plan settings**.
+
 ## Add features (entitlements) to a plan
 
 Features describe the individual functions or entitlements that users get with their plan. These can be of the type metered (chargeable) or unmetered (included).
@@ -282,6 +285,95 @@ You cannot change the Name, the Key or the Type of feature once you have created
 15. Select **Save.**
 16. In the **Plan** window, select **Save** to commit your changes.
 17. Repeat for each feature you want to add to the plan. Then repeat this procedure for each plan.
+
+## Add one-time charges to a plan
+
+<Aside title="One-time charges are rolling out">
+
+You can create one-time charges and add them to plans now but subscribers can’t buy them yet and they can’t be applied to existing subscriptions.
+
+</Aside>
+
+One-time charges are single-purchase items on a plan—for example credit top-ups or add-on unlocks. They appear in their own **One-time charges** section on the plan, separate from **Fixed charges** and **Features**. See [One-time (flat or package) pricing](/billing/pricing/pricing-models/#one-time-flat-or-package-pricing) for pricing-model examples.
+
+### Add a one-time charge
+
+1. Open the plan you want to edit.
+2. In **One-time charges**, select **Add one-time charge**.
+
+    ![one-time charge section](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/328451d2-f279-46f5-3991-fe8555594b00/socialsharingimage)
+
+3. If you have previously created a one-time charge, you will see an extra option: **Use an existing one-time charge**:
+
+    ![use an existing one-time charge switch](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/eba4d1d0-2ff9-440c-1082-37fea5488400/socialsharingimage)
+
+    1. Turn this option **on** to reuse a charge already defined for another plan.
+
+        <Aside>
+        
+        Catalog details (name, description, key, line item, metering, unit of measurement) cannot be changed when using this option; you can still set plan-specific limits, pricing, and expiry.
+        
+        </Aside>
+
+    2. Leave this option **off** to create a new charge.
+4. For a new charge, complete **Details**:
+    - **Name** — use a reusable name if you’ll share the charge across plans.
+    - **Description** (optional) — what’s included and when to use it.
+    - **Key** — for referencing in your application’s code.
+    - **Line item description** — appears on the customer invoice.
+
+    ![add a one-time charge details](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/84fc605e-018e-4e69-6d81-e37e3381f200/socialsharingimage)
+
+5. Under **Usage** select one of the following:
+    - **Unmetered** — When you don't track usage for this charge
+    - **Metered** — Track the usage for this charge
+6. Set **Unit of measurement** (optional): for example `credits` and **Maximum units**. 
+
+    <Aside>
+
+    You can leave the **Maximum units** field blank if there is no limit.
+
+    </Aside>
+
+7. Under **Pricing**, select a **Pricing model**:
+    - **Flat** — set the **Amount** for each purchase.
+    - **Package** — set the **Amount** and **Number of units**
+8. Under **Expiry**, select:
+    - **Never expires** (default) — Remains available across billing cycles
+    - **Expires with the billing cycle** — Ends with the current billing cycle
+
+    <Aside>
+
+    Access starts as soon as the subscriber pays. Choose when it ends.
+
+    </Aside>
+
+9. Select **Save**.
+
+The charge appears on the plan under **One-time charges**. Cards show metering, pricing model, limits, expiry, and price sync status when connected to Stripe.
+
+### Edit or remove a one-time charge
+
+Use the actions on the one-time charge card to edit or remove it from the plan.
+
+- **Edit** updates the charge for this plan (and shared catalog fields when they are still editable). If the charge is used on other plans, Kinde shows which plans share it—same pattern as shared features.
+- **Remove** detaches the charge from this plan. It does not delete a shared catalog charge that other plans still use.
+
+You need permission to update plans to add or edit one-time charges, and permission to delete plans to remove them.
+
+### One-time charges vs features and fixed charges
+
+| Plan item | Purpose |
+| --- | --- |
+| Fixed charges | Recurring subscription fees billed in advance |
+| Features | Entitlements included with the subscription (metered or unmetered) |
+| One-time charges | Optional single purchases subscribers can buy (when purchase is live) |
+
+<Aside type="warning">
+
+Do not add one-time items through **Add feature** or **Add charge** under Fixed charges. Use **One-time charges** only.
+
+</Aside>
 
 ## Price sync status
 
