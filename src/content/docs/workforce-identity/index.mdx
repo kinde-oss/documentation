@@ -1,0 +1,119 @@
+---
+page_id: 9b92bbc7-f738-48e2-ab36-571cc3b4a57f
+title: Workforce identity in Kinde
+description: "Use Kinde as a SAML identity provider so your team can sign in to third-party tools such as Google Workspace, Microsoft 365, and Slack."
+sidebar:
+  order: 1
+  label: About workforce identity
+prev: false
+relatedArticles:
+  - c00a7687-2d59-427d-b8a4-f2f05d29a7f2
+  - 4a46eba1-598a-4804-b669-dc96f31d2205
+  - fcf28a71-c3a8-4474-9564-ad089d3f2105
+  - f36bce4a-52bb-4785-865b-6b33356f9838
+app_context:
+  - m: settings
+    s: applications
+topics:
+  - workforce-identity
+  - applications
+  - authentication
+sdk: []
+languages: []
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - workforce identity
+  - SAML identity provider
+  - IdP
+  - single sign-on
+  - SAML applications
+  - application catalog
+  - single logout
+  - self-serve portal
+updated: 2026-09-09
+featured: false
+deprecated: false
+ai_summary: "Workforce identity lets your own team sign in to third-party tools such as Google Workspace, Microsoft 365, Slack, and Salesforce using Kinde as a SAML 2.0 identity provider (IdP). This is the inverse of enterprise connections, where Kinde acts as a service provider consuming a customer's IdP. Settings > Environment > Applications is split into Customer identity (OAuth applications that make up your product) and Workforce identity (SAML applications your team signs in to). Kinde ships a catalog of around 120 pre-configured SAML applications, with Generic SAML available for anything not listed. Sign-in can be service provider initiated, identity provider initiated from the self-serve portal, or triggered by Test SSO in the admin. Access is controlled per application through Enabled, Show on self-serve portal, Limit to organizations, and role-based access control. Single logout ends SAML sessions only and does not sign the person out of Kinde. Available on the Kinde Scale plan."
+---
+
+<Aside type="upgrade">
+
+Workforce identity is available on the [Kinde Scale plan](https://kinde.com/pricing/). Separate plans for workforce identity are coming soon.
+
+</Aside>
+
+Workforce identity lets your team sign in to third-party tools using Kinde as the identity provider. Instead of managing a separate login for every tool your business runs on, you manage people once in Kinde and grant them access to the tools they need.
+
+Kinde acts as a SAML 2.0 identity provider (IdP). When someone on your team opens a connected tool, that tool asks Kinde to verify who they are, and Kinde returns a signed SAML assertion containing their identity and any attributes you choose to send.
+
+
+## Workforce identity vs enterprise connections
+
+Kinde supports SAML in both directions, and it is important to know which one you need.
+
+|                       | Workforce identity                                  | [Enterprise connections](/authenticate/enterprise-connections/about-enterprise-connections/) |
+| --------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Kinde's role          | Identity provider (IdP)                             | Service provider (SP)                                                                        |
+| Who signs in          | Your own team                                       | Your customers' users                                                                        |
+| Where they sign in to | Third-party tools such as Slack or Google Workspace | Your product                                                                                 |
+| You configure         | The third-party tool to trust Kinde                 | Kinde to trust your customer's IdP                                                           |
+
+If you want your customers to sign in to your product using their own company IdP, you want enterprise connections. If you want your team to sign in to other companies' tools using Kinde, you want workforce identity.
+
+## Customer identity and workforce identity
+
+**Settings > Environment > Applications** is split into two sub-pages.
+
+- **Customer identity** holds your OAuth applications, which are the front-end, back-end and machine to machine apps that make up your own product. See [Applications in Kinde](/build/applications/about-applications/).
+
+    ![kinde customer identity](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/25c48602-811a-4201-72ce-30ed90d48000/socialsharingimage)
+
+- **Workforce identity** holds your SAML applications, which are the third-party tools your team signs in to.
+
+    ![kinde workforce identity](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/fdf5e9cf-c965-43a6-a5fe-e2c8efce6000/socialsharingimage)
+
+The two are managed separately and do not share configuration.
+
+## The application catalog
+
+Kinde ships a catalog of around 120 pre-configured SAML applications, so most tools need only a couple of values to connect. The catalog includes Microsoft 365, Google Workspace, Slack and Salesforce, along with many HR, finance and IT tools.
+
+![workforce identity all apps](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/245249d8-6e2b-43f7-f6a9-c3c2b3657000/socialsharingimage)
+
+Catalog entries pre-fill what Kinde can know ahead of time, and many include an example SP entity ID, an example ACS URL, and a link to the vendor's own SAML setup guide.
+
+If your tool is not in the catalog, choose **Generic SAML** and enter the values by hand. Any SAML 2.0 service provider will work.
+
+## How people sign in
+
+There are three ways a connected tool can be opened.
+
+- **Service provider initiated** — someone goes to the tool directly, and the tool redirects them to Kinde to sign in. This is the most common path.
+- **Identity provider initiated** — someone opens the tool from a tile in the Kinde self-serve portal. See [Enable self-service portal for users](/build/self-service-portal/self-serve-portal-for-users/).
+- **Test SSO** — you open the tool yourself from the Kinde admin to check a connection before rolling it out.
+
+In every case the person signs in to Kinde using whichever authentication methods you have enabled, and Kinde issues the assertion only after they have authenticated.
+
+## Controlling who gets access
+
+Access to each application is controlled independently, so adding an application does not give it to everyone.
+
+- **Enabled** turns the application on or off. When it is off, nobody can sign in to it.
+- **Show on self-serve portal** controls whether a tile appears for organization members in the portal.
+- **Limit to organizations** restricts portal access to chosen organizations. Leave it unset to allow every organization.
+- **Role-based access control** restricts sign-in to members holding one of the roles you select.
+
+Role-based access control is evaluated within an organization. If it is enabled and Kinde cannot determine which organization the person is signing in from, access is denied.
+
+## Single logout
+
+If you set a logout URL on an application, Kinde supports SAML single logout for it. When a connected tool sends a logout request, Kinde ends the SAML session for that tool and notifies other connected tools that have logout configured.
+
+Single logout ends SAML sessions only. It does not sign the person out of Kinde, and it does not revoke access or refresh tokens for your own applications. Those end only through an explicit Kinde action such as signing out of Kinde, a credential change, or an admin action.
+
+## Get started
+
+- [Add a SAML application](/workforce-identity/add-saml-application/)

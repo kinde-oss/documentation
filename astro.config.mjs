@@ -158,6 +158,10 @@ export default defineConfig({
     // Build section subfolder redirects
     "/build/applications/":
       "/build/applications/about-applications/",
+    "/build/self-service-portal/":
+      "/build/self-service-portal/about-self-service-portal/",
+    "/build/set-up-options/self-serve-portal-for-users/":
+      "/build/self-service-portal/self-serve-portal-for-users/",
     "/build/domains/":
       "/build/domains/pointing-your-domain/",
     "/build/env-variables/":
