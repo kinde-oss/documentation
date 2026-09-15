@@ -8,8 +8,9 @@ relatedArticles:
   - 26e55a64-13dd-4c7b-b9ad-e7595903ddc8
   - 90f45d2e-cf59-4b5e-a26b-6dafd772e893
 description: >-
-  Complete setup guide for phone/SMS authentication using Twilio, including
-  configuration, MFA integration, and message formatting.
+  Complete setup guide for phone/SMS authentication using Kinde default SMS,
+  Twilio, or Sinch Engage, including configuration, MFA integration, and
+  message formatting.
 featured: false
 deprecated: false
 topics:
@@ -24,50 +25,64 @@ keywords:
   - phone authentication
   - SMS
   - Twilio
+  - Sinch Engage
   - MFA
   - A2P messaging
   - 10DLC
   - verification code
-updated: 2026-03-03
+updated: 2026-09-10
 ---
 
-You can allow users to use their phone as a primary method for authentication. This is a passwordless method, where the user is sent a verification code via SMS (or [WhatsApp](/authenticate/authentication-methods/whatsapp-authentication/) when configured). SMS can also be included as a secondary factor if you have [multi-factor authentication](/authenticate/multi-factor-auth/about-multi-factor-authentication/) set up. 
+You can allow users to use their phone as a primary method for authentication. This is a passwordless method, where the user is sent a verification code via SMS (or [WhatsApp](/authenticate/authentication-methods/whatsapp-authentication/) when configured). SMS can also be included as a secondary factor if you have [multi-factor authentication](/authenticate/multi-factor-auth/about-multi-factor-authentication/) set up.
 
-<Aside>
+## Kinde default SMS
 
-This feature requires paid third-party services to use. Rates and limitations apply.
+By default, Kinde sends authentication SMS from its own shared service. You can use this in live environments on every plan. You do not need a third-party SMS provider to go live.
+
+- On the **Free** plan, Kinde default SMS is limited to 10 SMS per month.
+- On **paid** plans (Pro, Plus, Scale), Kinde default SMS is not capped. Usage is billed per message — see [Kinde pricing](https://kinde.com/pricing/).
+- SMS sent as a second factor for MFA through Kinde’s default service counts toward the same Free plan limit and paid-plan usage as sign-in SMS.
+
+Free plans cannot connect their own SMS provider.
+
+## Bring your own SMS provider (recommended)
+
+We recommend connecting your own SMS provider for best deliverability, and so you can control the sender ID or from number. Your own provider is uncapped and is not billed by Kinde. This is a recommendation, not a requirement.
+
+Kinde supports:
+
+- [Twilio](https://www.twilio.com/en-us)
+- [Sinch Engage](https://developers.app.sinch.com/)
+
+<Aside type="upgrade">
+
+Connecting your own SMS provider requires a [Kinde paid plan](https://kinde.com/pricing/). Free plans cannot connect Twilio or Sinch Engage.
 
 </Aside>
 
-## (Existing phone auth Twilio users only) Switch on SMS for MFA
+### Benefits of using a third-party SMS service instead of Kinde
+
+- Gives you full control over the SMS delivery nuances, such as SenderID, country registrations, and detailed delivery metrics.
+- You can register dedicated short codes or sender IDs in countries that have strict SMS sending regulations like Ireland, NZ and Canada, which will greatly improve deliverability.
+- Access to delivery logs and other service quality details for troubleshooting.
+
+## Switch on SMS for MFA
+
+If you want phone authentication SMS and MFA SMS to use the same provider:
 
 1. In Kinde, go to **Settings > Environment > Messaging > SMS**.
 2. Scroll to the bottom and switch on the **Use this service for SMS MFA** option.
 3. Select **Save**.
 
-## Benefits of using a third-party SMS service instead of Kinde
+## Set up Twilio
 
-- Gives you full control over the SMS delivery nuances, such as SenderID, country registrations, and detailed delivery metrics. 
-- You can register dedicated short codes or sender IDs in countries that have strict SMS sending regulations like Ireland, NZ and Canada, which will greatly improve deliverability.
-- Access to delivery logs and other service quality details for troubleshooting.
-
-## SMS provider requirements (Twilio)
-
-SMS authentication requires the services of a messaging provider, in this case, [Twilio](https://www.twilio.com/en-us).
-
-You need a [Twilio](https://www.twilio.com/en-us) business account to ensure messaging works for local and overseas phone numbers.
+You need a [Twilio](https://www.twilio.com/en-us) business account to send from your own numbers.
 
 Phone authentication interactions are also known as [A2P (Application to Person)](https://www.twilio.com/docs/glossary/what-a2p-sms-application-person-messaging) messaging. Before you implement A2P, check if you need to register your business for 10DLC (10 Digit Long Code) support to be able to send messages, as this is required in some locations.
 
 We also recommend you check [Twilio’s guidelines for setting up messaging](https://www.twilio.com/en-us/guidelines/sms), and carefully follow procedures for registration, and SMS policies for all relevant countries.
 
-## What you need
-
-<Aside>
-
-If you just want to test this feature first, Kinde allows you to send 10 SMS messages per month without setting up Twilio. If you want the feature to be live for your users, you must implement the full Twilio setup.
-
-</Aside>
+### What you need
 
 You’ll need the following details that are in the dashboard of your [Twilio account](https://www.twilio.com/en-us).
 
@@ -79,17 +94,15 @@ You’ll need the following details that are in the dashboard of your [Twilio ac
 
 Refer to the [Twilio documentation](https://www.twilio.com/docs/messaging/services/tutorials/send-messages-with-messaging-services) for assistance setting up.
 
-## Configure phone SMS auth in Kinde
-
-After you set this up, you can use SMS for both phone authentication and SMS MFA.
+### Configure Twilio
 
 1. In Kinde, go to **Settings > Environment > Messaging > SMS**.
-2. Select the **Default country** that you want to show on the authentication screen when users sign in.
-3. Enter the Twilio details from your Twilio account (see above) in the relevant fields.
+2. Select **Twilio** in the **Provider** field.
+3. Enter the **Account SID** and **Auth token** from your Twilio account.
 
    ![twilio details](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4c857ff9-ff87-44ea-a488-3e2b511caf00/public)
- 
-4. In the **SMS source** field, select either the **Use** **Messaging service** or **Use phone number**. Verification codes will be sent from whichever you choose.
+
+4. In the **SMS source** field, select either **Use messaging service** or **Use phone number**. Verification codes will be sent from whichever you choose.
 
    <Aside>
 
@@ -101,15 +114,71 @@ After you set this up, you can use SMS for both phone authentication and SMS MFA
 
    ![Twilio config](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/749a80bc-d6b7-40b0-950a-650c7775b900/public)
 
-6. Select if you want to use a fallback service if the provider service is interrupted.
+6. Select if you want to use a fallback service if the provider service is interrupted. Fallback uses Kinde’s default SMS service.
 
    ![option to use kinde sms as fallback](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/9bdd2ef1-c308-4307-c84e-bc8ffdbfe200/public)
 
 7. Select **Save**.
 
-## Switch on phone authentication for an application
+<Aside>
 
-After you have set up Twilio details, you’re ready to switch on phone or SMS auth for your applications.
+For security, Kinde never displays a stored auth token, so the **Auth token** field is blank when you return to the page. If Twilio is already your selected provider, leave it blank to keep the token you saved earlier. If you are switching to Twilio from another provider, you must enter the auth token.
+
+</Aside>
+
+## Set up Sinch Engage
+
+You need a [Sinch Engage](https://app.sinch.com) account. See the [Sinch Engage API](https://developers.app.sinch.com/) for account and credential details.
+
+### What you need
+
+- An **API key**, created under **Settings > API Settings** in your Sinch Engage account
+- The **API secret** created alongside that key. Sinch only shows the secret once, when the key is created, so store it somewhere safe
+- The region your Sinch Engage account is hosted in — **APAC** or **EU**
+- Optionally, a **source number** and **source number type** if you want to send from a specific sender
+
+<Aside>
+
+**Account region** is where your Sinch Engage account is hosted — it selects the API endpoint Kinde calls. It is not a restriction on where you can send messages.
+
+</Aside>
+
+### Configure Sinch Engage
+
+1. In Kinde, go to **Settings > Environment > Messaging > SMS**.
+2. Select **Sinch Engage** in the **Provider** field.
+3. Enter your **API key**.
+4. Enter your **API secret**.
+5. Select your **Account region** — **APAC** or **EU**. This must match the region your Sinch Engage account is hosted in.
+6. Optionally enter a **Source number**. Leave it blank to use your account default.
+7. If you entered a source number, select the **Source number type**.
+8. Select if you want to use a fallback service if the provider service is interrupted. Fallback uses Kinde’s default SMS service.
+9. Select **Save**.
+
+<Aside>
+
+For security, Kinde never displays a stored API secret, so the **API secret** field is blank when you return to the page. If Sinch Engage is already your selected provider, leave **API secret** blank to keep the secret you saved earlier. If you are switching to Sinch Engage from another provider, you must enter the **API secret**.
+
+</Aside>
+
+## Configure phone SMS auth in Kinde
+
+After you set this up, you can use SMS for both phone authentication and SMS MFA.
+
+1. In Kinde, go to **Settings > Environment > Messaging > SMS**.
+2. Select the **Default country** that you want to show on the authentication screen when users sign in.
+3. Select a **Provider**:
+
+   - **Kinde default** — uses Kinde’s own SMS service. No credentials are needed. This works in live environments.
+   - **Twilio** — your own Twilio account. See [Set up Twilio](#set-up-twilio).
+   - **Sinch Engage** — your own Sinch Engage account. See [Set up Sinch Engage](#set-up-sinch-engage).
+
+   The fields below the selector change to match the provider you choose.
+
+4. If you selected your own provider, enter the credentials and choose whether to use a fallback service if the provider is interrupted.
+5. Select **Save**.
+
+## Switch on phone authentication for an application
 
 1. Go to **Settings > Environment > Authentication**.
 2. In the **Passwordless** section, select **Configure** on the **Phone** tile.
@@ -118,7 +187,7 @@ After you have set up Twilio details, you’re ready to switch on phone or SMS a
 
 ## Switch on SMS as a factor in MFA
 
-If MFA is required or optional for your users, you may want to use the Twilio service for SMS MFA.
+If MFA is required or optional for your users, you may want to use Kinde default SMS or your own SMS provider for SMS MFA.
 
 1. Go to **Settings > Environment > Multi-factor auth**.
 2. Under **Additional authentication methods**, switch on **SMS**.
