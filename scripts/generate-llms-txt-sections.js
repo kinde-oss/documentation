@@ -121,7 +121,9 @@ function generateSectionFrontmatter(sectionName) {
     'manage-users': '8e9f0a1b-2c3d-4e5f-6a7b-8c9d0e1f2a3b',
     'manage-your-account': '9f0a1b2c-3d4e-5f6a-7b8c-9d0e1f2a3b4c',
     'manage-your-apis': '0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d',
+    'mcp-servers': '5e6f7a8b-9c0d-1e2f-3a4b-5c6d7e8f9a0b',
     'properties': '1b2c3d4e-5f6a-7b8c-9d0e-1f2a3b4c5d6e',
+    'testing': '6f7a8b9c-0d1e-2f3a-4b5c-6d7e8f9a0b1c',
     'releases': '2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f',
     'trust-center': '3d4e5f6a-7b8c-9d0e-1f2a-3b4c5d6e7f8a',
     'workflows': '4e5f6a7b-8c9d-0e1f-2a3b-4c5d6e7f8a9b'
@@ -164,7 +166,7 @@ ai_summary: "Complete documentation for Kinde's ${sectionTitle.toLowerCase()} se
 }
 
 // Function to generate section documentation file
-function generateSectionFile(sectionName) {
+function generateSectionFile(sectionName, outputBase = path.join('dist', '_llms-txt')) {
   const results = extractSectionDocs(sectionName);
   
   if (results.length === 0) {
@@ -210,7 +212,8 @@ function generateSectionFile(sectionName) {
   }
 
   // Write to build output (dist/) so files are included in the deployed site.
-  const outputDir = path.join('dist', '_llms-txt');
+  // When run manually, outputBase can be public/_llms-txt for committed section files.
+  const outputDir = outputBase;
   fs.mkdirSync(outputDir, { recursive: true });
   const outputPath = path.join(outputDir, `${sectionName}.txt`);
   fs.writeFileSync(outputPath, sectionContent);
@@ -230,14 +233,16 @@ function getTopLevelSections() {
 
 // Run the extraction if this script is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const sections = getTopLevelSections();
+  const requestedSection = process.argv[2];
+  const outputBase = process.argv[3] || path.join('dist', '_llms-txt');
+  const sections = requestedSection ? [requestedSection] : getTopLevelSections();
   
   console.log('Generating section documentation files...');
   console.log(`Found ${sections.length} sections: ${sections.join(', ')}\n`);
   
   for (const section of sections) {
-    generateSectionFile(section);
+    generateSectionFile(section, outputBase);
   }
   
-  console.log('\nAll section documentation files have been generated in dist/_llms-txt/');
+  console.log(`\nAll section documentation files have been generated in ${outputBase}/`);
 }
