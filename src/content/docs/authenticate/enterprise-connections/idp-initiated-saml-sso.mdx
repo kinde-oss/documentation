@@ -2,25 +2,27 @@
 page_id: 8a3f4e2d-9c1b-4a7d-8e2f-1a5b6c7d8e9f
 title: IdP-initiated SAML SSO
 sidebar:
-  order: 14
+  order: 10
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - fcf28a71-c3a8-4474-9564-ad089d3f2105
   - 66b2a627-b24a-4ccf-a792-80a6a9fe35ef
   - 17559023-5b50-4690-ba7b-fd1df4b78664
+  - 02d02820-92da-4721-9a91-222c9b095869
+  - e100d77b-530b-4327-8216-93c955657e0c
+  - 2c58dabc-fe5c-4919-ade7-4caab8da47e8
 app_context:
   - m: settings
     s: authentication
-description: >-
-  Guide to configuring IdP-initiated SAML single sign-on flows where
-  authentication starts at the Identity Provider rather than your application.
+description: "Let users open your app from their IdP portal with IdP-initiated SAML SSO, RelayState, and a standard Kinde login"
 featured: false
 deprecated: false
-ai_summary: >-
-  Guide to configuring IdP-initiated SAML single sign-on flows where
-  authentication starts at the Identity Provider rather than your application,
-  including setup steps, IdP configuration, and security best practices.
+ai_summary: "Guide to configuring IdP-initiated SAML single sign-on in Kinde, where login starts at the identity provider rather than the application. Explains the two-hop flow: the IdP posts an unsolicited SAML assertion to the Kinde ACS endpoint, then Kinde redirects to a RelayState URL that starts a normal Kinde login. Covers creating environment-level and organization-level enterprise connections, completing provider-specific SAML setup for Custom SAML, Google Workspace, Okta, Cloudflare, Microsoft Entra ID, and LastPass, then enabling IdP-initiated settings including Accept requests, Use IdP email as login hint, ACS URL, and optional provisioning. Details how to build a full RelayState URL with client_id, connection_id, and org_code, and how the application login route must forward those values. Includes a Next.js login example and a raw OAuth authorization request without an SDK, plus IdP RelayState field names, testing of SP-initiated and IdP-initiated flows, troubleshooting, and security guidance. Intended for developers, enterprise admins, and security engineers."
 topics:
   - authenticate
+  - enterprise-connections
+  - saml
 sdk: []
 languages: []
 audience:
@@ -30,173 +32,288 @@ audience:
 complexity: advanced
 keywords:
   - IdP-initiated
-  - SAML
-  - SSO
-  - identity provider
-  - service provider
-  - SP-initiated
-  - enterprise authentication
-  - metadata URL
-  - metadata hosting
-  - XML
-updated: 2025-12-19
+  - RelayState
+  - ACS URL
+  - connection_id
+  - SAML SSO
+  - login_hint
+  - Accept requests
+  - unsolicited SAML
+updated: 2026-09-07
 ---
 
-In this guide, you'll learn how to configure IdP-initiated SSO in Kinde, including setting up the SAML connection, configuring your Identity Provider, and testing both SP-initiated and IdP-initiated authentication flows.
+In this guide, you'll learn how to configure IdP-initiated SSO in Kinde, including setting up the SAML connection, configuring RelayState, configuring your Identity Provider, and testing both SP-initiated and IdP-initiated authentication flows.
+
+## What you need
+
+- A [Kinde](https://kinde.com) account with **Engineer** or **Admin** permissions
+- Admin access to your [enterprise identity provider](/authenticate/enterprise-connections/about-enterprise-connections) (Okta, Microsoft Entra ID, Google Workspace, etc.)
+- A route in your application that starts Kinde login and can accept query parameters
+- For organization-level connections only: a [verified domain configured in Kinde](/build/domains/organization-custom-domain/). A [Kinde Plus plan](https://www.kinde.com/pricing/) or higher is required.
 
 ## What is IdP-initiated SSO?
 
-IdP-initiated SSO is an authentication flow where the login process **starts at the Identity Provider** rather than at your application (the Service Provider).
+IdP-initiated SSO is an authentication flow where login **starts at the Identity Provider** rather than at your application (the Service Provider). In Service Provider (SP) initiated SSO, the user visits your application first and is then redirected to the IdP to authenticate.
 
-When setting up enterprise authentication, you'll encounter two main ways to start a SAML single sign-on flow: Service Provider (SP) initiated and Identity Provider (IdP) initiated. IdP-initiated SSO differs from SP-initiated SSO, where the user first visits your application and is then redirected to the IdP to authenticate.
+Kinde completes IdP-initiated SSO in two hops. The IdP hands the user off to Kinde, and your application then starts a normal Kinde login.
 
-### How it works
+### Phase 1 – the IdP hands off to Kinde
 
-1. A user logs into their corporate Identity Provider portal (such as Okta, Azure AD, or Google Workspace)
-2. From the IdP dashboard, the user clicks on your application
-3. The IdP creates a SAML assertion containing the user's identity and attributes
-4. The IdP sends this assertion directly to your Kinde ACS URL
-5. Kinde validates the assertion and creates a user session
-6. The user is redirected to your application
+1. The user selects the tile for your application in their IdP.
+2. The IdP posts an unsolicited SAML assertion to your Kinde Assertion Consumer Service (ACS) endpoint.
+3. Kinde validates the assertion. This first request confirms who the user is, but **it does not sign the user in to Kinde**. No end-user session exists yet.
+4. Kinde redirects the browser to the URL supplied in RelayState.
 
-### What you need 
+### Phase 2 – your application starts the Kinde login
 
-- A [Kinde](https://kinde.com) account with an **enterprise connections** entitlement
-- Admin access to your [enterprise identity provider](/authenticate/enterprise-connections/about-enterprise-connections) (Okta, Azure AD, Google Workspace, etc.)
-- A [verified domain configured in Kinde](/build/domains/organization-custom-domain/) (for organization-level connections)
+1. The RelayState URL is a route in your application. That route starts a normal Kinde authorization request, preserving `connection_id`.
+2. Because `connection_id` is present, Kinde skips its own login screen and goes straight to the SP-initiated SAML round-trip for that connection.
+3. The user already has an active session at the IdP, so this round-trip normally completes without asking for credentials again.
+4. Kinde creates the authenticated session and returns the user to your application.
 
-## Step 1: Add a SAML enterprise connection in Kinde
+<Aside title="Why two hops?">
 
-### Option A: Environment-level connection (shared across organizations)
-
-1. Sign in to your Kinde admin portal
-2. Navigate to **Settings** > **Authentication**
-3. Select **Add connection** in the **Enterprise connections** section
-4. Select your SAML provider:
-   - **Custom SAML** (for any SAML 2.0 IdP)
-   - **Google Workspace** (pre-configured for Google)
-   - **Okta** (pre-configured for Okta)
-   - **Cloudflare** (pre-configured for Cloudflare Access)
-5. Select **Next**
-
-### Option B: Organization-level connection (specific to one organization)
-
-1. Sign in to your Kinde admin portal
-2. Navigate to **Organizations** > select your organization
-3. Go to the **Authentication** tab
-4. Select **Add connection**. A pop-up appears
-5. Select **Organization SSO connection**, then select **Next**
-6. Choose your connection type (Custom SAML, Cloudflare, Okta, etc.)
-7. Select **Next**
-
-<Aside type="warning">
-
-Organization-level connections require verified domains to be configured for the organization first. Contact your system administrator if no domains are available.
+The second leg is a standard SP-initiated exchange, so the session is created with the full set of checks in place, including `InResponseTo`, state, and Proof Key for Code Exchange (PKCE) where applicable. The user experience is still a single click in the IdP portal.
 
 </Aside>
 
+## Configuration
 
-## Step 2: Configure the SAML connection details in Kinde
+### 1. Create an enterprise connection
 
-After creating the connection, configure these settings:
+<Aside>
 
-    ![kinde custom saml connection](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/5f39d363-c8b2-4de8-2890-e1886edd7700/socialsharingimage)
+This is an environment-level connection shared across all organizations in the environment. For organization-specific connections, see [Alternative way](#alternative-way-create-an-organization-specific-connection).
 
-1. **Connection name**: A name to identify this connection (e.g., "Acme Corp SSO")
-2. **Entity ID**: The unique identifier configured in your IdP (e.g., `https://yourapp.kinde.com`)
-3. **IdP metadata URL**: You will add this after finishing setup in your Identity Provider (see Step 3)
+</Aside>
 
-    <Aside title="No metadata URL? Host the XML file yourself">
+1. Sign in to your Kinde admin portal
+2. Go to **Settings > Environment > Authentication**
+3. Select **Add connection** in the **Enterprise connections** section
+4. Select your SAML provider from the list of supported providers or select **Custom SAML**
+5. Select **Next**
 
-   If your identity provider gives you the SAML metadata as an XML file but does not provide a hosted metadata URL, upload the file to a publicly accessible location such as an [AWS S3](https://aws.amazon.com/s3/) bucket, [Cloudflare R2](https://developers.cloudflare.com/r2/), a [GitHub Gist](https://docs.github.com/en/get-started/writing-on-github/editing-and-sharing-content-with-gists/creating-gists/), or any public website. Then enter that file's URL in the **IdP metadata URL** field. Kinde reads the file from this URL so your signing certificates stay up to date.
+### Alternative way: Create an organization-specific connection
 
-    </Aside>
+<Aside type="upgrade">
 
-4. **Sign in URL** (optional): Override the default SSO endpoint with a URL your IdP recognizes
-5. **Sign request algorithm**: Choose the algorithm used to sign SAML requests (RSA-SHA1 or RSA-SHA256)
-6. **Protocol binding**: Choose the protocol binding used to send SAML requests
-7. **Name ID format**: Select the format for the Name ID used to identify users in SAML responses (*persistent* recommended)
-8. Set up the attribute mapping for user:
+Organization-level connections require [verified domains](/build/domains/organization-custom-domain/) to be configured for the organization first. A [Kinde Plus plan](https://www.kinde.com/pricing/) or higher is required to use this feature.
 
-    - **Email key attribute**: The attribute in the SAML token that contains the user's email. Defaults to `email` if not provided.
-    - **User ID key attribute**: The attribute in the SAML token that contains the user ID. Defaults to `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier` if not provided.
-    - **First name key attribute**: The attribute in the SAML token that contains the user's first name. Defaults to `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname` if not provided.
-    - **Last name key attribute**: The attribute in the SAML token that contains the user's last name. Defaults to `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname` if not provided.
+</Aside>
 
-        <Aside>
-        If your IdP uses different attribute names, enter the correct attribute keys in the mapping fields.
-        </Aside>
+1. Sign in to your Kinde admin portal
+2. Go to **Organizations** and select your organization
+3. Go to the **Authentication** tab
+4. Select **Add connection**. A dialog appears
+5. Select **Organization SSO connection**, then select **Next**
 
-9. **Home realm domains**: A list of domains used for home realm discovery. Add each URL on a new line:
+    ![kinde organization sso connection](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/bee83baa-247d-45db-eb26-d1a7adcf7800/socialsharingimage)
 
-    ```
-    acmecorp.com
-    acme.co
-    ```
-    <Aside> 
-      When users enter an email matching these domains, they'll be automatically routed to this SSO connection.
-    </Aside>
+6. Select your SAML provider from the list of supported providers or select **Custom SAML**
+7. Select **Next**
 
-10. **Always show sign-in button**: 
-    - **Off (default):** If home realm domains are set, the SSO button only shows after email domain detection
-    - **On:** The SSO button is always visible on the login screen
-11. Copy the **Assertion Consumer Service (ACS) URL**. You will need to add this to your IdP configuration.
-12. **Provisioning**: Control how users are created when authenticating via SAML:
+### 2. Configure the SAML connection and IdP-initiated settings
+
+Complete the SAML connection using the setup guide for your provider. Those pages cover Entity ID, IdP metadata URL, bindings, attribute mapping, and related fields.
+
+- [Custom SAML](/authenticate/enterprise-connections/custom-saml/) (any SAML 2.0 IdP)
+- [Google Workspace](/authenticate/enterprise-connections/custom-saml-google-workspace/)
+- [Okta](/authenticate/enterprise-connections/okta-saml-connection/)
+- [Cloudflare](/authenticate/enterprise-connections/cloudflare-saml/)
+- [Microsoft Entra ID (SAML)](/authenticate/enterprise-connections/entra-id-saml/)
+- [LastPass](/authenticate/enterprise-connections/lastpass-sso/)
+
+For extra SAML options, see [Advanced SAML configurations](/authenticate/enterprise-connections/advanced-saml-configurations/). For email-domain routing on the Kinde login screen, see [Home realm discovery](/authenticate/enterprise-connections/home-realm-discovery/).
+
+Then return to the connection in Kinde and complete the settings that IdP-initiated SSO depends on.
+
+    ![kinde custom saml connection](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/67daf001-e62e-488a-31ca-0199a8f8db00/socialsharingimage)
+
+1. Copy the **Connection ID**. You need it to create the RelayState URL in Step 3.
+2. Under **IdP-initiated SSO behavior**, configure:
+
+    - **Accept requests**: Switch this **On**. It is off by default. IdP-initiated SSO does not work until you switch it on. This setting accepts unsolicited login requests that your IdP sends to Kinde.
+    - **Use IdP email as login hint** (optional): Takes the email address from the SAML response and adds it to the RelayState redirect as a `login_hint` query parameter. This lets the IdP skip account selection when the user is signed in to more than one account.
+
+        ![kinde idp initiated sso behavior](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b3887c3a-a2d4-4bfb-8c85-a146ad6fb300/socialsharingimage)
+
+3. Copy the **Assertion Consumer Service (ACS) URL**. You need this for your IdP configuration in Step 4. If you use a custom domain, copy the ACS URL that matches that domain, not the default `*.kinde.com` URL.
+4. (Optional) Set [provisioning](/authenticate/enterprise-connections/provision-users-enterprise/) so users are created or added to the organization on first sign-in:
+
     - **Create a user record in Kinde**: When enabled, users who don't exist in Kinde are automatically created on first sign-in
     - **Trust email addresses provided by this connection**: Merge accounts when email matches an existing Kinde user
 
-        ![provisioning create user record](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6e7fd08b-b5b9-43a9-b171-4a43f1c97d00/socialsharingimage)
+        ![sso provisioning create a user record switch](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/31860fbb-b57e-49f5-ea89-71e0446a3000/socialsharingimage)
 
     - **Auto-add users** (org-level only): Users are automatically added as members of the organization
 
-        ![auto add users in kinde organization](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/adde50b3-de8c-429b-010e-7793a7df6800/socialsharingimage)
+        ![auto add users in kinde organization](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/a4736783-6aaf-4a69-b66a-e380f63a4300/socialsharingimage)
 
-13. Select **Save**
+5. Select **Save**. You will come back in Step 5 to paste the IdP metadata URL.
 
-## Step 3: Configure your Identity Provider
+### 3. Decide on your RelayState URL
 
-In your IdP admin console, create a new SAML application with these settings:
+RelayState is how the IdP tells Kinde where to send the browser after the assertion is validated. For this flow, RelayState is required, and it must be a **full, absolute URL**. A bare query string such as `client_id=...&connection_id=...` is not accepted.
+
+The URL should point at the route in your application that starts Kinde login, and it must carry the `client_id` and `connection_id` parameters:
+
+```text title="Sample RelayState URL"
+https://app.example.com/login?
+client_id=YOUR_KINDE_CLIENT_ID
+&connection_id=conn_xxxxxxxx
+```
+
+For an organization-level connection, include `org_code` as well:
+
+```text title="Sample RelayState URL for an organization-level connection"
+https://app.example.com/login?
+client_id=YOUR_KINDE_CLIENT_ID
+&connection_id=conn_xxxxxxxx
+&org_code=org_xxxxxxxx
+```
+
+<Aside type="warning" title="Kinde uses the exact URL you provide">
+
+Kinde redirects the browser to the exact RelayState URL you supply. It does **not** use `client_id` to look up your application's configured **Application login URI** and invoke that for you. If RelayState is missing, incomplete, or not a full URL, the flow cannot recover and the user won't be signed in.
+
+</Aside>
+
+#### RelayState parameters
+
+| Parameter | What it does | Notes |
+| --- | --- | --- |
+| `client_id` | Identifies the Kinde application the user is signing in to | Must use this exact query parameter name |
+| `connection_id` | Identifies the enterprise connection to use | Must use this exact query parameter name |
+| `org_code` | Identifies the organization | Required for an organization-level connection. Your application must preserve this value and pass it on to the authorization request |
+
+#### Where to find these parameters
+
+- `client_id`: Go to **Settings > Environment > Applications**, select **View details** on the application tile, and copy the **Client ID**.
+- `connection_id`: Copy this from the connection configuration in Step 2.
+- `org_code`: Go to **Organizations** and copy the **Code** value from the organization row.
+
+#### What your application's login route must do
+
+The route you point RelayState at is responsible for turning the parameters it receives into a complete Kinde authorization request.
+
+1. **Read `connection_id` from the incoming query string** and pass it into the login request.
+2. **Include callback, `state`, and PKCE values.** Your SDK adds these. If you are not using an SDK, you must add them yourself.
+3. **Pass `org_code` too, if the connection is organization-level.**
+4. **Pass `login_hint` through as well, if it is present.** If **Use IdP email as login hint** is switched on for the connection (Step 2), Kinde appends the user's email to the RelayState redirect as a `login_hint` query parameter. Forward it so the IdP can skip account selection on the second hop.
+
+<Tabs>
+
+  <TabItem label="Using an SDK">
+
+Most Kinde SDKs accept these as `connectionId`, `orgCode`, and `loginHint`. Parameter names vary slightly by SDK; check your [SDK docs](/developer-tools/about/our-sdks/) if a call fails.
+
+Read the values from the incoming RelayState query string, then start login. Do not hardcode them.
+
+
+```typescript title="Next.js example"
+import { redirect } from "next/navigation";
+
+export default async function LoginPage({ searchParams }) {
+  const { connection_id, org_code, login_hint } = await searchParams;
+  const query = new URLSearchParams();
+
+  if (connection_id) query.set("connection_id", connection_id);
+  if (org_code) query.set("org_code", org_code);
+  if (login_hint) query.set("login_hint", login_hint);
+
+  redirect(`/api/auth/login?${query.toString()}`);
+}
+```
+
+The SDK builds the authorization URL, including the callback URL, `state`, and PKCE parameters where applicable.
+
+  </TabItem>
+
+  <TabItem label="Without an SDK">
+
+Build a full `/oauth2/auth` request. Include `redirect_uri`, `state`, and PKCE (`code_challenge` and `code_challenge_method=S256`) where required. See [Use Kinde without an SDK](/developer-tools/about/using-kinde-without-an-sdk/#connection_id).
+
+Read `connection_id`, `org_code`, and `login_hint` from the incoming RelayState query string and add them to the authorization URL:
+
+```text title="Authorization request"
+https://<your_subdomain>.kinde.com/oauth2/auth
+?response_type=code
+&client_id=<your_kinde_client_id>
+&redirect_uri=<your_app_callback_url>
+&scope=openid%20profile%20email
+&state=<random_state>
+&connection_id=<connection_id_from_query>
+&org_code=<org_code_from_query>
+&login_hint=<login_hint_from_query>
+```
+
+Omit `org_code` or `login_hint` when they are not in the incoming request. Never send this URL with only `client_id` and `connection_id`.
+
+  </TabItem>
+
+</Tabs>
+
+<Aside type="warning">
+
+Don't construct or hardcode a partial `/oauth2/auth` URL that contains only `client_id` and `connection_id`. A URL with just those two parameters is missing the callback, state, and PKCE values needed to finish signing the user in.
+
+</Aside>
+
+### 4. Configure your Identity Provider
+
+In your IdP admin console, open the SAML application you created in the provider guide (or create one if you have not already). Add these settings:
 
 1. **ACS URL / Reply URL**: Use the ACS URL you copied from Kinde in Step 2 (e.g., `https://yourdomain.kinde.com/login/saml/callback`)
 2. **Entity ID / Audience**: Use the Entity ID you configured in Kinde
 3. **Name ID format**: Select the format for the Name ID used to identify users in SAML responses (*Persistent* recommended)
-4. **RelayState** (optional): Configure a default RelayState URL if your IdP supports it. This is where users are redirected after authentication.
-    <Aside> 
-    If you are using Google Workspace as your Identity Provider, set your RelayState URL in the Start URL field in the Google SAML application settings. 
-    </Aside>
+4. **RelayState**: Enter the full URL you decided on in Step 3. This is required for IdP-initiated SSO in Kinde. It is where the browser is sent to *begin* Kinde login, not where the user lands after signing in.
 
-5. **Enable IdP-initiated SSO**: In your IdP's application settings, enable the option to allow IdP-initiated sign-on (the exact setting name varies by provider)
+    Field names vary by provider. Common locations:
+
+    - **Google Workspace**: **Start URL** in the SAML application settings
+    - **Okta**: **Default Relay State**
+    - **Microsoft Entra ID**: **Relay State** in the SAML single sign-on settings
+    - Other IdPs: look for RelayState, Default RelayState, or Start URL
+
+5. **Enable IdP-initiated SSO**: IdP-initiated SSO must be enabled on both sides. Switch on **Accept requests** in Kinde (Step 2), and enable the equivalent option in your IdP's application settings (the exact setting name varies by provider)
 
     <Aside>
+
     IdP-initiated SAML SSO support may vary by Identity Provider. Contact Kinde support if you encounter issues with specific IdP configurations.
+
     </Aside>
 
-6. Copy the **Metadata URL** from your IdP. This is typically found in the SAML application settings or can be downloaded as an XML file. You'll need this URL in the next step.
-  
-## Step 4: Finish setting up your IdP connection
+6. Copy the **Metadata URL** from your IdP. This is typically in the SAML application settings. If you only have an XML file, host it at a **publicly accessible HTTPS URL**, such as a public [AWS S3](https://aws.amazon.com/s3/) object or [Cloudflare R2](https://developers.cloudflare.com/r2/) object. Private objects cannot be used. You need this URL in the next step.
 
-1. Open the connection in Kinde. Go to **Organizations** > **Authentication** or **Settings** > **Authentication**.
-2. Scroll to the **IdP metadata URL** field and paste the Metadata URL you copied from Step 3.
+### 5. Finish setting up your IdP connection
+
+1. Open the connection in Kinde. Go to **Settings > Environment > Authentication** or **Organizations > Authentication**.
+2. Scroll to the **IdP metadata URL** field and paste the Metadata URL you copied from Step 4.
 3. (Optional) Enter the signed certificate and key information if you have it. You can do this later as well. See [Advanced SAML configurations](/authenticate/enterprise-connections/advanced-saml-configurations/) for more details.
-4. Switch on the connection. This will make it instantly available to users if this is your production environment.
-    - For environment-level connections, scroll down and select the apps that will use the auth method.
-    - For organization-level connections, scroll down and select if you want to switch this on for the org.
+4. Switch on the connection. This makes it available to users immediately if this is your production environment.
+    - For environment-level connections, scroll down and select the applications that will use this authentication method.
+    - For organization-level connections, scroll down and choose whether to switch this on for the organization.
 5. Select **Save**. You can now use the IdP for the selected applications.
 
-## Step 5: Test the configuration
+## Test the configuration
 
-### Test SP-initiated flow (standard)
+### SP-initiated flow
 
-1. Navigate to your application's login page
-2. Enter an email address matching a home realm domain
-3. You should be redirected to your IdP
-4. After authentication, you should be redirected back to your app
+This path uses [home realm discovery](/authenticate/enterprise-connections/home-realm-discovery/). If you did not set home realm domains on the connection, enter an email on the Kinde login screen and select the enterprise connection instead.
 
-### Test IdP-initiated flow
+1. Go to your application's login page
+2. Enter an email address that matches a home realm domain
 
-1. Log in to your Identity Provider's portal
-2. Click on your application in the IdP dashboard
-3. You should be redirected to your app and logged in automatically
+You should be redirected to your IdP. After authentication, you should be redirected back to your app.
+
+### IdP-initiated flow
+
+Confirm **Accept requests** is switched on for the connection (Step 2) before you test.
+
+1. Sign in to your Identity Provider's portal
+2. Select your application in the IdP dashboard
+
+Your browser should be sent to your RelayState URL, which starts Kinde login. Because you already have a session at the IdP, you should not be asked for credentials again. You should land back in your app, signed in.
 
 ## Troubleshooting
 
@@ -206,12 +323,20 @@ In your IdP admin console, create a new SAML application with these settings:
 | --- | --- | --- |
 | "Invalid SAML response" | Mismatched Entity ID | Ensure the Entity ID in Kinde matches your IdP configuration exactly |
 | "Signature verification failed" | Certificate mismatch | Verify your IdP's signing certificate is correctly configured |
-| User not created | Provisioning disabled | Enable "Create a user record in Kinde" |
+| User not created | Provisioning disabled | Enable "Create a user record in Kinde". See [Provision users for enterprise](/authenticate/enterprise-connections/provision-users-enterprise/) |
 | Wrong attributes | Attribute mapping | Check that your IdP attribute names match the mapped keys |
+| Nothing happens after selecting the app tile, or you land on the Kinde login screen | RelayState is only `client_id=...&connection_id=...`, or RelayState is not set in the IdP | RelayState must be a full URL including the scheme and host. Confirm it is saved in the IdP (Start URL, Default Relay State, or equivalent) |
+| Login does not complete after the redirect | Your login route is sending a Kinde `/oauth2/auth` URL that contains only `client_id` and `connection_id` | Use your SDK's login method, or include callback, `state`, and PKCE parameters |
+| The ordinary Kinde login screen appears instead of the enterprise connection | Your application's login route is not forwarding `connection_id` | Read `connection_id` from the incoming request and pass it to the SDK as `connectionId` |
+| Nothing happens after selecting the app tile, and **Accept requests** is off | IdP-initiated SSO is disabled on the Kinde connection | Switch **Accept requests** on (Step 2) |
+| Users reach the wrong organization, or the connection isn't offered | An organization-level connection without `org_code` | Include `org_code` in RelayState, preserve it through your login route, and pass it to the SDK |
+| The IdP shows an account picker on the second hop | `login_hint` is not forwarded | Switch on **Use IdP email as login hint** and pass `login_hint` / `loginHint` through to the authorization request |
+| ACS or audience errors | The ACS URL or Entity ID in the IdP does not match Kinde, or you mixed a custom domain ACS with the default `*.kinde.com` ACS | Copy the ACS URL shown on the connection you are using, including custom domain if configured |
+| "Invalid client", or the connection isn't recognized | The client ID and connection ID are from different Kinde environments | Confirm both values come from the same Kinde environment |
 
 ### Error codes
 
-For a comprehensive list of error codes, see [Common errors and codes](/get-started/guides/error-codes/).
+For a full list of error codes, see [Common errors and codes](/get-started/guides/error-codes/).
 
 ## Security best practices
 
@@ -220,8 +345,3 @@ For a comprehensive list of error codes, see [Common errors and codes](/get-star
 - **Use signed requests**: Configure SAML request signing for enhanced security
 - **Enforce MFA at the IdP**: Since authentication happens at the IdP, ensure MFA is required there
 - **Keep certificates current**: Monitor certificate expiration and rotate before they expire
-
-### Conclusion
-
-You've successfully configured IdP-initiated SAML SSO in Kinde. Your enterprise users can now access your application directly from their Identity Provider portal. Remember that while IdP-initiated SSO offers convenience, SP-initiated flows provide additional security validations. Use IdP-initiated SSO only when your enterprise customers specifically require portal-based access. Test both authentication flows thoroughly before enabling in production.
-
