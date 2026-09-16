@@ -153,7 +153,9 @@ Then return to the connection in Kinde and complete the settings that IdP-initia
 
 ### 3. Decide on your RelayState URL
 
-RelayState is how the IdP tells Kinde where to send the browser after the assertion is validated. For this flow, RelayState is required, and it must be a **full, absolute URL**. A bare query string such as `client_id=...&connection_id=...` is not accepted.
+RelayState is how the IdP tells Kinde where to send the browser after the assertion is validated. For this flow, RelayState is required, and it must be a **full, absolute URL** starting with `https://`, or with `http://localhost` when you are testing locally.
+
+A bare query string such as `client_id=...&connection_id=...` is not accepted. Neither is a relative path such as `/login?client_id=...` — Kinde does not resolve it against your Kinde domain. Both fail with error 9055.
 
 The URL should point at the route in your application that starts Kinde login, and it must carry the `client_id` and `connection_id` parameters:
 
@@ -176,7 +178,9 @@ client_id=YOUR_KINDE_CLIENT_ID
 
 The SAML 2.0 specification limits RelayState to 80 bytes. The sample URLs above already exceed that with placeholder values, and real `client_id`, `connection_id`, and `org_code` values make them longer again.
 
-Most identity providers accept longer values, but some enforce the limit and will truncate or reject the value. If your IdP rejects the RelayState URL, or the browser lands somewhere unexpected after the assertion, keep the host and path of your login route as short as possible. If it still doesn't fit, contact Kinde support.
+Kinde does not enforce this limit. It won't reject or truncate a longer RelayState value, and the RelayState Kinde generates for SP-initiated flows is well inside the limit. Any constraint you hit comes from your identity provider: most accept longer values, but some enforce the spec limit and will truncate or reject.
+
+If your IdP rejects the RelayState URL, or the browser lands at a truncated URL, keep the host and path of your login route as short as possible. You can't drop `client_id` or `connection_id` to save space — Kinde requires both.
 
 </Aside>
 
@@ -190,9 +194,11 @@ Kinde redirects the browser to the exact RelayState URL you supply. It does **no
 
 | Parameter | What it does | Notes |
 | --- | --- | --- |
-| `client_id` | Identifies the Kinde application the user is signing in to | Must use this exact query parameter name |
-| `connection_id` | Identifies the enterprise connection to use | Must use this exact query parameter name |
+| `client_id` | Identifies the Kinde application the user is signing in to | Required. Must use this exact query parameter name |
+| `connection_id` | Identifies the enterprise connection to use | Required. Must use this exact query parameter name |
 | `org_code` | Identifies the organization | Required for an organization-level connection. Your application must preserve this value and pass it on to the authorization request |
+
+If either `client_id` or `connection_id` is missing from the RelayState URL, Kinde does not recognize the request as IdP-initiated and sign-in fails with error 9055. Include both, even though Kinde does not use `client_id` to look up your **Application login URI**.
 
 #### Where to find these parameters
 
@@ -330,18 +336,18 @@ Your browser should be sent to your RelayState URL, which starts Kinde login. Be
 | Issue | Possible cause | Solution |
 | --- | --- | --- |
 | "Invalid SAML response" | Mismatched Entity ID | Ensure the Entity ID in Kinde matches your IdP configuration exactly |
-| "Signature verification failed" | Certificate mismatch | Verify your IdP's signing certificate is correctly configured |
+| "Signature verification failed", or error 9055 on an otherwise correct setup | Kinde could not validate the SAML assertion — signature, issuer, audience, recipient, or validity window | Verify your IdP's signing certificate, Entity ID, and ACS URL match the connection in Kinde |
 | User not created | Provisioning disabled | Enable "Create a user record in Kinde". See [Provision users for enterprise](/authenticate/enterprise-connections/provision-users-enterprise/) |
 | Wrong attributes | Attribute mapping | Check that your IdP attribute names match the mapped keys |
-| Nothing happens after selecting the app tile, or you land on the Kinde login screen | RelayState is only `client_id=...&connection_id=...`, or RelayState is not set in the IdP | RelayState must be a full URL including the scheme and host. Confirm it is saved in the IdP (Start URL, Default Relay State, or equivalent) |
+| Nothing happens after selecting the app tile, or you land on the Kinde login screen. Error 9055 | RelayState is only `client_id=...&connection_id=...`, is a relative path, or is not set in the IdP | RelayState must be a full URL including the scheme and host. Confirm it is saved in the IdP (Start URL, Default Relay State, or equivalent) |
 | Login does not complete after the redirect | Your login route is sending a Kinde `/oauth2/auth` URL that contains only `client_id` and `connection_id` | Use your SDK's login method, or include callback, `state`, and PKCE parameters |
 | The ordinary Kinde login screen appears instead of the enterprise connection | Your application's login route is not forwarding `connection_id` | Read `connection_id` from the incoming request and pass it to the SDK as `connectionId` |
-| Nothing happens after selecting the app tile, and **Accept requests** is off | IdP-initiated SSO is disabled on the Kinde connection | Switch **Accept requests** on (Step 2) |
+| Nothing happens after selecting the app tile, and **Accept requests** is off. Error 9055 | IdP-initiated SSO is disabled on the Kinde connection | Switch **Accept requests** on (Step 2) |
 | Users reach the wrong organization, or the connection isn't offered | An organization-level connection without `org_code` | Include `org_code` in RelayState, preserve it through your login route, and pass it to the SDK |
 | The IdP shows an account picker on the second hop | `login_hint` is not forwarded | Switch on **Use IdP email as login hint** and pass `login_hint` / `loginHint` through to the authorization request |
 | ACS or audience errors | The ACS URL or Entity ID in the IdP does not match Kinde, or you mixed a custom domain ACS with the default `*.kinde.com` ACS | Copy the ACS URL shown on the connection you are using, including custom domain if configured |
 | The IdP rejects the RelayState value, or the browser lands at a truncated URL | The RelayState URL exceeds the 80-byte limit in the SAML 2.0 specification and your IdP enforces it | Shorten the host and path of your login route. If it still doesn't fit, contact Kinde support |
-| "Invalid client", or the connection isn't recognized | The client ID and connection ID are from different Kinde environments | Confirm both values come from the same Kinde environment |
+| "Invalid client", or the connection isn't recognized. Error 6722 | The client ID and connection ID are from different Kinde environments, or the connection ID in RelayState doesn't match a SAML connection | Confirm both values come from the same Kinde environment and the connection ID is copied from the connection you configured |
 
 ### Error codes
 
