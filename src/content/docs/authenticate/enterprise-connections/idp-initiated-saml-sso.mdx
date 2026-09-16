@@ -39,7 +39,7 @@ keywords:
   - login_hint
   - Accept requests
   - unsolicited SAML
-updated: 2026-09-07
+updated: 2026-09-16
 ---
 
 In this guide, you'll learn how to configure IdP-initiated SSO in Kinde, including setting up the SAML connection, configuring RelayState, configuring your Identity Provider, and testing both SP-initiated and IdP-initiated authentication flows.
@@ -127,7 +127,7 @@ For extra SAML options, see [Advanced SAML configurations](/authenticate/enterpr
 
 Then return to the connection in Kinde and complete the settings that IdP-initiated SSO depends on.
 
-    ![kinde custom saml connection](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/67daf001-e62e-488a-31ca-0199a8f8db00/socialsharingimage)
+![kinde custom saml connection](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/67daf001-e62e-488a-31ca-0199a8f8db00/socialsharingimage)
 
 1. Copy the **Connection ID**. You need it to create the RelayState URL in Step 3.
 2. Under **IdP-initiated SSO behavior**, configure:
@@ -171,6 +171,14 @@ client_id=YOUR_KINDE_CLIENT_ID
 &connection_id=conn_xxxxxxxx
 &org_code=org_xxxxxxxx
 ```
+
+<Aside type="warning" title="Keep the RelayState URL short">
+
+The SAML 2.0 specification limits RelayState to 80 bytes. The sample URLs above already exceed that with placeholder values, and real `client_id`, `connection_id`, and `org_code` values make them longer again.
+
+Most identity providers accept longer values, but some enforce the limit and will truncate or reject the value. If your IdP rejects the RelayState URL, or the browser lands somewhere unexpected after the assertion, keep the host and path of your login route as short as possible. If it still doesn't fit, contact Kinde support.
+
+</Aside>
 
 <Aside type="warning" title="Kinde uses the exact URL you provide">
 
@@ -332,6 +340,7 @@ Your browser should be sent to your RelayState URL, which starts Kinde login. Be
 | Users reach the wrong organization, or the connection isn't offered | An organization-level connection without `org_code` | Include `org_code` in RelayState, preserve it through your login route, and pass it to the SDK |
 | The IdP shows an account picker on the second hop | `login_hint` is not forwarded | Switch on **Use IdP email as login hint** and pass `login_hint` / `loginHint` through to the authorization request |
 | ACS or audience errors | The ACS URL or Entity ID in the IdP does not match Kinde, or you mixed a custom domain ACS with the default `*.kinde.com` ACS | Copy the ACS URL shown on the connection you are using, including custom domain if configured |
+| The IdP rejects the RelayState value, or the browser lands at a truncated URL | The RelayState URL exceeds the 80-byte limit in the SAML 2.0 specification and your IdP enforces it | Shorten the host and path of your login route. If it still doesn't fit, contact Kinde support |
 | "Invalid client", or the connection isn't recognized | The client ID and connection ID are from different Kinde environments | Confirm both values come from the same Kinde environment |
 
 ### Error codes
