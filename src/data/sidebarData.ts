@@ -199,6 +199,15 @@ const sidebarData = [
     ]
   },
   {
+    label: "Workforce identity",
+    description:
+      "Use Kinde as a SAML identity provider so your team can sign in to third-party tools",
+    icon: "workforce-identity",
+    collapsed: true,
+    cardLink: "/workforce-identity/",
+    autogenerate: {directory: "workforce-identity"}
+  },
+  {
     label: "Testing",
     description:
       "Test your application's authentication flows, passwordless flows, and backend APIs",
