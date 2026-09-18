@@ -35,7 +35,7 @@ keywords:
   - Cloudflare
   - SSO
   - JIT provisioning
-updated: 2026-03-26
+updated: 2026-09-18
 ---
 
 Enterprise authentication is a common method for managing user access to systems in large organizations.
@@ -107,23 +107,47 @@ Learn more about [home realm discovery](/authenticate/enterprise-connections/hom
 
 ## Show or hide the SSO sign-in button on the auth page
 
-When you set up enterprise auth in Kinde, an SSO button appears on the authentication page which is linked to the IdP by default. Users can select this as a sign up method, similar to how they might select a Google or Facebook sign-in option. For a more seamless experience, you can hide the SSO button by entering a home realm domain for the connection (more info above). Users will be routed silently via their IdP when they enter their credentials.
+When you set up enterprise auth in Kinde, an SSO button appears on the authentication page, linked to the IdP. Users can select this as a sign-in method, similar to how they might select a Google or Facebook sign-in option.
 
-If you have multiple enterprise auth methods (E.g. SAML and Entra ID), you may not want to show multiple SSO buttons. Here's the options for showing and hiding, depending how many enterprise auth methods you add:
+Each enterprise connection has a **Sign-in button** option that controls when its button appears. You'll find it on the connection configuration page, below the **Home realm domains** field.
+
+| Option | When the SSO button appears |
+| --- | --- |
+| **Auto** (default) | Only when the connection has no home realm domains. If you add home realm domains, the button is hidden and users are routed silently based on their email domain. |
+| **Show** | Always, even when home realm domains are set. |
+| **Hide** | Never. |
+
+<Aside>
+
+**Hide** only hides the button — it does not switch off the connection. Users whose email domain matches a home realm domain on the connection are still routed to the IdP and signed in, and IdP-initiated sign-in still works. If you want to stop users signing in via a connection entirely, [disable the connection](#disable-an-enterprise-connection) instead.
+
+</Aside>
+
+If you have multiple enterprise auth methods (e.g. SAML and Entra ID), you may not want to show multiple SSO buttons. Here are the options for showing and hiding, depending on how many enterprise auth methods you add.
 
 ### (Option 1) Hide all SSO buttons
 
-If you configure home realm discovery in each enterprise auth method, all SSO buttons will be hidden by default. The user enters their credentials and they are silently authenticated against the relevant IdP based on email domain.
+If you configure home realm discovery on each enterprise auth method and leave **Sign-in button** set to **Auto**, all SSO buttons are hidden. The user enters their credentials and they are silently authenticated against the relevant IdP based on email domain.
+
+To hide a connection's button when the connection has no home realm domains — or to hide it even though home realm domains are set — set **Sign-in button** to **Hide**.
 
 ### (Option 2) Show a universal SSO button for all
 
-If you would prefer users explicitly choose to sign in with SSO, you can add a universal button to the sign in screen. 
+If you would prefer users explicitly choose to sign in with SSO, you can add a universal button to the sign in screen.
 
 1. Go to **Settings > Applications > Your application**.
-2. On the **Details** page scroll down to the **Authentication experience** section. 
+2. On the **Details** page scroll down to the **Authentication experience** section.
 3. Switch on **Show 'Sign in with SSO' button**.
 
-Users click the universal button, enter their credentials, and get routed silently to the IdP for verification. 
+Users click the universal button, enter their credentials, and get routed silently to the IdP for verification.
+
+The universal **Sign in with SSO** button is separate from the per-connection buttons. It is not affected by the **Sign-in button** option on individual connections.
+
+### (Option 3) Show a button for specific connections only
+
+If you want a button for some connections but not others, set **Sign-in button** to **Show** on the connections you want users to see, and **Hide** on the rest. This is useful when you have one connection you want to promote — for example a primary IdP — alongside several that should only ever be reached through home realm discovery.
+
+![Sign-in button set to Hide on an Entra ID connection](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/16f337f3-a346-4a4d-e6c6-f8494065b400/public)
 
 ## Service Provider vs Identity Provider initiated SSO
 
