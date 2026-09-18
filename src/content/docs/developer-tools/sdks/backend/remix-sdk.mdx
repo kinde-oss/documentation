@@ -1,7 +1,7 @@
 ---
 page_id: 035c5c07-276f-4172-bb09-de8ca15c0ba2
 title: Remix SDK
-description: "Complete guide for Remix SDK including authentication setup, route protection, session management, and internationalization for Remix applications."
+description: "Complete guide for Remix SDK including installation, route handlers, environment configuration, protecting routes, refreshing Kinde data, organizations, analytics, and more for Remix applications."
 sidebar:
   order: 11.1
 head:
@@ -30,35 +30,55 @@ keywords:
   - session management
   - internationalization
   - organizations
-updated: 2024-01-15
+updated: 2026-01-07
 featured: false
 deprecated: false
-ai_summary: Complete guide for Remix SDK including authentication setup, route protection, session management, and internationalization for Remix applications.
+ai_summary: Complete guide for Remix SDK including installation, route handlers, environment configuration, protecting routes, refreshing Kinde data, organizations, analytics, and more for Remix applications.
 ---
 
 This SDK is for developers using Remix.
 
-New to Kinde? [Get started here](/get-started/guides/first-things-first/).
+New to Kinde? [Refer to the Getting Started guide](/get-started/guides/first-things-first/).
 
-## Create a back end application in Kinde
+## Installation – New Project
 
-The Remix SDK works with back end applications. Create one in Kinde. See [Add and manage applications](/build/applications/add-and-manage-applications/).
+The fastest way to start is with the [Remix starter kit](https://github.com/kinde-starter-kits/kinde-remix-starter-kit). Clone the repository and add your Kinde application details.
 
-## Install the Kinde Remix SDK into your Remix project
+## Installation – Existing Project
 
 <PackageManagers pkg="@kinde-oss/kinde-remix-sdk" />
 
-## **Set callback URLs**
+If you intend to use the optional client-side `KindeProvider` component (illustrated in the example below), also install the React authentication helpers:
 
-1. In Kinde, go to **Settings > Applications > [Your app] > View details**.
-2. Add your callback URLs in the relevant fields. For example:
-   - Allowed callback URLs (also known as redirect URIs) - for example `http://localhost:3000/kinde-auth/callback`
-   - Allowed logout redirect URLs - for example `http://localhost:3000`
-3. Select **Save**.
+```bash
+npm install @kinde-oss/kinde-auth-react
+# or
+yarn add @kinde-oss/kinde-auth-react
+```
 
-## Set up environment variables
+To utilize portal navigation utilities (e.g. `PortalPage`), install the JavaScript utilities package:
 
-While you are in your Kinde backend application, copy the Client ID and Client secret, redirect URLs, etc. Add these details to the Environment variables for your application.
+```bash
+npm install @kinde/js-utils
+# or
+yarn add @kinde/js-utils
+```
+
+## Set callback URLs
+
+The Remix SDK works with back-end applications. Create one in Kinde. See [Add and manage applications](/build/applications/add-and-manage-applications/).
+
+1. In the Kinde dashboard, go to **Settings > Applications > [Your app] > View details**.
+2. Add your callback URLs in the corresponding fields. For example:
+   - Allowed callback URLs (redirect URIs) - e.g. `http://localhost:3000/kinde-auth/callback`
+   - Allowed logout redirect URLs - e.g. `http://localhost:3000`
+3. Click **Save**.
+
+## Environment Variables
+
+While configuring your backend application in the Kinde dashboard, copy the **Client ID**, **Client Secret**, **Issuer URL**, and any required redirect URIs. Store these values securely in your application's environment variables.
+Add `KINDE_AUDIENCE` if your application needs to call protected APIs (this populates the `aud` claim in access tokens).
+
 
 `.env`
 
@@ -69,11 +89,14 @@ KINDE_ISSUER_URL=https://<your-kinde-subdomain>.kinde.com
 KINDE_SITE_URL=http://localhost:3000
 KINDE_POST_LOGOUT_REDIRECT_URL=http://localhost:3000
 KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000
+KINDE_AUDIENCE=<optional-audience>
 ```
 
-## Set up authentication routes
+## Authentication Route Handler
 
-Create this file `app/routes/kinde-auth.$index.tsx`.
+Create a catch-all route to handle all Kinde authentication endpoints (login, logout, callback, register, health check, etc.) - e.g. `app/routes/kinde-auth.$index.tsx`
+
+
 
 ```jsx
 import { handleAuth } from "@kinde-oss/kinde-remix-sdk";
@@ -81,6 +104,78 @@ import { LoaderFunctionArgs } from "@remix-run/node";
 
 export async function loader({ params, request }: LoaderFunctionArgs) {
   return await handleAuth(request, params.index);
+}
+```
+
+## Custom Base Path
+
+By default, authentication endpoints are mounted at `/kinde-auth/`. *To use a different prefix (e.g. `/auth/`):*
+
+1. Rename the file → `app/routes/auth.$index.tsx`
+2. Update all references (links, redirects) from `/kinde-auth/...` to the new path
+
+## Session Management
+
+Remix handles protection and session validation via `loaders`. Always return the `headers` object from `getKindeSession` in your responses to enable automatic background refresh token rotation.
+```ts
+import { json, LoaderFunctionArgs } from "@remix-run/node";
+import { getKindeSession } from "@kinde-oss/kinde-remix-sdk";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const session = await getKindeSession(request);
+  const { isAuthenticated, headers } = session;
+
+  if (!(await isAuthenticated())) {
+    return json({ signedIn: false }, { headers });
+  }
+
+  return json({ signedIn: true }, { headers });
+};
+```
+
+## Client-Side Auth Context (KindeProvider)
+
+Although the SDK is primarily server-oriented, you can expose authentication state to React components using the KindeProvider.
+
+```tsx
+// app/root.tsx
+import {
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  useLoaderData
+} from "@remix-run/react";
+import { json, LoaderFunctionArgs } from "@remix-run/node";
+import { getKindeSession } from "@kinde-oss/kinde-remix-sdk";
+import { KindeProvider } from "@kinde-oss/kinde-auth-react";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { getUser, headers, isAuthenticated } = await getKindeSession(request);
+  const user = await getUser();
+
+  return json({ user, isAuthenticated: await isAuthenticated() }, { headers });
+};
+
+export default function App() {
+  const data = useLoaderData<typeof loader>();
+
+  return (
+    <html lang="en">
+      <head>
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        <KindeProvider initialUser={data.user} isAuthenticated={data.isAuthenticated}>
+          <Outlet />
+        </KindeProvider>
+        <ScrollRestoration />
+        <Scripts />
+      </body>
+    </html>
+  );
 }
 ```
 
@@ -99,6 +194,27 @@ import { Link } from "@remix-run/react";
 
 <Link to={"/kinde-auth/register"}>
   Register
+</Link>
+```
+
+### Redirecting after authentication
+
+**Static redirect**
+
+Set `KINDE_POST_LOGIN_REDIRECT_URL` in `.env` to send users to a fixed page after login.
+
+**Dynamic redirect**
+
+Append `post_login_redirect_url` or `returnTo` to the login/register URL for per-request redirects.
+
+```jsx
+<Link
+  to={{
+    pathname: "/kinde-auth/login",
+    search: "?post_login_redirect_url=/dashboard"
+  }}
+>
+  Login
 </Link>
 ```
 
@@ -142,31 +258,6 @@ import {Link} from "@remix-run/react";
 <Link to={"/kinde-auth/logout"}>Logout</Link>;
 ```
 
-### Protect routes
-
-In the `loader`, check if the user exists and then handle route protection there.
-
-In this example we will redirect the user to sign in if there is no login data.
-
-```typescript
-export const loader = async ({request}: LoaderFunctionArgs) => {
-  const {getUser, headers} = await getKindeSession(request);
-  const user = await getUser();
-
-  if (user === null) {
-    throw redirect("/kinde-auth/login");
-  }
-
-  return json({user}, {headers});
-};
-```
-
-<Aside>
-
-Note that passing the headers through in the `json` response is required to ensure refresh tokens can be used in the background to keep the session alive.
-
-</Aside>
-
 ### Return to a specific page after authentication
 
 After a user has logged in following a redirect from a protected route, we usually want to send the user back to the page they were trying to access prior to logging in.
@@ -205,7 +296,7 @@ export async function loader({params, request}: LoaderFunctionArgs) {
 }
 ```
 
-## Kinde session data - `getKindeSession()`
+## Kinde Auth data - Server
 
 ```jsx
 const {
@@ -226,81 +317,314 @@ const {
 } = await getKindeSession(request);
 ```
 
-### **Claims**
+### Claims
 
-`getClaim(claim, type)`: Fetches a specific claim from the user's session based on the provided claim name and type. Returns an object with `name` and `value` properties, or null on error.
+- `getClaim(claim, type)`: Fetch a claim by name and token type.
+- `getClaimValue(claim, type)`: Return only the claim value.
 
-`getClaimValue(claim, type)`: Similar to `getClaim`, but retrieves only the claim's value. Returns the value or null on error.
+### Authentication and user information
 
-### **Authentication and user information**
+- `getToken()`: Current access token or null.
+- `refreshTokens()`: Refresh access and refresh tokens.
+- `isAuthenticated()`: Returns true/false.
+- `getUser()`: Returns user info or null.
+- `getUserProfile()`: Fetches the user's profile.
 
-`getToken()`: Retrieves the current access token from the session. Returns the token or null when the user is not authenticated or on error.
+### Feature flags
 
-`refreshTokens()`: Attempts to refresh the user's access and refresh tokens. Returns true on success or throws an error.
+- `getFlag(code, defaultValue, type)`
+- `getBooleanFlag(code, defaultValue)`
+- `getIntegerFlag(code, defaultValue)`
+- `getStringFlag(code, defaultValue)`
 
-`isAuthenticated()`: Checks if a valid session exists, indicating a logged-in user. Returns true if authenticated, otherwise false.
+### Permissions
 
-`getUser()`: Retrieves the user information associated with the current session. Returns a user object or null on error or if the user is not authenticated.
+- `getPermission(permission)`
+- `getPermissions()`
 
-`getUserProfile()`: Fetches the user's profile details from Kinde. Returns a user profile object or null on error or if the user is not authenticated.
+### Organizations
 
-### **Feature flags**
+- `getOrganization()`
+- `getUserOrganizations()`
 
-`getFlag(code, defaultValue, type)`: Retrieves a feature flag value by code. Optionally provides a default value and type for parsing the retrieved value. Returns the flag value or the default value on error.
+## Kinde Auth data - Client
 
-`getBooleanFlag(code, defaultValue)`: Retrieves a boolean feature flag.
+Pass data from your loader to the UI. Example of exposing user info to the route component:
 
-`getIntegerFlag(code, defaultValue)`: Retrieves an integer feature flag.
+```tsx
+// app/routes/dashboard.tsx
+import { json, LoaderFunctionArgs } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
+import { getKindeSession } from "@kinde-oss/kinde-remix-sdk";
 
-`getStringFlag(code, defaultValue)`: Retrieves a string feature flag.
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { getUser, headers, isAuthenticated } = await getKindeSession(request);
+  const user = await getUser();
 
-### **Permissions**
+  return json({ user, isAuthenticated: await isAuthenticated() }, { headers });
+};
 
-`getPermission(permission)`: Checks if a specific permission is granted to the user. Returns true if granted, false otherwise.
+export default function Dashboard() {
+  const { user, isAuthenticated } = useLoaderData<typeof loader>();
 
-`getPermissions()`: Retrieves all permissions associated with the user's session. Returns an array of permission strings or an empty array on error.
+  if (!isAuthenticated) return <p>Please sign in.</p>;
+  return <p>Welcome back, {user?.given_name}</p>;
+}
+```
 
-### **Organizations**
+## Protecting routes
 
-`getOrganization()`: Fetches information about the user's current organization. Returns an organization object or null on error.
+Use the loader example above to block unauthenticated users. To automatically redirect back to the requested route after login, include `returnTo` in the login/register link.
 
-`getUserOrganizations()`: Retrieves a list of organizations the user belongs to. Returns an array of organization objects or an empty array on error.
+```tsx
+// app/routes/protected.tsx
+import { json, LoaderFunctionArgs, redirect } from "@remix-run/node";
+import { useLoaderData, Link } from "@remix-run/react";
+import { getKindeSession } from "@kinde-oss/kinde-remix-sdk";
 
-## Using refresh tokens
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { getUser, headers, isAuthenticated } = await getKindeSession(request);
 
-Refresh tokens used to keep the user session alive. You can pass through the `headers` from `getKindeSession` through to the loader fetch response. Or you can use the `refreshTokens` function to refresh the user's access and refresh tokens manually.
+  if (!(await isAuthenticated())) {
+    throw redirect("/kinde-auth/login?returnTo=/protected");
+  }
+
+  const user = await getUser();
+  return json({ user }, { headers });
+};
+
+export default function Protected() {
+  const { user } = useLoaderData<typeof loader>();
+  return (
+    <div>
+      <p>This page is protected.</p>
+      <p>Welcome {user?.given_name}</p>
+      <Link to="/kinde-auth/logout">Logout</Link>
+    </div>
+  );
+}
+```
+
+## Refreshing Kinde data
+
+Pass the `headers` returned from `getKindeSession` in your loader/action responses so refresh tokens rotate automatically. You can also call `refreshTokens()` manually when you need the latest data (for example after a mutation).
 
 ```typescript
+import { json, LoaderFunctionArgs } from "@remix-run/node";
+import { getKindeSession } from "@kinde-oss/kinde-remix-sdk";
+
 // Refresh tokens in the background
 export const loader = async ({request}: LoaderFunctionArgs) => {
   const {headers} = await getKindeSession(request);
-  return json({paylod: "Refreshing tokens in the backgrounf"}, {headers});
+  return json({payload: "Refreshing tokens in the background"}, {headers});
 };
 
-// Refresh tokens manually
-export const action = ({request}: ActionFunctionArgs) => {
-  const {refreshTokens} = await getKindeSession(request);
-  const headers = refreshTokens();
-  return redirect("/profile", {headers});
-};
 ```
 
-## Get up-to-date Kinde data
+To refresh tokens manually (e.g., before a redirect):
 
-To get up-to-date Kinde data into your app you can use the `refreshTokens` function in an `action` function and then include the headers in the response.
+```typescript
+import { ActionFunctionArgs, redirect } from "@remix-run/node";
+import { getKindeSession } from "@kinde-oss/kinde-remix-sdk";
 
-```jsx
-export const action = ({request}: ActionFunctionArgs) => {
+export const action = async ({request}: ActionFunctionArgs) => {
   const {refreshTokens} = await getKindeSession(request);
-  const headers = refreshTokens();
-  return redirect('/profile', {headers});
-}
+  const headers = await refreshTokens();
+  return redirect("/profile", {headers});
+};
+
+```
+
+To refresh after a mutation and return updated data:
+
+```typescript
+import { json, ActionFunctionArgs } from "@remix-run/node";
+import { getKindeSession } from "@kinde-oss/kinde-remix-sdk";
+
+export const action = async ({request}: ActionFunctionArgs) => {
+  const { refreshTokens, getUser } = await getKindeSession(request);
+  // ...perform your mutation here...
+  const headers = await refreshTokens();
+  const user = await getUser();
+  return json({ user }, { headers });
+};
 ```
 
 ## Kinde Management API
 
-To use our management API please see [@kinde/management-api-js](https://github.com/kinde-oss/management-api-js)
+To use our management API please see [@kinde/management-api-js](https://github.com/kinde-oss/management-api-js).
 
+Server loader example:
+
+```typescript
+import { json, LoaderFunctionArgs } from "@remix-run/node";
+import { Roles, Users } from "@kinde/management-api-js";
+import { getKindeSession } from "@kinde-oss/kinde-remix-sdk";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { headers } = await getKindeSession(request);
+
+  const { roles } = await Roles.getRoles();
+  const { users } = await Users.getUsers();
+
+  return json({ roles, users }, { headers });
+};
 ```
 
+## Organizations
+
+- To log users into a specific organization, set `org_code` on your login/register links (as shown above).
+- To create an organization from your app, link to `/kinde-auth/create_org` or use the Management API.
+
+```tsx
+// Create org via Kinde Auth route
+<Link
+  to={{
+    pathname: "/kinde-auth/create_org",
+    search: "?org_name=Hurlstone"
+  }}
+>
+  Create org
+</Link>
 ```
+
+If `org_code` is not specified and the user belongs to multiple organizations, they’ll be prompted to choose during login/registration.
+
+## Self-Serve Portal
+
+Send users to the self-serve portal by linking to the portal URL returned from the [Self-serve portal API](/build/self-service-portal/self-serve-portal-for-orgs/) or by using a stored URL in your app.
+
+```tsx
+<Link to="https://<your-kinde-subdomain>.kinde.com/portal">Open portal</Link>
+```
+
+### subNav
+
+Use `subNav` to land users on a specific portal area.
+
+```tsx
+import { Link } from "@remix-run/react";
+import { PortalPage } from "@kinde/js-utils";
+
+<Link to={`https://<your-kinde-subdomain>.kinde.com/portal?subNav=${PortalPage.organizationPaymentDetails}`}>
+  Manage billing
+</Link>;
+```
+
+<Aside>
+
+`PortalPage` lives in `@kinde/js-utils`, so add that package if you use `subNav` examples.
+
+</Aside>
+
+### returnUrl
+
+Send users back to your app after portal actions with an absolute `returnUrl`.
+
+```tsx
+<Link to="https://<your-kinde-subdomain>.kinde.com/portal?returnUrl=https://app.example.com/settings">
+  Open portal
+</Link>
+```
+
+## Analytics
+
+Attach UTM parameters to your auth links to track traffic sources.
+
+```jsx
+<Link
+  to={{
+    pathname: "/kinde-auth/login",
+    search: "?utm_source=reddit&utm_medium=social&utm_campaign=remix"
+  }}
+>
+  Login
+</Link>
+```
+
+## Internationalization
+
+Include `lang` in the search params when sending users to login or register.
+
+```jsx
+<Link
+  to={{
+    pathname: "/kinde-auth/login",
+    search: "?lang=fr"
+  }}
+>
+  Login
+</Link>
+```
+
+## Audience
+
+An `audience` is the intended recipient of an access token. Set `KINDE_AUDIENCE` in `.env` to populate the `aud` claim.
+
+```env
+KINDE_AUDIENCE=<your-api>
+KINDE_AUDIENCE="<api-one> <api-two>"  # multiple audiences (space separated)
+```
+
+## Working with subdomains
+
+If you use a custom domain and start auth on `auth.mysite.com` but redirect back to `app.mysite.com`, set `KINDE_COOKIE_DOMAIN=.mysite.com` so cookies are available across subdomains.
+
+```shell
+KINDE_COOKIE_DOMAIN=.mysite.com
+```
+
+## Working with preview URLs
+
+When deploying to environments with dynamic URLs (for example Vercel previews), set `KINDE_SITE_URL`, `KINDE_POST_LOGOUT_REDIRECT_URL`, and `KINDE_POST_LOGIN_REDIRECT_URL` at build time to the preview URL. Wildcards are supported in Kinde callback/logout URLs if you prefer a simpler setup.
+
+```bash
+# example in a Remix deploy script
+export KINDE_SITE_URL="https://${VERCEL_URL}"
+export KINDE_POST_LOGOUT_REDIRECT_URL="https://${VERCEL_URL}"
+export KINDE_POST_LOGIN_REDIRECT_URL="https://${VERCEL_URL}/dashboard"
+```
+
+To keep Kinde allowlists up to date, you can use an M2M token with the Kinde Management API to add the preview callback/logout URLs during your deploy step (similar to the Next.js example).
+
+## Health check
+
+`/kinde-auth/health` exposes your configuration. The client secret is masked (only indicates if it is set correctly).
+
+```json
+{
+  "apiPath": "/kinde-auth",
+  "redirectURL": "http://localhost:3000/kinde-auth/callback",
+  "postLoginRedirectURL": "http://localhost:3000",
+  "issuerURL": "https://<your_kinde_subdomain>.kinde.com",
+  "clientID": "<your_kinde_client_id>",
+  "clientSecret": "Set correctly",
+  "postLogoutRedirectURL": "http://localhost:3000",
+  "logoutRedirectURL": "http://localhost:3000"
+}
+```
+
+## State not found error
+
+### Solution
+
+1. Ensure the domain you start auth on matches the domain you return to (including preview domains).
+2. Dynamically set `KINDE_SITE_URL` and `KINDE_POST_LOGIN_REDIRECT_URL` for each environment (preview/staging/production).
+
+### Explanation
+
+If the domain where the auth flow starts differs from the callback domain, the `state` cookie cannot be validated and the flow is rejected. Keep the origin consistent or set environment variables per deployment URL.
+
+## Debug mode
+
+Enable verbose logs when troubleshooting.
+
+```shell
+KINDE_DEBUG_MODE=true
+```
+
+## Migration guide
+
+- `handleAuth` is provided by `@kinde-oss/kinde-remix-sdk` and must be mounted at the auth route.
+- Functions returned from `getKindeSession` return promises; `await` them in loaders/actions.
+
