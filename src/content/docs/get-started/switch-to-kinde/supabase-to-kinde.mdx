@@ -9,7 +9,7 @@ tableOfContents:
 relatedArticles:
   - c4bc277a-5ec7-418c-ba1c-4d58c9ddfd7d
   - f6eaf29b-d8d9-4caf-bc1d-5319b6fb8ffc
-  - 8b3e1d47-2f96-4a0c-c8d5-6e7a2b9f3150
+  - 1977cf9a-cde0-4d88-85a7-92173771b191
   - e89d246a-5cdf-4993-9cee-94b31ec27583
 description: Export users and hashed passwords from Supabase Auth and import them into Kinde. Supabase uses bcrypt, which Kinde supports natively — users keep their existing passwords.
 topics:
@@ -38,7 +38,7 @@ keywords:
   - bulk import
   - sql export
   - social login migration
-updated: 2026-05-05
+updated: 2026-08-05
 featured: false
 deprecated: false
 ai_summary: "Step-by-step guide for migrating users from Supabase Auth to Kinde using a bulk CSV import. Supabase stores passwords as bcrypt hashes in the auth.users table, which is not accessible via the standard API. Users are exported by running a SQL query in the Supabase SQL Editor — selecting id, email, encrypted_password, email_verified (derived from email_confirmed_at), and name fields from raw_user_meta_data. The exported CSV requires one column rename (encrypted_password to hashed_password) and a new hashing_method column set to bcrypt for every row. Social and OAuth users stored in auth.identities can be imported by email and will re-link their social login on first sign-in. The prepared CSV is imported in Kinde via Users > Import users > Custom CSV. Password authentication must be enabled in Kinde before importing hashed passwords. Links to the full bulk import guide for additional CSV fields covering organizations, roles, and permissions."
@@ -48,7 +48,7 @@ Migrate your users from Supabase Auth to Kinde. Supabase stores passwords as bcr
 
 ### What you need
 
-- A Kinde account with **Admin** access 
+- A Kinde account with **Admin** access
 - Kinde account configured to match your current auth provider - see [before you migrate](/get-started/switch-to-kinde/switch-to-kinde-for-user-authentication/#before-you-migrate)
 - Supabase account with SQL editor permissions
 
@@ -67,17 +67,17 @@ Migrate your users from Supabase Auth to Kinde. Supabase stores passwords as bcr
 2. Go to **SQL Editor** in the sidebar.
 3. Run the following query:
 
-    ```sql
-    SELECT
-      id,
-      email,
-      encrypted_password AS hashed_password,
-      CASE WHEN email_confirmed_at IS NOT NULL THEN 'TRUE' ELSE 'FALSE' END AS email_verified,
-      raw_user_meta_data->>'first_name' AS first_name,
-      raw_user_meta_data->>'last_name'  AS last_name
-    FROM auth.users
-    WHERE email IS NOT NULL;
-    ```
+   ```sql
+   SELECT
+     id,
+     email,
+     encrypted_password AS hashed_password,
+     CASE WHEN email_confirmed_at IS NOT NULL THEN 'TRUE' ELSE 'FALSE' END AS email_verified,
+     raw_user_meta_data->>'first_name' AS first_name,
+     raw_user_meta_data->>'last_name'  AS last_name
+   FROM auth.users
+   WHERE email IS NOT NULL;
+   ```
 
 4. In the results panel, set the row limit to **No Limit** so all users are returned.
 5. Select **Export** and choose **Download CSV**.
@@ -92,15 +92,15 @@ If your app stores names under different keys in `raw_user_meta_data` (e.g. `ful
 
 The SQL query exports columns that mostly match Kinde's expected names. Rename the one that differs and add the `hashing_method` column.
 
-| Supabase column | Rename to | Notes |
-|---|---|---|
-| `email` | `email` | Required — primary sign-in identifier |
-| `id` | `id` | Keep as-is |
-| `email_verified` | `email_verified` | Keep as-is — `TRUE` or `FALSE` |
-| `first_name` | `first_name` | Keep as-is |
-| `last_name` | `last_name` | Keep as-is |
-| `encrypted_password` | `hashed_password` | bcrypt hash — preserves existing passwords |
-| *(new column)* | `hashing_method` | Add this column and set every row to `bcrypt` |
+| Supabase column      | Rename to         | Notes                                         |
+| -------------------- | ----------------- | --------------------------------------------- |
+| `email`              | `email`           | Required — primary sign-in identifier         |
+| `id`                 | `id`              | Keep as-is                                    |
+| `email_verified`     | `email_verified`  | Keep as-is — `TRUE` or `FALSE`                |
+| `first_name`         | `first_name`      | Keep as-is                                    |
+| `last_name`          | `last_name`       | Keep as-is                                    |
+| `encrypted_password` | `hashed_password` | bcrypt hash — preserves existing passwords    |
+| _(new column)_       | `hashing_method`  | Add this column and set every row to `bcrypt` |
 
 For the full list of supported CSV fields — including organizations, roles, and permissions — see [Prepare your CSV](/get-started/switch-to-kinde/migrate-users-bulk-import/#3-prepare-your-csv) in the bulk import guide.
 

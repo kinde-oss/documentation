@@ -1,23 +1,26 @@
 ---
 page_id: 51899f7f-3436-46e0-9a1b-6ecc3603a0df
 title: Register and manage APIs
-description: "Guide to registering and managing APIs in Kinde, including audience configuration, OpenAPI scope imports, authorization setup, and API keys"
+description: "Register APIs in Kinde, set audiences, import OpenAPI scopes for MCP, and manage app authorization and API keys"
 sidebar:
   order: 1
 relatedArticles:
   - cffc17b9-2d10-4f42-8c84-a12b263a6040
   - b98cb579-f80c-4f17-92a6-059f976ae081
+  - edb34665-0eda-47a1-b8e1-89f705c6ac87
 app_context:
   - m: settings
     s: apis
 topics:
   - developer-tools
   - your-apis
+  - openapi
 sdk:
   - react
 languages:
   - javascript
   - jsx
+  - json
 audience:
   - developers
   - admins
@@ -27,14 +30,14 @@ keywords:
   - audience
   - aud claim
   - m2m token
-  - user token
-  - authorization
   - openapi spec
+  - mcp connections
   - api keys
-updated: 2026-06-05
+  - authorize application
+updated: 2026-07-15
 featured: false
 deprecated: false
-ai_summary: "This guide explains how to register and manage custom APIs in Kinde so your front-end and back-end can authenticate securely. You register an API by providing a name and a unique audience value, then authorize specific Kinde applications to access it from the API details page. Once linked, the API audience can be included in access tokens when your front-end passes the audience parameter through an SDK or when machine-to-machine clients request tokens from the OAuth token endpoint. The guide describes how Kinde validates the audience against registered APIs and returns the aud claim, with examples for user tokens via the React SDK and M2M tokens using the client credentials grant. On Kinde Plus and higher, you can upload OpenAPI 3.x or Swagger 2 files to automatically generate scopes from your API operations. Additional topics include creating API keys for customer access through the self-serve portal, scoping keys to organizations, authorizing or revoking application access, and permanently deleting APIs you no longer need."
+ai_summary: "Guide to registering and managing custom APIs in Kinde so front-end and back-end apps can authenticate securely. Covers registering an API with a name and unique audience, authorizing applications, and including the audience in user tokens via SDKs such as React or in M2M tokens via the client credentials grant. Explains how Kinde validates the audience and returns the aud claim. On Kinde Plus and higher, you can upload OpenAPI 3.x or Swagger 2 files to generate scopes and MCP tool metadata, including upstream base URL from servers[0].url for MCP proxying. Also covers creating and scoping API keys, authorizing or revoking app access, and deleting APIs. Intended for developers and admins setting up API access in Kinde."
 ---
 
 If you manage your application’s data using APIs, you can register them with Kinde.
@@ -68,6 +71,17 @@ After you register a custom API, you can upload an OpenAPI 3.x or Swagger 2 file
     Your file will be uploaded and Kinde will parse it to generate scopes.
 
 Generated scopes appear on the **Scopes** tab and can be authorized for your applications and API keys. For full details on how scopes are named, how re-imports work, and how to delete an import, see [Import scopes from an OpenAPI spec](/developer-tools/your-apis/custom-api-scopes/#import-scopes-from-an-openapi-spec).
+
+### OpenAPI specs and MCP connections
+
+When you upload an OpenAPI spec, Kinde also stores MCP tool metadata for each operation (HTTP method, path, tool name, and description). The first server URL in the spec (`servers[0].url`) is stored as the upstream base URL used when Kinde proxies MCP tool calls to your API.
+
+If you use [MCP connections for your APIs](/mcp-servers/add-mcp-connection/):
+
+- Re-importing a spec updates tools on active connections that use that API.
+- Scopes generated from the spec control which tools a user API key can access when connected via MCP.
+
+Include a reachable `servers[0].url` in the spec so upstream tool calls have a valid base URL.
 
 <Aside>
 
