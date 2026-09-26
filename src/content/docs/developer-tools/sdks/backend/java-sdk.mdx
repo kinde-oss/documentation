@@ -711,7 +711,13 @@ Link to it from your app, for example:
 <a href="${pageContext.request.contextPath}/logout">Sign out</a>
 ```
 
-`KINDE_LOGOUT_REDIRECT_URI` must be set (see below) and added to **Allowed logout redirect URLs** in Kinde, or the logout request will fail.
+<Aside type="warning">
+
+`KindeLogoutServlet` only supports `GET` and has no CSRF protection, so another site can sign your users out by linking to or embedding `/logout`. This can't expose user data, but take it into account when deciding how to expose the endpoint.
+
+</Aside>
+
+`KINDE_LOGOUT_REDIRECT_URI` must be set (see below). If it isn't, `/logout` fails with a server error and the user stays signed in to Kinde. The URL must also exactly match one of your **Allowed logout redirect URLs** in Kinde. If it doesn't, Kinde ends the session but shows its default logged-out page instead of redirecting to your app.
 
 ### Environment configuration
 
