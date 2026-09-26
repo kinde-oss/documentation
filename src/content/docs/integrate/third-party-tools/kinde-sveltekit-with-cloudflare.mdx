@@ -1,0 +1,333 @@
+---
+page_id: 4f3a9e2a-12eb-4b4c-8790-48b6e09a224d
+title: Kinde with SvelteKit on Cloudflare Pages
+sidebar:
+  order: 9
+relatedArticles:
+  - 855e5ca8-f2fb-4162-a594-10cee8a2ff8b
+  - f1ba22b9-b35f-478a-be09-4524d060fe36
+  - 00d62179-e0e8-489c-90f7-9a593f3b058a
+---
+
+# Kinde with SvelteKit on Cloudflare Pages
+
+This guide walks you through implementing Kinde authentication in a SvelteKit application deployed to Cloudflare Pages using js-utils with KV storage.
+
+<Aside type="warning">
+Your Kinde application must be configured as a **Single Page Application** (SPA) to enable PKCE flow, which js-utils requires.
+</Aside>
+
+<Aside type="tip">
+This implementation leverages **@kinde/js-utils** to handle the OAuth flow automatically, resulting in much cleaner code compared to manual implementations.
+</Aside>
+
+## What you need
+
+- A Cloudflare account with Pages and KV access
+- A Kinde account with an SPA application configured
+- SvelteKit project ready for Cloudflare Pages deployment
+
+## Step 1: Install dependencies
+
+```bash
+npm install @kinde/js-utils
+npm install -D @sveltejs/adapter-cloudflare
+```
+
+## Step 2: Configure Cloudflare KV storage
+
+1. In Cloudflare dashboard, go to **Workers & Pages > KV**
+2. Create a new namespace (e.g., `AUTH_STORAGE`)
+3. Copy the namespace ID
+
+## Step 3: Configure environment variables
+
+Update your `wrangler.toml`:
+
+```toml
+name = "your-project-name"
+compatibility_date = "2023-06-28"
+compatibility_flags = ["nodejs_compat_v2"]
+pages_build_output_dir = "./build"
+
+kv_namespaces = [
+  { binding = "AUTH_STORAGE", id = "your-namespace-id" }
+]
+
+[vars]
+KINDE_ISSUER_URL = "https://your-kinde-domain.kinde.com"
+KINDE_CLIENT_ID = "your-client-id"
+KINDE_REDIRECT_URL = "https://your-domain.pages.dev/api/auth/kinde_callback"
+KINDE_POST_LOGIN_REDIRECT_URL = "https://your-domain.pages.dev/dashboard"
+KINDE_POST_LOGOUT_REDIRECT_URL = "https://your-domain.pages.dev"
+KINDE_AUTH_WITH_PKCE = "true"
+KINDE_SCOPE = "openid profile email offline"
+KINDE_DEBUG = "false"
+```
+
+Add your client secret securely:
+
+```bash
+npx wrangler secret put KINDE_CLIENT_SECRET
+```
+
+## Step 4: Create hybrid storage adapter
+
+Create `src/lib/kindeAuth.ts`:
+
+```typescript
+import { 
+  KvStorage, 
+  setActiveStorage,
+  setInsecureStorage,
+  type SessionManager
+} from '@kinde/js-utils';
+import type { RequestEvent } from '@sveltejs/kit';
+
+/**
+ * Cookie storage for temporary OAuth data (state, nonce, code verifier)
+ */
+class CookieStorage implements SessionManager {
+  constructor(private event: RequestEvent) {}
+  
+  async setSessionItem(key: string, value: unknown): Promise<void> {
+    const cookieValue = typeof value === 'string' ? value : JSON.stringify(value);
+    this.event.cookies.set(`kinde_${key}`, cookieValue, {
+      path: '/',
+      maxAge: 3600,
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax'
+    });
+  }
+  
+  async getSessionItem(key: string): Promise<unknown | null> {
+    const value = this.event.cookies.get(`kinde_${key}`);
+    if (!value) return null;
+    
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+  
+  async removeSessionItem(key: string): Promise<void> {
+    this.event.cookies.delete(`kinde_${key}`, { path: '/', secure: true });
+  }
+
+  async removeItems(keys: string[]): Promise<void> {
+    for (const key of keys) {
+      await this.removeSessionItem(key);
+    }
+  }
+
+  async clearSession(): Promise<void> {
+    const cookiesToClear = ['state', 'nonce', 'codeVerifier'];
+    for (const key of cookiesToClear) {
+      this.event.cookies.delete(`kinde_${key}`, { path: '/', secure: true });
+    }
+  }
+}
+
+/**
+ * Initialize Kinde authentication with hybrid storage:
+ * - KV storage for tokens (eventual consistency is fine)
+ * - Cookie storage for OAuth temp data (immediate consistency required)
+ */
+export function initializeKindeAuth(event: RequestEvent): boolean {
+  const platform = event.platform as any;
+  const env = platform?.env;
+  const AUTH_STORAGE = env?.AUTH_STORAGE;
+
+  if (!AUTH_STORAGE) {
+    console.error('KV storage not available');
+    return false;
+  }
+
+  // KV storage for long-term token storage
+  const tokenStorage = new KvStorage(AUTH_STORAGE, { defaultTtl: 2592000 });
+
+  // Cookie storage for temporary OAuth data
+  const tempStorage = new CookieStorage(event);
+
+  // Set up js-utils storage
+  setActiveStorage(tokenStorage);     // For tokens
+  setInsecureStorage(tempStorage);    // For OAuth temp data
+
+  return true;
+}
+```
+
+## Step 5: Create authentication endpoints
+
+Create `src/routes/api/auth/[...kindeAuth]/+server.ts`:
+
+```typescript
+import { json, redirect } from '@sveltejs/kit';
+import type { RequestEvent } from "@sveltejs/kit";
+import { 
+  generateAuthUrl,
+  exchangeAuthCode,
+  frameworkSettings,
+  IssuerRouteTypes,
+  Scopes,
+  type LoginOptions
+} from '@kinde/js-utils';
+import { initializeKindeAuth } from '$lib/kindeAuth';
+import { 
+  KINDE_ISSUER_URL, 
+  KINDE_CLIENT_ID, 
+  KINDE_REDIRECT_URL, 
+  KINDE_POST_LOGIN_REDIRECT_URL, 
+  KINDE_POST_LOGOUT_REDIRECT_URL,
+  KINDE_DEBUG 
+} from '$env/static/private';
+
+// Configure js-utils
+frameworkSettings.framework = 'sveltekit';
+
+const getConfig = () => ({
+  issuerURL: KINDE_ISSUER_URL,
+  clientID: KINDE_CLIENT_ID,
+  redirectURL: KINDE_REDIRECT_URL,
+  postLoginRedirectURL: KINDE_POST_LOGIN_REDIRECT_URL,
+  postLogoutRedirectURL: KINDE_POST_LOGOUT_REDIRECT_URL,
+  debug: KINDE_DEBUG === 'true'
+});
+
+export async function GET(event: RequestEvent) {
+  // Initialize storage for every request
+  if (!initializeKindeAuth(event)) {
+    return json({ error: 'KV storage not available' }, { status: 500 });
+  }
+
+  const path = event.params.kindeAuth ?? '';
+  const config = getConfig();
+  
+  switch (path) {
+    case 'login':
+      return handleLogin(event, config, { isRegister: false });
+    
+    case 'register':
+      return handleLogin(event, config, { isRegister: true });
+    
+    case 'kinde_callback':
+      return handleCallback(event, config);
+    
+    case 'logout':
+      return handleLogout(config);
+    
+    default:
+      return json({ error: 'Unknown auth endpoint' }, { status: 404 });
+  }
+}
+
+async function handleLogin(
+  event: RequestEvent, 
+  config: ReturnType<typeof getConfig>,
+  options: { isRegister: boolean }
+) {
+  const url = new URL(event.request.url);
+  const orgCode = url.searchParams.get('org_code');
+  
+  const loginOptions: LoginOptions = {
+    issuerRouteType: options.isRegister ? IssuerRouteTypes.register : IssuerRouteTypes.login,
+    scopes: [Scopes.openid, Scopes.profile, Scopes.email, Scopes.offline],
+    ...(orgCode && { orgCode })
+  };
+
+  // Let js-utils handle the complete auth URL generation and state management
+  const authUrl = await generateAuthUrl(loginOptions);
+  return redirect(302, authUrl);
+}
+
+async function handleCallback(event: RequestEvent, config: ReturnType<typeof getConfig>) {
+  const url = new URL(event.request.url);
+  const error = url.searchParams.get('error');
+  
+  if (error) {
+    return json({ error: `OAuth error: ${error}` }, { status: 400 });
+  }
+
+  try {
+    // Let js-utils handle the complete token exchange
+    await exchangeAuthCode({
+      urlParams: url.searchParams,
+      domain: config.issuerURL,
+      clientId: config.clientID,
+      clientSecret: '', // Not needed for PKCE flow
+      redirectUri: config.redirectURL
+    });
+
+    return redirect(302, config.postLoginRedirectURL);
+
+  } catch (error) {
+    // Handle expected window error in server environment
+    if (error instanceof Error && error.message.includes('window')) {
+      // Wait for async token storage to complete
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return redirect(302, config.postLoginRedirectURL);
+    }
+
+    console.error('Authentication error:', error);
+    return json({ error: 'Authentication failed' }, { status: 500 });
+  }
+}
+
+async function handleLogout(config: ReturnType<typeof getConfig>) {
+  const logoutUrl = new URL('/logout', config.issuerURL);
+  logoutUrl.searchParams.append('redirect', config.postLogoutRedirectURL);
+  
+  return redirect(302, logoutUrl.toString());
+}
+```
+
+## Step 6: Check authentication in protected routes
+
+For protected routes, use js-utils authentication check:
+
+```typescript
+// src/routes/dashboard/+page.server.ts
+import type { PageServerLoad } from './$types';
+import { isAuthenticated, getUserProfile } from '@kinde/js-utils';
+import { initializeKindeAuth } from '$lib/kindeAuth';
+import { redirect } from '@sveltejs/kit';
+
+export const load: PageServerLoad = async (event) => {
+  if (!initializeKindeAuth(event)) {
+    throw redirect(302, '/api/auth/login');
+  }
+
+  const authenticated = await isAuthenticated();
+  
+  if (!authenticated) {
+    throw redirect(302, '/api/auth/login');
+  }
+
+  const userProfile = await getUserProfile();
+
+  return { 
+    authenticated: true,
+    user: userProfile
+  };
+};
+```
+
+## Usage
+
+Once configured, you can use standard links for authentication:
+
+- Login: `/api/auth/login`
+- Register: `/api/auth/register`  
+- Logout: `/api/auth/logout`
+
+Use `isAuthenticated()` and `getUserProfile()` from js-utils in your server-side code to check authentication status and retrieve user data.
+
+## Troubleshooting
+
+**"invalid_client" error**: Ensure your Kinde application is configured as a **Single Page Application** (SPA).
+
+**Window errors in server logs**: These are expected in server environments and are handled gracefully.
+
+Your Kinde authentication should now be working seamlessly with SvelteKit on Cloudflare Pages!
