@@ -280,6 +280,12 @@ KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authori
 
 Logging out ends the user's session in your app and on Kinde, then redirects them to your logout redirect URL.
 
+<Aside>
+
+This section is for the Kinde Java core. If you're using [Kinde-J2EE](#logout-with-kinde-j2ee) or the [Spring Boot starter](#logout-with-spring-boot), see those sections instead.
+
+</Aside>
+
 ### Set the logout redirect URL
 
 1. In Kinde, go to **Settings > Applications** and select **View details** on your app.
@@ -327,12 +333,6 @@ resp.sendRedirect(logoutUrl.getUrl().toString());
 ```
 
 Kinde ends the user's session and redirects them to `KINDE_LOGOUT_REDIRECT_URI`.
-
-<Aside>
-
-If you're using the [Kinde-J2EE](#logout-with-kinde-j2ee) servlets or the [Spring Boot starter](#logout-with-spring-boot), logout is handled for you.
-
-</Aside>
 
 ## Get user information
 
@@ -775,7 +775,6 @@ export KINDE_DOMAIN=https://<replace>.kinde.com # This is the domain you setup a
 export KINDE_CLIENT_ID=<replace> # the id for the client connecting to Kinde
 export KINDE_CLIENT_SECRET=<replace> # the secret used to authenticate the client against Kinde
 export KINDE_REDIRECT_URI=http://localhost:< replace with port of application server >/kinde-j2ee-app/login
-export KINDE_LOGOUT_REDIRECT_URI=http://localhost:< replace with port of application server > # where users land after signing out
 export KINDE_GRANT_TYPE=CODE
 export KINDE_SCOPES=profile,email,openid
 ```
@@ -787,7 +786,6 @@ KINDE_DOMAIN=https://<replace>.kinde.com # This is the domain you setup at kinde
 KINDE_CLIENT_ID=<replace> # the id for the client connecting to Kinde
 KINDE_CLIENT_SECRET=<replace> # the secret used to authenticate the client against Kinde
 KINDE_REDIRECT_URI=http://localhost:< replace with port of application server >/kinde-j2ee-app/login
-KINDE_LOGOUT_REDIRECT_URI=http://localhost:< replace with port of application server > # where users land after signing out
 KINDE_GRANT_TYPE=CODE
 KINDE_SCOPES=profile,email,openid
 ```
@@ -806,7 +804,9 @@ kinde:
 
 ### Logout with Spring Boot
 
-Set `kinde.oauth2.post-logout-redirect-uri` to sign users out of both your app and Kinde. You can set it directly, or read it from the `KINDE_LOGOUT_REDIRECT_URI` environment variable:
+Set `kinde.oauth2.post-logout-redirect-uri` in `application.yaml` to sign users out of both your app and Kinde. The Spring Boot starter reads the logout redirect URL only from this property, not from a `KINDE_LOGOUT_REDIRECT_URI` entry in a `.env` file.
+
+To set it per environment, use a Spring placeholder. This reads the `KINDE_LOGOUT_REDIRECT_URI` environment variable if it's exported, and otherwise uses the default after the colon:
 
 ```yaml
 kinde:
@@ -838,7 +838,7 @@ If `post-logout-redirect-uri` is not set, `/logout` only clears the local Spring
 
 <Aside>
 
-In Spring Boot starter versions 3.0.1 and earlier, the servlet (non-reactive) auto-configuration reads the redirect URL from the `KINDE_LOGOUT_REDIRECT_URI` environment variable or `.env` entry instead of the property. Set both to the same value. If you are upgrading from version 2.x, this property was previously named `okta.oauth2.post-logout-redirect-uri`.
+In Spring Boot starter versions 3.0.1 and earlier, the servlet (non-reactive) auto-configuration reads the redirect URL from the `KINDE_LOGOUT_REDIRECT_URI` environment variable or `.env` entry instead of the property, and fails to start if it isn't set. On these versions, set both to the same value. If you are upgrading from version 2.x, this property was previously named `okta.oauth2.post-logout-redirect-uri`.
 
 </Aside>
 
