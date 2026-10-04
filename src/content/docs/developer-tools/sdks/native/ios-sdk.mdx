@@ -156,24 +156,47 @@ Replace the values in \<angle brackets> with your own values. For example:
 
 ## Integrate with your app
 
-Before `KindeSDKAPI.auth` can be used, a call to `KindeSDKAPI.configure()` must be made, typically in `AppDelegate` as part of `application(launchOptions)` for a UIKit app, or the `@main` initialization logic for a SwiftUI app.
+Before using `KindeSDKAPI.auth` or other Kinde SDK APIs, call `KindeSDKAPI.configure()` during app initialization.
 
-`AppDelegate.swift`
+### SwiftUI
 
-```swift
-...
-import KindeSDK
-...
+Initialize Kinde in the `init()` of your `@main` app.
+
+```diff lang="swift" title="MyApp.swift"
+import SwiftUI
++import KindeSDK
+
+@main
+struct MyApp: App {
+    init() {
++        KindeSDKAPI.configure()
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
+}
+```
+
+### UIKit
+
+For UIKit apps both with and without a scene delegate, you can initialize Kinde in your app delegate's `application(_:didFinishLaunchingWithOptions:)` method.
+
+```diff lang="swift" title="AppDelegate.swift"
+import UIKit
++import KindeSDK
 
 class AppDelegate: UIResponder, UIApplicationDelegate {
-	...
-	func application(...) {
-		...
-		// The Kinde authentication service must be configured before use
-		KindeSDKAPI.configure(Logger())
-		...
-	}
-	...
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions:
+            [UIApplication.LaunchOptionsKey: Any]?
+    ) -> Bool {
++        KindeSDKAPI.configure()
+        return true
+    }
 }
 ```
 
