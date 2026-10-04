@@ -255,27 +255,36 @@ To switch to a different environment, simply change the configuration file name 
 
 ## Custom Logger (Optional)
 
-You can use your own Custom Logger as well by extending `LoggerProtocol`.
+Calling `KindeSDKAPI.configure()` without a logger uses the SDK's `DefaultLogger`. 
 
-`CustomLogger.swift`
+To customize logging, create a type that conforms to `LoggerProtocol`:
+
+```swift title="CustomLogger.swift"
+import KindeSDK
+
+struct CustomLogger: LoggerProtocol {
+    func debug(message: String) {
+        print("[DEBUG]: \(message)")
+    }
+
+    func info(message: String) {
+        print("[INFO]: \(message)")
+    }
+
+    func error(message: String) {
+        print("[ERROR]: \(message)")
+    }
+
+    func fault(message: String) {
+        print("[FAULT]: \(message)")
+    }
+}
+```
+
+During [app initialization](#integrate-with-your-app), pass your custom logger to `KindeSDKAPI.configure()`:
 
 ```swift
-...
-import os.log
-import KindeSDK
-...
-struct CustomLogger: LoggerProtocol {
-.....
-.....
-
-  func log(_ message: String) {
-      print("[INFO]: \(message)")
-  }
-
-  func log(error: Error) {
-      print("[ERROR]: \(error.localizedDescription)")
-  }
-}
+KindeSDKAPI.configure(CustomLogger())
 ```
 
 ## Login and register
