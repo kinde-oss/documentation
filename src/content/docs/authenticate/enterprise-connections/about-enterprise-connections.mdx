@@ -36,7 +36,7 @@ keywords:
   - Cloudflare
   - SSO
   - JIT provisioning
-updated: 2026-03-26
+updated: 2026-10-07
 ---
 
 Enterprise authentication is a common method for managing user access to systems in large organizations.
@@ -83,18 +83,17 @@ Many businesses have businesses for customers (B2B), and use Kinde organizations
 
 Unless you are using a Microsoft Entra ID SAML connection with single logout switched on, when enterprise connection users sign out, they are only signed out of the Kinde session and are not signed out of the identity provider. We do not force sign out of the IdP because this could break existing sessions the user is signed into, for other applications. This behavior also applies for social connections, where a third party is the identity provider.
 
-## Trust email addresses provided by this connection option
+## Email address trust option
 
-When you set up a connection, you can choose to trust email addresses provided by the identity provider you are using, e.g. your SAML provider.
+When you set up an environment-level enterprise connection, you choose how much to trust the email addresses provided by the identity provider you are using, e.g. your SAML provider. The **Email address trust** option sits in the **Provisioning** section of the connection configuration and applies when a user signs in and the email address returned by the identity provider already belongs to a Kinde user.
 
-- If you switch this on - Kinde will look for a user with the same email address and match the record as part of authentication. This can make for a more seamless sign in experience.
-- If you do not switch this on - Kinde does not try to match the user's email to an existing account, even if one exists. Instead, a new user identity is created in Kinde.
+- **Don't trust** - Kinde never merges accounts on email address alone. A separate user and identity are created, or the user is treated as not found if sign-up is disabled. No code is sent. Safest if the identity provider doesn't verify email addresses.
+- **Verify, then trust** (recommended) - Kinde sends a one-time code to the email address and shows the standard email verification page. Once the code is entered, the enterprise identity is linked to the existing user. If the user abandons or fails verification, nothing is created or linked.
+- **Trust** - Kinde links the enterprise identity to the existing user straight away, with no code. This makes for a more seamless sign in experience, but only use it if the identity provider verifies email addresses.
 
-<Aside type="warning">
+Organization-level connections, such as self-serve SSO, do not show this option. They show **Auto-add users** in its place.
 
-This option should be disabled unless you understand the impact of having this enabled. We recommend leaving this off for maximum security, as you will be trusting email addresses from providers who don't verify the email address is correct and valid.
-
-</Aside> 
+For the full explanation and examples, see [Trusting emails from providers](/authenticate/about-auth/identity-and-verification/#trusting-emails-from-providers).
 
 ## Routing in enterprise connections
 
