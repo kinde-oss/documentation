@@ -1,13 +1,15 @@
 ---
 page_id: 10d87520-542b-4881-9d63-9b7128766e60
 title: Set global access policies for your business
-description: "Control how users join and sign in—set global policies for sign-up, domains, org creation, invitations, and MFA"
+description: "Control how users join and sign in—set global policies for sign-up, domains, disposable emails, org creation, invitations, and MFA"
 sidebar:
   order: 6
   label: Set global access policies
 relatedArticles:
   - bc69e746-1ade-4433-8b0f-f2bc7d8a7a6a
   - 43e8aa2d-76a4-4445-ae90-84d3f1a55fcb
+  - c4a8e1d2-7b36-4f90-8c15-2e6d9a0b3f71
+  - 6b1f9c84-3e27-4a5d-b0c8-9d4e7f2a1b56
 tableOfContents:
   maxHeadingLevel: 3
 topics:
@@ -26,15 +28,17 @@ keywords:
   - global access policies
   - self sign-up
   - domain restrictions
+  - disposable email
+  - throwaway email
   - organization creation
   - member invitations
   - passkeys
   - profile sync
   - MFA OTP expiration
-updated: 2026-07-01
+updated: 2026-10-07
 featured: false
 deprecated: false
-ai_summary: "Guide to configuring global access policies at the environment level in Kinde via Settings > Environment > Policies. Explains how settings apply to all organizations by default and can be overridden per organization on the Kinde Scale plan. Covers allowing or disabling self sign-up, restricting sign-up to allowed email domains, enabling organization creation during registration for B2B self-serve onboarding, signing users into their most recent organization, passkeys on paid plans, syncing user profiles from social and enterprise identity providers on sign-in, MFA and OTP code expiration duration, and member invitations including invite application selection. Includes a quick reference table for common policy combinations and links to related guides for per-organization policies, disabling sign-up, organization creation flows, and the self-serve portal. Intended for business owners, product managers, and developers configuring onboarding and authentication access rules."
+ai_summary: "Guide to configuring global access policies at the environment level in Kinde via Settings > Environment > Policies. Explains how settings apply to all organizations by default and can be overridden per organization on the Kinde Scale plan. Covers allowing or disabling self sign-up, restricting sign-up to allowed email domains, blocking sign-ups from known disposable email providers, enabling organization creation during registration for B2B self-serve onboarding, signing users into their most recent organization, passkeys on paid plans, syncing user profiles from social and enterprise identity providers on sign-in, MFA and OTP code expiration duration, and member invitations including invite application selection. Includes a quick reference table for common policy combinations and links to related guides for per-organization policies, disabling sign-up, organization creation flows, and the self-serve portal. Intended for business owners, product managers, and developers configuring onboarding and authentication access rules."
 ---
 
 Access policies are the ground rules for who can join your product and how sign-in works across your entire Kinde environment. Settings here apply to every organization by default, so they are the first place to shape onboarding, security, and the experience your customers have when they register or sign in.
@@ -43,7 +47,8 @@ With access policies, you can:
 
 - Allow anyone to sign up for an account
 - Create an organization when someone signs up (usually for B2B businesses)
-- Allow only users from specific domains to sign up (e.g., @yourdomain.com only)
+- Allow only users from specific domains to sign up (e.g. @yourdomain.com only)
+- Block sign-ups from known disposable email addresses
 - Enable profiles from social providers to sync with Kinde profiles (recommended if you allow social sign-in)
 
 If you need different rules for specific customers, you can override these defaults per organization on the [Kinde Scale plan](https://kinde.com/pricing/). See [Set access policies for an organization](/build/organizations/organization-access-policies/).
@@ -53,9 +58,17 @@ If you need different rules for specific customers, you can override these defau
 1. In Kinde, go to **Settings > Environment > Policies**.
 2. Make the required changes and select **Save** when you're done.
 
+![Kinde global access policies page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/3408e7ce-26c1-4275-7e86-40d6b2d6c700/socialsharingimage)
+
 ### Allow self sign-up
 
-Let people create their own accounts without you adding them manually. **Allow self sign-up** is enabled by default.
+<Aside>
+
+**Allow self sign-up** is enabled by default.
+
+</Aside>
+
+Let people create their own accounts without you adding them manually. 
 
 Turn this off if you want an invitation-only or admin-managed model—for example, internal tools, enterprise customers you onboard yourself, or apps where every user must be approved first. You can still add users manually, import them, or send invitations. See [Disable self sign-up](/authenticate/custom-configurations/disable-sign-up/).
 
@@ -69,6 +82,25 @@ Enter domains in the **Allowed domains** list. This only applies when **Allow se
 - If you leave this empty, users from any domain can sign up.
 
 On the [Kinde Scale plan](https://kinde.com/pricing/), you can also set domain restrictions per organization. See [Set access policies for an organization](/build/organizations/organization-access-policies/).
+
+### Block disposable email addresses
+
+<Aside>
+
+This policy is environment-wide. Unlike **Allowed domains**, it cannot be set per organization.
+
+</Aside>
+
+Stop people from creating accounts with temporary or throwaway email addresses, for example `@temp-mail.com` or `@guerrillamail.com`. These addresses are commonly used for spam, abuse, and one-time sign-ups you can never reach again.
+
+1. Enable the **Block disposable email addresses** toggle.
+2. Select **Save**.
+
+If you also use **Allowed domains**, both checks apply. A domain must be on your allow list **and** not on the disposable list to complete self-service sign-up.
+
+You cannot view or edit the domain list. Use this setting to cover known throwaway providers; it is not a replacement for **Allowed domains** if you only want people from specific companies to register.
+
+See: [Block disposable email addresses](/build/set-up-options/block-disposable-emails/) for what is blocked, what is not, and how to block additional domains that are not on Kinde’s list.
 
 ### Allow organization creation on sign up
 
@@ -151,5 +183,6 @@ Global access policies can be overridden at the individual organization level if
 | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | Allow anyone to sign up to your applications.                                                   | Select **Allow self sign-up**.                                                                |
 | Allow only people from `specificdomain.com` to sign up to your applications.                    | Select **Allow self sign-up** and enter `specificdomain.com` in the **Allowed domains** list. |
+| Block sign-ups from known disposable email addresses.                                           | Switch on **Block disposable email addresses**.                                               |
 | Allow anyone to sign up to your applications and create an organization if they are a business. | Select **Allow self sign-up** and **Allow organization creation on sign up**.                 |
 | Let organization members invite other people into their organization.                           | Select **Allow invitations** and choose an **Invite application**.                            |
