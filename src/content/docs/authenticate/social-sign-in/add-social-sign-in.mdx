@@ -28,7 +28,7 @@ keywords:
   - client ID
   - client secret
   - trusted providers
-updated: 2026-03-26
+updated: 2026-10-07
 ---
 
 Social connections enable you to sign up and sign in users with credentials from their existing social accounts, such as Google or GitHub.
@@ -73,7 +73,13 @@ We treat social identities different to email identities in Kinde, and record so
 
 ## Trusting emails from social providers
 
-There's no guarantee that the email kept on file with a social provider remains current. Because of this, Kinde does not automatically treat social provider emails as 'trusted', and therefore we do not automatically sync email profiles. When you add a social connection, you can choose whether to 'trust' provider emails for each connection type. For more information, see [User identity and verification](/authenticate/about-auth/identity-and-verification/#trusting-emails-from-providers).
+There's no guarantee that the email kept on file with a social provider remains current. Because of this, Kinde does not automatically treat social provider emails as trusted, and therefore we do not automatically sync email profiles. When you configure a social connection, the **Email address trust** option under **Provisioning** lets you choose what happens when the email address returned by the provider already belongs to a Kinde user:
+
+- **Don't trust** - Keep them as separate users. Kinde never merges accounts on email address alone. Safest if the provider doesn't verify email addresses.
+- **Verify, then trust** (recommended) - Kinde sends a one-time code to the email address and links the social identity to the existing user once the code is entered.
+- **Trust** - Kinde links the social identity to the existing user straight away. Only use this if the provider verifies email addresses and prevents users changing them.
+
+We recommend **Verify, then trust** for most connections. It gives users a single account without taking the provider's word for the email address. For the full explanation, see [Trusting emails from providers](/authenticate/about-auth/identity-and-verification/#trusting-emails-from-providers).
 
 ## Delete a social connection
 
@@ -98,3 +104,5 @@ If you need platform-conditional authentication options, consider building [cust
 ## Manage social connections via API
 
 You can [add, update, and delete social connections via the Kinde management API](/kinde-apis/management#tag/connections) using predefined endpoints.
+
+Set the connection's email address trust with the `trust_mode` option when you create or update a connection. It accepts `none` (**Don't trust**), `validate` (**Verify, then trust**) or `trust` (**Trust**). The older `is_trusted` boolean is deprecated but still accepted: `true` maps to `trust` and `false` to `none`, and `trust_mode` wins if both are sent. If neither is sent, Google connections default to `trust` and all other strategies default to `none`. Responses include both `trust_mode` and a derived `is_trusted`.

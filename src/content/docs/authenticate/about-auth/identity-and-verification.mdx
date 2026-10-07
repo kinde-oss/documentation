@@ -32,7 +32,7 @@ keywords:
   - social identity
   - enterprise identity
   - profile sync
-updated: 2025-01-16
+updated: 2026-10-07
 ---
 
 A key part of making authentication secure, is through verification of user identities. Verification usually happens at sign up, to ensure the person signing up exists and is the intended person gaining access to your app or project.
@@ -58,55 +58,83 @@ You can [manually add these user identities](/manage-users/add-and-edit/add-mana
 
 ### Social
 
-A social identity is created when a user signs up with a social account or when they sign in with a trusted provider, who supplies a verified email that matches an existing email identity in Kinde.
+A social identity is created when a user signs up with a social account, or when they sign in with a social connection that supplies an email matching an existing email identity in Kinde and the connection's [email address trust](#trusting-emails-from-providers) setting allows the identities to be linked, either straight away (**Trust**) or after the user enters a one-time code (**Verify, then trust**).
 
 If a user signs up with a trusted social provider that provides us a verified email, and an email identity does not exist for the user, Kinde creates an email identity with this email. They can use this email to sign in with (if an email authentication method is enabled for your application).
 
 ### Enterprise
 
-An enterprise identity is created when a user signs up via an enterprise connection, or when they sign in via a trusted provider who supplies a verified email that matches an existing email identity.
+An enterprise identity is created when a user signs up via an enterprise connection, or when they sign in via an enterprise connection that supplies an email matching an existing email identity and the connection's [email address trust](#trusting-emails-from-providers) setting allows the identities to be linked, either straight away (**Trust**) or after the user enters a one-time code (**Verify, then trust**).
 
 Users with enterprise identities in Kinde can't also have other identity types in Kinde. E.g. a user can have an email identity and a social identity. But if a user has an enterprise identity, they cannot have other identities. In this case, identity information is sourced with the identity provider and is managed via the identity provider, not in Kinde.
 
 ## Trusting emails from providers
 
+When a user signs in through a social or enterprise connection, the identity provider returns an email address. If that email address already belongs to a user in Kinde, the connection's **Email address trust** setting decides what happens next. You choose the setting per connection, and it applies to every application in the environment.
+
 ### Trusted emails
 
 A trusted email provider is one that guarantees the email they issue is verified and also does not allow the user to change their primary email address.
 
-Currently Google is the only provider we treat as trusted by default. But you can choose to trust emails from any provider when you configure them in Kinde (See below). You can also choose not to trust Google emails if you want.
+Currently Google is the only provider we treat as trusted by default. This applies to connections created through the Kinde Management API without a trust setting. You can choose how much to trust emails from any provider when you configure the connection in Kinde (see below), including choosing not to trust Google emails.
 
-**Google example**
+**Google example (Trust)**
 
 1. When a user signs up, the Kinde profile first name, last name and picture are populated from Google.
-2. If Google is a trusted provider, we create a social identity and an email identity.
+2. If the Google connection is set to **Trust**, we create a social identity and an email identity.
 3. The user can sign in with either Google or their email (if this auth method is allowed).
 
 ### Untrusted emails
 
 This isn’t to say that other email providers are not trustworthy, this purely relates to email addresses and the guarantee that it will not change.
 
-**LinkedIn example**
+**LinkedIn example (Don't trust)**
 
 1. When a user signs up, the Kinde profile first name, last name and picture are populated from LinkedIn.
-2. If LinkedIn is an untrusted email provider, we only create a social identity.
+2. If the LinkedIn connection is set to **Don't trust**, we only create a social identity.
 3. At this stage the user can only sign in with their LinkedIn account.
 
-### Trust an untrusted provider
+### Verify, then trust
 
-When you set up an enterprise connection or a social connection, you can select the option to trust them. For example, go to **Settings > Authentication > Social connections** and select **Configure** on a tile. You'll see the **Trust email addresses provided by this connection** switch. Switch on or off as you like.
+**Verify, then trust** is the recommended middle ground. Kinde does not take the provider's word for the email address, but it doesn't keep the accounts apart either. Instead, the user proves they own the email address before the identities are linked.
+
+When a user signs in through the connection and the email address returned by the provider already belongs to someone in Kinde:
+
+1. Kinde sends a one-time code to that email address and shows the standard email verification page.
+2. Once the user enters the code, the new social or enterprise identity is linked to the existing user.
+3. If the user abandons or fails verification, nothing is created or linked. The next attempt asks for the code again.
+
+The code is only required when the email address already belongs to someone. A brand-new email address skips the code and behaves like **Trust**. An identity that is already linked to this provider signs in as normal. "Belongs to someone" includes subscribers and access-request records, not only users who can sign in.
+
+### Choose an email address trust option
+
+You choose the trust level per connection, for both social connections (such as Google, Apple, Microsoft, GitHub and custom OAuth 2.0) and enterprise connections (such as Microsoft Entra ID, custom SAML, Okta, Cloudflare, Google Workspace and LastPass).
+
+1. Go to **Settings > Authentication > Social connections** (or **Enterprise connections**).
+2. Select **Configure** on the connection.
+3. Under **Provisioning**, choose an option in **Email address trust**:
+
+   - **Don't trust** - Keep them as separate users. Never merges on email alone. A separate user and identity are created, or the user is treated as not found if sign-up is disabled. No code is sent. Safest if the identity provider doesn't verify email addresses.
+   - **Verify, then trust** (recommended) - Send a one-time code to the email address and merge with the existing user once it's entered.
+   - **Trust** - Merge with the existing user straight away, with no code. Only use this if the identity provider verifies email addresses.
+
+4. Select **Save**.
+
+Email address trust is an environment-level decision. Organization-level connections, such as self-serve SSO and connections created for a single organization, do not show this control. They show **Auto-add users** in its place.
 
 <Aside type="warning">
 
-This option should be disabled unless you understand the impact of having this enabled. We recommend leaving this off for maximum security, as you will be trusting email addresses from providers who don't verify the email address is correct and valid.
+Choose **Verify, then trust** unless you are certain the identity provider verifies email addresses and prevents users from changing them, in which case **Trust** is acceptable. Choose **Don't trust** when you never want accounts combined on email address. With **Trust**, you are taking the provider's word that the email address is correct, valid and belongs to the person signing in.
 
 </Aside>
+
+Existing connections keep their current behavior. A connection that previously had trust switched on is now set to **Trust**, and one that had it switched off is now set to **Don't trust**. No connection is moved to **Verify, then trust** automatically.
 
 ## Email sign up flow example
 
 1. When a user signs up with email, the Kinde profile first name, last name are populated by the user (if you ask for it as part of the sign up flow). Their picture will be populated from Gravatar if it exists.
 2. Kinde creates a primary contact email using the address they signed up with. They can only sign in with this email address.
-3. If the same user returns and signs in with a trusted connection, e.g. Google, Kinde recognises that a user exists and the email address is from a trusted provider, so we add a Google identity to their profile.
+3. If the same user returns and signs in with a connection set to **Trust**, e.g. Google, Kinde recognises that a user exists and the email address is from a trusted provider, so we add a Google identity to their profile. If the connection is set to **Verify, then trust**, the user first enters a one-time code sent to that email address, and then the Google identity is added.
 4. The Kinde profile first name, last name and picture are updated by Google (if profile syncing is also turned on).
 5. The user can sign in using either email or Google.
 
