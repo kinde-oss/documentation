@@ -1,0 +1,118 @@
+---
+page_id: d27f7bed-6c7c-4a0f-9208-88dbfdc83c7e
+title: Block disposable email addresses
+sidebar:
+  order: 2
+relatedArticles:
+  - 66e7bda8-bc17-463b-8b63-980bccf57e86
+  - 10d87520-542b-4881-9d63-9b7128766e60
+  - 8a385f58-5e01-437c-8128-6b86ee8ff382
+  - 69b42223-701c-4707-b961-e52c7cb05399
+app_context:
+  - m: settings
+    s: environment_details
+description: "Reject sign-ups from disposable and throwaway email domains with the Block disposable email addresses policy in Kinde"
+featured: false
+deprecated: false
+topics:
+  - authenticate
+  - custom-configurations
+  - access-policies
+  - security
+sdk: []
+languages: []
+audience:
+  - developer
+  - product-manager
+  - enterprise-admin
+complexity: beginner
+keywords:
+  - disposable email
+  - throwaway email
+  - temporary email
+  - block disposable email addresses
+  - sign-up policy
+  - access policies
+  - error code 9697
+ai_summary: "Dashboard guide to the Block disposable email addresses sign-up policy in Kinde. Explains that the policy rejects sign-ups whose email domain is on a list of known disposable and throwaway providers maintained by Kinde, is off by default, is set per environment, and requires the Plus, Scale, or Enterprise plan. Covers switching it on under Settings > Environment > Policies, suffix-based domain matching, which registration paths are blocked (sign-up page, Create account from sign-in, SAML or enterprise SSO provisioning) and which are not (invitations, Management API, admin console, bulk import, SCIM, access request and subscriber conversion, existing users, phone-only and username-only sign-ups), the error message and error code 9697 a blocked person sees, and alternatives using Allowed domains or a custom workflow."
+updated: 2026-10-07
+---
+
+You can stop people signing up to your business with disposable or throwaway email addresses, such as those from temporary inbox services.
+
+When **Block disposable email addresses** is switched on, Kinde rejects any sign-up whose email domain is on a list of known disposable email providers. Kinde maintains the list, so you do not need to keep your own list up to date.
+
+The policy is off by default. It is set per environment, and each environment is independent, so switching it on in one environment does not affect any other.
+
+## Availability
+
+<Aside type="upgrade">
+
+Blocking disposable email addresses requires the [Kinde Plus plan](https://kinde.com/pricing/) or above. It is available on the Plus, Scale, and Enterprise plans.
+
+</Aside>
+
+On the Free and Pro plans, the **Block disposable email addresses** switch shows an upgrade prompt instead of turning the policy on.
+
+If your environment is on the Free or Pro plan and the switch already appears on, this is because the policy was briefly available on all plans before the Plus requirement was added. Blocking is not applied while the environment stays on Free or Pro. Your saved setting is kept, and blocking resumes if you upgrade.
+
+## Turn on disposable email blocking
+
+1. In Kinde, go to **Settings > Environment > Policies**.
+2. In the **Sign up** section, below **Allowed domains**, switch on **Block disposable email addresses**.
+3. Select **Save**.
+
+{/* TODO screenshot: Policies page, Sign up section, showing the Block disposable email addresses switch below Allowed domains. */}
+
+The policy takes effect for new sign-ups in this environment. Repeat these steps in any other environment where you want it on.
+
+## What gets blocked
+
+Kinde checks the domain of the email address a person enters when they register. If the domain is on the disposable list, the sign-up is rejected.
+
+Matching is suffix-based, so subdomains of a listed domain are also blocked. For example, if `listed.com` is on the list, a sign-up with `user@mail.foo.listed.com` is rejected.
+
+The reverse does not apply. Some entries on the list are specific subdomains of otherwise legitimate hosting providers that are known to be abused. When only a subdomain is listed, the parent domain and the provider's other subdomains are not blocked.
+
+The policy applies to these registration paths.
+
+| Registration path                                                          | Blocked |
+| -------------------------------------------------------------------------- | ------- |
+| Sign-up page registration (email and password, email code, trusted social) | Yes     |
+| Registration started from the sign-in page via **Create account**          | Yes     |
+| SAML or enterprise SSO automatically provisioning a new user               | Yes     |
+| Accepting an invitation                                                    | No      |
+| Users created through the Kinde Management API                             | No      |
+| Users added from the Kinde admin console                                   | No      |
+| Bulk user import                                                           | No      |
+| SCIM provisioning from a directory                                         | No      |
+| Converting an access request or subscriber into a user                     | No      |
+
+Kinde manages the contents of the list. You cannot add domains to it, edit it, or exclude individual domains from it. If you need different rules, see [If you need different behaviour](#if-you-need-different-behaviour) below.
+
+## What is not blocked
+
+**Existing users are never affected.** The policy applies at registration only. A user who already has an account on a domain that is later added to the list continues to sign in as normal.
+
+**Invitations are exempt.** Someone who accepts an invitation can complete sign-up with any email address, including one on the disposable list. An invitation names a specific address, so the policy does not override the choice of whoever sent it. When the **Allow invitations** policy is on, organization members can send invitations as well as admins. See [Set global access policies for your business](/build/set-up-options/access-policies/#invitations).
+
+**Users you create are not checked.** The policy does not apply to users [added in the admin console](/manage-users/add-and-edit/add-and-edit-users/), [imported in bulk](/manage-users/add-and-edit/import-users-in-bulk/), created through the [Kinde Management API](/kinde-apis/management#tag/users/post/api/v1/user), or provisioned through SCIM from a directory. Converting an access request or a subscriber into a user is also not checked.
+
+**Registrations without an email address are not checked.** Phone-only and username-only sign-ups have no email domain to check, so they proceed as normal.
+
+## What the person signing up sees
+
+When a sign-up is blocked, the person sees an error page with this message:
+
+> We can't finish signing you up as the email domain we detected is not allowed. Try a different sign up method.
+
+The page also shows **Error code: 9697**. The message is localised into the language of the sign-up page.
+
+The person is not told that their email domain was classified as disposable, and Kinde does not notify your business when a sign-up is blocked.
+
+## If you need different behaviour
+
+The disposable email list is maintained by Kinde and cannot be customised. If you need something different, you have two options.
+
+- **Allow only specific domains.** Use the **Allowed domains** policy to permit sign-ups only from the email domains you list, for example your own company domain or a partner's. See [Allowed domains](/build/set-up-options/access-policies/#allowed-domains).
+- **Use your own list or logic.** Write a pre-user registration workflow that checks the email address against your own list of domains, or applies any other rule you need. See the [Block disposable emails](https://github.com/kinde-starter-kits/workflow-examples/blob/main/preUserRegistration/blockDisposableEmails.ts) workflow example and the [Pre user registration workflow](/workflows/example-workflows/pre-user-registration-workflow/) guide. A workflow is also the only option on the Free and Pro plans.
