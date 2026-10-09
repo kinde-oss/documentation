@@ -1,0 +1,163 @@
+---
+page_id: 6b1f9c84-3e27-4a5d-b0c8-9d4e7f2a1b56
+title: Block disposable emails with Kinde workflows
+sidebar:
+  order: 8
+  label: Tutorial - Block disposable emails
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - c4a8e1d2-7b36-4f90-8c15-2e6d9a0b3f71
+  - 10d87520-542b-4881-9d63-9b7128766e60
+  - 69b42223-701c-4707-b961-e52c7cb05399
+description: "Stop extra throwaway domains at sign-up with a Kinde pre-registration workflow you control."
+topics:
+  - workflows
+  - workflow-tutorials
+  - disposable-email
+  - pre-registration
+sdk: "kinde infrastructure"
+languages:
+  - typescript
+  - javascript
+audience:
+  - developers
+complexity: intermediate
+keywords:
+  - disposable email domains
+  - throwaway email
+  - "user:pre_registration"
+  - kinde.env
+  - sign-up blocking
+updated: 2026-10-07
+featured: false
+deprecated: false
+ai_summary: "Tutorial for developers who want to block additional disposable email domains at sign-up, alongside Kinde's built-in Block disposable email addresses policy. The workflow uses the user:pre_registration trigger. Kinde's policy blocks known providers before the workflow runs, so this guide covers domains you add yourself. Prerequisites are a Kinde account, a connected workflow Git repository from the quick start, and a prohibited-domain list. Store that list as a comma-separated DISPOSABLE_EMAIL_DOMAINS environment variable under Settings > Data management > Env variables. The TypeScript workflow imports helpers from @kinde/infrastructure, reads the email from the pre-registration event, loads the variable with getEnvironmentVariable, splits and trims domains, and calls denyAccess with the message Disposable email domain detected when the domain matches. Registration continues when the event has no email, the variable is unset, or the domain is not listed. Required bindings are kinde.env, to read the variable, and kinde.auth, so denyAccess works on this trigger. The failure policy is stop. Testing covers one blocked domain and one allowed domain."
+---
+
+<Aside>
+
+Kinde can block known disposable email providers out of the box. See how to [enabled this setting](/build/set-up-options/block-disposable-emails/) from the Kinde dashboard. Use this workflow when you also want to block domains that are not on that list.
+
+</Aside>
+
+The workflow runs on the `user:pre_registration` trigger and checks the sign-up email against your own list.
+
+## What you need
+
+- A [Kinde](https://app.kinde.com/register) account (Sign up for free)
+- A workflow Git repository connected to your Kinde account (follow the [quick start guide](/workflows/getting-started/quick-start-guide/))
+- Your own list of prohibited email domains
+
+## Block disposable emails
+
+### Set up the environment variable
+
+1. Create a new environment variable in **Settings > Data management > Env variables** called `DISPOSABLE_EMAIL_DOMAINS`. 
+2. Use a comma-separated list, for example `yopmail.com,guerrillamail.com,mailinator.com`.
+
+### Workflow logic
+
+1. Read the email from the pre-registration event:
+
+    ```typescript
+    event.context.user.email
+    ```
+
+2. Read your domain list from your environment variable (e.g., `DISPOSABLE_EMAIL_DOMAINS`):
+
+    ```typescript
+    const disposableEmailDomains = getEnvironmentVariable(
+      "DISPOSABLE_EMAIL_DOMAINS"
+    )?.value
+    ```
+
+3. Display a message on the Kinde form when registration is blocked using the `denyAccess` built-in function:
+
+    ```typescript
+    denyAccess("Disposable email domain detected")
+    ```
+
+### Full `Workflow.ts` file example
+
+```typescript
+import {
+  onUserPreRegistrationEvent,
+  WorkflowSettings,
+  WorkflowTrigger,
+  denyAccess,
+  getEnvironmentVariable,
+} from "@kinde/infrastructure";
+
+// The settings for this workflow
+export const workflowSettings: WorkflowSettings = {
+  id: "preRegistration",
+  name: "Block disposable emails",
+  failurePolicy: {
+    action: "stop",
+  },
+  trigger: "user:pre_registration",
+  bindings: {
+    "kinde.env": {},
+    "kinde.auth": {},
+  },
+};
+
+// The workflow code to be executed when the event is triggered
+export default async function Workflow(
+  event: onUserPreRegistrationEvent
+) {
+  console.log("handlePreRegistration", event);
+
+  // Check if user email exists in the event
+  if (!event.context.user.email) {
+    console.log(
+      "No user email found in pre-registration event, allowing registration"
+    );
+    return;
+  }
+
+  const disposableEmailDomains = getEnvironmentVariable(
+    "DISPOSABLE_EMAIL_DOMAINS"
+  )?.value;
+
+  // If no disposable email domains are configured, allow registration
+  if (!disposableEmailDomains) {
+    console.log(
+      "No disposable email domains configured, allowing registration"
+    );
+    return;
+  }
+
+  const disposableEmailDomainsArray = disposableEmailDomains
+    .split(",")
+    .map((domain) => domain.trim());
+
+  const userEmailDomain = event.context.user.email.split("@")[1];
+
+  if (disposableEmailDomainsArray.includes(userEmailDomain)) {
+    console.log(
+      `Blocking registration for disposable email domain: ${userEmailDomain}`
+    );
+    denyAccess("Disposable email domain detected");
+  } else {
+    console.log(`Allowing registration for email domain: ${userEmailDomain}`);
+  }
+}
+```
+
+The workflow checks the sign-up email against the domains in `DISPOSABLE_EMAIL_DOMAINS`:
+
+- If the event has no email, registration continues.
+- If the environment variable is not set, registration continues.
+- If the domain matches a listed domain, `denyAccess` stops registration and the user sees `Disposable email domain detected`.
+
+### Required bindings
+
+- `kinde.env`: required to read the environment variable
+- `kinde.auth`: required for `denyAccess` on the pre-registration trigger
+
+### Test the workflow
+
+1. Attempt to sign up with an email address whose domain is in `DISPOSABLE_EMAIL_DOMAINS`. Registration will be blocked and the user sees `Disposable email domain detected`.
+2. Attempt to sign up with an email address whose domain is not in the list. Registration will continue.
