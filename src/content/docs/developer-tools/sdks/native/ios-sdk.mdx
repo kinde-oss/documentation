@@ -81,6 +81,46 @@ If you would like to use our Environments feature as part of your development pr
 
 ## Configuring your app
 
+### Custom URL Scheme
+
+Register a custom URL scheme using one of these methods:
+
+<Tabs>
+
+  <TabItem label="Via Xcode UI">
+
+1. Open your project in Xcode and select the project in the navigator.
+2. Under **Targets**, select your app target.
+3. Open the **Info** tab, expand **URL Types**, and select **+** to add a URL type.
+4. Set **Role** to **Editor**.
+5. Add `<your-url-scheme>` to **URL Schemes**.
+
+  </TabItem>
+
+  <TabItem label="Via Info.plist File">
+
+Open your app target's `Info.plist` and add the following inside the top-level `<dict>`:
+
+```xml title="Info.plist"
+<key>CFBundleURLTypes</key>
+<array>
+    <dict>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+            <string><your-url-scheme></string>
+        </array>
+    </dict>
+</array>
+```
+
+  </TabItem>
+
+</Tabs>
+
+For more information, see Apple's [Defining a custom URL scheme for your app](https://developer.apple.com/documentation/xcode/defining-a-custom-url-scheme-for-your-app).
+
 ### **Environment variables**
 
 The Kinde `Auth` service is configured with an instance of the `Config` class. The example uses the bundled `kinde-auth.json` for configuration.
@@ -116,24 +156,47 @@ Replace the values in \<angle brackets> with your own values. For example:
 
 ## Integrate with your app
 
-Before `KindeSDKAPI.auth` can be used, a call to `KindeSDKAPI.configure()` must be made, typically in `AppDelegate` as part of `application(launchOptions)` for a UIKit app, or the `@main` initialization logic for a SwiftUI app.
+Before using `KindeSDKAPI.auth` or other Kinde SDK APIs, call `KindeSDKAPI.configure()` during app initialization.
 
-`AppDelegate.swift`
+### SwiftUI
 
-```swift
-...
-import KindeSDK
-...
+Initialize Kinde in the `init()` of your `@main` app.
+
+```diff lang="swift" title="MyApp.swift"
+import SwiftUI
++import KindeSDK
+
+@main
+struct MyApp: App {
+    init() {
++        KindeSDKAPI.configure()
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
+}
+```
+
+### UIKit
+
+For UIKit apps both with and without a scene delegate, you can initialize Kinde in your app delegate's `application(_:didFinishLaunchingWithOptions:)` method.
+
+```diff lang="swift" title="AppDelegate.swift"
+import UIKit
++import KindeSDK
 
 class AppDelegate: UIResponder, UIApplicationDelegate {
-	...
-	func application(...) {
-		...
-		// The Kinde authentication service must be configured before use
-		KindeSDKAPI.configure(Logger())
-		...
-	}
-	...
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions:
+            [UIApplication.LaunchOptionsKey: Any]?
+    ) -> Bool {
++        KindeSDKAPI.configure()
+        return true
+    }
 }
 ```
 
@@ -192,27 +255,36 @@ To switch to a different environment, simply change the configuration file name 
 
 ## Custom Logger (Optional)
 
-You can use your own Custom Logger as well by extending `LoggerProtocol`.
+Calling `KindeSDKAPI.configure()` without a logger uses the SDK's `DefaultLogger`. 
 
-`CustomLogger.swift`
+To customize logging, create a type that conforms to `LoggerProtocol`:
+
+```swift title="CustomLogger.swift"
+import KindeSDK
+
+struct CustomLogger: LoggerProtocol {
+    func debug(message: String) {
+        print("[DEBUG]: \(message)")
+    }
+
+    func info(message: String) {
+        print("[INFO]: \(message)")
+    }
+
+    func error(message: String) {
+        print("[ERROR]: \(message)")
+    }
+
+    func fault(message: String) {
+        print("[FAULT]: \(message)")
+    }
+}
+```
+
+During [app initialization](#integrate-with-your-app), pass your custom logger to `KindeSDKAPI.configure()`:
 
 ```swift
-...
-import os.log
-import KindeSDK
-...
-struct CustomLogger: LoggerProtocol {
-.....
-.....
-
-  func log(_ message: String) {
-      print("[INFO]: \(message)")
-  }
-
-  func log(error: Error) {
-      print("[ERROR]: \(error.localizedDescription)")
-  }
-}
+KindeSDKAPI.configure(CustomLogger())
 ```
 
 ## Login and register
