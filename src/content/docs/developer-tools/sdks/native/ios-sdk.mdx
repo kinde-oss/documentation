@@ -598,6 +598,183 @@ KindeSDKAPI.auth.getUserOrganizations();
 
 For more information about how organizations work in Kinde, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
 
+## Invitation
+
+The SDK can start the invitation sign-up flow when your app is opened via a URL containing an `invitation_code` query parameter.
+
+For example, `com.example.App://login?invitation_code=abc123` for an [Application login URI](/build/applications/default-login-routes/#to-set-default-login-routes) of `com.example.App://login` and an invitation code of `abc123`.
+
+To support the invitation sign-up flow in your iOS app, use one of the following methods:
+
+<Tabs>
+
+  <TabItem label="Automatic handling">
+
+  To make the SDK automatically intercept your invitation code URLs, set  `KindeURLInterceptorEnabled` to `true` in your app's `Info.plist`.
+
+  ```xml title="Info.plist"
+  <key>KindeURLInterceptorEnabled</key>
+  <true/>
+  ```
+
+  The SDK then uses [method swizzling](https://nshipster.com/method-swizzling/) to intercept incoming invitation URLs in your app delegate and scene delegate callbacks.
+
+  <details>
+  <summary>Delegate methods swizzled for URL interception</summary>
+
+  **App delegate**
+
+  - `application(_:open:options:)`
+  - `application(_:continue:restorationHandler:)`
+
+  **Scene delegate**
+
+  - `scene(_:willConnectTo:options:)`
+  - `scene(_:openURLContexts:)`
+  - `scene(_:continue:)`
+
+  </details>
+
+  This is disabled by default and is only used when you set the `KindeURLInterceptorEnabled` flag to `true`.
+
+  </TabItem>
+
+  <TabItem label="Manual handling">
+
+  To manually handle incoming URLs:
+
+  - Ensure `KindeURLInterceptorEnabled` is unset or set to `false` in your app's `Info.plist`.
+
+    ```xml title="Info.plist"
+    <key>KindeURLInterceptorEnabled</key>
+    <false/>
+    ```
+
+  - Forward your app's incoming URLs to `KindeSDKAPI.handle(url:)` from your app's URL-handling callbacks.
+
+    Choose the approach that matches your app's setup.
+
+    <Tabs>
+
+      <TabItem label="SwiftUI">
+
+      Handle incoming custom-scheme URLs and universal links using `.onOpenURL`, forwarding them to `KindeSDKAPI.handle(url:)`.
+
+      ```diff lang="swift" title="MyApp.swift"
+      import SwiftUI
+      import KindeSDK
+
+      @main
+      struct MyApp: App {
+          var body: some Scene {
+              WindowGroup {
+                  ContentView()
+      +                .onOpenURL { url in
+      +                    KindeSDKAPI.handle(url: url)
+      +                }
+              }
+          }
+      }
+      ```
+
+      </TabItem>
+
+      <TabItem label="UIKit (app delegate)">
+
+      Handle custom-scheme URLs in `application(_:open:options:)` and universal links in `application(_:continue:restorationHandler:)`.
+
+      ```diff lang="swift" title="AppDelegate.swift"
+      import UIKit
+      import KindeSDK
+
+      class AppDelegate: UIResponder, UIApplicationDelegate {
+          func application(
+              _ application: UIApplication,
+              open url: URL,
+              options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+          ) -> Bool {
+      +        return KindeSDKAPI.handle(url: url)
+          }
+
+          func application(
+              _ application: UIApplication,
+              continue userActivity: NSUserActivity,
+              restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
+          ) -> Bool {
+      +        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+      +              let url = userActivity.webpageURL else {
+      +            return false
+      +        }
+      +
+      +        return KindeSDKAPI.handle(url: url)
+          }
+      }
+      ```
+
+      </TabItem>
+
+      <TabItem label="UIKit (scene delegate)">
+
+      In the scene delegate, handle incoming URLs when a scene connects in `scene(_:willConnectTo:options:)`, and subsequent URLs in `scene(_:openURLContexts:)` for custom schemes and `scene(_:continue:)` for universal links.
+
+      ```diff lang="swift" title="SceneDelegate.swift"
+      import UIKit
+      +import KindeSDK
+
+      class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+          var window: UIWindow?
+
+          func scene(
+              _ scene: UIScene,
+              willConnectTo session: UISceneSession,
+              options connectionOptions: UIScene.ConnectionOptions
+          ) {
+              guard let _ = (scene as? UIWindowScene) else { return }
+
+      +        if let context = connectionOptions.urlContexts.first {
+      +            KindeSDKAPI.handle(url: context.url)
+      +        }
+      +
+      +        if let activity = connectionOptions.userActivities.first(where: {
+      +            $0.activityType == NSUserActivityTypeBrowsingWeb
+      +        }), let url = activity.webpageURL {
+      +            KindeSDKAPI.handle(url: url)
+      +        }
+          }
+
+          func scene(
+              _ scene: UIScene,
+              openURLContexts URLContexts: Set<UIOpenURLContext>
+          ) {
+      +        guard let url = URLContexts.first?.url else {
+      +            return
+      +        }
+      +
+      +        KindeSDKAPI.handle(url: url)
+          }
+
+          func scene(
+              _ scene: UIScene,
+              continue userActivity: NSUserActivity
+          ) {
+      +        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+      +              let url = userActivity.webpageURL else {
+      +            return
+      +        }
+      +
+      +        KindeSDKAPI.handle(url: url)
+          }
+      }
+      ```
+
+      </TabItem>
+
+    </Tabs>
+
+  </TabItem>
+
+</Tabs>
+
 ## Feature flags
 
 We have provided a helper to return any features flag from the access token:
