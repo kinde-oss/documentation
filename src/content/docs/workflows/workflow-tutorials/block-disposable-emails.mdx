@@ -29,10 +29,10 @@ keywords:
   - "user:pre_registration"
   - kinde.env
   - sign-up blocking
-updated: 2026-10-07
+updated: 2026-10-12
 featured: false
 deprecated: false
-ai_summary: "Tutorial for developers who want to block additional disposable email domains at sign-up, alongside Kinde's built-in Block disposable email addresses policy. The workflow uses the user:pre_registration trigger. Use the built-in policy on the Plus plan and above when you want a list that Kinde maintains with no code. Use this workflow for your own list, custom logic, or on the Free or Pro plan. Kinde's policy blocks known providers before the workflow runs. Prerequisites are a Kinde account, a connected workflow Git repository from the quick start, and a prohibited-domain list. Store that list as a comma-separated DISPOSABLE_EMAIL_DOMAINS environment variable under Settings > Data management > Env variables. The TypeScript workflow imports helpers from @kinde/infrastructure, reads the email from the pre-registration event, loads the variable with getEnvironmentVariable, splits and trims domains, and calls denyAccess with the message Disposable email domain detected when the domain matches. Registration continues when the event has no email, the variable is unset, or the domain is not listed. Required bindings are kinde.env, to read the variable, and kinde.auth, so denyAccess works on this trigger. The failure policy is stop. Testing covers one blocked domain and one allowed domain."
+ai_summary: "Tutorial for developers who want to block additional disposable email domains at sign-up, alongside Kinde's built-in Block disposable email addresses policy. The workflow uses the user:pre_registration trigger. Use the built-in policy on the Plus plan and above when you want a list that Kinde maintains with no code. Use this workflow for your own list, custom logic, or on the Free or Pro plan. Kinde's policy blocks known providers before the workflow runs. Prerequisites are a Kinde account, a connected workflow Git repository from the quick start, and a prohibited-domain list. Store that list as a comma-separated DISPOSABLE_EMAIL_DOMAINS environment variable under Settings > Data management > Env variables. The TypeScript workflow imports helpers from @kinde/infrastructure, reads the email from the pre-registration event, loads the variable with getEnvironmentVariable, splits, trims, and lowercases domains, and calls denyAccess with the message Disposable email domain detected when the domain matches. Registration continues when the event has no user or email, the variable is unset, or the domain is not listed. Each trigger can have only one workflow, so an existing user:pre_registration workflow should receive this check plus the kinde.env and kinde.auth bindings. Required bindings are kinde.env, to read the variable, and kinde.auth, so denyAccess works on this trigger. The failure policy is stop. Testing covers one blocked domain and one allowed domain."
 ---
 
 <Aside>
@@ -80,6 +80,12 @@ The workflow runs on the `user:pre_registration` trigger and checks the sign-up 
 
 ### Full `Workflow.ts` file example
 
+<Aside>
+
+Each trigger can have only one workflow. If you already have a `user:pre_registration` workflow, add the disposable-domain check and the `kinde.env` and `kinde.auth` bindings to that workflow so its other registration rules stay in place.
+
+</Aside>
+
 ```typescript
 import {
   onUserPreRegistrationEvent,
@@ -107,10 +113,10 @@ export const workflowSettings: WorkflowSettings = {
 export default async function Workflow(
   event: onUserPreRegistrationEvent
 ) {
-  console.log("handlePreRegistration", event);
+  console.log("handlePreRegistration");
 
   // Check if user email exists in the event
-  if (!event.context.user.email) {
+  if (!event.context.user?.email) {
     console.log(
       "No user email found in pre-registration event, allowing registration"
     );
@@ -131,11 +137,11 @@ export default async function Workflow(
 
   const disposableEmailDomainsArray = disposableEmailDomains
     .split(",")
-    .map((domain) => domain.trim());
+    .map((domain) => domain.trim().toLowerCase());
 
-  const userEmailDomain = event.context.user.email.split("@")[1];
+  const userEmailDomain = event.context.user.email.split("@")[1]?.toLowerCase();
 
-  if (disposableEmailDomainsArray.includes(userEmailDomain)) {
+  if (userEmailDomain && disposableEmailDomainsArray.includes(userEmailDomain)) {
     console.log(
       `Blocking registration for disposable email domain: ${userEmailDomain}`
     );
@@ -148,9 +154,10 @@ export default async function Workflow(
 
 The workflow checks the sign-up email against the domains in `DISPOSABLE_EMAIL_DOMAINS`:
 
-- If the event has no email, registration continues.
+- If the event has no user or email, registration continues.
 - If the environment variable is not set, registration continues.
 - If the domain matches a listed domain, `denyAccess` stops registration and the user sees `Disposable email domain detected`.
+- Domains are compared in lowercase, so a configured domain matches the sign-up domain regardless of casing.
 
 ### Required bindings
 
