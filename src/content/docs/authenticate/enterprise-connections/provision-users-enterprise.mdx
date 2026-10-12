@@ -7,14 +7,16 @@ relatedArticles:
   - 98f6868a-7871-4ece-ba9c-2a7b21d1b322
   - e100d77b-530b-4327-8216-93c955657e0c
   - cc242fb3-4b06-4842-97c8-dd58e87308df
-description: >-
-  Comprehensive guide to user provisioning for enterprise connections including
-  JIT provisioning, pre-provisioning, and troubleshooting SSO issues.
+description: "Provision enterprise users with just-in-time sign-in, pre-created identities, or verified email matching"
+ai_summary: "Guide to provisioning users for enterprise connections such as SAML and Cloudflare. Explains that enterprise-managed users can hold only an enterprise identity. Recommends just-in-time provisioning, which creates the user on first authentication, and also covers pre-provisioning through import, the Kinde Management API, or manual entry. Details two linking methods: assigning an enterprise identity directly, or matching the identity provider email when Email address trust is set to Verify, then trust. Includes troubleshooting for missing accounts, duplicate identities, and incorrect customer SSO credentials, and notes that SCIM provisioning is planned. Intended for developers, enterprise admins, and security engineers."
 featured: false
 deprecated: false
 topics:
   - authenticate
-sdk: []
+  - enterprise-connections
+  - provisioning
+sdk:
+  - kinde-management-api
 languages: []
 audience:
   - developer
@@ -22,13 +24,15 @@ audience:
   - security-engineer
 complexity: intermediate
 keywords:
-  - user provisioning
   - JIT provisioning
-  - enterprise connections
-  - SSO
-  - identity management
-  - troubleshooting
-updated: 2026-10-07
+  - pre-provisioning
+  - enterprise identity
+  - email address trust
+  - SCIM
+  - SSO troubleshooting
+  - Management API
+  - identity linking
+updated: 2026-10-12
 ---
 
 When you set up Kinde with enterprise authentication like SAML or Cloudflare, you’ll want to make sure that users are set up with the correct access and identity from day one. How you do this depends on how you ‘provision’ their enterprise user identity.
@@ -89,12 +93,9 @@ You can search connections via API and filter them by domain. This can help you 
 
 Instead of adding and linking each user manually as per method 1 above, you can let Kinde link the enterprise identity to the pre-provisioned user when the email address from your identity provider matches. Note that linking overrides any existing identity information in Kinde (such as email or phone number) with the connection data from the identity provider.
 
-To employ this method, open the connection configuration (**Settings > Authentication > Enterprise connections > Configure**) and under **Provisioning** choose one of these options in **Email address trust**:
+To employ this method, open the connection configuration (**Settings > Authentication > Enterprise connections > Configure**) and under **Provisioning**, set **Email address trust** to **Verify, then trust**. When the email matches a pre-provisioned user, Kinde asks them to verify the address before combining the accounts.
 
-- **Verify, then trust** (recommended) - When the user signs in with the SSO connection and the email matches a pre-provisioned user, Kinde sends a one-time code to that email address. Once the user enters the code, the accounts are combined. This confirms the user owns the email address without relying on the identity provider to verify it.
-- **Trust** - When the email matches, Kinde combines the accounts straight away with no code. Only use this if your identity provider verifies email addresses.
-
-In both cases, once the users are combined their original email identity is removed and from this point on they can only authenticate via the SSO connection. See [Trusting emails from providers](/authenticate/about-auth/identity-and-verification/#trusting-emails-from-providers) for the full explanation.
+Once the users are combined, their original email identity is removed and they can only authenticate via the SSO connection. For details about the trust options, see [Trusting emails from providers](/authenticate/about-auth/identity-and-verification/#trusting-emails-from-providers).
 
 ## Troubleshoot SSO issues
 
@@ -104,7 +105,7 @@ If a user goes to sign in and encounters the ’We can’t find your account’ 
 
 **Duplicate identities**
 
-If duplicate identities are created for users in Kinde, it may be because **Email address trust** is set to **Don't trust** in the connection configuration. Change it to **Verify, then trust** or **Trust** so that matching email addresses are linked to the existing user.
+If duplicate identities are created for users in Kinde, set **Email address trust** to **Verify, then trust** so matching email addresses can be linked to the existing user.
 
 **Customer's SSO auth not working**
 

@@ -6,15 +6,15 @@ sidebar:
 app_context:
   - m: settings
     s: authentication
-description: >-
-  Comprehensive guide to adding and managing social sign-in connections
-  including setup, security considerations, and provider-specific
-  configurations.
+description: "Add social sign-in to Kinde, set email trust, and manage every connection from the dashboard or API"
+ai_summary: "Guide to adding and managing social sign-in connections in Kinde. Explains why production environments need each provider's own client ID and client secret, links to the provider setup guides, and notes that custom OAuth 2.0 connections are configured in the same area. Covers providers that do not return an email and the requirement to collect one. Explains that Trust should be used only when the provider verifies email addresses, Verify, then trust is a safer middle ground, and Google social connections use Trust by default. Also covers deleting a connection, the lack of device-conditional social buttons on hosted pages, and Management API fields including trust_mode values none, validate, and trust. Intended for developers, product managers, and security engineers."
 featured: false
 deprecated: false
 topics:
   - authenticate
-sdk: []
+  - social-sign-in
+sdk:
+  - kinde-management-api
 languages: []
 audience:
   - developer
@@ -22,13 +22,15 @@ audience:
   - security-engineer
 complexity: intermediate
 keywords:
-  - social sign-in
   - social connections
   - OAuth
   - client ID
   - client secret
-  - trusted providers
-updated: 2026-10-07
+  - email address trust
+  - trust_mode
+  - callback URL
+  - custom OAuth
+updated: 2026-10-12
 ---
 
 Social connections enable you to sign up and sign in users with credentials from their existing social accounts, such as Google or GitHub.
@@ -73,13 +75,7 @@ We treat social identities different to email identities in Kinde, and record so
 
 ## Trusting emails from social providers
 
-There's no guarantee that the email kept on file with a social provider remains current. Because of this, Kinde does not automatically treat social provider emails as trusted, and therefore we do not automatically sync email profiles. When you configure a social connection, the **Email address trust** option under **Provisioning** lets you choose what happens when the email address returned by the provider already belongs to a Kinde user:
-
-- **Don't trust** - Keep them as separate users. Kinde never merges accounts on email address alone. Safest if the provider doesn't verify email addresses.
-- **Verify, then trust** (recommended) - Kinde sends a one-time code to the email address and links the social identity to the existing user once the code is entered.
-- **Trust** - Kinde links the social identity to the existing user straight away. Only use this if the provider verifies email addresses and prevents users changing them.
-
-We recommend **Verify, then trust** for most connections. It gives users a single account without taking the provider's word for the email address. For the full explanation, see [Trusting emails from providers](/authenticate/about-auth/identity-and-verification/#trusting-emails-from-providers).
+Under **Provisioning**, configure the connection as follows: Set **Email address trust** to **Trust** only when you know the third-party provider verifies email addresses. For a safer middle ground, select **Verify, then trust**. Google social connections are set to **Trust** by default. For details about the options, see [Trusting emails from providers](/authenticate/about-auth/identity-and-verification/#trusting-emails-from-providers).
 
 ## Delete a social connection
 

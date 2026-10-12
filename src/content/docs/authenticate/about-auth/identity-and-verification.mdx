@@ -3,36 +3,38 @@ page_id: e519f56a-603a-44dd-a946-3aaf6fb256ce
 title: User identity and verification
 sidebar:
   order: 4
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 0145d1ce-564e-4c28-820f-2f126abbfe3a
   - d5ab49ac-bf16-487a-b1a1-e07f68e42be7
   - 776166a5-eebd-42be-a695-36eaafba0823
   - 8b9376c4-308c-4eaa-a990-606fb8bbf770
-description: >-
-  Understanding how user identity and verification works in Kinde, including
-  identity types, trusted providers, and verification processes.
+description: "Choose how Kinde links, verifies, or separates social and enterprise email identities"
 featured: false
 deprecated: false
-ai_summary: >-
-  Comprehensive guide to user identity management in Kinde covering identity
-  types, verification processes, trusted providers, and profile synchronization.
+ai_summary: "Conceptual overview of user identity and verification in Kinde. Explains the Kinde profile and the identity details used to sign in: email, phone, username, social, and enterprise. Covers how each identity type is created, including that a user with an enterprise identity cannot also hold other identity types. Details the per-connection Email address trust setting, with Trust appropriate only when the third-party provider verifies email addresses and Verify, then trust as a safer middle ground. Explains when each option creates a separate user, sends a one-time code, or links accounts immediately. Notes that Google social connections use Trust by default, that a new email skips the code, and that organization-level connections show Auto-add users instead. Also covers the email sign-up flow, social and enterprise profile sync, verified email requirements for usernames, case-insensitive usernames, and replacing a verified identity. Intended for developers, product managers, and security engineers configuring authentication."
 topics:
   - authenticate
+  - user-identity
+  - email-address-trust
 sdk: []
 languages: []
 audience:
   - developer
+  - product-manager
   - security-engineer
 complexity: intermediate
 keywords:
-  - user identity
-  - verification
-  - trusted providers
-  - email verification
+  - email address trust
+  - account linking
   - social identity
   - enterprise identity
   - profile sync
-updated: 2026-10-07
+  - username identities
+  - one-time code
+  - trusted providers
+updated: 2026-10-12
 ---
 
 A key part of making authentication secure, is through verification of user identities. Verification usually happens at sign up, to ensure the person signing up exists and is the intended person gaining access to your app or project.
@@ -71,6 +73,8 @@ Users with enterprise identities in Kinde can't also have other identity types i
 ## Trusting emails from providers
 
 When a user signs in through a social or enterprise connection, the identity provider returns an email address. If that email address already belongs to a user in Kinde, the connection's **Email address trust** setting decides what happens next. You choose the setting per connection, and it applies to every application in the environment.
+
+Set **Email address trust** to **Trust** only when you know the third-party provider verifies email addresses. For a safer middle ground, select **Verify, then trust**. Google social connections are set to **Trust** by default.
 
 ### Trusted emails
 
@@ -113,6 +117,8 @@ You choose the trust level per connection, for both social connections (such as 
 1. Go to **Settings > Authentication > Social connections** (or **Enterprise connections**).
 2. Select **Configure** on the connection.
 3. Under **Provisioning**, choose an option in **Email address trust**:
+
+    ![email address trust options](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8d63e7e0-b77f-43b3-4bbc-0ea125d98600/socialsharingimage)
 
    - **Don't trust** - Keep them as separate users. Never merges on email alone. A separate user and identity are created, or the user is treated as not found if sign-up is disabled. No code is sent. Safest if the identity provider doesn't verify email addresses.
    - **Verify, then trust** (recommended) - Send a one-time code to the email address and merge with the existing user once it's entered.
