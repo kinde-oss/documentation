@@ -1,40 +1,38 @@
 ---
 page_id: 8c71cef6-4e34-4417-afcd-cbc3fdf13ab3
 title: Migrating users from email identity to enterprise identity
-description: Step-by-step guide to migrating existing email/password users to Enterprise SSO connections (SAML/Entra ID) using JIT provisioning, including testing, pilot rollout, and post-migration security best practices.
+description: "Move email and password users to enterprise SSO without losing their profiles, roles, or permissions"
 sidebar:
   order: 5
 relatedArticles:
   - 2c58dabc-fe5c-4919-ade7-4caab8da47e8
 topics:
-  - integrate
-  - third-party-tools
+  - authenticate
+  - enterprise-connections
+  - user-migration
 sdk: []
 languages: []
 audience:
-  - developers
-  - admins
+  - developer
+  - enterprise-admin
+  - security-engineer
 complexity: advanced
 keywords:
-  - email
-  - enterprise
   - user migration
-  - SSO
+  - JIT provisioning
+  - email address trust
+  - enterprise SSO
   - SAML
   - Entra ID
-  - Azure AD
-  - JIT provisioning
-  - enterprise connections
-  - identity migration
-  - trust email
-  - IdP
-updated: 2026-01-12
+  - identity mapping
+  - pilot rollout
+updated: 2026-10-12
 featured: false
 deprecated: false
-ai_summary: Step-by-step guide to migrating existing email/password users to Enterprise SSO connections (SAML/Entra ID) using JIT provisioning, including testing, pilot rollout, and post-migration security best practices.
+ai_summary: "Step-by-step guide to migrating existing email and password users to an enterprise SSO identity such as SAML or Microsoft Entra ID. Explains just-in-time provisioning, exact email matching, and using Verify, then trust so each existing user confirms the address before the enterprise identity replaces the email identity. Covers a single-user test, log verification, troubleshooting, a pilot rollout, and enabling the connection for production applications. Includes the post-migration review of Email address trust, audit and security housekeeping, identity removal, email capitalization issues, and customer identity provider setup. Intended for developers, enterprise admins, and security engineers."
 ---
 
-This guide walks you through migrating existing email/password users to Enterprise SSO connections (such as SAML, Entra ID, or other enterprise connections). This process uses just-in-time (JIT) provisioning to map existing users to their enterprise identities based on matching email addresses.
+This guide walks you through migrating existing email/password users to Enterprise SSO connections (such as SAML, Entra ID, or other enterprise connections). This process uses just-in-time (JIT) provisioning to map existing users to their enterprise identities based on matching email addresses. The connection's **Email address trust** setting controls how that mapping happens.
 
 
 ### What you need
@@ -56,6 +54,12 @@ Before testing with real users, verify the connection works correctly with a sin
 4. Toggle the connection **ON** for your test application. Ideally, this should be an application that is not publicly available.
 5. Select **Save**.
 
+### Choose how existing users are linked
+
+In the same connection configuration, under **Provisioning**, set **Email address trust** to **Verify, then trust**. On their first SSO sign-in, each existing user verifies their email address with a one-time code before Kinde links the enterprise identity to their existing account.
+
+Do not choose **Don't trust** for a migration, because Kinde would create a separate user instead of mapping to the existing account. If you use **Trust** to migrate without verification, first confirm the identity provider meets the conditions in [Trusting emails from providers](/authenticate/about-auth/identity-and-verification/#trusting-emails-from-providers). You can switch from **Trust** to **Verify, then trust** during migration; remaining users can still link their accounts after entering a one-time code. Do not switch to **Don't trust** until migration is complete (see [Complete migration and review email address trust](#complete-migration-and-review-email-address-trust)).
+
 ### Prepare a test user
 
 1. Identify one existing Kinde user who has an email/password identity.
@@ -72,7 +76,7 @@ Before testing with real users, verify the connection works correctly with a sin
 3. Authenticate with the test user's identity provider credentials.
 4. After successful authentication, your identity provider should redirect back to Kinde (via the ACS URL).
 5. Kinde should process the SAML response and either:
-   - Map to the existing Kinde user (if the email matches and **Trust email addresses** is enabled), preserving the user's profile, roles, and permissions; **or**
+   - Map to the existing Kinde user if the email matches, preserving the user's profile, roles, and permissions. With **Verify, then trust**, the user is first asked to enter a one-time code sent to that email address. With **Trust**, the mapping happens straight away; **or**
    - Create a new Kinde user via JIT provisioning with the SAML attributes if no match exists.
 6. You should be redirected back to your application with a valid authenticated session.
 
@@ -139,19 +143,21 @@ After successful pilot testing, enable the Enterprise Connection for your produc
 4. Toggle the connection **ON** for each production application that should use this Enterprise Connection.
 5. Select **Save**.
 
-### Complete migration and disable trust email
+### Complete migration and review email address trust
 
-Once all existing users for that Enterprise Connection have signed in successfully at least once:
+If you used **Verify, then trust**, there is nothing to switch off. Every migrated user proved ownership of their email address with a one-time code, and any future sign-in that matches an existing account will be asked for a code in the same way.
+
+If you used **Trust**, move to a stricter option once all existing users for that Enterprise Connection have signed in successfully at least once:
 
 1. In Kinde, go to **Environment > Settings > Authentication**.
 2. Find your Enterprise Connection and select **Configure**.
-3. Scroll down to the **Trust email addresses provided by this connection** option.
-4. Turn this setting **OFF** (improves security and prevents silent linking of emails).
+3. Under **Provisioning**, find the **Email address trust** option.
+4. Choose **Verify, then trust** so future matches require a one-time code, or **Don't trust** if you never want accounts combined on email address.
 5. Select **Save**.
 
 <Aside type="warning" title="Important">
 
-Only disable **Trust email addresses** after all users have successfully migrated. Disabling this before migration is complete may prevent users from being mapped to their existing accounts.
+You can change **Trust** to **Verify, then trust** before migration finishes. Remaining users can still link their existing accounts after entering a one-time code. Only avoid **Don't trust** until migration is complete, because that setting prevents remaining users from being mapped to their existing accounts.
 
 </Aside>
 
@@ -181,11 +187,11 @@ Only disable **Trust email addresses** after all users have successfully migrate
 - User can initiate SSO login from the application and is redirected to your identity provider.
 - Your identity provider accepts credentials and returns a successful SAML response to Kinde (redirect to ACS URL).
 - Kinde either:
-    - Maps the incoming SAML `emailaddress` to the **existing** Kinde user (when `Trust email addresses` is ON), preserving profile and permissions; **or**
+    - Maps the incoming SAML `emailaddress` to the **existing** Kinde user (after the user enters a one-time code with **Verify, then trust**, or straight away with **Trust**), preserving profile and permissions; **or**
     - Creates a new Kinde user via JIT provisioning with the SAML attributes if no match exists.
 - The user is redirected back to the application with a valid authenticated session and can access resources according to their preserved permissions.
 - Your identity provider's sign-in logs show the successful authentication; Kinde logs show either the mapped existing user sign-in or creation of the user from the enterprise connection.
-- After migration completion and verification, `Trust email addresses` can be turned **OFF** and email/password login disabled for migrated accounts.
+- After migration completion and verification, email/password login can be disabled for migrated accounts. If you used **Trust**, **Email address trust** can be changed to **Verify, then trust** or **Don't trust**.
 
 ---
 
@@ -233,7 +239,7 @@ This guide covered migrating existing email/password users to Enterprise Identit
 **Key takeaways:**
 
 1. Email addresses must match exactly (case-sensitive) between Kinde and your identity provider—verify your Email key attribute configuration matches your IdP's SAML response format
-2. Enable **Trust email addresses** during migration to enable automatic mapping, then disable it after all users have migrated for improved security
+2. Set **Email address trust** to **Verify, then trust** so each user confirms their email address with a one-time code as they are mapped. Use **Trust** only when the identity provider meets the conditions in [Trusting emails from providers](/authenticate/about-auth/identity-and-verification/#trusting-emails-from-providers), and move to a stricter option after all users have migrated
 3. Test with a single user first, then expand to a pilot group before full rollout
 4. Users created in Kinde before March 2025 may require manual resolution due to email capitalization issues
 5. Monitor authentication logs during and after migration to ensure successful user mapping
