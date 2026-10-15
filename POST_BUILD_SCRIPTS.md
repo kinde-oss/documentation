@@ -48,6 +48,8 @@ The LLM scripts write directly to the **build output** (`dist/`), not to `public
 - `authenticate.txt` - Authentication documentation
 - `billing.txt` - Billing and subscription management
 - `build.txt` - Building applications on Kinde
+- `contribute.txt` - Contributing to Kinde docs
+- `design.txt` - Design and branding
 - `developer-tools.txt` - Developer tools and APIs
 - `get-started.txt` - Getting started guides
 - `integrate.txt` - Third-party integrations
@@ -55,7 +57,11 @@ The LLM scripts write directly to the **build output** (`dist/`), not to `public
 - `manage-users.txt` - User management
 - `manage-your-account.txt` - Account management
 - `manage-your-apis.txt` - API management
+- `mcp-servers.txt` - MCP connections and the Kinde Management MCP server
 - `properties.txt` - Custom properties
+- `releases.txt` - Feature flags and releases
+- `testing.txt` - Testing authentication and APIs
+- `trust-center.txt` - Security, privacy, and compliance
 - `workflows.txt` - Workflow automation
 
 ## Build Integration
@@ -236,7 +242,7 @@ Processed 392 files
 Complete documentation created: dist/llms-full.txt
 Processed 392 files
 Generating section documentation files...
-Found 16 sections: authenticate, billing, build, contribute, design, developer-tools, get-started, integrate, machine-to-machine-applications, manage-users, manage-your-account, manage-your-apis, properties, releases, trust-center, workflows
+Found 18 sections: authenticate, billing, build, contribute, design, developer-tools, get-started, integrate, machine-to-machine-applications, manage-users, manage-your-account, manage-your-apis, mcp-servers, properties, releases, testing, trust-center, workflows
 ...
 All section documentation files have been generated in public/_llms-txt/
 ```
