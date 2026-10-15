@@ -81,6 +81,46 @@ If you would like to use our Environments feature as part of your development pr
 
 ## Configuring your app
 
+### Custom URL Scheme
+
+Register a custom URL scheme using one of these methods:
+
+<Tabs>
+
+  <TabItem label="Via Xcode UI">
+
+1. Open your project in Xcode and select the project in the navigator.
+2. Under **Targets**, select your app target.
+3. Open the **Info** tab, expand **URL Types**, and select **+** to add a URL type.
+4. Set **Role** to **Editor**.
+5. Add `<your-url-scheme>` to **URL Schemes**.
+
+  </TabItem>
+
+  <TabItem label="Via Info.plist File">
+
+Open your app target's `Info.plist` and add the following inside the top-level `<dict>`:
+
+```xml title="Info.plist"
+<key>CFBundleURLTypes</key>
+<array>
+    <dict>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+            <string>YOUR_URL_SCHEME</string>
+        </array>
+    </dict>
+</array>
+```
+
+  </TabItem>
+
+</Tabs>
+
+For more information, see Apple's [Defining a custom URL scheme for your app](https://developer.apple.com/documentation/xcode/defining-a-custom-url-scheme-for-your-app).
+
 ### **Environment variables**
 
 The Kinde `Auth` service is configured with an instance of the `Config` class. The example uses the bundled `kinde-auth.json` for configuration.
@@ -116,24 +156,47 @@ Replace the values in \<angle brackets> with your own values. For example:
 
 ## Integrate with your app
 
-Before `KindeSDKAPI.auth` can be used, a call to `KindeSDKAPI.configure()` must be made, typically in `AppDelegate` as part of `application(launchOptions)` for a UIKit app, or the `@main` initialization logic for a SwiftUI app.
+Before using `KindeSDKAPI.auth` or other Kinde SDK APIs, call `KindeSDKAPI.configure()` during app initialization.
 
-`AppDelegate.swift`
+### SwiftUI
 
-```swift
-...
-import KindeSDK
-...
+Initialize Kinde in the `init()` of your `@main` app.
+
+```diff lang="swift" title="MyApp.swift"
+import SwiftUI
++import KindeSDK
+
+@main
+struct MyApp: App {
+    init() {
++        KindeSDKAPI.configure()
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
+}
+```
+
+### UIKit
+
+For UIKit apps both with and without a scene delegate, you can initialize Kinde in your app delegate's `application(_:didFinishLaunchingWithOptions:)` method.
+
+```diff lang="swift" title="AppDelegate.swift"
+import UIKit
++import KindeSDK
 
 class AppDelegate: UIResponder, UIApplicationDelegate {
-	...
-	func application(...) {
-		...
-		// The Kinde authentication service must be configured before use
-		KindeSDKAPI.configure(Logger())
-		...
-	}
-	...
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions:
+            [UIApplication.LaunchOptionsKey: Any]?
+    ) -> Bool {
++        KindeSDKAPI.configure()
+        return true
+    }
 }
 ```
 
@@ -192,27 +255,36 @@ To switch to a different environment, simply change the configuration file name 
 
 ## Custom Logger (Optional)
 
-You can use your own Custom Logger as well by extending `LoggerProtocol`.
+Calling `KindeSDKAPI.configure()` without a logger uses the SDK's `DefaultLogger`. 
 
-`CustomLogger.swift`
+To customize logging, create a type that conforms to `LoggerProtocol`:
+
+```swift title="CustomLogger.swift"
+import KindeSDK
+
+struct CustomLogger: LoggerProtocol {
+    func debug(message: String) {
+        print("[DEBUG]: \(message)")
+    }
+
+    func info(message: String) {
+        print("[INFO]: \(message)")
+    }
+
+    func error(message: String) {
+        print("[ERROR]: \(message)")
+    }
+
+    func fault(message: String) {
+        print("[FAULT]: \(message)")
+    }
+}
+```
+
+During [app initialization](#integrate-with-your-app), pass your custom logger to `KindeSDKAPI.configure()`:
 
 ```swift
-...
-import os.log
-import KindeSDK
-...
-struct CustomLogger: LoggerProtocol {
-.....
-.....
-
-  func log(_ message: String) {
-      print("[INFO]: \(message)")
-  }
-
-  func log(error: Error) {
-      print("[ERROR]: \(error.localizedDescription)")
-  }
-}
+KindeSDKAPI.configure(CustomLogger())
 ```
 
 ## Login and register
@@ -525,6 +597,183 @@ KindeSDKAPI.auth.getUserOrganizations();
 ```
 
 For more information about how organizations work in Kinde, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
+
+## Invitation
+
+The SDK can start the invitation sign-up flow when your app is opened via a URL containing an `invitation_code` query parameter.
+
+For example, `com.example.App://login?invitation_code=abc123` for an [Application login URI](/build/applications/default-login-routes/#to-set-default-login-routes) of `com.example.App://login` and an invitation code of `abc123`.
+
+To support the invitation sign-up flow in your iOS app, use one of the following methods:
+
+<Tabs>
+
+  <TabItem label="Automatic handling">
+
+  To make the SDK automatically intercept your invitation code URLs, set  `KindeURLInterceptorEnabled` to `true` in your app's `Info.plist`.
+
+  ```xml title="Info.plist"
+  <key>KindeURLInterceptorEnabled</key>
+  <true/>
+  ```
+
+  The SDK then uses [method swizzling](https://nshipster.com/method-swizzling/) to intercept incoming invitation URLs in your app delegate and scene delegate callbacks.
+
+  <details>
+  <summary>Delegate methods swizzled for URL interception</summary>
+
+  **App delegate**
+
+  - `application(_:open:options:)`
+  - `application(_:continue:restorationHandler:)`
+
+  **Scene delegate**
+
+  - `scene(_:willConnectTo:options:)`
+  - `scene(_:openURLContexts:)`
+  - `scene(_:continue:)`
+
+  </details>
+
+  This is disabled by default and is only used when you set the `KindeURLInterceptorEnabled` flag to `true`.
+
+  </TabItem>
+
+  <TabItem label="Manual handling">
+
+  To manually handle incoming URLs:
+
+  - Ensure `KindeURLInterceptorEnabled` is unset or set to `false` in your app's `Info.plist`.
+
+    ```xml title="Info.plist"
+    <key>KindeURLInterceptorEnabled</key>
+    <false/>
+    ```
+
+  - Forward your app's incoming URLs to `KindeSDKAPI.handle(url:)` from your app's URL-handling callbacks.
+
+    Choose the approach that matches your app's setup.
+
+    <Tabs>
+
+      <TabItem label="SwiftUI">
+
+      Handle incoming custom-scheme URLs and universal links using `.onOpenURL`, forwarding them to `KindeSDKAPI.handle(url:)`.
+
+      ```diff lang="swift" title="MyApp.swift"
+      import SwiftUI
+      import KindeSDK
+
+      @main
+      struct MyApp: App {
+          var body: some Scene {
+              WindowGroup {
+                  ContentView()
+      +                .onOpenURL { url in
+      +                    KindeSDKAPI.handle(url: url)
+      +                }
+              }
+          }
+      }
+      ```
+
+      </TabItem>
+
+      <TabItem label="UIKit (app delegate)">
+
+      Handle custom-scheme URLs in `application(_:open:options:)` and universal links in `application(_:continue:restorationHandler:)`.
+
+      ```diff lang="swift" title="AppDelegate.swift"
+      import UIKit
+      import KindeSDK
+
+      class AppDelegate: UIResponder, UIApplicationDelegate {
+          func application(
+              _ application: UIApplication,
+              open url: URL,
+              options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+          ) -> Bool {
+      +        return KindeSDKAPI.handle(url: url)
+          }
+
+          func application(
+              _ application: UIApplication,
+              continue userActivity: NSUserActivity,
+              restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
+          ) -> Bool {
+      +        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+      +              let url = userActivity.webpageURL else {
+      +            return false
+      +        }
+      +
+      +        return KindeSDKAPI.handle(url: url)
+          }
+      }
+      ```
+
+      </TabItem>
+
+      <TabItem label="UIKit (scene delegate)">
+
+      In the scene delegate, handle incoming URLs when a scene connects in `scene(_:willConnectTo:options:)`, and subsequent URLs in `scene(_:openURLContexts:)` for custom schemes and `scene(_:continue:)` for universal links.
+
+      ```diff lang="swift" title="SceneDelegate.swift"
+      import UIKit
+      +import KindeSDK
+
+      class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+          var window: UIWindow?
+
+          func scene(
+              _ scene: UIScene,
+              willConnectTo session: UISceneSession,
+              options connectionOptions: UIScene.ConnectionOptions
+          ) {
+              guard let _ = (scene as? UIWindowScene) else { return }
+
+      +        if let context = connectionOptions.urlContexts.first {
+      +            KindeSDKAPI.handle(url: context.url)
+      +        }
+      +
+      +        if let activity = connectionOptions.userActivities.first(where: {
+      +            $0.activityType == NSUserActivityTypeBrowsingWeb
+      +        }), let url = activity.webpageURL {
+      +            KindeSDKAPI.handle(url: url)
+      +        }
+          }
+
+          func scene(
+              _ scene: UIScene,
+              openURLContexts URLContexts: Set<UIOpenURLContext>
+          ) {
+      +        guard let url = URLContexts.first?.url else {
+      +            return
+      +        }
+      +
+      +        KindeSDKAPI.handle(url: url)
+          }
+
+          func scene(
+              _ scene: UIScene,
+              continue userActivity: NSUserActivity
+          ) {
+      +        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+      +              let url = userActivity.webpageURL else {
+      +            return
+      +        }
+      +
+      +        KindeSDKAPI.handle(url: url)
+          }
+      }
+      ```
+
+      </TabItem>
+
+    </Tabs>
+
+  </TabItem>
+
+</Tabs>
 
 ## Feature flags
 
