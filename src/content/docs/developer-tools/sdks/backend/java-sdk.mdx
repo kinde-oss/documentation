@@ -34,7 +34,8 @@ keywords:
   - PKCE
   - environment variables
   - client credentials
-updated: 2024-01-15
+  - logout
+updated: 2026-09-26
 featured: false
 deprecated: false
 ai_summary: Complete guide for Java SDK including Maven/Gradle installation, M2M token retrieval, PKCE authentication, and environment configuration for Java 17+ applications.
@@ -124,6 +125,14 @@ export KINDE_REDIRECT_URI=http://localhost:8080/kinde-j2ee-app/login
 
 The redirect URI/URL is used post successful login. It is the URL that the PKCE client CODE will be set to. A query parameter of ?code='value' must be processed.
 
+Provide a logout redirect URI, so Kinde knows where to send the user after they sign out. This is required to use [`logout`](#log-out).
+
+```shell
+export KINDE_LOGOUT_REDIRECT_URI=http://localhost:8080
+```
+
+Both URLs must also be added to your application in Kinde. Go to **Settings > Applications > [your app] > View details** and add them under **Allowed callback URLs** and **Allowed logout redirect URLs**, then select **Save**.
+
 ### Set up .env files
 
 The Kinde library supports .env files. The must be located in the directory from which the application is executed.
@@ -133,6 +142,7 @@ KINDE_DOMAIN=https://<replace>.kinde.com
 KINDE_CLIENT_ID=<replace>
 KINDE_CLIENT_SECRET=<replace>
 KINDE_REDIRECT_URI=http://localhost:8080/kinde-j2ee-app/login
+KINDE_LOGOUT_REDIRECT_URI=http://localhost:8080
 ```
 
 #### Core server example
@@ -198,6 +208,7 @@ export KINDE_DOMAIN=https://<replace>.kinde.com # This is the domain you setup a
 export KINDE_CLIENT_ID=<replace> # the id for the client connecting to Kinde
 export KINDE_CLIENT_SECRET=<replace> # the secret used to authenticate the client against Kinde
 export KINDE_REDIRECT_URI=openid # the open id
+export KINDE_LOGOUT_REDIRECT_URI=<replace> # where users land after signing out
 ```
 
 #### By .env file config
@@ -209,6 +220,7 @@ KINDE_DOMAIN=https://<replace>.kinde.com
 KINDE_CLIENT_ID=<replace>
 KINDE_CLIENT_SECRET=<replace>
 KINDE_REDIRECT_URI=<replace>
+KINDE_LOGOUT_REDIRECT_URI=<replace>
 KINDE_SCOPES=openid
 ```
 
@@ -223,6 +235,7 @@ KindeClient kindeClient = KindeClientBuilder
         .clientId("<replace>")
         .clientSecret("<replace>")
         .redirectUri("replace")
+        .logoutRedirectUri("<replace>")
         .addScope("openid")
         .build();
 ```
@@ -262,6 +275,64 @@ KindeClient kindeClient = KindeClientBuilder
         .build();
 KindeTokens tokens = kindeClient.getKindeClient().initClientSession(code,authorizationUrl).retrieveTokens();
 ```
+
+## Log out
+
+Logging out ends the user's session in your app and on Kinde, then redirects them to your logout redirect URL.
+
+<Aside>
+
+This section is for the Kinde Java core. If you're using [Kinde-J2EE](#logout-with-kinde-j2ee) or the [Spring Boot starter](#logout-with-spring-boot), see those sections instead.
+
+</Aside>
+
+### Set the logout redirect URL
+
+1. In Kinde, go to **Settings > Applications** and select **View details** on your app.
+2. Add your URL under **Allowed logout redirect URLs**, for example `http://localhost:8080`.
+3. Select **Save**.
+4. Set the same URL in your app, either with the `KINDE_LOGOUT_REDIRECT_URI` environment variable or `.env` entry:
+
+   ```shell
+   KINDE_LOGOUT_REDIRECT_URI=http://localhost:8080
+   ```
+
+   Or programmatically, with the `KindeClientBuilder`:
+
+   ```java
+   KindeClient kindeClient = KindeClientBuilder
+           .builder()
+           .logoutRedirectUri("http://localhost:8080")
+           .build();
+   ```
+
+If no logout redirect URL is configured, `logout()` throws an exception.
+
+<Aside type="warning">
+
+The URL in your app must exactly match one of your **Allowed logout redirect URLs**, including any trailing slash. For example, `http://localhost:8080` and `http://localhost:8080/` are treated as different URLs. If they don't match, Kinde ends the session but shows its default logged-out page instead of redirecting to your app.
+
+</Aside>
+
+### Generate the logout URL
+
+`logout()` returns the Kinde logout URL, with your logout redirect URL added as a parameter. Clear your app's session, then redirect the browser to it.
+
+```java
+KindeClientSession kindeClientSession = kindeClient.clientSession();
+AuthorizationUrl logoutUrl = kindeClientSession.logout();
+
+// End the session in your app
+HttpSession session = req.getSession(false);
+if (session != null) {
+    session.invalidate();
+}
+
+// End the session on Kinde
+resp.sendRedirect(logoutUrl.getUrl().toString());
+```
+
+Kinde ends the user's session and redirects them to `KINDE_LOGOUT_REDIRECT_URI`.
 
 ## Get user information
 
@@ -340,20 +411,20 @@ resp.sendRedirect(authorizationUrl.getUrl().toString());
 
 #### `logout`
 
-The register process generates an authorization URL. This can be used by the browser to initiate the login.
+The logout process generates the Kinde logout URL, with your configured `KINDE_LOGOUT_REDIRECT_URI` added. Redirect the browser to it to end the user's session on Kinde. Kinde then sends the user to the logout redirect URL. Throws an exception if no logout redirect URL is configured. See [Log out](#log-out).
 
 ```java
 KindeClient kindeClient = KindeClientBuilder
         .builder()
         .build();
 KindeClientSession kindeClientSession = kindeClient.getKindeClient().clientSession();
-AuthorizationUrl authorizationURL = kindeClientSession.logout();
+AuthorizationUrl logoutUrl = kindeClientSession.logout();
 ```
 
 Send the redirect response using:
 
 ```java
-resp.sendRedirect(authorizationUrl.getUrl().toString());
+resp.sendRedirect(logoutUrl.getUrl().toString());
 ```
 
 #### `getToken`  
@@ -626,6 +697,28 @@ The above project configuration sets up an example web.xml using the Kinde-J2EE 
 3. KindeLogoutServlet: This servlet is responsible for triggering the logout flow, and for removing from the application any active session for the user.
 4. KindeLoginFilter: This is a J2EE filter and acts as a gateway to the private section of your site. It will deny users access to anything its scope covers, unless they have successfully authenticated. It also sets up roles or permissions for the logged in user.
 
+### Logout with Kinde-J2EE
+
+With `KindeLogoutServlet` mapped to `/logout` as above, a `GET` request to `/logout`:
+
+1. Removes the Kinde tokens and user from the HTTP session, and invalidates it.
+2. Redirects the browser to Kinde to end the user's Kinde session.
+3. Kinde then redirects the user to `KINDE_LOGOUT_REDIRECT_URI`.
+
+Link to it from your app, for example:
+
+```html
+<a href="${pageContext.request.contextPath}/logout">Sign out</a>
+```
+
+<Aside type="warning">
+
+`KindeLogoutServlet` only supports `GET` and has no CSRF protection, so another site can sign your users out by linking to or embedding `/logout`. This can't expose user data, but take it into account when deciding how to expose the endpoint.
+
+</Aside>
+
+`KINDE_LOGOUT_REDIRECT_URI` must be set (see below). If it isn't, `/logout` fails with a server error and the user stays signed in to Kinde. The URL must also exactly match one of your **Allowed logout redirect URLs** in Kinde. If it doesn't, Kinde ends the session but shows its default logged-out page instead of redirecting to your app.
+
 ### Environment configuration
 
 Configuration can either be performed by exports or through an .env file.
@@ -637,6 +730,7 @@ export KINDE_DOMAIN=https://<replace>.kinde.com # This is the domain you set up 
 export KINDE_CLIENT_ID=<replace> # the ID for the client connecting to Kinde
 export KINDE_CLIENT_SECRET=<replace> # the secret used to authenticate the client against Kinde
 export KINDE_REDIRECT_URI=http://localhost:8080/kinde-j2ee-app/login
+export KINDE_LOGOUT_REDIRECT_URI=http://localhost:8080/kinde-j2ee-app # where users land after signing out
 ```
 
 #### .env
@@ -648,6 +742,7 @@ KINDE_DOMAIN=https://<replace>.kinde.com
 KINDE_CLIENT_ID=<replace>
 KINDE_CLIENT_SECRET=<replace>
 KINDE_REDIRECT_URI=http://localhost:8080/kinde-j2ee-app/login
+KINDE_LOGOUT_REDIRECT_URI=http://localhost:8080/kinde-j2ee-app
 ```
 
 ## Kinde Spring Boot starter
@@ -710,7 +805,48 @@ kinde:
     client-id: < replace >
     client-secret: < replace >
     scopes: openid,email,profile
+    post-logout-redirect-uri: http://localhost:< replace with port of application server >
 ```
+
+### Logout with Spring Boot
+
+Set `kinde.oauth2.post-logout-redirect-uri` in `application.yaml` to sign users out of both your app and Kinde. The Spring Boot starter reads the logout redirect URL only from this property, not from a `KINDE_LOGOUT_REDIRECT_URI` entry in a `.env` file.
+
+To set it per environment, use a Spring placeholder. This reads the `KINDE_LOGOUT_REDIRECT_URI` environment variable if it's exported, and otherwise uses the default after the colon:
+
+```yaml
+kinde:
+  oauth2:
+    post-logout-redirect-uri: ${KINDE_LOGOUT_REDIRECT_URI:http://localhost:8080}
+```
+
+When this property is set, a `POST` request to `/logout`:
+
+1. Clears the user's Spring Security session.
+2. Redirects the browser to Kinde's logout endpoint, with the user's ID token and your post-logout redirect URL.
+3. Kinde ends the user's session and redirects them to `post-logout-redirect-uri`.
+
+A relative value, such as `/goodbye`, is resolved against your app's base URL. The resolved URL must exactly match one of your **Allowed logout redirect URLs** in Kinde, including any trailing slash.
+
+Spring Security requires a CSRF token on `/logout`, so trigger logout from a form rather than a link. For example, with Thymeleaf:
+
+```html
+<form th:action="@{/logout}" method="post">
+    <button type="submit">Sign out</button>
+</form>
+```
+
+<Aside type="warning">
+
+If `post-logout-redirect-uri` is not set, `/logout` only clears the local Spring session. The user is still signed in to Kinde, so they will be signed straight back in the next time they log in.
+
+</Aside>
+
+<Aside>
+
+In Spring Boot starter versions 3.0.1 and earlier, the servlet (non-reactive) auto-configuration reads the redirect URL from the `KINDE_LOGOUT_REDIRECT_URI` environment variable or `.env` entry instead of the property, and fails to start if it isn't set. On these versions, set both to the same value. If you are upgrading from version 2.x, this property was previously named `okta.oauth2.post-logout-redirect-uri`.
+
+</Aside>
 
 ## Kinde Management API
 
