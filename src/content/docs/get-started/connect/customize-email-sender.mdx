@@ -27,7 +27,7 @@ keywords:
   - mailgun
   - postmark
   - troubleshooting
-updated: 2026-03-03
+updated: 2026-10-15
 featured: false
 deprecated: false
 ai_summary: Guide to customizing email sender configuration in Kinde including SMTP setup, email provider integration, and troubleshooting common issues.
@@ -111,9 +111,60 @@ You should only do this if your environment is not live.
 2. Disable the **Use custom sender** switch. This reverts back to use the default Kinde email address and removes SMTP details.
 3. Select **Save**.
 
+## Email sending alerts
+
+If your SMTP provider starts rejecting emails from Kinde, for example because the password was changed at the provider, Kinde lets you know in the dashboard. This helps you fix the problem before your users miss sign-in codes and password reset emails.
+
+When an email fails to send using your custom SMTP details:
+
+- **Home page** - An **Email sending issue** banner appears. Select **View email settings** to go to the Email Sender page. If there are other issues at the same time, a **Multiple issues detected** banner appears instead, with a link to the status page.
+- **Status page** - The **Email sender** card shows an error.
+- **Email Sender page** - A banner at the top of the page shows when the last attempt failed, and the error message returned by your SMTP server.
+
+Kinde only keeps the most recent failure. If another email fails, the banner shows the newer error.
+
+<Aside>
+
+You need the `read:email_settings` permission to see email sending alerts on the home page and status page.
+
+</Aside>
+
+### What triggers an alert
+
+An alert is shown when your SMTP server rejects an email because of a problem with your sender settings, for example:
+
+- The username or password is wrong
+- Kinde can't connect to the server or port
+- The server rejects your sender email address
+- The server refuses to relay the email, or blocks it for policy reasons
+
+Problems with an individual recipient, such as an email address that doesn't exist or a full mailbox, don't trigger an alert. These don't mean anything is wrong with your settings.
+
+Alerts are only shown for your custom SMTP sender. If you use Kinde's default email sender, Kinde monitors delivery for you.
+
+### Clear an alert
+
+The alert clears automatically when:
+
+- An email sends successfully through your SMTP server.
+- You save your email sender details.
+- You send a successful test email using the same details that are saved. If you test new details, you need to save them too. Kinde keeps using your saved details for real emails until you do.
+
+To fix the problem:
+
+1. In Kinde, go to **Settings > Environment > Messaging > Email Sender**.
+2. Read the error in the banner at the top of the page. It usually tells you what the SMTP server rejected.
+3. Check your **Sender email** and SMTP details, and update the password if it has changed at your provider.
+4. Select **Send test email**.
+5. If the test is successful, select **Save**. The alert clears.
+
+If the error continues, see [Troubleshoot the SMTP provider connection](#troubleshoot-the-smtp-provider-connection).
+
 ## Troubleshoot the SMTP provider connection
 
 Sometimes things go wrong with server connections and external provider configuration. There’s only so much we can assist with on our side, but if you get an SMTP error, check your provider documentation.
+
+If emails stop sending after your custom sender was working, go to **Settings > Environment > Messaging > Email Sender**. The banner at the top of the page shows the error your SMTP server returned on the last failed attempt. See [Email sending alerts](#email-sending-alerts).
 
 Here’s a [list of errors](https://datatracker.ietf.org/doc/html/rfc2821#section-4.2.3) you might see (from the IETF), and here’s link to SMTP docs from some common providers.
 
