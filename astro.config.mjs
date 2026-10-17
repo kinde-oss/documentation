@@ -141,6 +141,9 @@ export default defineConfig({
     "/authenticate/social-sign-in/":
       "/authenticate/social-sign-in/add-social-sign-in/",
     
+    "/billing/manage-subscribers/one-time-charges/":
+      "/billing/manage-subscribers/one-time-purchases/",
+
     // Billing section subfolder redirects
     "/billing/about-billing/":
       "/billing/about-billing/about-billing/",
