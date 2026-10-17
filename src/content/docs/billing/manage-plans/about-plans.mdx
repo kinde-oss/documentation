@@ -11,7 +11,7 @@ tableOfContents:
 app_context:
   - m: billing
   - s: plans
-description: "Design Kinde billing plans, plan groups, mixed-interval charges, trials, tax, and draft vs published"
+description: "Design Kinde billing plans, plan groups, mixed-interval charges, one-time charges, trials, tax, and draft vs published"
 featured: false
 deprecated: false
 topics:
@@ -35,8 +35,9 @@ keywords:
   - free trial
   - collect tax automatically
   - draft plans
-ai_summary: "Conceptual overview of billing plans in Kinde for structuring product features and charging customers. Explains plan groups for users or organizations, pricing table constraints, and the parts of a plan including profile details and settings such as Ask for credit card, Collect tax automatically with account or plan-level Stripe Tax options, and configurable free trial periods. Covers pricing building blocks: fixed charges with daily weekly monthly or yearly intervals, optional annual pricing on one charge per plan, and mixed-interval totals such as yearly plus monthly; metered features for usage-based entitlements including unit tiered and included allowances such as MAU; and unmetered features for feature gating. Describes reusing a shared pool of features and charges across plans with plan-specific prices and limits. Explains draft versus published states, Stripe price sync status, current limitations including no custom billing cycle changes and no per-subscription add-ons or discount. Intended for developers, product managers, and business owners designing SaaS pricing."
-updated: 2026-08-30
+  - one-time charges
+ai_summary: "Conceptual overview of billing plans in Kinde for structuring product features and charging customers. Explains plan groups for users or organizations, pricing table constraints, and the parts of a plan including profile details and settings such as Ask for credit card, Collect tax automatically with account or plan-level Stripe Tax options, and configurable free trial periods. Covers pricing building blocks: fixed charges with daily weekly monthly or yearly intervals, optional annual pricing on one charge per plan, mixed-interval totals such as yearly plus monthly; metered and unmetered features; and one-time charges with flat or package pricing and expiry. Describes reusing a shared pool of features, fixed charges, and one-time charges across plans with plan-specific prices and limits. Explains draft versus published states, Stripe price sync status, current limitations including no custom billing cycle changes, no per-subscription add-ons or discounts, and that subscribers cannot purchase one-time charges yet. Intended for developers, product managers, and business owners designing SaaS pricing."
+updated: 2026-09-07
 ---
 
 Plans enable you to structure your app features and charge your customers for using your services. Kinde supports both basic and more advanced plans for SaaS services. Here’s some examples:
@@ -52,6 +53,7 @@ These are known limitations that we are actively working on to add.
 
 - No alterations to billing cycle or invoice methods.
 - Add-ons and discounts that can be applied to individual subscriptions.
+- One-time charge purchase by subscribers, and applying one-time charges to existing subscriptions, are not available yet (plan configuration is available now).
 
 ## About plan groups
 
@@ -78,7 +80,7 @@ The plan name appears on the pricing table that you can generate to share with c
 
 Plan settings control additional subscription behavior beyond pricing.
 
-- **Ask for credit card:** Determines whether users must provide payment details when subscribing. This can be disabled for free plans with no charges, allowing frictionless signups. For plans with any charges (fixed or metered), credit card collection is always required.
+- **Ask for credit card:** Determines whether users must provide payment details when subscribing. This can be disabled for free plans with no charges, allowing frictionless signups. For plans with any positive-price fixed charge or chargeable metered billing, credit card collection is always required. Priced one-time charges alone do not require a card at signup.
 - **Collect tax automatically:** Controls whether Stripe Tax is applied for subscriptions to this plan. Choose **Use account setting** (default), **Collect**, or **Don’t collect**. The account default lives under **Settings > Environment > Billing**. See [Create plans — Collect tax automatically](/billing/manage-plans/create-plans/#collect-tax-automatically) for details.
 - **Trial period:** When enabled, lets customers try the plan for a set number of days before being charged. You can configure the trial length and how many days before the trial ends to prompt for payment details. Plans with a trial enabled show a “Free trial for N day(s)” badge on the pricing table. See [Create plans — Configure trial period](/billing/manage-plans/create-plans/#configure-trial-period) for configuration details.
 
@@ -102,6 +104,22 @@ Bill customers for additional features they can access. Features can be:
 - **Metered:** Users pay based on the usage limits you set. Pricing can be per unit, per tier, or non-chargeable. For example, $10 per 1 million API calls, then $25 for up to the next 5 million API calls, and so on.
 - **Unmetered:** The user either has access to the feature or not. There is no usage limit. Unmetered features are typically used to gate feature access. For example, custom domain support or custom themes.
 
+#### One-time charges
+
+Single-purchase items subscribers can buy in addition to their subscription—for example credit top-ups or add-on unlocks. You configure them on the plan under **One-time charges**, with:
+
+- **Flat** or **Package** pricing
+- Optional metering and unit limits
+- An expiry policy (**Never expires** or **Expires with the billing cycle**)
+
+<Aside>
+
+You can create one-time charges and add them to plans now. Subscribers can’t buy them yet, and they can’t be applied to existing subscriptions.
+
+</Aside>
+
+See [Create billing plans — Add one-time charges to a plan](/billing/manage-plans/create-plans/#add-one-time-charges-to-a-plan).
+
 ## Example plan features
 
 | Feature             | Price                        | Pricing model             |
@@ -112,16 +130,19 @@ Bill customers for additional features they can access. Features can be:
 | Storage/Usage       | $x per GB                    | Metered / units or tiered |
 | MAU                 | x included                   | Metered / non-chargeable  |
 | MAU                 | Additional $x per MAU over n | Metered / tiered          |
+| Credit top-up       | $x one-time (for example per package of credits) | One-time / flat or package |
 
 A plan is complete when it includes all the features needed to provide the access and charge the right price.
 
 ## How to use and re-use features and charges
 
-Kinde structures plans so that they can share a pool of features and charges that you define at a high level. When you add the feature in a plan, you add the price, limits, and other differences uniquely in each plan. This makes building and managing plan features easier, because the feature shares the same key (e.g. `base_price`), making it easier to manage in your code and for gating.
+Kinde structures plans so that they can share a pool of features, fixed charges, and one-time charges that you define at a high level. When you add the item to a plan, you set the price, limits, and other differences uniquely in each plan. This makes building and managing plan items easier, because the item shares the same key (e.g. `base_price` or `credit_top_up`), making it easier to manage in your code and for gating.
 
 For example, you only need to define the item ‘Base price’ once, and then you define the price when you add it to each individual plan.
 
 Similarly, features that are inclusions, such as support hours included, just create one metered feature. Then set the limits of the feature differently for each plan level. E.g. Free plan one hour, Pro plan gets 2 hours, etc.
+
+The same reuse pattern applies to one-time charges: define a top-up once, then attach it to each plan with the amount, package size, and expiry you want for that plan.
 
 ![Model of how you can use the same feature or charge across plans](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/190e7ba8-ba26-4fb6-57b4-a4d6b9fec700/public)
 

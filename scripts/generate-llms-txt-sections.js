@@ -124,7 +124,8 @@ function generateSectionFrontmatter(sectionName) {
     'properties': '1b2c3d4e-5f6a-7b8c-9d0e-1f2a3b4c5d6e',
     'releases': '2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f',
     'trust-center': '3d4e5f6a-7b8c-9d0e-1f2a-3b4c5d6e7f8a',
-    'workflows': '4e5f6a7b-8c9d-0e1f-2a3b-4c5d6e7f8a9b'
+    'workflows': '4e5f6a7b-8c9d-0e1f-2a3b-4c5d6e7f8a9b',
+    'workforce-identity': '03a725f4-4412-4ac5-9c1f-effebb5101e9'
   };
   
   const pageId = sectionUUIDs[sectionName] || `llms-${sectionName}-fallback`;
