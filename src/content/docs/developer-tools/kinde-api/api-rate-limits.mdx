@@ -1,9 +1,12 @@
 ---
 page_id: c944dcc9-35d1-4816-b2d3-a39fb0d3e68f
-title: API rate limits
-description: "Documentation on Kinde API rate limits, including rate and concurrency limiters, common causes, and graceful handling strategies"
+title: Kinde Management API Rate Limits
+description: "Understand Kinde API rate limits and concurrency limits, what causes 429 errors, and how to handle them gracefully."
 sidebar:
-  order: 7
+  order: 9
+  label: "API Rate Limits"
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 6bf993fc-a195-4836-8eaf-133812be8876
   - 51899f7f-3436-46e0-9a1b-6ecc3603a0df
@@ -12,6 +15,8 @@ relatedArticles:
 topics:
   - developer-tools
   - kinde-api
+  - api-reference
+  - error-handling
 sdk: []
 languages: []
 audience:
@@ -22,47 +27,81 @@ keywords:
   - api limits
   - 429 error
   - rate limiting
+  - too many requests
   - concurrency limiter
+  - rate limiter
   - exponential backoff
   - token bucket
-updated: 2024-01-15
-featured: false
-deprecated: false
-ai_summary: Documentation on Kinde API rate limits, including rate and concurrency limiters, common causes, and graceful handling strategies
+  - RateLimit-Reset
+  - request throttling
+  - api stability
+  - bulk api limits
+  - page size limit
+  - retry strategy
+updated: 2026-05-03
+ai_summary: "Kinde enforces two types of API limits: a rate limiter and a concurrency limiter. The rate limiter restricts payload size — capping GET responses at 500 results per page and bulk POST/PATCH requests at 100 objects — while the concurrency limiter caps the number of simultaneous in-flight requests. When either limit is exceeded, the API returns a 429 Too Many Requests status with a RateLimit-Reset header indicating how many seconds until the limit resets. Common triggers include high-frequency requests during migrations or analytics operations, resource-intensive list queries, requests with expansions, and sudden traffic spikes such as bulk user imports. The recommended handling strategy is exponential backoff with jitter: read the RateLimit-Reset header, wait progressively longer between retries, and add randomness to prevent multiple clients from retrying at the same time (thundering herd). An alternative is to implement a token bucket algorithm on the client side to proactively throttle outbound request volume before hitting the API. Integrations that require higher limits should contact Kinde support."
 ---
 
-Kinde may rate limit incoming traffic to help maximise API stability and prevent bursts of requests from destabilizing API functions.
+Kinde rate limits incoming traffic to maximise API stability and prevent bursts of requests from destabilizing API functions.
 
-If you send a lot of requests in quick succession, you might see error responses with **code `429`**.
+If you send too many requests in quick succession, you'll see error responses with **status `429`**.
 
-For advice on handling these errors, see [Handle limiting gracefully](#handle-limiting-gracefully), below. If you suddenly see a rising number of rate-limited requests, contact Kinde support.
+For advice on handling these errors, read the sections below. If you suddenly see a rising number of rate-limited requests, contact [Kinde support](https://www.kinde.com/support/).
 
-## API limiters
+## What limiters does the Kinde API use?
 
-Kinde has several limiters in the API, including a rate limiter and a concurrency limiter.
+Kinde applies two types of limiters: a **rate limiter** and a **concurrency limiter**.
 
 ### Rate limiter
 
-The basic rate limiter restricts the number of API requests per minute as follows:
+The rate limiter caps both request frequency and payload size. Key constraints:
 
-- maximum page size of 500 per request to API GET endpoints that use the `page_size` parameter, additional results can be requested using the `page_size` and `next_token` parameters (e.g. GET `/api/v1/subscribers`)
-- maximum 100 objects can be updated in a single request when sending `POST/PATCH` requests to bulk endpoints (e.g. PATCH `/api/v1/organizations/{org_code}/users`)
+- **Page size:** Maximum of 500 results per request on GET endpoints that accept a `page_size` parameter. Use `page_size` and `next_token` to paginate through additional results (e.g. `GET /api/v1/subscribers`).
+- **Bulk updates:** Maximum of 100 objects per request on bulk `POST`/`PATCH` endpoints (e.g. `PATCH /api/v1/organizations/{org_code}/users`).
 
-If this affects your integrations and you require an extended period with a higher limit please get in touch.
+If your integration requires a higher limit for an extended period, contact [Kinde support](https://www.kinde.com/support/).
 
-## Common causes
+### Concurrency limiter
 
-Rate limiting can occur under a variety of conditions, but it’s most common in these scenarios:
+The concurrency limiter caps the number of requests that can be in-flight at the same time. When this limit is reached, new incoming requests are shed and return a `429` response.
 
-- Running a large volume of closely-spaced requests can lead to rate limiting. Often this is part of an analytical or migration operation. When engaging in these activities, you should try to control the request rate on the client-side.
-- Issuing many long-lived requests can trigger limiting. Requests vary in the amount of Kinde’s server resources they use, and more resource-intensive requests tend to take longer and run the risk of causing new requests to be shed by the concurrency limiter.
-- Resource requirements vary, but list requests and requests that include expansions generally use more resources and take longer to run. We suggest profiling the duration of Kinde API requests, and watch for timeouts to try and spot those that are unexpectedly slow.
-- A sudden increase in volume like the bulk addition of new users can result in rate limiting. We try to set our rates high enough that legitimate user traffic never exceeds the limits, but if you suspect that an upcoming event might push you over the limits listed above, contact us to increase limits for you.
+Resource-intensive requests — such as large list queries or requests that include expansions — consume more server resources and take longer to complete, which reduces available concurrency slots for other requests.
 
-## Handle limiting gracefully
+## What causes rate limiting?
 
-Graceful handling involves monitoring for `429` status codes and triggering a retry method.  The header `RateLimit-Reset` will return the number of seconds until the rate limit is reset.
+Rate limiting most commonly occurs in these scenarios:
 
-Your method should follow an exponential back-off schedule to reduce request volume as needed. We also recommend building randomness into the back-off schedule to avoid a ‘thundering herd’ effect.
+- **High request volume.** Running a large number of closely-spaced requests — often as part of an analytical or migration operation — can trigger rate limiting. Control the request rate on the client-side when doing this.
+- **Long-lived or resource-intensive requests.** Requests that consume significant server resources take longer to complete, leaving fewer concurrency slots available for new requests.
+- **List requests and expansions.** These generally use more resources and run longer than other request types. Profile your Kinde API request durations and watch for unexpected timeouts.
+- **Sudden traffic spikes.** Bulk operations like adding a large number of users at once can push you over the limit. If you anticipate an upcoming spike, contact Kinde support in advance to have limits increased.
 
-Another method is to manage traffic at a global level, and throttle it back if you detect substantial rate limiting. A common technique for controlling rate is to implement something like a token bucket rate limiting algorithm on the client-side. Ready-made and mature implementations for token bucket can be found in most programming languages.
+## How do I handle rate limiting gracefully?
+
+When a request is rate limited, the API returns a `429` status code. The response includes a `RateLimit-Reset` header with the number of seconds until the rate limit resets:
+
+```http
+HTTP/1.1 429 Too Many Requests
+RateLimit-Reset: 30
+```
+
+**Exponential backoff with jitter** is the recommended retry approach. Wait progressively longer between retries and add randomness to avoid a [thundering herd](https://en.wikipedia.org/wiki/Thundering_herd_problem) effect where many clients retry simultaneously:
+
+```javascript
+async function fetchWithBackoff(url, options, maxRetries = 5) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, options);
+
+    if (response.status !== 429) return response;
+    if (attempt === maxRetries) throw new Error('Max retries reached');
+
+    const resetAfter = parseInt(response.headers.get('RateLimit-Reset') || '1', 10);
+    const jitter = Math.random() * 1000;
+    const delay = Math.max(resetAfter * 1000, Math.pow(2, attempt) * 1000) + jitter;
+
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+}
+```
+
+**Token bucket (global throttle):** An alternative is to manage traffic at a global level using a [token bucket](https://en.wikipedia.org/wiki/Token_bucket) algorithm on the client-side. This lets you cap your own outbound request rate before hitting the API. Mature token bucket implementations are available in most programming languages.

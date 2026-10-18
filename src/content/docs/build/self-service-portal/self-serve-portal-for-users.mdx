@@ -1,7 +1,7 @@
 ---
 page_id: f36bce4a-52bb-4785-865b-6b33356f9838
 title: Enable self-service portal for users
-description: Guide for enabling and configuring self-service portals for users including profile management, billing access, and multiple methods for generating portal links with SDK and API examples.
+description: Guide for enabling and configuring self-service portals for users including profile management, billing access, and generating portal links with SDK and Account API examples.
 sidebar:
   order: 9
 tableOfContents:
@@ -9,6 +9,7 @@ tableOfContents:
 relatedArticles:
   - beebe908-27f8-4be6-b74c-05fc8ff5dfb5
   - a2668524-5842-4c68-ab50-30b7e8c3e842
+  - c00a7687-2d59-427d-b8a4-f2f05d29a7f2
 topics:
   - self-serve-portal
   - user-management
@@ -30,23 +31,26 @@ keywords:
 updated: 2026-03-13
 featured: false
 deprecated: false
-ai_summary: Guide for enabling and configuring self-service portals for users including profile management, billing access, and multiple methods for generating portal links with SDK and API examples.
+ai_summary: Guide for enabling and configuring self-service portals for users including profile management, billing access, and generating portal links with SDK and Account API examples.
 ---
 
 You can configure a self-serve portal to enable users to be able to self-manage functions provided by Kinde. For example, you can allow users to update their profile, as well as their billing subscription and payment details (if you have billing set up). If you have a B2C business, you might want to set this up.
 
 A self-serve portal means your customers can make basic account changes without contacting you for support. This can save time and money.
 
+<YoutubeVideo videoId="xxVwZW8OxIA" videoTitle="The customer billing experience with Kinde"/>
+
 ## Configure the user self-serve portal
 
 1. Go to **Settings > Environment > Self-serve portal**.
-2. Enter the **Return URL** that you want users to land on when they exit the portal, e.g. your app dashboard. This can also be used as a fallback URL if you decide to use the SDK method of dynamically generating the URL (see below).
 
-    ![Settings for self-serve portal set up in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/81169031-611b-402a-20f7-47c84f53b600/public)
+    ![Self-serve portal settings in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/69070a52-77b9-447b-b7c9-8cd1f708f900/socialsharingimage)
+
+2. Enter the **Return URL** that you want users to land on when they exit the portal, e.g. your app dashboard. This can also be used as a fallback URL if you decide to use the SDK method of dynamically generating the URL (see below).
 
 ## User self-management
 
-   ![Self-serve portal settings for users](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/877380ff-7b4a-4be0-a369-8c6a59a0d200/socialsharingimage)
+![User self-management options in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/42e3f627-1666-4121-22fb-7ce8b0820000/socialsharingimage)
 
 ### User profile
 
@@ -67,14 +71,26 @@ Allows users to manage their billing subscription, change or cancel their plan, 
 
 Allows users to create and manage their API keys.
 
+### Applications
+
+Allows organization members to open your connected workforce applications directly from the portal. Each application you have made available appears as a tile, and selecting one signs the person in to that tool using Kinde as the identity provider.
+
+This module is off by default. Turn it on in **Settings > Environment > Self-serve portal**.
+
+A tile appears only when all of the following are true for that application:
+
+- The application is **Enabled**.
+- **Show on self-serve portal** is turned on for it.
+- The person's organization is allowed, if you have restricted the application under **Limit to organizations**.
+- The person holds an allowed role, if role-based access control is turned on for it.
+
+To set these up, see [Add and configure a SAML application](/workforce-identity/add-saml-application/).
+
 ## Generate the self-serve portal link
 
-Access to the portal is granted via a one-time link. There are two main ways to generate this link:
+Access to the portal is granted via a one-time link.
 
-- **Using the user's access token** (recommended)
-- **Using the Kinde Management API**
-
-Both methods are able to generate the portal link on the fly. For example, when a user clicks an "Account" button in your app.
+You can generate the portal link on the fly when a user clicks an "Account" button in your app.
 
 ### Generate using a Kinde SDK
 
@@ -102,8 +118,10 @@ window.location = data.url;
 
 Optional parameters:
 
+- `subnav` – specify the portal section to open (e.g., `organization_details`, `profile`).
 - `return_url` – where to redirect the user after exiting the portal.
-- `sub_nav` – specify the portal section to open (e.g., `organization_billing`, `profile`).
+
+See [Get self-serve portal link](https://docs.kinde.com/kinde-apis/frontend/#tag/self-serve-portal/get/account_api/v1/portal_link) for all the supported values.
 
 ### Using the Kinde Management API
 
@@ -128,8 +146,4 @@ This will return a one-time portal link for the specified user.
 
 When the user clicks the link you've added to your app, the portal opens. The default design is shown below, and we are working on allowing you to style this yourself. The options a member sees depends on their role and what you have chosen to display.
 
-![Self-serve portal in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4b3574c5-a499-4da5-e8d0-467d56255e00/public)
-
-You can also watch this short video showing how the portal works when a customer signs up for a plan using Kinde billing.
-
-<YoutubeVideo videoId="xxVwZW8OxIA" videoTitle="The customer billing experience with Kinde"/>
+![Self-serve portal as a user sees it](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8bf8d2dd-4103-409c-3045-537f8dd9c400/socialsharingimage)

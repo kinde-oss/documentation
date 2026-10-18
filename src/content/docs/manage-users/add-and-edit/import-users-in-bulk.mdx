@@ -9,10 +9,11 @@ relatedArticles:
   - 855b9b3b-2729-481f-a81b-231e8375fa59
 app_context:
   - m: users
-description: Comprehensive guide to importing users in bulk to Kinde including custom CSV and NDJSON format requirements, validation rules, and error handling for large-scale user management.
+description: "Import users in bulk to Kinde from CSV or NDJSON—handle passwords, roles, organizations, and migrations at scale."
 topics:
   - manage-users
   - add-and-edit
+  - user-import
 sdk: []
 languages:
   - csv
@@ -25,29 +26,84 @@ complexity: intermediate
 keywords:
   - bulk import
   - csv import
-  - auth0 migration
+  - ndjson import
   - user migration
   - password import
+  - hashing methods
+  - firebase scrypt
+  - firebase password migration
+  - management api
   - organization assignment
-  - roles and permissions
-  - hashed passwords
   - external_organization_id
   - username case sensitivity
-updated: 2025-09-02
+  - ASP.NET Identity import
+  - ASP.NET Identity v2
+  - UTF-16 CSV
+  - UTF-16 NDJSON
+updated: 2026-08-05
 featured: false
 deprecated: false
-ai_summary: Comprehensive guide to importing users in bulk to Kinde from CSV and JSON, including file requirements, data preparation, password handling, and organization assignment.
+ai_summary: "Guide to importing users in bulk to Kinde using UTF-8 or BOM-marked UTF-16 CSV and NDJSON files up to 49MB. Covers file requirements, username case-insensitivity, and preparing data so users link to roles, permissions, organizations, feature flags, properties, identities, and API scopes. Includes the full NDJSON schema and CSV preparation for user and password data. Supported CSV password hashes include crypt, bcrypt, sha256, md5, wordpress, PBKDF2, Firebase scrypt, and ASP.NET Identity v2. Firebase scrypt imports require a per-user base64 salt and the project's signer key, salt separator, rounds, and memory cost; these passwords can also be supplied through the Management API. Explains Auth0, Firebase, and ASP.NET Identity migration paths, import steps, error handling, re-import behavior, and the end-user sign-in experience. Intended for admins and developers managing large-scale user migrations."
 ---
 
-You can import users in bulk, from CSV or JSON. If you are moving to Kinde from Auth0, see [this guide](/manage-users/add-and-edit/import-users-from-auth0/) instead.
+You can import users in bulk from CSV or JSON. If you are moving to Kinde from Auth0,
+Firebase, or ASP.NET Identity, see the dedicated migration guides
+([Auth0](/manage-users/add-and-edit/import-users-from-auth0/),
+[Firebase](/get-started/switch-to-kinde/firebase-to-kinde/), and
+[ASP.NET Identity](/get-started/switch-to-kinde/aspnet-identity-to-kinde/)).
 
 ## File requirements
 
-- CSV - User details and passwords need to be in UTF-8 encoded CSV format
-- JSON - User details and passwords need to be in NDJSON (Newline Delimited JSON) format
-- File size up to 20MB supported
+- **CSV** — user details and passwords in CSV format, encoded as UTF-8 or UTF-16
+  with a byte order mark (BOM)
+- **NDJSON** — user details and passwords in NDJSON (Newline Delimited JSON) format,
+  one user object per line, encoded as UTF-8 or UTF-16 with a BOM
+- **Firebase NDJSON** — Firebase Authentication user objects in NDJSON format, one
+  object per line, prepared from `firebase auth:export`
+- **ASP.NET Identity CSV** — a CSV export of the `AspNetUsers` table. See
+  [Migrate to Kinde from ASP.NET Identity](/get-started/switch-to-kinde/aspnet-identity-to-kinde/)
+- Files that are neither UTF-8 nor BOM-marked UTF-16 are rejected before rows are imported
+- File size must be 49MB or less
 
-If you’ve got large user sets (over 20MB) or are concerned about file size limits, you might consider importing in batches, or contact us for import support.
+For user sets over 49MB, import in batches or
+[contact Kinde support](https://kinde.com/support).
+
+## Importing from Firebase
+
+If you are migrating from Firebase Authentication, at a high level you will:
+
+- Export your users with the Firebase CLI (`firebase auth:export`)
+- Convert the JSON export to NDJSON — one user object per line — with a `.ndjson` extension
+- Upload the file using the **Firebase** import type in the admin
+- Enter your Firebase project's password hash parameters on the confirmation screen, so migrated users keep their existing password (Kinde supports Firebase's modified `scrypt` hashes)
+
+For the full step-by-step workflow, including exporting, NDJSON conversion, hash parameters, and the Firebase-to-Kinde field mapping, see [Migrate to Kinde from Firebase Authentication](/get-started/switch-to-kinde/firebase-to-kinde/).
+
+### Other ways to bring Firebase passwords across
+
+The Firebase NDJSON import above is the simplest path, but you can also supply Firebase scrypt passwords through:
+
+- **Custom CSV import** — include the password columns described in [Prepare CSV files](#prepare-csv-files), with `hashing_method` set to `firebase-scrypt`. Each row needs the user's `hashed_password` and `salt`, plus the four project-level values (`signer_key`, `salt_separator`, `rounds`, and `mem_cost`) repeated on every row.
+- **Kinde Management API** — call [Set user password](/kinde-apis/management#tag/users/put/api/v1/users/{user_id}/password) with the Firebase password hash and parameters.
+
+For example:
+
+```json
+{
+  "hashed_password": "<base64-firebase-password-hash>",
+  "hashing_method": "firebase-scrypt",
+  "salt": "<base64-user-salt>",
+  "signer_key": "<base64-signer-key>",
+  "salt_separator": "Bw==",
+  "rounds": 8,
+  "mem_cost": 14,
+  "is_temporary_password": false
+}
+```
+
+Firebase exports `passwordHash` and `salt` as base64-encoded strings — submit both as-is without decoding. Replace the other example values with your Firebase project hash parameters. Set `is_temporary_password` to `false` so the user can keep their existing password. PBKDF2-specific fields (`iterations` and `variant`) are rejected for Firebase scrypt, and the Firebase scrypt fields are rejected for any other hashing method.
+
+For both paths, the first time an imported user signs in, Kinde verifies their password against the Firebase scrypt hash, then re-hashes it with bcrypt. Users keep their existing passwords and do not see a reset prompt when Custom CSV rows set `password_verified` to `TRUE`, or when the Management API call sets `is_temporary_password` to `false` as in the example above.
 
 ## Before you import users
 
@@ -55,17 +111,19 @@ If you’ve got large user sets (over 20MB) or are concerned about file size lim
 - [Create organizations in Kinde](/build/organizations/add-and-manage-organizations/) - only if you use this function to support multi-tenancy (for example, in a B2B structure) or if you manage separate user groups this way.
 - Add [roles](/manage-users/roles-and-permissions/user-roles/) and [permissions](/manage-users/roles-and-permissions/user-permissions/) in Kinde, if you intend to import these details with users.
 
-**Note: Importing users from Entra ID (formerly Azure)** Set up the [MS Entra ID connection in Kinde](/authenticate/enterprise-connections/azure/) before you import your users. Then when you import, Kinde will match users to the relevant connection based on their email address.
+<Aside title="Importing users from Entra ID (formerly Azure)">
+Set up the [MS Entra ID connection in Kinde](/authenticate/enterprise-connections/azure/) before you import your users. Then when you import, Kinde will match users to the relevant connection based on their email address.
+</Aside>
 
 ## Cases in usernames
 
-Kinde treats usernames as case-insensitive. In other words, we ignore case. We do this because it eliminates the possibility of auth issues and fraud when two usernames are identical in every aspect except the case of one of their letters. 
+Kinde treats usernames as case-insensitive. In other words, we ignore case. We do this because it eliminates the possibility of auth issues and fraud when two usernames are identical in every aspect except the case of one of their letters.
 
 We are happy to support users choosing an aesthetically pleasing username combination, like `RosyRose` or `BuilderBob`. We just don't also support separate identities for `rosYrosE` and `BUilderbob`. Before importing users, we recommend checking that all usernames are unique in more than just case.
 
 ## Prepare NDJSON data
 
-Before importing, make sure that you set up data that you want user records to be linked to, e.g. roles, permissions, organizations. Organizations are linked based on the 'external_organization_id' field , the value of which needs to be added against the organization object with 'external_id' in your import file. 
+Before importing, make sure that you set up data that you want user records to be linked to, e.g. roles, permissions, organizations. Organizations are linked based on the 'external_organization_id' field , the value of which needs to be added against the organization object with 'external_id' in your import file.
 
 Using the NDJSON format you can import users with the following user data:
 
@@ -115,7 +173,7 @@ The following schema can be used for importing NDJSON files, note this schema re
         },
         "hashing_algorithm": {
           "type": "string",
-          "enum": ["crypt", "bcrypt", "sha256", "md5", "wordpress"],
+          "enum": ["crypt", "bcrypt", "sha256", "md5", "wordpress", "pbkdf2", "firebase-scrypt"],
           "description": "The algorithm used to hash the password."
         }
       }
@@ -310,7 +368,7 @@ Example, but a bit easier to read.
 }
 ```
 
-## Prepare CSV files 
+## Prepare CSV files
 
 When exporting data from another auth system or your own system via CSV, the file needs to be set up with specific headings and formats for the data you are importing. These are detailed below.
 
@@ -323,7 +381,7 @@ If you are migrating from Auth0, see the **Prepare JSON data (for Auth0 imports)
 
 <Aside>
 
-There are special considerations if you are importing users who will share a phone number to authenticate via a mobile device. Contact support@kinde.com for advice on the best way to import users where the phone is the primary identity and numbers are shared. 
+There are special considerations if you are importing users who will share a phone number to authenticate via a mobile device. Contact support@kinde.com for advice on the best way to import users where the phone is the primary identity and numbers are shared.
 
 </Aside>
 
@@ -345,7 +403,7 @@ The more data that you include for import, the easier we can set up your users i
 - `role_key` - the role key for the role a user will be assigned on import. If the user is to be assigned more than one role, use a comma separated list.
 - `permission_key` - the permissions key for the permission a user will be assigned (that is not included in their role). If the user is to be assigned more than one permission, use a comma separated list.
 - `external_organization_id` - your supplied 'external_id' for the organization that you want the user to be imported into. Optional unless you are importing roles and permissions with user data. If the user belongs to more than one organization, use a comma separated list wrapped in double quotes. If left empty the user will be assigned to the default organization, if the 'Add users to this organization if no organization is specified' policy is enabled.
-  
+
   <Aside>
 
   Note that this is NOT the same as the **Organization code** in Kinde, which is a Kinde-supplied ID. You can define your ID in the organization 'external_id' field.
@@ -354,31 +412,89 @@ The more data that you include for import, the easier we can set up your users i
 
 ### Password data (optional)
 
-- `hashed_password` - the user’s password encrypted using a hashing method or algorithm.
-- `hashing_method` - the name of the algorithm used to encrypt the user’s password. Currently **crypt**, **bcrypt**, **sha256**, **md5**, and **wordpress** are supported. [Contact us](https://kinde-21631392.hs-sites.com/en-au/feature-request) if you need a different method.
-- `salt` - extra characters added to passwords to make them stronger
-- `salt_position` - position of salt in password string. E.g. prefix (before) or suffix (after).
-- `salt_format` - format of the salt, e.g. hex, string, etc.
+- `hashed_password` — the user's hashed password
+- `hashing_method` — the algorithm used to hash the password. One of `bcrypt`, `crypt`,
+  `md5`, `sha256`, `wordpress`, `pbkdf2`, `firebase-scrypt`, or `aspnet-identity-v2`.
+- `salt` — extra characters added to the password before hashing. See the table below for
+  when this is required.
+- `salt_position` — position of the salt in the password string, either `prefix` or
+  `suffix`
+- `salt_format` — format of the salt, such as `hex` or `string`
+- `variant` — PBKDF2 only. The hashing variant used to derive the hash. Required for
+  `pbkdf2`.
+- `iterations` — PBKDF2 only. The iteration count (factor) used to derive the hash.
+  Optional for `pbkdf2`.
+- `signer_key` — Firebase only. The base64-encoded signer key from your Firebase project's
+  password hash parameters.
+- `salt_separator` — Firebase only. The base64-encoded salt separator from your Firebase
+  project's password hash parameters.
+- `rounds` — Firebase only. The scrypt rounds value (1–16) from your Firebase project's
+  password hash parameters.
+- `mem_cost` — Firebase only. The scrypt memory cost value (1–20) from your Firebase
+  project's password hash parameters.
 
-<Aside title="bcrypt $2b variant support:">
+| Hashing method                                | Salt                        | Salt position             |
+| --------------------------------------------- | --------------------------- | ------------------------- |
+| `md5`                                         | Optional                    | Required if salt included |
+| `bcrypt`                                      | Optional                    | —                         |
+| `crypt`                                       | Optional                    | —                         |
+| `wordpress`                                   | Optional                    | —                         |
+| `sha256`                                      | Optional                    | Required if salt included |
+| `pbkdf2`                                      | Required (base64)           | —                         |
+| [`firebase-scrypt`](#importing-from-firebase) | Required (base64, per user) | —                         |
+| `aspnet-identity-v2`                          | Embedded in the hash        | —                         |
 
-  Please note if you are importing bcrypt hashes with the $2b variant, Kinde will substitute this for the $2a variant. These are interchangeable as long as you were not running OpenBSD at the time the hashes were generated.
+For `firebase-scrypt` passwords, every row must also include the `signer_key`, `salt_separator`, `rounds`, and `mem_cost` columns. These four values are the same for every user in a Firebase project. You can find them in the Firebase console under **Authentication > Users**, in the three-dots menu, as **Password hash parameters**.
 
-  </Aside>
+You can use the Firebase-style column names (`signerKey`, `saltSeparator`, and `memCost`) instead of the snake_case names if that is how your export is labelled.
 
-  <Aside title="sha256 support:">
+<Aside title="bcrypt $2b variant support">
 
-  Provide the hash in hex format. Import the salt using the `salt` column. For the `salt_format`, specify how the salt should be interpreted: e.g. **hex** for a hex-encoded string (68656c6c6f for hello). By default, the salt is treated as a plain string, and escape sequences (like \n or \v) are treated as literal characters.
+Kinde substitutes bcrypt `$2b` hashes with `$2a` on import. These are interchangeable
+unless the hashes were generated on OpenBSD.
 
-  </Aside>
+</Aside>
 
-  | Hashing method | Salt     | Salt position             |
-  | -------------- | -------- | ------------------------- |
-  | md5            | Optional | required if salt included |
-  | bcrypt         |          |                           |
-  | crypt          | Optional |                           |
-  | wordpress      | Optional |                           |
-  | sha256         | Optional | required if salt included |
+<Aside title="sha256 support">
+
+Provide the hash in hex format and import the salt using the `salt` column. For
+`salt_format`, use `hex` for a hex-encoded string, such as `68656c6c6f` for `hello`. By
+default, Kinde treats the salt as a plain string and treats escape sequences such as `\n`
+or `\v` as literal characters.
+
+</Aside>
+
+<Aside title="pbkdf2 support">
+
+Provide the base64-encoded `salt` for each user, plus a `variant` column. Kinde supports
+these variants:
+
+- `salted-pbkdf2-hmac-sha256` (HMAC-SHA256, 256-bit)
+- `salted-pbkdf2-hmac-sha256-512` (HMAC-SHA256, 512-bit)
+- `salted-pbkdf2-hmac-sha512-512` (HMAC-SHA512, 512-bit)
+
+The `iterations` column is optional. If you leave it empty, Kinde verifies the hash using
+an iteration count of 24000. Set it explicitly if your system used a different factor,
+otherwise migrated users will not be able to sign in.
+
+Both columns are specific to PBKDF2. Rows that set them alongside `firebase-scrypt` or
+`aspnet-identity-v2` are rejected.
+
+</Aside>
+
+<Aside title="aspnet-identity-v2 support">
+
+Provide the `PasswordHash` value from the ASP.NET Identity `AspNetUsers` table exactly as
+exported. The salt and other parameters are embedded in the hash, so leave `salt`,
+`salt_position`, `iterations`, and `variant` empty. Rows containing those values are
+rejected. Kinde supports ASP.NET Identity v2 hashes on the .NET Framework, not ASP.NET
+Core Identity v3 hashes.
+
+For a full database migration, use the dedicated **ASP.NET Identity** import type, which
+maps `AspNetUsers` columns automatically. See
+[Migrate to Kinde from ASP.NET Identity](/get-started/switch-to-kinde/aspnet-identity-to-kinde/).
+
+</Aside>
 
 ### **Example simple csv import**
 
@@ -420,8 +536,10 @@ id,roles,permissions,external_organization_id
 
 1. In Kinde, go to **Users**, then select **Import users**.
 2. Select the option for your situation:
-   - Custom CSV
-   - Custom NDJSON
+   - **Firebase** — see [Migrate to Kinde from Firebase Authentication](/get-started/switch-to-kinde/firebase-to-kinde/)
+   - **ASP.NET Identity** — see [Migrate to Kinde from ASP.NET Identity](/get-started/switch-to-kinde/aspnet-identity-to-kinde/)
+   - **Custom CSV**
+   - **Custom NDJSON**
 3. Follow the on-screen prompts to import the data.
 4. If there are any [errors with the import](/manage-users/add-and-edit/troubleshoot-user-import-errors/), you will be able to view them afterwards.
 5. Most import errors can be fixed by editing the CSV or NDJSON file and then re-importing into Kinde. Any records that have already been successfully imported, will be ignored.
