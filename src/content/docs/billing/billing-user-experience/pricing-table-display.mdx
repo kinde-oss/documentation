@@ -30,7 +30,7 @@ keywords:
   - URL parameters
   - trial
   - free trial
-updated: 2026-04-07
+updated: 2026-10-19
 ---
 
 The pricing table that is displayed in a particular flow depends on the [default plan groups and pricing table order](/billing/manage-plans/add-manage-plan-groups/).
@@ -46,8 +46,12 @@ A pricing table is shown when:
 
 A pricing table is shown when:
 
-- A new organization registers (`is_create_org` parameter)
-- An org member with `org:write:billing` permission signs in and the org is a billing customer but not on a plan yet
+- A new organization registers (`is_create_org=true` parameter) **and** the user creating the organization is automatically assigned a role with the `org:write:billing` system permission (via the role's **Assign to the creator** setting)
+- An existing org member with the `org:write:billing` system permission signs in and the organization is already a billing customer, but is not on a plan yet
+
+<Aside type="warning">
+For `is_create_org=true` sign-ups, Kinde only creates a billing customer and displays the organization pricing table if the user who creates the organization has the `org:write:billing` system permission. If you have not created a role with **Assign to the creator** enabled and the `org:write:billing` system permission selected, Kinde skips the billing steps and redirects the user directly to your callback URL without creating a subscription. See [Step 1: Add billing role (B2B)](/billing/get-started/add-billing-role/).
+</Aside>
 
 ## B2B2C (Platforms - uses both)
 
@@ -68,10 +72,26 @@ You can override which plan or pricing table is shown using URL parameters. See:
 
 ## Summary of display for plan groups
 
-| Model | Plan group | Pricing table is shown when |
-| --- | --- | --- |
-| B2C | User plan group | New user registers / logs in |
-| B2B | Org plan group | New org registers / billing admin |
-| B2B2C | Both | Depends on flow context |
+| Model | Plan group | Pricing table is shown when | Required role / permission |
+| --- | --- | --- | --- |
+| B2C | User plan group | New user registers, or an existing billing customer signs in without an active plan | Granted automatically to the signing-up user |
+| B2B | Org plan group | New org registers (`is_create_org=true`), or an org member signs in when the org is a billing customer without an active plan | User must have a role with `org:write:billing` (for `is_create_org=true`, enable **Assign to the creator** on that role) |
+| B2B2C | Both | Depends on flow context (`is_create_org=true` uses Org plan group; standard sign-up uses User plan group) | B2B flows require `org:write:billing` on the creator role |
+
+## Troubleshooting: Pricing table not shown during sign-up
+
+If a user completes sign-up (for example, after setting their password) and is redirected straight to your callback URL without seeing the pricing table, check the following:
+
+1. **Missing B2B creator role or `org:write:billing` permission (most common for `is_create_org=true`):**
+   When `is_create_org=true` is passed in the auth URL, the user creating the organization must have the `org:write:billing` system permission in that new organization. Go to **Settings > Roles**, ensure you have a role (for example, `Owner` or `Billing Admin`) with **Assign to the creator** enabled, and enable both `org:write:billing` and `org:read:billing` under **System permissions**. See [Add billing role (B2B)](/billing/get-started/add-billing-role/).
+2. **Allow organizations to be created during registration is disabled:**
+   For `is_create_org=true` flows, ensure organization creation on sign-up is enabled in your environment settings.
+3. **"Show the pricing table when customers sign up" is turned off:**
+   Go to **Settings > Environment > Billing** and verify that **Show the pricing table when customers sign up** is enabled.
+4. **Pricing table is not Live or has no published plans:**
+   Go to **Billing > Pricing tables** and confirm the pricing table is set to **Live**, belongs to a plan group that matches your flow (`Organizations` group for `is_create_org=true`, or `Users` group for B2C), and contains at least one **Published** plan whose prices are synced with Stripe.
+5. **`pricing_table_key` does not match or `plan_interest` was passed:**
+   - If you pass `pricing_table_key` in the auth URL, verify it exactly matches the key of a **Live** pricing table in that environment.
+   - If you pass `plan_interest` in the auth URL, Kinde pre-selects that plan and intentionally skips the plan selection screen.
 
 

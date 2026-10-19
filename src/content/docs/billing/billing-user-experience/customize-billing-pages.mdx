@@ -33,7 +33,7 @@ keywords:
   - HTML CSS customization
   - trial
   - free trial
-updated: 2026-04-07
+updated: 2026-10-19
 ---
 
 There are three ways you can allow customers to sign up to a plan.
@@ -48,10 +48,12 @@ To pre-select a plan, pass the `plan_interest` query parameter in the Kinde auth
 Let Kinde handle plan selection as part of the authentication flow. To enable this:
 
 - [Create a pricing table](/billing/billing-user-experience/plan-selection/) in Kinde
-- [Add and publish plans](/billing/manage-plans/create-plans/)
+- [Add and publish plans](/billing/manage-plans/create-plans/) (a pricing table can display 1 to 4 plans)
 - Set the table to **Live**
+- Ensure **Show the pricing table when customers sign up** is enabled in **Settings > Environment > Billing**
+- For B2B organization sign-ups (`is_create_org=true`), ensure you have configured a role with **Assign to the creator** enabled and the `org:write:billing` system permission selected (see [Add billing role (B2B)](/billing/get-started/add-billing-role/))
 
-Once this is done, use the relevant pricing table key in the authentcation URL and Kinde will display the plan selection screen during signup.
+Once this is done, pass the relevant `pricing_table_key` in the authentication URL (or set the pricing table to **Show by default**) and Kinde will display the plan selection screen during sign-up.
 
 ## Option 3: Assign a plan via the Kinde Management API
 
@@ -67,11 +69,15 @@ This is ideal for:
 
 Depending on how you choose to onboard customers, users will see up to three different billing screens during the authentication flow. These screens can be customized:
 
-1. **Plan selection** - Displayed when a user signs up for the first time and multiple plans are available. Plans with a trial enabled show a "Free trial for N day(s)" badge.
+1. **Plan selection** - Displayed when a user signs up (or when an eligible billing customer without a plan signs in) and a live pricing table with at least one published plan is available, unless a plan was pre-selected via `plan_interest`. Even if your pricing table has only a single plan (such as a single free tier), this screen is still displayed so the customer can confirm their plan selection. Plans with a trial enabled show a "Free trial for N day(s)" badge.
 
-2. **Payment details** - Shown after a user selects a plan—or if a plan was pre-selected before redirecting to Kinde. This screen only appears if the plan requires credit card details. Plans with no charges can optionally skip this screen if "Ask for credit card" is disabled in the [plan settings](/billing/manage-plans/create-plans/#configure-plan-settings). For trial plans, this screen may appear later — when prompted for payment details before the trial ends — and includes a message explaining the trial window. This skip behavior does not apply to trial-enabled paid plans.
+2. **Payment details** - Shown after a user selects a plan—or if a plan was pre-selected via `plan_interest` before redirecting to Kinde. This screen only appears if the plan requires credit card details. Plans with no charges (`$0`) skip this screen when **Ask for credit card** is disabled in the [plan settings](/billing/manage-plans/create-plans/#configure-plan-settings). For trial plans, this screen may appear later — when prompted for payment details before the trial ends — and includes a message explaining the trial window. This skip behavior does not apply to trial-enabled paid plans.
 
-3. **Success** - Shown when sign up and payment are successfully completed (or when a free plan subscription is confirmed).
+3. **Success** - Shown when sign-up and payment are successfully completed (or when a free plan subscription is confirmed).
+
+<Aside>
+If you are using `is_create_org=true` (B2B) and neither the **Plan selection** screen nor the **Payment details** screen appears during sign-up, check that the user creating the organization is assigned a creator role with the `org:write:billing` system permission. Without `org:write:billing`, Kinde skips billing setup entirely. See [Troubleshooting: Pricing table not shown during sign-up](/billing/billing-user-experience/pricing-table-display/#troubleshooting-pricing-table-not-shown-during-sign-up).
+</Aside>
 
 By default, all screens will inherit branding and styling from the global Kinde [Design](/design/brand/global-brand-defaults/) settings.
 
