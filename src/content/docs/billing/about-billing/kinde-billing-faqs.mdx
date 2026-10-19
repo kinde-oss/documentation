@@ -8,6 +8,7 @@ relatedArticles:
   - bd6757e3-81d5-48d6-89c8-dd4c222ac647
   - 9d1daf85-1a2c-4cc5-879a-230c950bed12
   - e6dde80d-2977-419f-a05a-62ad0a7ac6de
+  - c4e8a1d2-6b37-4f9a-8c15-2d7e9f0a4b63
 featured: false
 deprecated: false
 topics:
@@ -33,8 +34,9 @@ keywords:
   - next invoice details
   - billing webhooks
   - pricing models
-ai_summary: "Short answers to common questions about setting up and running Kinde billing. Covers choosing pricing models, metered versus unmetered features, plan groups for B2B and B2C, draft versus published plans, free plans without card collection, and free trial configuration. Explains Stripe topics including automatic tax and VAT via Stripe Tax, connected account provisioning, In progress connection status, and testing in non-production. Covers plan design for upgrades, tiered usage pricing, upgrade and downgrade policies, Pay annually on self-serve plan changes, mixed yearly and monthly fixed charges, Next invoice behavior, pricing table conversion tips, and when to show pricing during signup. Describes the self-serve portal, org billing permissions such as org write billing, and generating one-time portal links via SDK or Management API. Also covers syncing entitlements with the Account and Management APIs, webhook handling, billing URL parameters, Stripe price sync troubleshooting, billing discrepancy checks, known limitations, launch migration practices, and churn reduction. Intended for developers, product managers, business owners, and support."
-updated: 2026-08-30
+  - one-time charges
+ai_summary: "Short answers to common questions about setting up and running Kinde billing. Covers choosing pricing models, metered versus unmetered features, plan groups for B2B and B2C, draft versus published plans, free plans without card collection, one-time charges that subscribers can purchase from the portal or that admins can assign, and free trial configuration. Explains Stripe topics including automatic tax and VAT via Stripe Tax, connected account provisioning, In progress connection status, and testing in non-production. Covers plan design for upgrades, tiered usage pricing, upgrade and downgrade policies, Pay annually on self-serve plan changes, mixed yearly and monthly fixed charges, Next invoice behavior, pricing table conversion tips, and when to show pricing during signup. Describes the self-serve portal, org billing permissions such as org write billing, and generating one-time portal links via SDK or Management API. Also covers syncing entitlements with the Account and Management APIs, webhook handling, billing URL parameters, Stripe price sync troubleshooting, billing discrepancy checks, known limitations, launch migration practices, and churn reduction. Intended for developers, product managers, business owners, and support."
+updated: 2026-10-14
 ---
 
 Here are short answers to the most common billing questions. Click any question to expand the answer.
@@ -94,8 +96,17 @@ Draft plans can be updated freely without affecting subscribers. When a plan is 
 <details>
 <summary><strong>Can I offer a free plan without requiring credit card details?</strong></summary>
 
-Yes, when creating or editing a plan, you'll find an **Ask for credit card** toggle in the Plan settings section. For plans with no charges, you can disable this toggle so users can subscribe without entering payment information. This is great for reducing friction on free tiers. However, if your plan includes any fixed charges or metered/usage-based billing, credit card collection is always required regardless of this setting.
+Yes, when creating or editing a plan, you'll find an **Ask for credit card** toggle in the Plan settings section. For plans with no charges, you can disable this toggle so users can subscribe without entering payment information. This is great for reducing friction on free tiers. However, if your plan includes any positive-price fixed charges or chargeable metered (usage-based) billing, credit card collection is always required regardless of this setting. Priced one-time charges alone do not require a credit card at signup.
 [Create and configure plans](/billing/manage-plans/create-plans/) | [About plans](/billing/manage-plans/about-plans/)
+</details>
+
+<details>
+<summary><strong>Can I add one-time charges (top-ups or add-ons) to a plan?</strong></summary>
+
+Yes. In the plan editor, use the **One-time charges** section to add single-purchase items such as credit top-ups or add-on unlocks. Each charge can be metered or unmetered, priced with a **Flat** amount or a **Package** (amount per a set number of units), and set to **Never expire** or **Expire with the billing cycle**.
+
+Subscribers with billing write permission (B2C users get it already, `org:write:billing` for B2B organization members) can buy one-time purchases from the **Plan** page in the self-serve portal. Admins can also assign purchases from the customer's **Billing** page in Kinde (charging the saved card or assigning without charge). Active one-time purchases belong to the current billing agreement and are forfeited without refund if the customer changes plan or cancels.
+[One-time purchases](/billing/manage-subscribers/one-time-purchases/) | [Create plans — Add one-time charges](/billing/manage-plans/create-plans/#add-one-time-charges-to-a-plan)
 </details>
 
 <details>
@@ -213,7 +224,7 @@ Start by mapping those customers to existing plans with adjusted feature limits 
 <details>
 <summary><strong>How does Kinde's self-serve portal reduce my customer support workload?</strong></summary>
 
-The self-serve portal lets customers update payment details, view billing history, manage plans, and handle organization billing actions without opening support tickets. You control which actions are self-managed through permissions. Portal links are secure and one-time use, so they can be embedded in your application safely.
+The self-serve portal lets customers update payment details, view billing history, manage plans, buy one-time purchases, and handle organization billing actions without opening support tickets. You control which actions are self-managed through permissions. Portal links are secure and one-time use, so they can be embedded in your application safely.
 [Self-serve portal setup](/build/self-service-portal/self-serve-portal-for-orgs/) | [Portal configuration options](/build/self-service-portal/self-serve-portal-for-orgs/)
 </details>
 
