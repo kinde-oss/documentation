@@ -1,7 +1,7 @@
 ---
 page_id: 4b44982b-ec53-4888-838f-5da4a89e3236
 title: iOS SDK
-description: "Complete guide for iOS SDK including CocoaPods installation, multiple environment configuration, custom logging, and native iOS authentication integration."
+description: "Ship Kinde authentication in your iOS app—SwiftUI and UIKit sign-in, organizations, and feature flags."
 sidebar:
   order: 18
 tableOfContents:
@@ -20,36 +20,37 @@ sdk:
   - ios
 languages:
   - swift
-  - objective-c
-  - json
   - ruby
+  - json
 audience:
   - developers
 complexity: intermediate
 keywords:
-  - ios sdk
-  - swift
-  - objective-c
   - cocoapods
+  - swiftui
+  - uikit
+  - custom url scheme
+  - feature flags
+  - organizations
+  - invitation code
   - appauth
-  - multiple environments
-  - custom logger
-  - url schemes
-updated: 2024-01-15
+updated: 2026-10-19
 featured: false
 deprecated: false
-ai_summary: Complete guide for iOS SDK including CocoaPods installation, multiple environment configuration, custom logging, and native iOS authentication integration.
+ai_summary: "Guide for iOS developers integrating the Kinde iOS SDK into native apps. Requires a Kinde account, iOS 13.0 or later, and Swift 5.0 or later. Covers installing KindeSDK with CocoaPods, including dynamic linking because of the AppAuth dependency, setting callback and logout redirect URLs in Kinde, and registering a matching custom URL scheme in Xcode or Info.plist. Explains configuring issuer, client ID, redirect URIs, scopes, and optional audience in a kinde-auth.json file, initializing the SDK in SwiftUI or UIKit with KindeSDKAPI.configure, and switching environments by passing a different config file name. Also covers an optional custom logger that conforms to LoggerProtocol. Documents login, register, and logout, custom auth pages with connectionId, skipping the initial login page with loginHint, token retrieval after redirect, user details, permissions, claims, and organizations. Invitation sign-up from invitation_code URLs can be automatic with KindeURLInterceptorEnabled or manual by forwarding URLs to KindeSDKAPI.handle. Includes boolean, string, and integer feature flags, secure token storage, the config field reference, and the KindeSDK method reference."
 ---
 
 The Kinde iOS SDK allows developers to quickly and securely integrate a new or existing application into the Kinde platform.
 
 You can view the [Kinde iOS SDK](https://github.com/kinde-oss/kinde-sdk-ios) and [iOS starter kit](https://github.com/kinde-starter-kits/ios-starter-kit) in GitHub.
 
-## Before you begin
+## What you need
 
-If you haven’t already got a Kinde account, [register for free here](https://app.kinde.com/register) (no credit card required). Registering gives you a Kinde domain, which you need to get started, e.g. `yourapp.kinde.com`.
+- A [Kinde](https://app.kinde.com/) account (Sign up for free)
+- iOS 13.0 or later
+- [Swift](https://www.swift.org/) 5.0 or later
 
-## **Installation**
+## Installation
 
 KindeSDK is available through [CocoaPods](https://cocoapods.org/). To install it, add the following line to your Podfile:
 
@@ -61,23 +62,41 @@ Please note that `KindeSDK` is typically used with CocoaPods dynamic linking (`u
 
 If integrating with other pods that require static linking, follow the instructions provided by CocoaPods.
 
-## **Kinde configuration**
+## Kinde configuration
 
-### Callback URLs
+### 1. Create a Kinde application
 
-Here you want to put in the callback URLs for your iOS app:
+1. Go to your Kinde dashboard and select **Add application**.
+2. In **Customer identity** select **Add application**.
+2. Enter a name for the application (e.g., "My iOS App"), select **Front end and mobile**, and select **Save**.
+3. Select **iOS** and select **Save**.
 
-1. In Kinde, go to **Settings > Applications > [your app] > View details**.
+### 2. Get app keys
+
+1. Open the application page you just created.
+2. Go to the **Details** page and scroll to the **App keys** section and copy:
+   - **Domain** — the domain issued by Kinde (`<your-business>.kinde.com`), or **Custom domain** if you have [configured a custom domain](/build/domains/pointing-your-domain/)
+   - **Client ID**
+
+    <Aside>
+
+    **Front end and mobile** applications do not have a client secret.
+
+    </Aside>
+
+### 3. Set callback URLs
+
+1. On your application **Details** page scroll down to the **Callback URLs** section.
 2. Add your callback URLs in the relevant fields. For example:
    - Allowed callback URLs (also known as redirect URIs): `<your_url_scheme>://kinde_callback`
    - Allowed logout redirect URLs: `<your_url_scheme>://kinde_logoutcallback`
 3. Select **Save**.
 
-Note: `your_url_scheme` can be any valid custom URL scheme, such as your app's bundle ID or an abbreviation. It must match the scheme component of the **Allowed callback URLs** (redirect URIs) and **Allowed logout redirect URLs** you configured in the [Application details](/get-started/connect/getting-app-keys/) page for your Kinde application.
+    <Aside>
 
-### **Environments**
+    `your_url_scheme` can be any valid custom URL scheme, such as your app's bundle ID or an abbreviation. It must match the scheme component of the **Allowed callback URLs** (redirect URIs) and **Allowed logout redirect URLs** you configured in the [Application details](/get-started/connect/getting-app-keys/) page for your Kinde application.
 
-If you would like to use our Environments feature as part of your development process. You will need to create them first within your Kinde account. In this case you would use the Environment subdomain in the code block above.
+    </Aside>
 
 ## Configuring your app
 
@@ -121,7 +140,7 @@ Open your app target's `Info.plist` and add the following inside the top-level `
 
 For more information, see Apple's [Defining a custom URL scheme for your app](https://developer.apple.com/documentation/xcode/defining-a-custom-url-scheme-for-your-app).
 
-### **Environment variables**
+### Environment variables
 
 The Kinde `Auth` service is configured with an instance of the `Config` class. The example uses the bundled `kinde-auth.json` for configuration.
 
@@ -202,28 +221,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 ## Multiple environments
 
-You may need to test or deploy your app across different environments, such as development, staging, or production. The Kinde iOS SDK now supports configuration for multiple environments, allowing you to easily switch between them. Follow these steps to set up and configure environments in your Kinde account and integrate them into your iOS app.
+You can configure your app to use different Kinde environments, such as development, staging, and production.
 
-> **Note:** Unless you are on a Kinde Plus or Scale plan, you can only create one additional non-production environment.
+### Set up environments in Kinde
 
-### Setting up environments
+Create each environment in your Kinde dashboard, then create an application in each one. Each application has its own `issuer`, `clientId`, and callback URLs. For setup steps and plan limits, see [Environments](/build/environments/environments/).
 
-Before you can configure multiple environments in your iOS app, you must first create these environments in your Kinde dashboard. After setting up your environments, create an application under each environment. You will get different App Details (such as issuer, clientId, redirectUri, etc.) for each environment you create. These details will be used to configure your iOS app for the specific environment.
+<Aside type="upgrade">
 
-- On the Kinde home page, click the **Environment** dropdown in the top-left corner and select **All environments**.
-- Click **Add environment** and follow the prompts to create each new non-production environment (**deployment, staging, etc**).
-- For each environment, create a new application under the respective environment.
-- After creating the app, you'll receive different **App Details** (such as `issuer`, `clientId`, `redirectUri`, etc.) for each environment.
+You will need a paid plan in Kinde to create multiple non-production environments.
 
-### Configuring multiple environments
+</Aside>
 
-Once the environments are set up in your Kinde dashboard, you can configure your iOS app to handle multiple environments by using a JSON file for each environment. Create a JSON file for each environment in your project. For example:
+### Configure environments in your app
 
-- `kinde-auth-production.json`
-- `kinde-auth-development.json`
-- `kinde-auth-staging.json` (if applicable)
-
-Each file should contain the configuration details for that specific environment. Here's an example configuration:
+Create a JSON config file for each environment in your project, for example `kinde-auth-production.json` and `kinde-auth-development.json`. Each file uses the same format as `kinde-auth.json`, with the details for that environment:
 
 ```json
 {
@@ -235,23 +247,15 @@ Each file should contain the configuration details for that specific environment
 }
 ```
 
-To set up multiple environments in your iOS app, use the `KindeSDKAPI.configure()` method and pass the environment configuration file name. Here's how to do it:
-
-#### Example: switch to the production environment
+Pass the file name (without the `.json` extension) to `KindeSDKAPI.configure()` to choose the environment:
 
 ```swift
-// Use the 'production' environment configuration
+// Production
 KindeSDKAPI.configure(fileName: "kinde-auth-production")
-```
 
-#### Example: switch to the development environment
-
-```swift
-// Switch to the 'development' environment
+// Development
 KindeSDKAPI.configure(fileName: "kinde-auth-development")
 ```
-
-To switch to a different environment, simply change the configuration file name in the `KindeSDKAPI.configure()` method.
 
 ## Custom Logger (Optional)
 
@@ -797,7 +801,7 @@ KindeSDKAPI.auth.getFlag(code: "no-feature-flag", defaultValue: "default-value",
 
 We also require wrapper functions by type which should leverage `getFlag` above.
 
-### **Get boolean flags**
+### Get boolean flags
 
 ```swift
 KindeSDKAPI.auth.getBooleanFlag(code: "is_dark_mode")
@@ -816,7 +820,7 @@ KindeSDKAPI.auth.getBooleanFlag(code: "theme")
 // incorrectType("Flag \"theme\" is type string - requested type boolean")
 ```
 
-### **Get string flags**
+### Get string flags
 
 ```swift
 KindeSDKAPI.auth.getStringFlag(code: "theme")
@@ -835,7 +839,7 @@ KindeSDKAPI.auth.getStringFlag(code: "is_dark_mode")
 // incorrectType("Flag \"is_dark_mode\" is type boolean - requested type string")
 ```
 
-### **Get integer flags**
+### Get integer flags
 
 ```swift
 KindeSDKAPI.auth.getIntegerFlag(code: "user_limit")
@@ -910,7 +914,7 @@ Type: `string`
 
 Required: No
 
-## **KindeSDK** methods
+## KindeSDK methods
 
 ### `login`
 
@@ -1159,7 +1163,7 @@ Sample output:
 Flag(code: "theme", type: Optional(KindeSDK.Flag.ValueType.string), value: black, isDefault: false)
 ```
 
-### **`getBooleanFlag`**
+### `getBooleanFlag`
 
 Get a boolean flag from the `feature_flags` claim of the access token
 
@@ -1178,7 +1182,7 @@ KindeSDKAPI.auth.getBooleanFlag(code: "is_dark_mode")
 
 Sample output: `true`
 
-### **`getStringFlag`**
+### `getStringFlag`
 
 Get a string flag from the `feature_flags` claim of the access token
 
@@ -1197,7 +1201,7 @@ KindeSDKAPI.auth.getStringFlag(code: "theme")
 
 Sample output: `pink`
 
-### **`getIntegerFlag`**
+### `getIntegerFlag`
 
 Get a integer flag from the `feature_flags` claim of the access token
 
