@@ -6,20 +6,18 @@ sidebar:
 relatedArticles:
   - bd6757e3-81d5-48d6-89c8-dd4c222ac647
   - 100f75f1-a0a4-459f-874f-da127f2d0615
+  - c4e8a1d2-6b37-4f9a-8c15-2d7e9f0a4b63
 app_context:
   - m: billing
   - s: faq
-description: >-
-  Frequently asked questions about Kinde billing including setup, plan
-  management, payment processing, and customer support scenarios.
+description: "Get answers on Kinde billing—Stripe setup, plans, trials, tax, metered usage, upgrades, and self-serve support"
 featured: false
 deprecated: false
 topics:
   - billing
   - faq
+  - stripe
   - plans
-  - payments
-  - subscriptions
 sdk: []
 languages: []
 audience:
@@ -29,17 +27,17 @@ audience:
   - support
 complexity: beginner
 keywords:
-  - billing faq
-  - billing questions
-  - plan management
-  - payment processing
-  - subscription management
-  - customer support
-  - trial
+  - stripe connection
   - free trial
-  - tax
+  - sales tax
   - VAT
-updated: 2026-04-07
+  - metered billing
+  - plan upgrades
+  - pricing table
+  - billing webhooks
+  - one-time charges
+ai_summary: "FAQ covering Kinde billing setup and day-to-day operations. Explains core concepts such as subscription plans, monthly billing cycles, multi-currency defaults, and Stripe-backed payment processing. Covers getting started steps including connecting Stripe, configuring billing roles for B2B organizations, and creating plans with features, limits, and pricing. Answers questions on free plans without card collection, one-time charges that subscribers can purchase from the portal or that admins can assign, free trial periods that convert to paid subscriptions, automatic tax and VAT via Stripe Tax, payment methods, failed payments, upgrades and downgrades, metered usage, cancellations and refunds, pricing tables, customized billing pages, and signup-flow integration. Also covers self-serve portals, troubleshooting billing errors, webhooks for subscription lifecycle events, and pricing best practices. Intended for developers, product managers, business owners, and support teams working with Kinde billing."
+updated: 2026-10-19
 ---
 
 Find quick answers to common questions about Kinde billing. Each section covers specific aspects of billing setup, management, and customer support.
@@ -127,9 +125,49 @@ Kinde provides methods for users to upgrade or downgrade their plans, either thr
 <details>
 <summary>Can I let users subscribe to a free plan without entering payment details?</summary>
 
-Yes, Kinde allows you to configure whether credit card collection is required for each plan. When creating or editing a plan, look for the **Ask for credit card** toggle in the Plan settings section. You can disable this for plans with no charges, allowing users to subscribe without providing payment information. This is useful for reducing signup friction on free tiers. Note that plans with any pricing (fixed or usage-based) always require payment details.
+Yes, Kinde allows you to configure whether credit card collection is required for each plan. When creating or editing a plan, look for the **Ask for credit card** toggle in the Plan settings section. You can disable this for plans with no charges, allowing users to subscribe without providing payment information. This is useful for reducing signup friction on free tiers. Note that plans with any positive-price fixed charge or chargeable metered (usage-based) billing always require payment details. Priced one-time charges alone do not require a credit card at signup.
 
 **Learn more:** [Create plans](/billing/manage-plans/create-plans/)
+</details>
+
+<details>
+<summary>Can I add one-time charges (top-ups or add-ons) to a plan?</summary>
+
+Yes. In the plan editor, use the **One-time charges** section to add single-purchase items such as credit top-ups or add-on unlocks. You can create a new charge or reuse an existing one across plans.
+
+Each one-time charge can be:
+
+- **Unmetered** or **Metered**
+- Priced with a **Flat** amount or a **Package** (amount per a set number of units)
+- Set to **Never expire** or **Expire with the billing cycle**
+
+**How customers buy one-time purchases**
+
+After a customer subscribes to a plan that includes one-time purchases, they can buy them from the self-serve portal:
+
+1. Open the portal and go to the **Plan** page.
+2. In **One-time purchases**, select **Purchase** (or **Buy more** if they already own the item).
+3. For package-priced purchases, choose how many packages to buy.
+4. Confirm payment using the saved payment method.
+
+Customers need billing write permission (B2C users get it already, `org:write:billing` for B2B organization members).
+
+**How admins assign one-time purchases**
+
+You can also grant a one-time purchase from the Kinde admin:
+
+1. Open the user or organization record and select **Billing**.
+2. In **One-time purchases**, select **Assign** (or **Assign more**).
+3. For package-priced purchases, enter the number of packages.
+4. Choose whether to **charge the default payment method** or **assign without charge** (complimentary).
+
+You need permission to create billing agreements.
+
+**Plan changes and cancellations**
+
+One-time purchases belong to the customer’s current billing agreement. If the customer **changes plan** or **cancels**, active one-time purchases on that agreement are forfeited. They are not refunded. If the same charge is available on the new plan, buying it again is a new purchase.
+
+**Learn more:** [One-time purchases](/billing/manage-subscribers/one-time-purchases/) | [Create plans — Add one-time charges](/billing/manage-plans/create-plans/#add-one-time-charges-to-a-plan)
 </details>
 
 <details>
@@ -152,9 +190,11 @@ Plans with a trial display a "Free trial for N day(s)" badge on the pricing tabl
 <details>
 <summary>How is tax (sales tax or VAT) handled in Kinde billing?</summary>
 
-Kinde billing does not provide separate tax settings in the plan builder. Payments and invoices are processed through your connected **Stripe** account, so tax behavior depends on how you configure **Stripe**—for example registrations, Stripe Tax, and invoice settings. Use the Stripe Dashboard to set this up for the regions where you sell.
+You can enable **Collect tax automatically** in **Settings > Environment > Billing** (off by default). When enabled, Kinde turns on Stripe Tax for new subscriptions. Individual plans can inherit that setting via **Use account setting**, or override it with **Collect** or **Don’t collect**.
 
-**Learn more:** [About billing](/billing/about-billing/about-billing/) | [Manage Stripe connection](/billing/payment-management/manage-stripe-connection/)
+Stripe Tax calculates tax amounts; Stripe Billing presents them on invoices. Configure tax registrations and related Stripe Tax options in the Stripe Dashboard for the regions where you sell. Until a customer has a billing country (for example on a trial before a card is added), tax may use your Stripe account’s registered address.
+
+**Learn more:** [About billing](/billing/about-billing/about-billing/#how-is-sales-tax-or-vat-handled-in-kinde-billing) | [Create plans](/billing/manage-plans/create-plans/#collect-tax-automatically) | [Connect to Stripe and set policies](/billing/get-started/connect-to-stripe/#collect-tax-automatically)
 </details>
 
 <details>
@@ -247,6 +287,8 @@ Kinde provides self-service portals where customers can view their subscription 
 <summary>What should I do if a customer reports billing errors?</summary>
 
 First, check the customer's subscription status in your Kinde dashboard and verify their payment method in Stripe. Common issues include expired cards, insufficient funds, or plan configuration problems. You can also check webhook logs for any payment processing errors.
+
+If the customer saw an error during **sign-up or plan selection** on a Kinde hosted page, note the **error code** at the bottom of the message (for example **9864**–**9870**). See [Common errors and codes — Billing signup — collect payment details errors](/get-started/guides/error-codes/#billing-signup--collect-payment-details-errors) for what each code means and suggested troubleshooting steps.
 
 **Learn more:** [Manage customer activity webhooks](/billing/manage-subscribers/manage-customer-activity-webhooks/)
 </details>

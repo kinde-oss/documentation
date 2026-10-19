@@ -1,0 +1,357 @@
+---
+page_id: edb34665-0eda-47a1-b8e1-89f705c6ac87
+title: Add a new MCP connection
+description: "Turn your APIs into MCP tools for AI agents—connect Cursor, Claude, and VS Code with OpenAPI and user API keys"
+sidebar:
+  order: 2
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - 2219e226-2b23-5132-a2a7-c578b1cfb0c1
+  - 51899f7f-3436-46e0-9a1b-6ecc3603a0df
+  - 1c9f5b72-5c33-4e7c-9a0d-2b7d6e9a1c4f
+  - 5d4c3b2a-1e0f-4a9b-8c7d-5e4f3a2b1c0d
+app_context:
+  - m: mcp_connection_details
+    s: connections
+topics:
+  - mcp-servers
+  - developer-tools
+  - your-apis
+  - api-keys
+sdk: []
+languages:
+  - yaml
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - mcp connections
+  - openapi
+  - user api key
+  - mcp tools
+  - backend authentication
+  - model context protocol
+  - tools audit
+  - ai agents
+updated: 2026-07-16
+featured: false
+deprecated: false
+ai_summary: "Guide to creating an MCP connection that exposes your registered APIs as tools for AI agents such as Cursor, Claude, and VS Code. Covers uploading an OpenAPI spec to generate scopes and tool metadata, creating a connection with a unique URL, configuring backend authentication and extra HTTP headers, issuing a user API key with the right scopes, and connecting MCP clients via Remote MCP or Stdio bridge. Also covers re-authorizing APIs, reviewing generated tools, monitoring calls in the tools audit log, deleting connections, permissions required, and a sample OpenAPI spec. Requires Admin permissions on Plus plan or higher and MCP connections enabled for the environment (beta). Intended for developers and admins."
+---
+
+<Aside>
+
+MCP connections are currently in beta. [Contact support](https://kinde.com/support) to enable this feature for your account.
+
+</Aside>
+
+An **MCP connection** exposes your registered APIs as tools that AI agents—like Cursor, Claude, and VS Code—can call on behalf of your users. Kinde builds the tools from your OpenAPI spec, gives each connection a unique URL, and authenticates clients with a **user API key**. The scopes on that key control which tools the agent can use.
+
+## What you need
+
+- A [Kinde](/get-started/guides/first-things-first) account with **Admin** permissions (Plus plan or higher — [see pricing](https://kinde.com/pricing/))
+- MCP connections enabled for your environment (beta feature; [contact support](https://kinde.com/support) to enable for your business)
+- A live upstream base URL that your API is reachable at
+
+## How it works
+
+1. Upload an OpenAPI spec for your API. Kinde generates scopes and MCP tool metadata for each operation.
+2. Create an MCP connection and authorize that API.
+3. Configure how Kinde authenticates to your upstream API (for example, pass through the user’s API key, or send a static bearer token).
+4. A user creates a user API key for the authorized API and selects the scopes (tools) they need.
+5. An MCP client connects to `https://<your_business>.kinde.com/mcp/<connection-id>` with that key.
+6. When the agent calls a tool, Kinde proxies the matching HTTP request to your API and records an audit entry.
+
+## Quickstart
+
+### 1. Create an API with an OpenAPI spec
+
+If you haven't already, create an API with the following steps:
+
+<Aside type="upgrade">
+Adding scopes from an OpenAPI spec is only available on the Kinde Plus plan and higher. See [pricing](https://kinde.com/pricing/) for more details.
+</Aside>
+
+1. Go to **Settings > Environment > APIs**.
+2. Select **Add API**.
+3. Enter an **API name** (e.g., "MCP Demo API") and **Audience**. The audience (`aud`) is a unique identifier for this API. Often a short code or the URL of the API is used (e.g., `https://yourbusiness.com/mcp`).
+4. Select **Save**. The details window for the API opens.
+5. Select **OpenAPI spec** in the side menu.
+6. Select **Upload file**.
+7. Choose your JSON or YAML file from your computer (maximum file size: 20MB).
+
+    Kinde uploads the file and parses it to generate scopes.
+
+    <Aside>
+    Ensure the spec includes a server URL under `servers` (first entry). That URL becomes the base URL for upstream tool calls. See the [sample OpenAPI spec file](#sample-openapi-spec-file).
+    </Aside>
+
+See also [Register and manage APIs](/developer-tools/your-apis/register-manage-apis/).
+
+### 2. Create an MCP connection
+
+1. Go to your Kinde dashboard and select **MCP Servers > Connections**.
+2. Select **Add new connection**.
+3. Enter a **Connection name** (e.g., "MCP Demo Connection").
+4. Select the **API** from the dropdown.
+5. Select **Save**.
+
+You are redirected to the connection **Details** page.
+
+### 3. Configure authentication and headers
+
+Choose how Kinde authenticates to your upstream API:
+
+1. Go to the **Details** page for the connection.
+2. Scroll down to **Backend authentication**.
+3. Select one of the following **Authentication type** options:
+
+    - **Pass through user token**: Forwards the MCP client’s user API key as `Authorization: Bearer <key>` to your API.
+    - **Static bearer token**: Sends a configured token as `Authorization: Bearer <token>`.
+    - **API key (X-Api-Key header)**: Sends a configured key as `X-Api-Key: <key>`.
+    - **Static headers only**: Adds no authentication header. Use extra headers for any custom auth your API needs.
+    - **Coming Soon - OAuth 2.0 client credentials**: Shown in the UI but not available yet. Choose another type.
+
+4. Scroll down to **Extra HTTP headers** and add any you need for your API.
+
+    These headers are applied on every upstream request after the primary auth headers. Header values support templates that Kinde replaces per request:
+
+    - `{{kinde.user.id}}`
+    - `{{kinde.user.username}}`
+    - `{{kinde.user.email}}`
+    - `{{kinde.user.firstname}}`
+    - `{{kinde.user.lastname}}`
+
+5. Select **Save**.
+
+### 4. Get a user API key
+
+MCP clients authenticate with a user's API key for the authorized API. You can create one from the dashboard on behalf of the user, or they can create it themselves if you have enabled this in the [self-serve portal](/build/self-service-portal/self-serve-portal-for-users/#api-keys).
+
+To create an API key for a user:
+
+1. Go to your Kinde dashboard and select **Users**.
+2. Select the user you want to create an API key for (such as yourself).
+3. Go to the **API keys** page.
+4. Select **Add API key**. A modal opens.
+
+    ![create an api key for a user](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/823f0e81-0946-4331-fa98-e35fc51ace00/socialsharingimage)
+5. Enter a key **Name**, select the API (e.g., "MCP Demo API"), select the scopes you want to grant, and select **Save**.
+6. Copy the key and store it securely. You will only see it once.
+
+    ```text title="Kinde API key format"
+    k_live_1234567890abcdefghijklmnopqrstuvwxyz
+    ```
+
+You will need this API key when configuring your MCP client.
+
+See [User-level API keys](/manage-your-apis/about-api-keys/user-api-keys/) and [Scopes for API keys](/manage-your-apis/add-manage-api-keys/scopes-for-api-keys/).
+
+## Connect to an MCP client
+
+1. Go to your Kinde dashboard > **MCP Servers** > **Connections** and select the connection.
+2. Go to the **Quick start** page.
+3. Copy the connection config JSON for your preferred MCP client:
+    - **Remote MCP (HTTP)** (e.g., Cursor and VS Code–based tools)
+    - **Stdio bridge (command-based clients)** (e.g., Claude desktop)
+4. Replace the `KINDE_USER_API_KEY` with the [user API key](#4-get-a-user-api-key) you created in the previous section.
+
+See the following sections for client-specific setup steps.
+
+### Claude desktop
+
+1. Open the **[Claude desktop app](https://claude.com/download)**.
+2. Go to **Settings** > **Developer** > select **Edit Config**. The `claude_desktop_config.json` file opens in your file browser.
+
+    ![claude developer edit config](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4cf5d471-03c8-4f47-20eb-08d9130e8d00/socialsharingimage)
+
+3. Open the file in your preferred text editor.
+4. Paste the **Stdio bridge** connection config JSON and save the file.
+
+    You can find this under the **Quick start** > **Stdio bridge (command-based clients)** section of your MCP connection in Kinde. Replace `KINDE_USER_API_KEY` with the user API key you created in the previous section.
+5. Restart **Claude**.
+6. Confirm the Kinde MCP server appears on the page.
+
+    ![claude local mcp servers](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b66b0fac-5491-4968-2a5a-4e63ffd72400/socialsharingimage)
+
+7. Open your chat window. The connection appears under the connectors list.
+
+    ![claude local mcp servers tools](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/79da9476-1e0d-4cfa-dc42-23f2414a6f00/socialsharingimage)
+8. Run a sample tool call to test the connection.
+
+    ![claude local mcp servers tool call](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4f31f819-4cd6-411f-f045-9aa3fd825f00/socialsharingimage)
+
+### Cursor
+
+1. Open the **[Cursor desktop app](https://cursor.com/download)**.
+2. Go to **Cursor** > **Settings** > **Cursor Settings**.
+3. Go to **Tools & MCP**.
+4. Select **Add custom MCP**, or if you already have other MCP servers, select **New MCP server**. The `mcp.json` file opens.
+
+    ![mcp server settings page in cursor](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/23db4925-2024-4e66-2d4e-1e29a1dbb300/socialsharingimage)
+
+5. Paste the **Remote MCP** connection config JSON and save the file.
+
+    You can find this under the **Quick start** > **Remote MCP (HTTP)** section of your MCP connection in Kinde. Replace `KINDE_USER_API_KEY` with the user API key you created in the previous section.
+6. Restart Cursor.
+7. Confirm your connection appears in the list of **Installed MCP Servers**.
+
+    ![cursor mcp server enabled](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/a8153fbc-9be8-4fa4-7e15-c202346d4900/socialsharingimage)
+
+8. Open your chat window and run a sample tool call to test the connection.
+
+    ![cursor mcp server tool call](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/85bc2240-9446-4cb8-66a5-236488af5b00/socialsharingimage)
+
+## Manage connections
+
+### Re-authorize an API
+
+If you have more than one API, you can change or re-authorize it:
+
+1. Go to your Kinde dashboard > **MCP Servers** > **Connections** and select **View details** for the connection you want to change.
+2. Go to the **APIs** page.
+3. Select the three dots next to the API and select **Re-authorize connection** or **Authorize connection**.
+
+<Aside>
+Changing the authorized API updates which tools are available on this connection. The connection URL stays the same. Only one API can be authorized at a time.
+</Aside>
+
+### Review tools
+
+Open the connection and select the **Tools** page.
+
+    ![mcp connection tools page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/2ecd8f6a-59db-4aff-e038-f4fddc4add00/socialsharingimage)
+
+Tools are generated from the operations in the authorized API’s active OpenAPI spec.
+
+- Each tool maps to one OpenAPI operation.
+- Tool names prefer a sanitized `operationId` when present; otherwise Kinde derives a name from the API name, HTTP method, and path. Duplicate names are disambiguated automatically.
+- An MCP client only sees tools whose corresponding API scopes are assigned to the user’s API key.
+
+### Monitor tool calls
+
+Open the connection and select the **Tools audit** page.
+
+You will see every tool call made through this connection, including the agent, user, outcome, and upstream status.
+
+![tools audit page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8dbc2140-788a-4abf-47ca-59a8b6a1aa00/socialsharingimage)
+
+| Column | Meaning |
+| --- | --- |
+| User | Email or user ID associated with the API key |
+| Tool | MCP tool name |
+| Outcome | **OK** or **Error** |
+| Upstream | HTTP status returned by your API (when available) |
+| Duration | Time spent calling upstream |
+| When | Timestamp |
+
+You can search by tool or user, and filter outcome to **All**, **OK**, or **Error**. Select **View details** for method, path, error summary, agent ID, IP address, user agent, MCP protocol version, and session ID.
+
+### Delete a connection
+
+<Aside type="danger" title="Deleting a connection is permanent">
+
+The connection URL will stop working immediately and cannot be restored.
+
+</Aside>
+
+1. Go to your Kinde dashboard > **MCP Servers** > **Connections** and select the **three dots** on the connection tile you want to delete.
+2. Select **Delete connection**.
+3. Confirm.
+
+## Sample OpenAPI spec file
+
+```yaml title="sample-openapi.yaml"
+openapi: 3.0.3
+info:
+  title: MCP Demo API
+  description: Sample catalog API for testing Kinde MCP connections.
+  version: 1.0.0
+servers:
+  - url: https://mcp-demo-api.vercel.app
+paths:
+  /api/items:
+    get:
+      operationId: listItems
+      summary: List all items
+      description: Returns the full sample catalog of items.
+      responses:
+        "200":
+          description: A list of items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Item"
+                  total:
+                    type: integer
+  /api/items/{id}:
+    get:
+      operationId: getItemById
+      summary: Get item by ID
+      description: Returns a single item from the sample catalog.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Item ID (1–5 in the sample data)
+          schema:
+            type: string
+            example: "1"
+      responses:
+        "200":
+          description: The requested item
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  item:
+                    $ref: "#/components/schemas/Item"
+        "404":
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  id:
+                    type: string
+components:
+  schemas:
+    Item:
+      type: object
+      required:
+        - id
+        - name
+        - category
+        - price
+        - inStock
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        price:
+          type: number
+        inStock:
+          type: boolean
+```
+{/* TODO: Learn about permissions */}
+
+## Permissions
+
+| Action | Permission |
+| --- | --- |
+| View connections, tools, audit | `read:apis` |
+| Create, delete, authorize APIs, configure backend auth | `update:apis` |
