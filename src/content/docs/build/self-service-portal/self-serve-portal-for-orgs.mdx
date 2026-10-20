@@ -35,7 +35,7 @@ keywords:
 updated: 2026-10-20
 featured: false
 deprecated: false
-ai_summary: "Guide to enabling and configuring the Kinde self-serve portal for organizations (B2B). Covers dashboard setup including return URL, organization alias, and selecting which functions org admins can manage such as business details, payment details, one-time purchases, API keys, members, SSO connections, and MFA. The Members switch is shown for every business under Organization self-management and is off until turned on. Explains how authorized members can invite new users, assign roles with org:write:members and role-based gating, and revoke pending invitations when Members is enabled and Allow invitations is on with an Invite application selected. Describes portal access control through system permissions such as org:write:billing, custom role assignment, and auto-assignment options. Documents generating one-time portal links via the React PortalLink component or the Account API portal_link endpoint with optional subnav and return_url parameters. Notes Scale plan per-organization portal configuration. Intended for developers integrating org portal access into applications."
+ai_summary: "Guide to enabling and configuring the Kinde self-serve portal for organizations (B2B). Covers dashboard setup including return URL, organization alias, and selecting which functions org admins can manage such as business details, payment details, one-time purchases, API keys, members, SSO connections, and MFA. The Members switch is shown for every business under Organization self-management and is off until turned on. Explains how authorized members can view invitations with org:read:members, and invite new users or revoke pending invitations with org:write:members and role-based gating, when Members is enabled and Allow invitations is on with an Invite application selected. Describes portal access control through system permissions such as org:write:billing, custom role assignment, and auto-assignment options. Documents generating one-time portal links via the React PortalLink component or the Account API portal_link endpoint with optional subnav and return_url parameters. Notes Scale plan per-organization portal configuration. Intended for developers integrating org portal access into applications."
 ---
 
 You can configure a self-serve portal to enable authorized organization members to be able to self-manage functions provided by Kinde. Authorized org members can update:
@@ -86,9 +86,10 @@ Member invitations must also be enabled at the environment level. Go to **Settin
 
 ### Who can invite members
 
-A member can only invite others and assign roles if they have sufficient permission in the organization:
+A member can view invitations, invite others, and revoke pending invitations only with the matching system permission:
 
-- The member needs the `org:write:members` permission to open the **Add member** flow.
+- The member needs the `org:read:members` permission to view pending invitations.
+- The member needs the `org:write:members` permission to open the **Add member** flow and send an invitation. **Revoke invitation** is shown only when the member has this permission.
 - Each role in the **Add member** dialog is gated individually—a member can only assign a role if they hold the permission required to grant it. Roles they can't assign appear disabled. This mirrors the role gating used for Kinde team members, so a member can never grant access broader than their own.
 
 ### Invite a member
@@ -107,7 +108,7 @@ A member can only invite others and assign roles if they have sufficient permiss
 
 ### Revoke a pending invitation
 
-Pending invitations appear in an **Invitations** list on the **Members** screen, showing each invitee's name, email, role, and the date invited.
+Pending invitations appear in an **Invitations** list on the **Members** screen, showing each invitee's name, email, role, and the date invited. **Revoke invitation** is shown only to members with the `org:write:members` permission.
 
 1. Find the invitation in the **Invitations** list.
 2. Select the actions menu next to it, then select **Revoke invitation**.
