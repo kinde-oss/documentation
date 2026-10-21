@@ -1,9 +1,11 @@
 ---
 page_id: 2b425ccb-d328-41ff-afb2-016019f46839
 title: Python SDK
-description: "Complete guide for Python SDK including Flask and FastAPI integration, OAuth configuration, environment variables, and session management for Python 3.9+ applications."
+description: "Add Kinde auth to Flask, FastAPI, and serverless Python apps—login, permissions, feature flags, and the Management API."
 sidebar:
   order: 15
+tableOfContents:
+  maxHeadingLevel: 3
 head: 
   - tag: meta
     attrs:
@@ -19,156 +21,66 @@ sdk:
 languages:
   - python
   - bash
-  - html
 audience: developers
 complexity: intermediate
 keywords:
-  - Python SDK
-  - Flask
-  - FastAPI
+  - kinde-python-sdk
+  - flask
+  - fastapi
   - OAuth
-  - environment variables
-  - callback URLs
-  - session management
-updated: 2026-09-03
+  - feature flags
+  - management API
+  - PKCE
+  - serverless
+updated: 2026-10-21
 featured: false
 deprecated: false
-ai_summary: Complete guide for Python SDK including Flask and FastAPI integration, OAuth configuration, environment variables, and session management for Python 3.9+ applications.
+ai_summary: "Guide to integrating the Kinde Python SDK (kinde-python-sdk) into Python 3.9+ applications. Covers creating a backend web application in Kinde, copying domain, client ID, and client secret, and setting callback and logout URLs. Explains how to choose among the OAuth client for Flask and FastAPI, AsyncOAuth for native async and serverless apps, and SmartOAuth for mixed sync and async contexts, including AWS Lambda and Google Cloud Functions examples with custom token storage. Documents the authentication flow: login, register, callback, logout, automatic route registration, and manual Flask and FastAPI routes. Shows how to check user permissions, read string, boolean, and integer feature flags, and access token claims. Covers organization sign-in, token refresh, and session configuration. Describes the synchronous Management API client for machine-to-machine access to users, organizations, and invites, plus required environment variables such as KINDE_HOST and the PKCE grant type. Includes migration from the v1 KindeApiClient and exception handling for authentication and Management API errors. Intended for developers integrating Kinde into Python backends."
 ---
 
 The Kinde Python SDK allows developers to quickly and securely integrate a new or an existing Python application into the Kinde platform. The SDK supports both Flask and FastAPI frameworks through a single unified interface.
 
-### What you need
+## What you need
 
 - A [Kinde](https://www.kinde.com) account (Sign up for free)
 - [Python](https://www.python.org/downloads/) version 3.9 or up
 
-If you are using a previous version of Python, you may need to refer to the [previous v1 SDK](/developer-tools/sdks/backend/python-sdk-v1/).
+If you are using a previous version of Python, you may need to refer to the [previous v1 SDK](/developer-tools/sdks/backend/python-sdk-v1/), see [Migration from v1 SDK](#migration-from-v1-sdk)
 
 For new projects, you can find our [Starter Kit on GitHub](https://github.com/kinde-starter-kits/python-starter-kit).
 
-## Migration from v1 SDK
+## Kinde configuration
 
-If you're migrating from an older version of the SDK or switching between client types, follow these recommendations:
+### 1. Create a Kinde application
 
-The current SDK (v2+) provides a more flexible architecture with multiple client types:
+1. Go to your Kinde dashboard and select **Add application**.
+2. In **Customer identity** select **Add application**.
+3. Enter a name for the application (e.g., "My Python App"), select **Back end web**, and select **Save**.
+4. Select **Python** and select **Save**.
 
-**Old v1 SDK code**
+### 2. Get app keys
 
-```python
-from kinde_sdk.kinde_api_client import KindeApiClient
+1. Open the application page you just created.
+2. Go to the **Details** page and scroll to the **App keys** section and copy:
+   - **Domain** — the domain issued by Kinde (`<your-business>.kinde.com`), or **Custom domain** if you have [configured a custom domain](/build/domains/pointing-your-domain/)
+   - **Client ID**
+   - **Client Secret**
 
-kinde_client = KindeApiClient(**kinde_api_client_params)
-login_url = kinde_client.get_login_url()
-```
+### 3. Set callback URLs
 
-**New SDK code (OAuth client)**
+1. On your application **Details** page scroll down to the **Callback URLs** section.
+2. Add your callback URLs in the relevant fields. For example:
+   - Allowed callback URLs (also known as redirect URIs): `http://localhost:5000/callback`
+   - Allowed logout redirect URLs: `http://localhost:5000`
+3. Select **Save**.
 
-```python
-from kinde_sdk.auth.oauth import OAuth
-import asyncio
-
-oauth = OAuth(framework="flask", app=app)
-login_url = asyncio.get_event_loop().run_until_complete(oauth.login())
-```
-
-### Choosing the right client for migration
-
-1. **If you're using Flask/FastAPI**: Continue using `OAuth` client
-2. **If you're building async-only applications**: Migrate to `AsyncOAuth`
-3. **If you need flexibility**: Consider `SmartOAuth` for context-aware behavior
-
-### Migration steps
-
-1. **Update imports**: Change from `kinde_sdk.kinde_api_client` to the appropriate client type
-2. **Update initialization**: Use the new client initialization pattern
-3. **Update method calls**: Most methods are now async - use `await` or `asyncio.run_until_complete()`
-4. **Update error handling**: Use the exception types from `kinde_sdk.core.exceptions` (authentication) and `kinde_sdk.management.exceptions` (Management API)
-5. **Test thoroughly**: Verify all authentication flows work correctly
-
-### Client selection recommendations
-
-| Scenario | Recommended Client | Reason |
-|----------|-------------------|--------|
-| Flask application | `OAuth` | Framework integration, session management |
-| FastAPI application | `OAuth` or `AsyncOAuth` | Both work well, choose based on preference |
-| Pure async app | `AsyncOAuth` | Native async support, better performance |
-| Serverless/Lambda | `AsyncOAuth` | No framework dependencies, async-friendly |
-| Library/Utility | `SmartOAuth` | Works in both sync and async contexts |
-| Mixed codebase | `SmartOAuth` | Context-aware behavior |
-
-For more detailed migration instructions, see our [GitHub migration guide](https://github.com/kinde-oss/kinde-python-sdk/blob/main/MIGRATION.md).
-
-## Install
+## Install the SDK
 
 Install [PIP](https://pip.pypa.io/en/stable/installation/) and then execute the following command:
 
 ```bash
 pip install kinde-python-sdk
 ```
-
-### Environment variables
-
-The Kinde Python SDK uses environment variables for configuration. Here are all the supported variables:
-
-#### Required variables
-- `KINDE_CLIENT_ID` - Your application's client ID from Kinde
-- `KINDE_CLIENT_SECRET` - Your application's client secret from Kinde
-- `KINDE_REDIRECT_URI` - The callback URL where Kinde will redirect after authentication
-- `KINDE_HOST` - Your Kinde domain (e.g., `https://yourdomain.kinde.com`)
-- `KINDE_ISSUER_URL` - Your Kinde issuer URL (typically same as KINDE_HOST)
-- `GRANT_TYPE` - The OAuth grant type to use (e.g., `AUTHORIZATION_CODE_WITH_PKCE`)
-
-#### Optional variables
-- `KINDE_AUDIENCE` - The intended recipient of the access token (for API access)
-- `KINDE_CALLBACK_URL` - Alternative name for KINDE_REDIRECT_URI
-- `LOGOUT_REDIRECT_URL` - Where users are redirected after logout
-- `SITE_HOST` - Your application's host (default: `127.0.0.1`)
-- `SITE_PORT` - Your application's port (default: `5000`)
-- `SITE_URL` - Your application's base URL
-- `CODE_VERIFIER` - Required for PKCE flow (auto-generated if not provided)
-
-**Session management variables** (core SDK features):
-- `SECRET_KEY` - Used for session management and token security
-- `SESSION_TYPE` - Session storage type (e.g., `filesystem`)
-- `SESSION_PERMANENT` - Whether sessions are permanent (default: `False`)
-
-**Application configuration**:
-- `TEMPLATES_AUTO_RELOAD` - Whether to auto-reload templates (default: `True`)
-
-**Management API variables** (only needed if using Management API features):
-- `MGMT_API_CLIENT_ID` - Management API client ID
-- `MGMT_API_CLIENT_SECRET` - Management API client secret
-
-Example `.env` file:
-```bash
-KINDE_CLIENT_ID=your_client_id
-KINDE_CLIENT_SECRET=your_client_secret
-KINDE_REDIRECT_URI=http://localhost:5000/api/auth/kinde_callback
-KINDE_HOST=https://yourdomain.kinde.com
-KINDE_ISSUER_URL=https://yourdomain.kinde.com
-GRANT_TYPE=AUTHORIZATION_CODE_WITH_PKCE
-SITE_HOST=localhost
-SITE_PORT=5000
-SITE_URL=http://localhost:5000
-LOGOUT_REDIRECT_URL=http://localhost:8000
-SECRET_KEY=your_secret_key
-SESSION_TYPE=filesystem
-SESSION_PERMANENT=False
-TEMPLATES_AUTO_RELOAD=True
-```
-
-### Set callback URLs
-
-1. In Kinde, go to **Settings > Applications > [Your app] > View details**.
-2. Add your callback URLs in the relevant fields. For example:
-   - Allowed callback URLs (also known as redirect URIs) - for example, `http://localhost:8000/callback`
-   - Allowed logout redirect URLs - for example, `http://localhost:8000`
-3. Select **Save**.
-
-### Add environments
-
-Kinde comes with a production environment, but you can set up other environments if you want to. Note that each environment needs to be set up independently, so you need to use the Environment subdomain in the code block above for those new environments.
 
 ## Choose your OAuth client
 
@@ -207,7 +119,7 @@ The Kinde Python SDK provides three client types to suit different application n
 
 ## Configure your app
 
-### Using the OAuth client (Framework-based)
+### OAuth client (framework-based)
 
 The `OAuth` client is automatically configured based on the framework you're using. Simply import the OAuth class from the auth module and create an instance:
 
@@ -233,7 +145,7 @@ oauth = OAuth(
 
 The SDK will automatically detect and configure the appropriate framework implementation based on the framework parameter and app instance you provide.
 
-### Using the AsyncOAuth client (Native async)
+### AsyncOAuth client (native async)
 
 The `AsyncOAuth` client is designed for native async applications. It provides direct async/await support without framework abstractions:
 
@@ -254,7 +166,7 @@ register_url = await oauth.register()
 - Direct control over async operations
 - Ideal for pure async applications and serverless functions
 
-### Using the SmartOAuth client (Context-aware)
+### SmartOAuth client (context-aware)
 
 The `SmartOAuth` client automatically adapts to sync or async contexts:
 
@@ -1464,6 +1376,117 @@ You don't need to manage these tokens yourself.
 6. **Reuse the client**: Create the `ManagementClient` once and reuse it so cached tokens are shared.
 
 For more information about the Management API endpoints and capabilities, see the [Kinde Management API documentation](https://docs.kinde.com/kinde-apis/management/).
+
+## Environment variables
+
+The Kinde Python SDK uses environment variables for configuration. Here are all the supported variables:
+
+### Required variables
+
+- `KINDE_CLIENT_ID` - Your application's client ID from Kinde
+- `KINDE_CLIENT_SECRET` - Your application's client secret from Kinde
+- `KINDE_REDIRECT_URI` - The callback URL where Kinde will redirect after authentication
+- `KINDE_HOST` - Your Kinde domain (e.g., `https://yourdomain.kinde.com`)
+- `KINDE_ISSUER_URL` - Your Kinde issuer URL (typically same as KINDE_HOST)
+- `GRANT_TYPE` - The OAuth grant type to use (e.g., `AUTHORIZATION_CODE_WITH_PKCE`)
+
+### Optional variables
+
+- `KINDE_AUDIENCE` - The intended recipient of the access token (for API access)
+- `KINDE_CALLBACK_URL` - Alternative name for KINDE_REDIRECT_URI
+- `LOGOUT_REDIRECT_URL` - Where users are redirected after logout
+- `SITE_HOST` - Your application's host (default: `127.0.0.1`)
+- `SITE_PORT` - Your application's port (default: `5000`)
+- `SITE_URL` - Your application's base URL
+- `CODE_VERIFIER` - Required for PKCE flow (auto-generated if not provided)
+
+### Session management variables (core SDK features)
+
+- `SECRET_KEY` - Used for session management and token security
+- `SESSION_TYPE` - Session storage type (e.g., `filesystem`)
+- `SESSION_PERMANENT` - Whether sessions are permanent (default: `False`)
+
+### Application configuration
+
+- `TEMPLATES_AUTO_RELOAD` - Whether to auto-reload templates (default: `True`)
+
+### Management API variables 
+
+only needed if using Management API features
+
+- `MGMT_API_CLIENT_ID` - Management API client ID
+- `MGMT_API_CLIENT_SECRET` - Management API client secret
+
+### Example `.env` file
+
+```bash title=".env"
+KINDE_CLIENT_ID=your_client_id
+KINDE_CLIENT_SECRET=your_client_secret
+KINDE_REDIRECT_URI=http://localhost:5000/api/auth/kinde_callback
+KINDE_HOST=https://yourdomain.kinde.com
+KINDE_ISSUER_URL=https://yourdomain.kinde.com
+GRANT_TYPE=AUTHORIZATION_CODE_WITH_PKCE
+SITE_HOST=localhost
+SITE_PORT=5000
+SITE_URL=http://localhost:5000
+LOGOUT_REDIRECT_URL=http://localhost:8000
+SECRET_KEY=your_secret_key
+SESSION_TYPE=filesystem
+SESSION_PERMANENT=False
+TEMPLATES_AUTO_RELOAD=True
+```
+
+## Migration from v1 SDK
+
+If you're migrating from an older version of the SDK or switching between client types, follow these recommendations:
+
+The current SDK (v2+) provides a more flexible architecture with multiple client types:
+
+**Old v1 SDK code**
+
+```python
+from kinde_sdk.kinde_api_client import KindeApiClient
+
+kinde_client = KindeApiClient(**kinde_api_client_params)
+login_url = kinde_client.get_login_url()
+```
+
+**New SDK code (OAuth client)**
+
+```python
+from kinde_sdk.auth.oauth import OAuth
+import asyncio
+
+oauth = OAuth(framework="flask", app=app)
+login_url = asyncio.get_event_loop().run_until_complete(oauth.login())
+```
+
+### Choosing the right client for migration
+
+1. **If you're using Flask/FastAPI**: Continue using `OAuth` client
+2. **If you're building async-only applications**: Migrate to `AsyncOAuth`
+3. **If you need flexibility**: Consider `SmartOAuth` for context-aware behavior
+
+### Migration steps
+
+1. **Update imports**: Change from `kinde_sdk.kinde_api_client` to the appropriate client type
+2. **Update initialization**: Use the new client initialization pattern
+3. **Update method calls**: Most methods are now async - use `await` or `asyncio.run_until_complete()`
+4. **Update error handling**: Use the exception types from `kinde_sdk.core.exceptions` (authentication) and `kinde_sdk.management.exceptions` (Management API)
+5. **Test thoroughly**: Verify all authentication flows work correctly
+
+### Client selection recommendations
+
+| Scenario | Recommended Client | Reason |
+|----------|-------------------|--------|
+| Flask application | `OAuth` | Framework integration, session management |
+| FastAPI application | `OAuth` or `AsyncOAuth` | Both work well, choose based on preference |
+| Pure async app | `AsyncOAuth` | Native async support, better performance |
+| Serverless/Lambda | `AsyncOAuth` | No framework dependencies, async-friendly |
+| Library/Utility | `SmartOAuth` | Works in both sync and async contexts |
+| Mixed codebase | `SmartOAuth` | Context-aware behavior |
+
+For more detailed migration instructions, see our [GitHub migration guide](https://github.com/kinde-oss/kinde-python-sdk/blob/main/MIGRATION.md).
 
 ## Error handling and best practices
 
