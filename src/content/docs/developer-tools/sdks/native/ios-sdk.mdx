@@ -140,6 +140,68 @@ Open your app target's `Info.plist` and add the following inside the top-level `
 
 For more information, see Apple's [Defining a custom URL scheme for your app](https://developer.apple.com/documentation/xcode/defining-a-custom-url-scheme-for-your-app).
 
+### Universal Links setup
+
+Configure Universal Links to allow HTTPS links, such as `https://example.com/login`, to open your app:
+
+<Aside type="info" title="Invitation links and authentication callbacks">
+
+This setup allows your app to be opened from HTTPS [invitation links](#invitation). The Kinde iOS SDK does not currently support using an HTTPS URL, such as `https://example.com/callback`, as your authentication callback URL. Use a [custom URL scheme](#custom-url-scheme) instead.
+
+</Aside>
+
+1. Open your project in Xcode and select the project in the navigator.
+2. Under **Targets**, select your app target.
+3. Open the **Signing & Capabilities** tab, select **+ Capability**, and add **Associated Domains**.
+4. Add an entry for your URL’s domain:
+
+   ```text
+   applinks:example.com
+   ```
+
+   Replace `example.com` with your domain. Don’t include `https://`, a path, or a trailing slash.
+
+5. Create an [`apple-app-site-association` file](https://developer.apple.com/documentation/xcode/supporting-associated-domains#Add-the-associated-domain-file-to-your-website), without a file extension, and host it at:
+
+   ```text
+   https://<your-domain>/.well-known/apple-app-site-association
+   ```
+
+   Replace `<your-domain>` with the domain you added to Associated Domains. For example, if your domain is `example.com`, host the file at:
+
+   ```text
+   https://example.com/.well-known/apple-app-site-association
+   ```
+
+   Add an `applinks` configuration that identifies your app and matches the URL path your app handles:
+
+   ```json title="apple-app-site-association"
+   {
+     "applinks": {
+       "details": [
+         {
+           "appIDs": ["ABCDE12345.com.example.App"],
+           "components": [
+             {
+               "/": "/login"
+             }
+           ]
+         }
+       ]
+     }
+   }
+   ```
+
+   Replace:
+   - `ABCDE12345.com.example.App` with your app’s application identifier, in the format `<App ID prefix>.<Bundle ID>`. Find these values in your [Apple Developer account](https://developer.apple.com/account/resources/identifiers/list) under **Certificates, Identifiers & Profiles > Identifiers**, then select your app.
+   - `/login` with the URL path your app handles. This example matches `https://example.com/login`, including URLs with query parameters.
+
+   Serve the file over HTTPS with a valid certificate and no redirects.
+
+
+For full setup instructions, see Apple’s [Supporting associated domains](https://developer.apple.com/documentation/xcode/supporting-associated-domains).
+
+
 ### Environment variables
 
 The Kinde `Auth` service is configured with an instance of the `Config` class. The example uses the bundled `kinde-auth.json` for configuration.
@@ -662,7 +724,7 @@ To support the invitation sign-up flow in your iOS app, use one of the following
 
       <TabItem label="SwiftUI">
 
-      Handle incoming custom-scheme URLs and universal links using `.onOpenURL`, forwarding them to `KindeSDKAPI.handle(url:)`.
+      Handle incoming [custom-scheme URLs](#custom-url-scheme) and [universal links](#universal-links-setup) using `.onOpenURL`, forwarding them to `KindeSDKAPI.handle(url:)`.
 
       ```diff lang="swift" title="MyApp.swift"
       import SwiftUI
@@ -685,7 +747,7 @@ To support the invitation sign-up flow in your iOS app, use one of the following
 
       <TabItem label="UIKit (app delegate)">
 
-      Handle custom-scheme URLs in `application(_:open:options:)` and universal links in `application(_:continue:restorationHandler:)`.
+      Handle [custom-scheme URLs](#custom-url-scheme) in `application(_:open:options:)` and [universal links](#universal-links-setup) in `application(_:continue:restorationHandler:)`.
 
       ```diff lang="swift" title="AppDelegate.swift"
       import UIKit
@@ -719,7 +781,7 @@ To support the invitation sign-up flow in your iOS app, use one of the following
 
       <TabItem label="UIKit (scene delegate)">
 
-      In the scene delegate, handle incoming URLs when a scene connects in `scene(_:willConnectTo:options:)`, and subsequent URLs in `scene(_:openURLContexts:)` for custom schemes and `scene(_:continue:)` for universal links.
+      In the scene delegate, handle incoming URLs when a scene connects in `scene(_:willConnectTo:options:)`, and subsequent URLs in `scene(_:openURLContexts:)` for [custom schemes](#custom-url-scheme) and `scene(_:continue:)` for [universal links](#universal-links-setup).
 
       ```diff lang="swift" title="SceneDelegate.swift"
       import UIKit
