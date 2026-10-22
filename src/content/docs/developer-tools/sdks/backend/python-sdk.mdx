@@ -32,10 +32,10 @@ keywords:
   - management API
   - PKCE
   - serverless
-updated: 2026-10-21
+updated: 2026-10-22
 featured: false
 deprecated: false
-ai_summary: "Guide to integrating the Kinde Python SDK (kinde-python-sdk) into Python 3.9+ applications. Covers creating a backend web application in Kinde, copying domain, client ID, and client secret, and setting callback and logout URLs. Explains how to choose among the OAuth client for Flask and FastAPI, AsyncOAuth for native async and serverless apps, and SmartOAuth for mixed sync and async contexts, including AWS Lambda and Google Cloud Functions examples with custom token storage. Documents the authentication flow: login, register, callback, logout, automatic route registration, and manual Flask and FastAPI routes. Shows how to check user permissions, read string, boolean, and integer feature flags, and access token claims. Covers organization sign-in, token refresh, and session configuration. Describes the synchronous Management API client for machine-to-machine access to users, organizations, and invites, plus required environment variables such as KINDE_HOST and the PKCE grant type. Includes migration from the v1 KindeApiClient and exception handling for authentication and Management API errors. Intended for developers integrating Kinde into Python backends."
+ai_summary: "Guide to integrating the Kinde Python SDK (kinde-python-sdk) into Python 3.9+ applications. Covers creating a backend web application in Kinde, copying domain, client ID, and client secret, and setting callback and logout URLs. Explains how to choose among the OAuth client for Flask and FastAPI, AsyncOAuth for native async and serverless apps, and SmartOAuth for mixed sync and async contexts, including the create_oauth_client factory, plus AWS Lambda and Google Cloud Functions examples with custom token storage. Documents the authentication flow: login, register, callback, logout, automatic route registration, and manual Flask and FastAPI routes. Shows how to check user permissions, read string, boolean, and integer feature flags, and access token claims. Covers organization sign-in, token refresh, and session configuration. Describes creating a machine-to-machine application, authorizing the Kinde Management API, and using the synchronous ManagementClient for users, organizations, and invites. Lists required environment variables such as KINDE_HOST and the PKCE grant type, and separate KINDE_MANAGEMENT_CLIENT_ID credentials. Includes migration from the v1 KindeApiClient and exception handling for authentication and Management API errors. Intended for developers integrating Kinde into Python backends."
 ---
 
 The Kinde Python SDK allows developers to quickly and securely integrate a new or an existing Python application into the Kinde platform. The SDK supports both Flask and FastAPI frameworks through a single unified interface.
@@ -190,6 +190,23 @@ def sync_function():
 - Works in both sync and async code
 - Flexible usage patterns
 - Ideal for libraries and utilities
+
+### Factory function
+
+`create_oauth_client` returns one of the three clients. Set `async_mode` to choose, or leave it unset for `SmartOAuth`.
+
+```python
+from kinde_sdk import create_oauth_client
+
+# Synchronous OAuth client
+oauth = create_oauth_client(async_mode=False, framework="flask", app=app)
+
+# Native async client
+oauth = create_oauth_client(async_mode=True, framework="fastapi", app=app)
+
+# SmartOAuth, the default when async_mode is omitted
+oauth = create_oauth_client(framework="fastapi", app=app)
+```
 
 ## Standalone usage (Serverless/Lambda)
 
@@ -1194,11 +1211,24 @@ You don't need to manually manage tokens or sessions - the SDK handles this auto
 
 ## Management API
 
-The Kinde Python SDK includes a Management API client for programmatically managing users, organizations, roles, and other resources. It is a **synchronous** client that is separate from the `OAuth`/`AsyncOAuth`/`SmartOAuth` user-authentication clients — you create it directly with your machine-to-machine (M2M) application credentials, and its calls are not awaited.
+The Kinde Python SDK includes a Management API client for programmatically managing users, organizations, roles, and other resources. It is a **synchronous** client, separate from the `OAuth`, `AsyncOAuth`, and `SmartOAuth` user-authentication clients. Create it with machine-to-machine (M2M) application credentials. Its calls are synchronous, and it uses its own client-credentials token rather than a signed-in user's session.
+
+### Set up a machine-to-machine application
+
+Create a second application in Kinde for the Management API. This is separate from the back-end web application you use for user sign-in.
+
+1. Go to your Kinde dashboard and select **Add application**.
+2. On the **Customer identity** tab, select **Add application**.
+3. Give it a name and select **Machine to machine** as the type, then select **Save**.
+4. Go to the **APIs** page, select the three dots next to the **Kinde Management API**, and choose **Authorize application**.
+5. Select the three dots again and choose **Manage scopes**. Enable only the scopes this app needs (for example `read:users` and `read:organizations`), then select **Save**.
+6. Go to the **Details** page and copy the **Domain**, **Client ID**, and **Client secret**.
+
+See [Connect to the Kinde API](/developer-tools/kinde-api/connect-to-kinde-api/) for the full connection guide, and the [Management API reference](/kinde-apis/management/) for endpoints and scopes.
 
 ### Getting started
 
-Create a `ManagementClient` with your M2M application's credentials. It authenticates automatically using the client credentials grant.
+Create a `ManagementClient` with those M2M credentials. Pass the domain as a hostname only, with no `https://` prefix. The client adds the scheme itself. It requests a token with the client credentials grant on the first API call, so incorrect credentials fail on that call, not when you construct the client.
 
 ```python
 from kinde_sdk.management import ManagementClient
@@ -1213,9 +1243,46 @@ management = ManagementClient(
 users = management.users_api.get_users(page_size=10)
 ```
 
-Each API group is available as a `<resource>_api` attribute, for example `management.users_api`, `management.organizations_api`, and `management.roles_api`.
+To load the same values from a `.env` file, install `python-dotenv` and call `load_dotenv()` before you create the client. `ManagementClient` does not read environment variables on its own.
 
-> The Management API requires a separate M2M application in Kinde with the relevant scopes enabled. It is not tied to a signed-in user, so it does not use your `OAuth` client or a user session.
+```bash
+pip install python-dotenv
+```
+
+```python
+import os
+from urllib.parse import urlparse
+
+from dotenv import load_dotenv
+from kinde_sdk.management import ManagementClient
+
+load_dotenv()
+
+# KINDE_HOST includes the scheme. ManagementClient expects the hostname only.
+host = os.environ["KINDE_HOST"]
+domain = urlparse(host).hostname or host
+
+management = ManagementClient(
+    domain=domain,
+    client_id=os.environ["KINDE_MANAGEMENT_CLIENT_ID"],
+    client_secret=os.environ["KINDE_MANAGEMENT_CLIENT_SECRET"],
+)
+```
+
+Each API group is a `<resource>_api` attribute. Call methods on that attribute. Flat methods on the client, such as `management.get_users()`, still run but are deprecated and emit a `DeprecationWarning`.
+
+```python
+management.users_api            # Users
+management.organizations_api    # Organizations
+management.roles_api            # Roles
+management.permissions_api      # Permissions
+management.feature_flags_api    # Feature flags
+management.environments_api     # Environment settings
+management.applications_api     # Applications
+management.connections_api      # Connections
+management.webhooks_api         # Webhooks
+management.business_api         # Business information
+```
 
 ### Available endpoints
 
@@ -1227,13 +1294,16 @@ from kinde_sdk.management.models.create_user_request_profile import CreateUserRe
 from kinde_sdk.management.models.create_user_request_identities_inner import CreateUserRequestIdentitiesInner
 from kinde_sdk.management.models.update_user_request import UpdateUserRequest
 
-# List users
+# List users. Pass next_token from the previous response to fetch the next page.
 users = management.users_api.get_users(page_size=10)
+if users.next_token:
+    next_page = management.users_api.get_users(page_size=10, next_token=users.next_token)
 
 # Get a specific user
 user = management.users_api.get_user_data(id="user_123")
 
-# Create a new user
+# Create a new user. Name fields sit under profile, and the email sits under identities.
+# Update user takes flat fields such as given_name on UpdateUserRequest.
 new_user = management.users_api.create_user(
     create_user_request=CreateUserRequest(
         profile=CreateUserRequestProfile(given_name="John", family_name="Doe"),
@@ -1282,6 +1352,8 @@ updated_org = management.organizations_api.update_organization(
 # Delete an organization
 management.organizations_api.delete_organization(org_code="org_123")
 ```
+
+`get_organization` takes `code`. `update_organization` and `delete_organization` take `org_code`. Keep the parameter name matched to the method when you copy these calls.
 
 **Organization invites:**
 
@@ -1359,21 +1431,23 @@ def get_user(user_id: str):
 
 The Management API client has its own token management, separate from the core SDK's user session token management. It automatically:
 
-- Obtains access tokens for Kinde's management endpoints using your M2M credentials
-- Refreshes management tokens when they expire
-- Caches tokens and shares them across clients with the same domain and client ID
+- Obtains an access token with the client credentials grant on the first API call
+- Caches that token and reuses it until it is close to expiry
+- Requests a new token about 60 seconds before the cached one expires
+- Shares the cached token across `ManagementClient` instances that use the same domain and client ID
 - Handles concurrent requests safely
 
-You don't need to manage these tokens yourself.
+Token lifetime is set on the M2M application in Kinde, not in the SDK. You don't need to manage these tokens yourself. Incorrect credentials surface on the first API call, as `UnauthorizedException`, rather than when the client is created.
 
 ### Best practices
 
-1. **Use a dedicated M2M application**: Create a separate machine-to-machine application for the Management API with only the scopes it needs.
-2. **Handle API errors appropriately**: Wrap calls in try/except and handle `ApiException` (and its subclasses) from `kinde_sdk.management.exceptions`.
-3. **Cache results when appropriate**: Reduce API calls by caching data such as users, organizations, and roles.
-4. **Keep your client credentials secure**: Use environment variables and never commit secrets to version control.
-5. **Add retry logic for transient failures**: Retry with exponential backoff on network errors and 5xx responses.
-6. **Reuse the client**: Create the `ManagementClient` once and reuse it so cached tokens are shared.
+1. **Use a dedicated M2M application**: Create a separate machine-to-machine application for the Management API and enable only the scopes it needs.
+2. **Call the resource APIs**: Use `management.users_api`, `management.organizations_api`, and the other `<resource>_api` attributes. The flat methods on `ManagementClient` are deprecated.
+3. **Handle API errors appropriately**: Wrap calls in try/except and handle `ApiException` (and its subclasses) from `kinde_sdk.management.exceptions`.
+4. **Cache results when appropriate**: Reduce API calls by caching data such as users, organizations, and roles.
+5. **Keep your client credentials secure**: Use environment variables and never commit secrets to version control.
+6. **Add retry logic for transient failures**: Retry with exponential backoff on network errors and 5xx responses.
+7. **Reuse the client**: Create the `ManagementClient` once and reuse it so cached tokens are shared.
 
 For more information about the Management API endpoints and capabilities, see the [Kinde Management API documentation](https://docs.kinde.com/kinde-apis/management/).
 
@@ -1410,12 +1484,13 @@ The Kinde Python SDK uses environment variables for configuration. Here are all 
 
 - `TEMPLATES_AUTO_RELOAD` - Whether to auto-reload templates (default: `True`)
 
-### Management API variables 
+### Management API variables
 
-only needed if using Management API features
+Only needed when you call the Management API. The client does not load these itself. Read them in your app and pass them to `ManagementClient`. Names match the [SDK readme](https://github.com/kinde-oss/kinde-python-sdk/blob/main/README_management_client.md).
 
-- `MGMT_API_CLIENT_ID` - Management API client ID
-- `MGMT_API_CLIENT_SECRET` - Management API client secret
+- `KINDE_DOMAIN` - Hostname only, with no scheme (for example `yourdomain.kinde.com`). This is the `domain` argument. If you already have `KINDE_HOST`, take its hostname.
+- `KINDE_MANAGEMENT_CLIENT_ID` - Client ID of the machine-to-machine application
+- `KINDE_MANAGEMENT_CLIENT_SECRET` - Client secret of the machine-to-machine application
 
 ### Example `.env` file
 
@@ -1434,6 +1509,11 @@ SECRET_KEY=your_secret_key
 SESSION_TYPE=filesystem
 SESSION_PERMANENT=False
 TEMPLATES_AUTO_RELOAD=True
+
+# Management API (separate M2M application)
+KINDE_DOMAIN=yourdomain.kinde.com
+KINDE_MANAGEMENT_CLIENT_ID=your_m2m_client_id
+KINDE_MANAGEMENT_CLIENT_SECRET=your_m2m_client_secret
 ```
 
 ## Migration from v1 SDK
