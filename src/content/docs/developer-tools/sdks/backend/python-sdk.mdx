@@ -437,13 +437,8 @@ def get_user():
     """Get the current user's information."""
     try:
         if not oauth.is_authenticated():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                login_url = loop.run_until_complete(oauth.login())
-                return redirect(login_url)
-            finally:
-                loop.close()
+            login_url = asyncio.run(oauth.login())
+            return redirect(login_url)
         return oauth.get_user_info()
     except Exception as e:
         return f"Failed to get user info: {str(e)}", 400
@@ -456,6 +451,7 @@ FastAPI natively supports async/await, making it ideal for async operations.
 **Using OAuth client with FastAPI:**
 
 ```python
+import asyncio
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import RedirectResponse
 from kinde_sdk.auth.oauth import OAuth
@@ -500,7 +496,8 @@ async def get_user(request: Request):
     if not oauth.is_authenticated():
         url = await oauth.login()
         return RedirectResponse(url=url)
-    return oauth.get_user_info()
+    # get_user_info() uses a blocking HTTP call, so run it off the event loop
+    return await asyncio.to_thread(oauth.get_user_info)
 ```
 
 **Using AsyncOAuth client with FastAPI (for more control):**
@@ -596,13 +593,8 @@ def get_user():
     """Get the current user's information.""
     try:
         if not oauth.is_authenticated():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                login_url = loop.run_until_complete(oauth.login())
-                return redirect(login_url)
-            finally:
-                loop.close()
+            login_url = asyncio.run(oauth.login())
+            return redirect(login_url)
         
         return oauth.get_user_info()
     except Exception as e:
@@ -612,6 +604,7 @@ def get_user():
 For FastAPI:
 
 ```python
+import asyncio
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 
@@ -642,7 +635,8 @@ async def logout(request: Request):
 async def get_user(request: Request):
     if not oauth.is_authenticated():
         return RedirectResponse(url=await oauth.login())
-    return oauth.get_user_info()
+    # get_user_info() uses a blocking HTTP call, so run it off the event loop
+    return await asyncio.to_thread(oauth.get_user_info)
 ```
 
 The manual implementation gives you more control over the authentication flow and allows you to add custom logic like session management, error handling, and logging. Note that Flask requires special handling of async methods using `asyncio` since it doesn't natively support async/await like FastAPI does.
@@ -1036,7 +1030,10 @@ oauth = OAuth(framework="fastapi", app=app)
 @app.get("/api/protected")
 async def protected_endpoint():
     aud_claim = await claims.get_claim("aud")
-    if not aud_claim["value"] or "api.yourapp.com" not in aud_claim["value"]:
+    audiences = aud_claim["value"]
+    if isinstance(audiences, str):
+        audiences = [audiences]
+    if not isinstance(audiences, list) or "api.yourapp.com" not in audiences:
         raise HTTPException(status_code=401, detail="Invalid token audience")
     return {"message": "Access granted"}
 ```
@@ -1497,14 +1494,14 @@ Only needed when you call the Management API. The client does not load these its
 ```bash title=".env"
 KINDE_CLIENT_ID=your_client_id
 KINDE_CLIENT_SECRET=your_client_secret
-KINDE_REDIRECT_URI=http://localhost:5000/api/auth/kinde_callback
+KINDE_REDIRECT_URI=http://localhost:5000/callback
 KINDE_HOST=https://yourdomain.kinde.com
 KINDE_ISSUER_URL=https://yourdomain.kinde.com
 GRANT_TYPE=AUTHORIZATION_CODE_WITH_PKCE
 SITE_HOST=localhost
 SITE_PORT=5000
 SITE_URL=http://localhost:5000
-LOGOUT_REDIRECT_URL=http://localhost:8000
+LOGOUT_REDIRECT_URL=http://localhost:5000
 SECRET_KEY=your_secret_key
 SESSION_TYPE=filesystem
 SESSION_PERMANENT=False
@@ -1551,7 +1548,7 @@ login_url = asyncio.get_event_loop().run_until_complete(oauth.login())
 
 1. **Update imports**: Change from `kinde_sdk.kinde_api_client` to the appropriate client type
 2. **Update initialization**: Use the new client initialization pattern
-3. **Update method calls**: Most methods are now async - use `await` or `asyncio.run_until_complete()`
+3. **Update method calls**: Most methods are now async. Use `await`, or run them with `asyncio.run()` or `loop.run_until_complete()`
 4. **Update error handling**: Use the exception types from `kinde_sdk.core.exceptions` (authentication) and `kinde_sdk.management.exceptions` (Management API)
 5. **Test thoroughly**: Verify all authentication flows work correctly
 
@@ -1603,9 +1600,10 @@ from kinde_sdk.management.exceptions import (
 **Pattern 1: Authentication check (FastAPI)**
 
 Authentication state is read synchronously and does not raise — `is_authenticated()`
-returns a bool and `get_user_info()` returns the user's claims. Guard the route yourself:
+returns a bool. `get_user_info()` makes a blocking HTTP request, so offload it when the route is async:
 
 ```python
+import asyncio
 from fastapi import FastAPI, HTTPException
 from kinde_sdk.auth.oauth import OAuth
 
@@ -1616,7 +1614,7 @@ oauth = OAuth(framework="fastapi", app=app)
 async def protected_route():
     if not oauth.is_authenticated():
         raise HTTPException(status_code=401, detail="Not authenticated")
-    return oauth.get_user_info()
+    return await asyncio.to_thread(oauth.get_user_info)
 ```
 
 **Pattern 2: Handling Management API errors**
