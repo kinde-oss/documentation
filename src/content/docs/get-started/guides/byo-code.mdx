@@ -32,7 +32,7 @@ keywords:
   - API registration
   - Kinde Management API
   - deploy to production
-updated: 2026-07-05
+updated: 2026-10-21
 featured: false
 deprecated: false
 ai_summary: "Guide for developers adding Kinde authentication to an existing application codebase after completing Kinde onboarding. The quickstart walks through creating or reusing a Kinde application, choosing a starter kit or manual SDK installation, setting callback and redirect URLs, copying domain, client ID, and client secret app keys into a .env file, and testing user registration locally. The build and deploy section covers creating non-production test environments, registering back-end APIs so they appear in access token audience claims, setting up a machine-to-machine application to call the Kinde Management API with client credentials, and deploying to production with updated callback URLs and environment variables, with links to Vercel, Netlify, and Cloudflare Workers guides. Advanced topics link to Workflows, webhooks, cross-environment configuration, and end-to-end testing. Prerequisites include a Kinde account with Admin or Engineer permission and familiarity with your chosen programming language and framework."
@@ -49,26 +49,37 @@ Once you have [completed the onboarding process](/get-started/guides/first-thing
 
 ### 1. Create a new application in Kinde
 
-During the onboarding process, you created an application in Kinde. You can use this application by going to your Kinde dashboard and selecting **View details** on that application tile. Skip to the next step (use a starter kit or install manually).
+During the onboarding process, you created an application in Kinde. You can use this application by going to your Kinde dashboard and selecting **View details** on that application tile.
+
+![view details on the kinde dashboard page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/3ad6ee6f-1f5d-406a-0010-fb8dff0ad600/socialsharingimage)
+
+Skip to the next step ([use a starter kit or install manually](#2-use-a-starter-kit-or-install-manually)).
 
 If you want to start over, follow the steps:
 
 1. Go to your Kinde dashboard and select **Add application**.
-2. Enter a name for the application (e.g., "My Next.js App"), select the type of application, and select **Save**.
+2. In the **Customer identity** page, select **Add application**.
 
-    <img src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/afb04c69-e3b0-4afe-385d-00e05346e600/socialsharingimage" alt="add new application in kinde" width="60%" height="auto" fetchpriority="low" loading="lazy" decoding="async" />
+   ![customer identity applications page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/e3cee89a-a91e-438d-0049-e0071fd63000/socialsharingimage)
 
-    If you are unsure about which application type to select, head over to our [SDK page](/developer-tools/about/our-sdks/) and find the language or framework you are using. For backend/fullstack apps, select **Back-end web**. For client-side apps like web and mobile, select **Front end and mobile**.
-3. Select the application language/framework (e.g., Next.js) and select **Save**.
+3. Enter a name for the application (e.g., "My Next.js App"), select the type of application, and select **Save**.
 
-    ![list of backend sdks in kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b793e938-0f4f-4209-7f81-e14309925b00/socialsharingimage)
+   ![add new application in kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/21d781cf-3826-43b4-26f3-db85dfe34700/socialsharingimage)
+
+   If you are unsure about which application type to select, head over to our [SDK page](/developer-tools/about/our-sdks/) and find the language or framework you are using. For backend/fullstack apps, select **Back-end web**. For client-side apps like web and mobile, select **Front end and mobile**.
+
+4. Select the application language/framework (e.g., Next.js) and select **Save**.
+
+   ![select technology stack in kinde application](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/e84b65aa-ae95-4031-6f72-adf22b590f00/socialsharingimage)
 
 ### 2. Use a starter kit or install manually
 
-On the **Quick start** page of your application, you have two options: 
+On the **Quick start** page of your application, you have two options:
 
 - **Starter kit**: If you are starting a brand new project or you just want to have a play around, using one of our starter kits gives you a ready-to-use project with Kinde already integrated with your tech of choice. Grab a starter kit from [GitHub](https://github.com/kinde-starter-kits).
 - **Existing codebase**: If you already have a project, you can install the SDK manually. Follow the instructions for your selected SDK.
+
+  ![kinde application quick start page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/851e0b5d-9e4d-413d-cf69-3ef9f4f14000/socialsharingimage)
 
 ### 3. Set callback and redirect URLs
 
@@ -83,12 +94,14 @@ These define where a user goes when they sign in to your app. You need to set th
 Enter your local development URL to get started.
 
     <Aside>
+
       `http://localhost:3000` is an example of a commonly used local development URL. It should be replaced with the URL where your app is running.
+    
     </Aside>
 
 You can update or remove them from the **Details** page of your application.
 
-![callback and redirect urls in kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7b365904-880a-434b-889d-266961c3e700/socialsharingimage)
+![callback and redirect urls in kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/2a8f41ff-a718-43c6-d8b2-260e659baf00/socialsharingimage)
 
 You can add more URLs later, when your production environment is ready to go live or you set up a custom domain.
 
@@ -97,11 +110,11 @@ You can add more URLs later, when your production environment is ready to go liv
 1. Go to the **Details** page of your application to find your app keys.
 2. Copy the following:
 
-    - **Domain** (`yourbrandname.kinde.com` or your [custom domain](/build/domains/pointing-your-domain/))
-    - **Client ID**
-    - **Client secret** (for back-end and M2M apps)
+   - **Domain** (`yourbusiness.kinde.com` or your [custom domain](/build/domains/pointing-your-domain/))
+   - **Client ID**
+   - **Client secret** (for back-end and M2M apps)
 
-![app keys in kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/14be768e-4223-4218-716b-dc70ef732400/socialsharingimage)
+   ![app keys in kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/1663cf14-4a06-49f9-c3e1-49d624f71a00/socialsharingimage)
 
 ### 5. Add app keys to the .env file
 
@@ -120,14 +133,16 @@ KINDE_POST_LOGIN_REDIRECT_URL=http://localhost:3000/dashboard
 ```
 
 <Aside type="warning" title="Protect your client secret">
+
 Make sure you do not commit your client secret to source control, by adding your `.env` file to your `.gitignore` file.
+
 </Aside>
 
 ### 6. Test user registration
 
-1. Run your app locally and select the **Sign up** button. You'll be redirected to the Kinde login page.
+1. Run your app locally and select the **Sign up** button. You'll be redirected to the Kinde sign-up page.
 
-    <img src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/e13f9836-cb8a-4f06-5556-69d668a5a200/socialsharingimage" alt="kinde hosted login page" width="60%" height="auto" fetchpriority="low" loading="lazy" decoding="async" />
+   ![kinde hosted sign-up page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b671e6e6-4061-4411-5201-a0db821b6900/socialsharingimage)
 
 2. Complete the sign-up process and you'll be redirected back to your app's dashboard page. If you run into an issue, take a look at the [common error codes page](/get-started/guides/error-codes/).
 
@@ -138,9 +153,10 @@ Make sure you do not commit your client secret to source control, by adding your
     Here, you can edit this user's profile details and even perform admin actions like suspending or deleting the user. Read more about [user management](/manage-users/about/) in Kinde.
 
     <Aside>
-    Users created in different applications all add to the same environment in your Kinde business.
-    </Aside>
 
+      Users created in different applications all add to the same environment in your Kinde business.
+
+    </Aside>
 
 ## Build and deploy
 
@@ -148,31 +164,35 @@ Make sure you do not commit your client secret to source control, by adding your
 
 Kinde comes with a default production environment, and the ability to create additional non-production environments. This is useful for testing in different environments without having to sign up for a new account.
 
-To create a test environment, do the following: 
+To create a test environment, do the following:
 
-1. Go to your Kinde dashboard, and select the arrow next to the production environment dropdown (top-left of the screen). A pop-up appears.
+1.  Go to your Kinde dashboard, and select the arrow next to the production environment dropdown (top-left of the screen). A pop-up appears.
 
-    ![kinde all environments dropdown](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0969d059-f555-42af-3423-899b35ec1c00/socialsharingimage)
+    ![kinde all environments dropdown](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/204f9117-0908-4db0-190f-937a32528300/socialsharingimage)
 
-2. Select **All environments**
-3. On the **Environments** page, select **Add environment**
-4. Enter a **Name** (e.g., "Test") and a URL-friendly **Code** for the environment (e.g., "test"), then select **Save**. A new environment is created.
-5. Select the **Switch to this environment** button to switch to the new environment.
+2.  Select **All environments**
+3.  On the **Environments** page, select **Add environment**
+4.  Enter a **Name** (e.g., "Test") and a URL-friendly **Code** for the environment (e.g., "test"), then select **Save**. A new environment is created.
+5.  Select the **Switch to this environment** button to switch to the new environment.
 
-    Every new environment comes with two default applications: 
+    Every new environment comes with two default applications:
 
         - **Back-end web** - for connecting a server-side application
         - **Front-end and mobile** - for connecting a client-side application
 
-    Your Kinde domain for this environment will be in the following format: 
-    
+    Your Kinde domain for this environment will be in the following format:
+
     ```text
     https://<yourbrandname>-<env-code>.<your-region>.kinde.com
     e.g: https://yourbrandname-test.au.kinde.com
     ```
 
     <Aside type="upgrade">
-    Kinde free plan allows you to create only one non-production environment. If you want to create more (e.g., dev, staging), you will need a paid plan. See [Kinde pricing](https://kinde.com/pricing/) for more details.
+
+      Kinde free plan allows you to create only one non-production environment. If you want to
+      create more (e.g., dev, staging), you will need a paid plan. See [Kinde
+      pricing](https://kinde.com/pricing/) for more details.
+
     </Aside>
 
 ### Register your APIs
@@ -191,7 +211,7 @@ See the full [Register and manage APIs guide](/developer-tools/your-apis/registe
 
 The Kinde Management API lets you automate admin tasks such as managing users, roles, permissions, and applications. To get started:
 
-1. Go to your Kinde dashboard and select **Add application**. 
+1. Go to your Kinde dashboard and select **Add application**.
 2. Give it a name and select **Machine to machine** as the type, then select **Save**.
 3. Go to the **APIs** page, select the three dots next to the **Kinde Management API** and choose **Authorize application**.
 4. Select the three dots again and choose **Manage scopes**. Enable only the scopes you need, then select **Save**.
@@ -200,7 +220,11 @@ The Kinde Management API lets you automate admin tasks such as managing users, r
 7. You can also get a test token from the **Quick start** page for testing purposes.
 
     <Aside type="warning" title="Use dashboard tokens for testing only">
-    Do not embed dashboard-generated Management API tokens in client-side code or long-lived production jobs. For production, request tokens server-side via the machine-to-machine client credentials flow and store secrets in your secure environment configuration.
+
+      Do not embed dashboard-generated Management API tokens in client-side code or long-lived
+      production jobs. For production, request tokens server-side via the machine-to-machine client
+      credentials flow and store secrets in your secure environment configuration.
+
     </Aside>
 
 See the full [Kinde Management API reference](/kinde-apis/management/) for available endpoints and usage examples.
