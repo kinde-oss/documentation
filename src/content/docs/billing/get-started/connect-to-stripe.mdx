@@ -6,7 +6,7 @@ sidebar:
 relatedArticles:
   - 46241baf-30aa-43c0-ac0c-b2b7e99941f1
   - 8770ef89-e805-475f-b4f5-a86c1e1eccc1
-description: "Connect Kinde to Stripe, finish onboarding, enable automatic tax, and set cancellation and plan-change billing policies"
+description: "Connect Kinde to Stripe, finish onboarding, enable automatic tax, collect organization billing details, and set billing policies"
 featured: false
 deprecated: false
 topics:
@@ -24,13 +24,15 @@ keywords:
   - connect Stripe
   - Stripe onboarding
   - Collect tax automatically
+  - Collect billing details
+  - organization billing
   - Stripe Tax
   - billing policies
   - cancellation policy
   - connection status
   - test Stripe account
-ai_summary: "Step-by-step guide to connecting Kinde billing to Stripe and configuring related environment settings. Explains that Kinde creates a new Stripe account for billing and that existing Stripe accounts cannot be connected directly, though business details can be copied during onboarding due to a Stripe third-party integration limitation. Covers testing in a non-production environment with a Stripe test account, starting the connection from Settings Environment Billing, completing Stripe onboarding via Update Stripe information, and interpreting connection statuses Connecting, In progress, and Connected. Describes enabling Collect tax automatically so Kinde turns on Stripe Tax for new subscriptions, with per-plan overrides still available, and notes that tax registrations must be completed in the Stripe Dashboard. Also covers setting billing policies for cancellations and plan changes, including how unpaid metered usage and unused paid subscription days are handled. Intended for developers, product managers, and business owners setting up Kinde billing payments."
-updated: 2026-08-10
+ai_summary: "Step-by-step guide to connecting Kinde billing to Stripe and configuring related environment settings. Explains that Kinde creates a new Stripe account for billing and that existing Stripe accounts cannot be connected directly, though business details can be copied during onboarding due to a Stripe third-party integration limitation. Covers testing in a non-production environment with a Stripe test account, starting the connection from Settings Environment Billing, completing Stripe onboarding via Update Stripe information, and interpreting connection statuses Connecting, In progress, and Connected. Describes enabling Collect tax automatically so Kinde turns on Stripe Tax for new subscriptions, with per-plan overrides still available, and notes that tax registrations must be completed in the Stripe Dashboard. Describes Collect billing details on payment step for organization billing, which is off for environments that already had billing and on for new environments, and collects business name, billing address, and optional tax ID for organization customers only. Also covers setting billing policies for cancellations and plan changes, including how unpaid metered usage and unused paid subscription days are handled. Intended for developers, product managers, and business owners setting up Kinde billing payments."
+updated: 2026-10-25
 ---
 
 Kinde’s billing feature comes with a dependency on [Stripe](https://stripe.com), which is a globally known and reliable payments processing platform. A new Stripe account is automatically created for you when you set up billing in Kinde.
@@ -99,6 +101,30 @@ After Stripe is connected, you can turn on automatic tax for new subscriptions.
 This setting is off by default. When it is on, Kinde enables Stripe Tax on new subscriptions unless a plan overrides it with **Collect** or **Don’t collect** in plan settings.
 
 You still need to complete Stripe Tax setup in the Stripe Dashboard (for example tax registrations for the regions where you sell). Until a customer has a billing country—such as during a trial before a card is added—tax may temporarily use your Stripe account’s registered address.
+
+## Collect billing details for organization customers
+
+After Stripe is connected, you can collect legal billing details from **organization** customers on the payment step. Kinde saves the Bill-to name, address, and optional tax ID on the Stripe customer so invoices and Stripe Tax can use them.
+
+User plans are not affected. They still collect payment method details only.
+
+1. Go to **Settings > Environment > Billing**.
+2. In the **Settings** section, turn on **Collect billing details on payment step for organization billing**.
+3. Select **Save**.
+
+   ![Collect billing details on payment step for organization billing](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ec9dec5c-f016-4e2e-0d43-11f56f41ba00/socialsharingimage)
+
+Environments that already had billing before this option shipped keep the setting **off**, so existing checkout stays payment-method-only until you turn it on. New environments start with the setting **on**. You can change it at any time. If a customer is already on the payment step, they keep the experience that checkout started with.
+
+When the setting is on, organization customers see **Billing details** above **Payment method details**. They enter a full name, billing address, and **business name** (required). A **tax ID** is optional. If they add one, it can appear on invoices.
+
+This pairs with **Collect tax automatically**. Stripe Tax needs a billing country. With this setting on, organization customers supply that country (and an optional tax ID) in Kinde instead of relying only on the card’s country.
+
+<Aside>
+
+Organization members can update the same billing information later in the self-serve portal. You can also edit it from the organization or user **Billing** page in Kinde. See [Enable self-serve portal for organizations](/build/self-service-portal/self-serve-portal-for-orgs/#manage-billing-information) and [Subscription upgrade and downgrade methods](/billing/manage-subscribers/upgrade-downgrade-methods/#edit-billing-information-for-an-organization-or-user).
+
+</Aside>
 
 ## Set billing policies for cancellation and plan changes
 

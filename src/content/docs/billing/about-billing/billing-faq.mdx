@@ -31,13 +31,15 @@ keywords:
   - free trial
   - sales tax
   - VAT
+  - billing information
+  - tax ID
   - metered billing
   - plan upgrades
   - pricing table
   - billing webhooks
   - one-time charges
-ai_summary: "FAQ covering Kinde billing setup and day-to-day operations. Explains core concepts such as subscription plans, monthly billing cycles, multi-currency defaults, and Stripe-backed payment processing. Covers getting started steps including connecting Stripe, configuring billing roles for B2B organizations, and creating plans with features, limits, and pricing. Answers questions on free plans without card collection, one-time charges that subscribers can purchase from the portal or that admins can assign, free trial periods that convert to paid subscriptions, automatic tax and VAT via Stripe Tax, payment methods, failed payments, upgrades and downgrades, metered usage, cancellations and refunds, pricing tables, customized billing pages, and signup-flow integration. Also covers self-serve portals, troubleshooting billing errors, webhooks for subscription lifecycle events, and pricing best practices. Intended for developers, product managers, business owners, and support teams working with Kinde billing."
-updated: 2026-10-19
+ai_summary: "FAQ covering Kinde billing setup and day-to-day operations. Explains core concepts such as subscription plans, monthly billing cycles, multi-currency defaults, and Stripe-backed payment processing. Covers getting started steps including connecting Stripe, configuring billing roles for B2B organizations, and creating plans with features, limits, and pricing. Answers questions on free plans without card collection, one-time charges that subscribers can purchase from the portal or that admins can assign, free trial periods that convert to paid subscriptions, automatic tax and VAT via Stripe Tax, collecting organization billing details at checkout, payment methods, failed payments, upgrades and downgrades, metered usage, cancellations and refunds, pricing tables, customized billing pages, and signup-flow integration. Also covers self-serve portals, editing billing information, troubleshooting billing errors, webhooks for subscription lifecycle events, and pricing best practices. Intended for developers, product managers, business owners, and support teams working with Kinde billing."
+updated: 2026-10-25
 ---
 
 Find quick answers to common questions about Kinde billing. Each section covers specific aspects of billing setup, management, and customer support.
@@ -192,9 +194,21 @@ Plans with a trial display a "Free trial for N day(s)" badge on the pricing tabl
 
 You can enable **Collect tax automatically** in **Settings > Environment > Billing** (off by default). When enabled, Kinde turns on Stripe Tax for new subscriptions. Individual plans can inherit that setting via **Use account setting**, or override it with **Collect** or **Don’t collect**.
 
-Stripe Tax calculates tax amounts; Stripe Billing presents them on invoices. Configure tax registrations and related Stripe Tax options in the Stripe Dashboard for the regions where you sell. Until a customer has a billing country (for example on a trial before a card is added), tax may use your Stripe account’s registered address.
+Stripe Tax calculates tax amounts; Stripe Billing presents them on invoices. Configure tax registrations and related Stripe Tax options in the Stripe Dashboard for the regions where you sell. Until a customer has a billing country (for example on a trial before a card is added), tax may use your Stripe account’s registered address. For organization customers, you can collect a Bill-to address (and optional tax ID) on the payment step so Stripe has a country and invoice tax IDs without relying only on the card. See **Can I collect a business name, billing address, and tax ID from organization customers?** below.
 
 **Learn more:** [About billing](/billing/about-billing/about-billing/#how-is-sales-tax-or-vat-handled-in-kinde-billing) | [Create plans](/billing/manage-plans/create-plans/#collect-tax-automatically) | [Connect to Stripe and set policies](/billing/get-started/connect-to-stripe/#collect-tax-automatically)
+</details>
+
+<details>
+<summary>Can I collect a business name, billing address, and tax ID from organization customers?</summary>
+
+Yes. In **Settings > Environment > Billing**, turn on **Collect billing details on payment step for organization billing**. Organization customers then enter a full name, billing address, and business name (required), plus an optional tax ID, on the payment step above **Payment method details**. Tax IDs can appear on invoices.
+
+User (B2C) checkout stays payment-method-only. After subscribe, **both** organization and user customers can add or edit billing information in the self-serve portal, and you can edit it from the customer’s **Billing** page in Kinde.
+
+Environments that already had billing keep this setting off until you enable it. New environments start with it on.
+
+**Learn more:** [Connect to Stripe and set policies](/billing/get-started/connect-to-stripe/#collect-billing-details-for-organization-customers) | [Customize the plan sign-up experience](/billing/billing-user-experience/customize-billing-pages/)
 </details>
 
 <details>
@@ -278,9 +292,11 @@ Kinde provides SDK methods and URL parameters to integrate billing directly into
 <details>
 <summary>How do I help customers who can't access their billing information?</summary>
 
-Kinde provides self-service portals where customers can view their subscription details, update payment methods, and manage their plans. For B2B customers, you can also access billing information on their behalf through the Kinde dashboard to provide support.
+Kinde provides self-service portals where customers can view their subscription, update payment methods, and edit billing information (address, tax IDs, and contact details). For B2B, members need a role with `org:read:billing` to view and `org:write:billing` to update. For B2C, the equivalent is `family:read:billing` and `family:write:billing`.
 
-**Learn more:** [Self-serve portal setup](/billing/get-started/self-serve-portal-setup/)
+You can also open the organization or user in Kinde, select **Billing**, and select **Edit** under **Provider account details** to update billing information on their behalf.
+
+**Learn more:** [Self-serve portal setup](/billing/get-started/self-serve-portal-setup/) | [Subscription upgrade and downgrade methods](/billing/manage-subscribers/upgrade-downgrade-methods/#edit-billing-information-for-an-organization-or-user)
 </details>
 
 <details>
