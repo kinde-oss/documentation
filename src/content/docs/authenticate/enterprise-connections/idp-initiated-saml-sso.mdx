@@ -39,7 +39,7 @@ keywords:
   - login_hint
   - Accept requests
   - unsolicited SAML
-updated: 2026-09-16
+updated: 2026-10-26
 ---
 
 In this guide, you'll learn how to configure IdP-initiated SSO in Kinde, including setting up the SAML connection, configuring RelayState, configuring your Identity Provider, and testing both SP-initiated and IdP-initiated authentication flows.
@@ -245,7 +245,7 @@ The SDK builds the authorization URL, including the callback URL, `state`, and P
 
   <TabItem label="Without an SDK">
 
-Build a full `/oauth2/auth` request. Include `redirect_uri`, `state`, and PKCE (`code_challenge` and `code_challenge_method=S256`) where required. See [Use Kinde without an SDK](/developer-tools/about/using-kinde-without-an-sdk/#connection_id).
+Build a full `/oauth2/auth` request. Include `redirect_uri`, `state`, and the PKCE parameters `code_challenge` and `code_challenge_method`. `code_challenge` is the base64-encoded SHA-256 hash of a code verifier you keep for the token exchange, and `code_challenge_method` is `S256`. See [Use Kinde without an SDK](/developer-tools/about/using-kinde-without-an-sdk/#code_challenge).
 
 Read `connection_id`, `org_code`, and `login_hint` from the incoming RelayState query string and add them to the authorization URL:
 
@@ -256,6 +256,8 @@ https://<your_subdomain>.kinde.com/oauth2/auth
 &redirect_uri=<your_app_callback_url>
 &scope=openid%20profile%20email
 &state=<random_state>
+&code_challenge=<base64_sha256_of_code_verifier>
+&code_challenge_method=S256
 &connection_id=<connection_id_from_query>
 &org_code=<org_code_from_query>
 &login_hint=<login_hint_from_query>
