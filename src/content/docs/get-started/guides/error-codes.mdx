@@ -3,15 +3,20 @@ page_id: 46149cb3-fa96-46a2-bd94-0ba4aacae527
 title: Common errors and codes
 sidebar:
   order: 4
-description: Comprehensive troubleshooting guide for common Kinde error codes including authentication, SAML, OAuth, and verification issues.
+tableOfContents:
+  maxHeadingLevel: 3
+description: "Diagnose Kinde auth, SAML, OAuth, verification, and billing signup errors with codes and clear fixes."
 relatedArticles:
   - 9b9ce8a8-dffb-47e5-82a9-e612b1947963
   - c4a8e1d2-7b36-4f90-8c15-2e6d9a0b3f71
 topics:
   - get-started
   - guides
+  - troubleshooting
+  - authentication
 sdk: []
-languages: []
+languages:
+  - typescript
 audience:
   - developers
   - admins
@@ -20,16 +25,21 @@ keywords:
   - error codes
   - troubleshooting
   - authentication errors
+  - JWKS 403
+  - state not found
+  - SAML response
   - saml errors
+  - OAuth callback
   - oauth errors
   - verification codes
   - token errors
-  - disposable email
-  - error code 9697
-updated: 2026-10-12
+  - post-authentication workflow
+  - collect payment details
+  - social sign-in
+updated: 2026-10-19
 featured: false
 deprecated: false
-ai_summary: Comprehensive troubleshooting guide for common Kinde error codes including authentication, SAML, OAuth, verification issues, and disposable email sign-up error 9697.
+ai_summary: "Reference guide to common Kinde error codes and how to troubleshoot them. Covers authentication messages such as being unable to authenticate a user, State not found, and JWKS endpoint 403 responses caused by the wrong domain, unexpected credentials, CORS restrictions, or IP allowlists. Explains missing email and SMS verification codes, including spam folders, Gmail delivery delays, Microsoft Defender filters, and connecting your own SMS provider such as Twilio or Sinch Engage. Documents numbered codes for SAML response validation, OAuth 2.0 callbacks, connected apps, social sign-in provider errors such as access denied, interaction required, temporary unavailability, and a missing authorization code, plus expired social secrets, mid-flow URLs, IdP-initiated SSO, invalid RelayState, browser trust tokens, and disposable email detection during sign-up workflows. Includes post-authentication workflow failures when the failure policy is set to stop, and cases where a workflow denies access on purpose. Also covers billing signup collect payment details codes 9862 and 9864 through 9870, with steps to restart sign-up, confirm Stripe is connected and the plan is active, and contact support with the error code and psid from the URL. Written for developers and admins diagnosing authentication and paid sign-up issues."
 ---
 
 Depending on the complexity of your authentication setup, you or your users may occasionally encounter errors.
@@ -75,9 +85,9 @@ Verification codes are sent almost immediately when triggered. If a code is not 
 - Carrier-level spam filtering blocking OTP messages
 - SMS delivery delays during peak usage times
 - Full storage preventing new messages from being received
-- Phone numbers in certain countries do sometimes experience issues. Contact us if you think this might be the case. 
+- Phone numbers in certain countries do sometimes experience issues. Contact us if you think this might be the case.
 
-We recommend using [Twilio](/authenticate/authentication-methods/phone-authentication/), a third-party SMS provider instead of Kinde's default service. This makes troubleshooting issues and accessing logs much easier.
+We recommend [configuring your own SMS provider](/authenticate/authentication-methods/phone-authentication/) — Twilio or Sinch Engage — instead of using Kinde's default service. This makes troubleshooting issues and accessing logs much easier.
 
 ## Email verification error code 123f11e6453744da8069f1a6d65247ba
 
@@ -362,6 +372,105 @@ Troubleshooting
 - Invitations, users you add yourself, and existing users are not checked by this policy
 - To allow only specific domains, or to block a list of your own, use **Allowed domains** or a [pre-registration workflow](/workflows/workflow-tutorials/block-disposable-emails/)
 
+## Billing signup — collect payment details errors
+
+These error codes appear on Kinde’s hosted authentication error page when sign-up or plan selection fails during the **collect payment details** step (payment method and billing details collection, typically as part of a paid plan or trial conversion flow). The page shows a short message and a line such as `Error code: 9868`.
+
+If you or your customer sees one of these codes:
+
+1. Ask the user to **start sign-up again from your app’s login or register entry point** (not a bookmarked or mid-flow URL).
+2. In the Kinde dashboard, confirm **billing is connected to Stripe** and the **plan** the user selected is active and correctly configured.
+3. If the code relates to payment method or Stripe setup, check the customer in **Stripe** for failed setup intents, card errors, or account restrictions.
+4. If the problem continues, contact [Kinde support](https://kinde.com/support/) with the **full error code**, the user’s email (if available), and the **`psid` value from the URL** when present (same as other auth errors).
+
+Related: [Plan selection](/billing/billing-user-experience/plan-selection/), [Connect to Stripe](/billing/get-started/connect-to-stripe/), [Customize page design](/design/customize-with-code/understand-page-design/) (route `(collect_payment_details)`).
+
+### Error code 9862
+
+Description
+- Collect payment details pipeline step — **default / fallback** error when the failure does not match a more specific code below
+
+Troubleshooting
+- Retry sign-up from the main entry point
+- Contact Kinde support with error code **9862** and any `psid` from the URL if the failure repeats without a more specific code
+
+### Error code 9864
+
+Description
+- Collect payment details step — billing context is missing (for example, billing customer ID or target plan ID is not in the pipeline session)
+- User-facing message: *We couldn't complete your plan selection. Please start a new session and try again.*
+
+Troubleshooting
+- Do not reuse bookmarked or shared URLs from the middle of sign-up
+- Clear cookies for your Kinde domain and restart from your application’s sign-up or register link
+- Confirm the user completed plan selection before the payment step when your flow requires it
+
+### Error code 9865
+
+Description
+- Collect payment details step — Kinde could not save billing details with the payment provider (Stripe)
+- User-facing message: *We couldn't save your billing details. Please try again, or contact support if the problem continues.*
+
+Troubleshooting
+- Verify the Stripe connection for the environment (**Settings > Environment > Billing**)
+- Retry after a few minutes in case of transient Stripe API errors
+- Contact Kinde support with code **9865** if failures persist
+
+### Error code 9866
+
+Description
+- Collect payment details step — maximum attempts exceeded while validating billing details
+- User-facing message: *We couldn't verify your billing details after several attempts. Please start a new session and try again, or contact support if you need help.*
+
+Troubleshooting
+- Start a new sign-up session from your app’s entry point
+- Ask the user to confirm billing name, address, and tax details match what their bank or card issuer expects
+- Contact Kinde support if the user is blocked after a single valid attempt
+
+### Error code 9867
+
+Description
+- Collect payment details step — failed to prepare subscription parameters for the selected plan
+- User-facing message: *We couldn't set up the selected plan. Please try again, or contact support if the problem continues.*
+
+Troubleshooting
+- In the dashboard, confirm the plan exists, is published, and has valid pricing/features for the environment
+- Try a different plan in a test environment to isolate plan configuration issues
+- Contact Kinde support with code **9867** and the plan name or ID
+
+### Error code 9868
+
+Description
+- Collect payment details step — failed to create a subscription awaiting payment with the payment provider
+- User-facing message: *We couldn't initialize your subscription payment. Please try again, or contact support if the problem continues.*
+
+Troubleshooting
+- Check Stripe dashboard for errors on customer or subscription creation for that environment
+- Confirm Stripe account is fully onboarded (not stuck in *Connecting* or *In progress*)
+- Contact Kinde support with code **9868**
+
+### Error code 9869
+
+Description
+- Collect payment details step — failed to attach the payment method to the customer in Stripe
+- User-facing message: *We couldn't save your payment method. Please try again, or contact support if the problem continues.*
+
+Troubleshooting
+- Ask the user to try a different card or payment method
+- Check Stripe for declined cards, authentication requirements, or radar rules
+- Contact Kinde support with code **9869**
+
+### Error code 9870
+
+Description
+- Collect payment details step — failed to create a Stripe Setup Intent for collecting the payment method
+- User-facing message: *We couldn't prepare the payment form. Please start a new session and try again.*
+
+Troubleshooting
+- Start sign-up again from your application (do not resume a stale tab)
+- Verify Stripe connection and that the environment’s billing configuration is complete
+- Contact Kinde support with code **9870**
+
 ## Error code 9881
 
 Description
@@ -369,5 +478,3 @@ Description
 
 Troubleshooting
 - Check the refresh token is valid
-
-

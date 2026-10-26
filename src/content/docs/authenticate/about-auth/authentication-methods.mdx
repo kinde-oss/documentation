@@ -3,6 +3,8 @@ page_id: 26e55a64-13dd-4c7b-b9ad-e7595903ddc8
 title: Ways to authenticate
 sidebar:
   order: 3
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - 720fcdda-daa6-4dff-ad2d-177af555e6bb
   - e519f56a-603a-44dd-a946-3aaf6fb256ce
@@ -10,15 +12,14 @@ relatedArticles:
   - 0145d1ce-564e-4c28-820f-2f126abbfe3a
   - a5225946-27ad-41c0-a3c1-9a6d735e3efb
   - 66b2a627-b24a-4ccf-a792-80a6a9fe35ef
-  - c62fc730-1d48-42fe-a05e-34f4d330887d
-description: >-
-  Detailed guide to all authentication methods supported by Kinde including
-  email, phone, social, and enterprise authentication.
+description: "Compare Kinde auth methods: password, passwordless OTP, phone SMS, social, enterprise SSO, custom OAuth, and passkeys"
 featured: false
 deprecated: false
-ai_summary: "Complete guide to Kinde authentication methods including email password, passwordless OTP, phone SMS, social providers, and enterprise SSO. Notes that a one-time passcode can be offered on the password screen without enabling both email connections, and links to the dedicated guide for using password and passwordless auth at the same time. Intended for developers and product managers choosing how users sign in."
+ai_summary: "Overview of authentication methods supported by Kinde. Covers email plus password sign-in, including minimum password length, blocked popular passwords, and first-time email verification with a one-time code. Explains passwordless email or username authentication using a one-time passcode (OTP), notes that email plus passwordless is enabled by default for new Kinde businesses, and states that magic links are not supported. Describes phone authentication via SMS OTP, including Kinde default SMS (available in live environments on all plans) and connecting Twilio or Sinch Engage on paid plans for custom sender control and deliverability, non-editable OTP message format with domain binding, and importing phone numbers when migrating. Covers social sign-in with automatic account linking by verified email, enterprise SSO with Microsoft Entra ID and SAML, custom OAuth 2.0 connections, and passkeys based on the Web Authentication (WebAuthn) standard. Points to per-method setup guides. Intended for developers and product managers choosing how users authenticate."
 topics:
   - authenticate
+  - about-auth
+  - authentication-methods
 sdk: []
 languages: []
 audience:
@@ -26,15 +27,15 @@ audience:
   - product-manager
 complexity: beginner
 keywords:
-  - email authentication
-  - password
-  - passwordless
-  - phone auth
-  - SMS
-  - social login
+  - email password
+  - passwordless OTP
+  - phone SMS
+  - social sign-in
   - enterprise SSO
-  - OTP
-updated: 2026-03-26
+  - custom OAuth
+  - passkeys
+  - WebAuthn
+updated: 2026-09-13
 ---
 
 Kinde supports the following authentication methods.
@@ -77,17 +78,11 @@ Kinde does not currently support magic links as a passwordless authentication me
 
 ## Phone authentication
 
-<Aside>
-
-You need to have a [Twilio](https://www.twilio.com/en-us) account set up before implementing phone authentication in your production environment. See [Set up phone authentication](/authenticate/authentication-methods/phone-authentication/) for more information.
-
-</Aside>
-
 You can allow users to authenticate using their phone number as their sign in identity. This is a passwordless method. Once set up, users enter their phone number on the sign in screen and then enter a one-time passcode (sent via SMS) on the next screen.
 
 ### Passwordless via SMS
 
-For users to receive a sign in code via SMS, you need to set up a connection to [Twilio](https://www.twilio.com/en-us), who offer a messaging service for authenticating via SMS. You will need a Twilio account to set up this auth option in Kinde. See [Set up phone authentication](/authenticate/authentication-methods/phone-authentication/).
+By default, Kinde sends the sign-in code via its own SMS service, which you can use in live environments (limited to 10 SMS per month on the Free plan, and uncapped on paid plans). For best deliverability and sender control, you can optionally connect your own provider — [Twilio](https://www.twilio.com/en-us) or [Sinch Engage](https://developers.app.sinch.com/) (formerly MessageMedia) — on a [Kinde paid plan](https://kinde.com/pricing/). See [Set up phone authentication](/authenticate/authentication-methods/phone-authentication/).
 
 Once set up, users will receive a one time code via SMS that enables them to complete the sign up process to your application or site.
 
@@ -97,12 +92,12 @@ If you’re switching to Kinde from another auth provider, you can [import phone
 
 The SMS message that users receive through Kinde auth complies with OTP best practice. Here’s an example:
 
-<aside>
+```text title="OTP message format"
 
 123456 is your one-time code to sign in to  
 xxxx@login.xxx.au #123456
 
-</aside>
+```
 
 The content and format of the OTP SMS message is not editable.
 
