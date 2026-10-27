@@ -58,7 +58,7 @@ This topic explains how organization-managed roles work, how to control which pe
 - **Organization roles belong to one organization.** A role an organization creates can only be assigned to members of that organization. Other organizations never see it.
 - **Organization roles hold two kinds of permissions.** The organization's own permissions, and the business-wide permissions you have marked as **Available to organization roles**. An organization cannot put any other business-wide permission into its roles.
 - **Organization permissions only reach users through organization roles.** You cannot grant an organization's permission directly to a user. Add it to one of the organization's roles and assign the role instead.
-- **They work in tokens like any other role or permission.** Organization roles appear in the `roles` claim and their permissions appear in the `permissions` claim, alongside business-wide ones. Your application code does not need to tell them apart.
+- **They work in tokens like any other role or permission.** Their permissions appear in the `permissions` claim alongside business-wide ones, and the roles themselves appear in the `roles` claim once you have [added roles to the access token](/manage-users/roles-and-permissions/user-roles/#add-roles-to-the-access-token) for the application. Your application code does not need to tell them apart.
 - **Keys must be unique.** An organization role or permission key must be unique within that organization and cannot reuse a business-wide key. Likewise, you cannot create a business-wide role or permission with a key that an organization is already using. Keys cannot be changed after creation.
 - **Limits apply.** Each organization can have up to 100 roles and 100 permissions of its own. Names and keys can be up to 64 characters and descriptions up to 255 characters.
 - **Organization roles do not affect MFA exemptions.** Only business-wide roles can be used as [MFA exempt roles](/authenticate/multi-factor-auth/mfa-per-org/) for an organization.
@@ -74,7 +74,7 @@ Before an organization can build roles from your business-wide permissions, you 
 
 <Aside type="warning">
 
-If you switch **Available to organization roles** off for a permission, it is removed from every organization role that includes it, in every environment. Members holding those roles lose the permission the next time their token is refreshed.
+If you switch **Available to organization roles** off for a permission, it is removed from every organization role that includes it, in every environment. Members holding those roles lose the permission the next time their token is refreshed, unless a business-wide role they hold, or a direct grant, still gives it to them.
 
 </Aside>
 
@@ -172,17 +172,26 @@ Things to know when using the API:
 
 ## Webhooks
 
-Organization roles and permissions use the same `role.created`, `role.updated`, `role.deleted`, `permission.created`, `permission.updated`, and `permission.deleted` [webhook events](/integrate/webhooks/add-manage-webhooks/) as business-wide ones. When the role or permission belongs to an organization, the payload includes an `organization_code` field. Business-wide permission events include `is_organization_role_assignable`.
+Organization roles and permissions use the same `role.created`, `role.updated`, `role.deleted`, `permission.created`, `permission.updated`, and `permission.deleted` [webhook events](/integrate/webhooks/add-manage-webhooks/) as business-wide ones. When the role or permission belongs to an organization, `data.role` or `data.permission` includes an `organization_code` field. Business-wide permission events include `is_organization_role_assignable` instead.
+
+Here is a decoded `role.created` event for an organization role. See [About webhooks](/integrate/webhooks/about-webhooks/) for the full payload format.
 
 ```json
 {
-  "role": {
-    "id": "018f3d4e-6f2a-7a1b-9c3d-2e4f5a6b7c8d",
-    "name": "Billing approver",
-    "key": "billing-approver",
-    "description": "Can approve invoices for this organization",
-    "organization_code": "org_7d8e9f0a1b2c"
-  }
+  "data": {
+    "role": {
+      "id": "018f3d4e-6f2a-7a1b-9c3d-2e4f5a6b7c8d",
+      "name": "Billing approver",
+      "key": "billing-approver",
+      "description": "Can approve invoices for this organization",
+      "organization_code": "org_7d8e9f0a1b2c"
+    }
+  },
+  "event_id": "event_1234567890",
+  "event_timestamp": "2026-10-27T12:00:00.000Z",
+  "source": "admin",
+  "timestamp": "2026-10-27T12:00:00.000Z",
+  "type": "role.created"
 }
 ```
 
