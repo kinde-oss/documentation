@@ -31,8 +31,10 @@ keywords:
   - plan groups
   - one-time purchases
   - one-time charges
-updated: 2026-10-17
-ai_summary: "Guide to changing a customer plan subscription in Kinde. Describes three methods: self-serve portal plan selection from the pricing table (within that table's plan group), including Pay annually when a displayed plan offers annual pricing; manual Change plan in the Kinde UI for an organization or user across published plans grouped by plan group (annual selection is not available in this admin flow yet); and overwriting the agreement by creating a new one via the Management API, including across plan groups of the same customer type. Notes that Pay annually applies only when moving to a different plan, not for switching monthly and annual on the current plan. Walks through admin Change plan steps, moving a customer to a plan in a different plan group, and agreement cancellation and invoice credit or bill behavior based on billing policies. Explains that a plan change starts a new billing agreement and forfeits active one-time purchases without a refund; interactive changes in the portal or admin show a confirmation dialog listing affected purchases, while Management API callers must check active purchases and warn the customer before creating the new agreement. Explains that the billing details subscription card shows Plan and Next invoice like the customer portal, while Agreement ID, Customer ID, and feature counts remain admin-only. Intended for developers, business owners, and admins managing upgrades and downgrades."
+  - billing information
+  - tax ID
+updated: 2026-10-25
+ai_summary: "Guide to changing a customer plan subscription in Kinde. Describes three methods: self-serve portal plan selection from the pricing table (within that table's plan group), including Pay annually when a displayed plan offers annual pricing; manual Change plan in the Kinde UI for an organization or user across published plans grouped by plan group (annual selection is not available in this admin flow yet); and overwriting the agreement by creating a new one via the Management API, including across plan groups of the same customer type. Notes that Pay annually applies only when moving to a different plan, not for switching monthly and annual on the current plan. Walks through admin Change plan steps, moving a customer to a plan in a different plan group, and agreement cancellation and invoice credit or bill behavior based on billing policies. Explains that a plan change starts a new billing agreement and forfeits active one-time purchases without a refund; interactive changes in the portal or admin show a confirmation dialog listing affected purchases, while Management API callers must check active purchases and warn the customer before creating the new agreement. Explains that the billing details subscription card shows Plan and Next invoice like the customer portal, while Agreement ID, Customer ID, and feature counts remain admin-only. Also covers editing Stripe Bill-to billing information (email, phone, description, address, and tax IDs) for organization and user customers from Provider account details. Intended for developers, business owners, and admins managing upgrades and downgrades."
 ---
 
 Customers will eventually want to change the plan they are on and you need a way to alter their subscription.
@@ -96,3 +98,30 @@ After the change:
 These forfeiture rules also apply when you change a plan via the Management API. Because the API overwrites the agreement directly without a Kinde confirmation dialog, API callers must check active purchases (for example with [Get billing one-time purchases](https://docs.kinde.com/kinde-apis/management/#tag/billing-one-time-purchases/get/api/v1/billing/one_time_purchases/)) and warn the customer before creating the new agreement.
 
 See [One-time purchases](/billing/manage-subscribers/one-time-purchases/).
+
+## Edit billing information for an organization or user
+
+You can update the Stripe Bill-to details for a customer without opening Stripe. The name on the customer record is shown on the page. You can edit email, phone, description, address, and tax IDs.
+
+This is available for **organization and user** billing customers.
+
+1. Open the organization or user record in Kinde.
+   - Go to **Organizations** and locate the org, or
+   - Go to **Users** and locate the user.
+2. Select **Billing** in the side menu.
+3. Under **Provider account details**, review **Details** (Address, Tax ID, Email, Phone, Description, Created).
+4. Select **Edit**.
+
+   ![Organization billing details in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0b3a9238-9358-4578-e2be-e56c7dd79700/socialsharingimage)
+
+5. In **Edit billing information**, update contact, address, and tax IDs as needed.
+   - Country is required.
+   - Phone, Description, Address line 2, and State are optional.
+   - Tax IDs are optional. Helper text: *Tax IDs appear on your invoices*. Use **Add another ID** for more than one.
+6. Select **Save**. Kinde confirms with **Billing information updated**.
+
+<Aside>
+
+Customers with portal billing write access can make the same changes on **Payment details**. See [Enable self-serve portal for organizations](/build/self-service-portal/self-serve-portal-for-orgs/#manage-billing-information) and [Enable self-service portal for users](/build/self-service-portal/self-serve-portal-for-users/#billing).
+
+</Aside>

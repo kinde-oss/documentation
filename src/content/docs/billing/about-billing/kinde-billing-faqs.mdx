@@ -29,14 +29,16 @@ keywords:
   - annual payments
   - mixed-interval pricing
   - Stripe Tax
+  - billing information
+  - tax ID
   - free trial
   - self-serve portal
   - next invoice details
   - billing webhooks
   - pricing models
   - one-time charges
-ai_summary: "Short answers to common questions about setting up and running Kinde billing. Covers choosing pricing models, metered versus unmetered features, plan groups for B2B and B2C, draft versus published plans, free plans without card collection, one-time charges that subscribers can purchase from the portal or that admins can assign, and free trial configuration. Explains Stripe topics including automatic tax and VAT via Stripe Tax, connected account provisioning, In progress connection status, and testing in non-production. Covers plan design for upgrades, tiered usage pricing, upgrade and downgrade policies, Pay annually on self-serve plan changes, mixed yearly and monthly fixed charges, Next invoice behavior, pricing table conversion tips, and when to show pricing during signup. Describes the self-serve portal, org billing permissions such as org write billing, and generating one-time portal links via SDK or Management API. Also covers syncing entitlements with the Account and Management APIs, webhook handling, billing URL parameters, Stripe price sync troubleshooting, billing discrepancy checks, known limitations, launch migration practices, and churn reduction. Intended for developers, product managers, business owners, and support."
-updated: 2026-10-14
+ai_summary: "Short answers to common questions about setting up and running Kinde billing. Covers choosing pricing models, metered versus unmetered features, plan groups for B2B and B2C, draft versus published plans, free plans without card collection, one-time charges that subscribers can purchase from the portal or that admins can assign, and free trial configuration. Explains Stripe topics including automatic tax and VAT via Stripe Tax, collecting organization Bill-to details at checkout, connected account provisioning, In progress connection status, and testing in non-production. Covers plan design for upgrades, tiered usage pricing, upgrade and downgrade policies, Pay annually on self-serve plan changes, mixed yearly and monthly fixed charges, Next invoice behavior, pricing table conversion tips, and when to show pricing during signup. Describes the self-serve portal, org billing permissions such as org write billing, and generating one-time portal links via SDK or Management API. Also covers syncing entitlements with the Account and Management APIs, webhook handling, billing URL parameters, Stripe price sync troubleshooting, billing discrepancy checks, known limitations, launch migration practices, and churn reduction. Intended for developers, product managers, business owners, and support."
+updated: 2026-10-25
 ---
 
 Here are short answers to the most common billing questions. Click any question to expand the answer.
@@ -125,8 +127,19 @@ Trial plans require the **Ask for credit card** option to be enabled. Plans with
 
 Enable **Collect tax automatically** in **Settings > Environment > Billing** to turn on Stripe Tax for new subscriptions (off by default). Plans can inherit that setting via **Use account setting**, or override it with **Collect** or **Don’t collect**.
 
-Stripe Tax calculates tax; Stripe Billing presents it on invoices. Set up tax registrations and related options in the Stripe Dashboard. Until a customer has a billing country, tax may temporarily use your Stripe account’s registered address. If you need guidance for your use case, contact [support@kinde.com](mailto:support@kinde.com).
-[About billing](/billing/about-billing/about-billing/#how-is-sales-tax-or-vat-handled-in-kinde-billing) | [Create plans](/billing/manage-plans/create-plans/#collect-tax-automatically) | [Manage Stripe connection](/billing/payment-management/manage-stripe-connection/)
+Stripe Tax calculates tax; Stripe Billing presents it on invoices. Set up tax registrations and related options in the Stripe Dashboard. Until a customer has a billing country, tax may temporarily use your Stripe account’s registered address.
+
+For organization customers, turn on **Collect billing details on payment step for organization billing** so they can provide a Bill-to address and optional tax ID at payment time. If you need guidance for your use case, contact [support@kinde.com](mailto:support@kinde.com).
+[About billing](/billing/about-billing/about-billing/#how-is-sales-tax-or-vat-handled-in-kinde-billing) | [Create plans](/billing/manage-plans/create-plans/#collect-tax-automatically) | [Connect to Stripe](/billing/get-started/connect-to-stripe/#collect-billing-details-for-organization-customers)
+</details>
+
+<details>
+<summary><strong>Can organization customers enter a billing address and tax ID in Kinde?</strong></summary>
+
+Yes. Enable **Collect billing details on payment step for organization billing** in **Settings > Environment > Billing**. Organization checkout then collects full name, billing address, business name (required), and optional tax ID. User-plan checkout does not. After subscribe, organization and user customers can edit billing information in the portal, and admins can edit it on the customer **Billing** page.
+
+Environments that already had billing keep this setting off until you enable it. New environments start with it on.
+[Connect to Stripe and set policies](/billing/get-started/connect-to-stripe/#collect-billing-details-for-organization-customers) | [Customize the plan sign-up experience](/billing/billing-user-experience/customize-billing-pages/)
 </details>
 
 <details>
@@ -224,8 +237,8 @@ Start by mapping those customers to existing plans with adjusted feature limits 
 <details>
 <summary><strong>How does Kinde's self-serve portal reduce my customer support workload?</strong></summary>
 
-The self-serve portal lets customers update payment details, view billing history, manage plans, buy one-time purchases, and handle organization billing actions without opening support tickets. You control which actions are self-managed through permissions. Portal links are secure and one-time use, so they can be embedded in your application safely.
-[Self-serve portal setup](/build/self-service-portal/self-serve-portal-for-orgs/) | [Portal configuration options](/build/self-service-portal/self-serve-portal-for-orgs/)
+The self-serve portal lets customers update payment methods, billing information (address, tax IDs, and contact details), view billing history, manage plans, buy one-time purchases, and handle organization billing actions without opening support tickets. You control which actions are self-managed through permissions. Portal links are secure and one-time use, so they can be embedded in your application safely.
+[Self-serve portal setup](/build/self-service-portal/self-serve-portal-for-orgs/#manage-billing-information) | [Portal configuration options](/build/self-service-portal/self-serve-portal-for-orgs/)
 </details>
 
 <details>
