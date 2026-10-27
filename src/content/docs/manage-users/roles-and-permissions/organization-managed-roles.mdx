@@ -1,0 +1,196 @@
+---
+page_id: e65eb5f6-70cf-4c57-b8c7-753334db56a0
+title: Let organizations manage their own roles
+sidebar:
+  order: 5
+relatedArticles:
+  - d2d64a2b-1fb7-4c18-88bc-2986723724cb
+  - f164c06e-9049-4372-b3ff-d2c6e7a13305
+  - de9f420d-d897-46f4-8c3b-4507f0169a27
+  - a2668524-5842-4c68-ab50-30b7e8c3e842
+app_context:
+  - m: organization_details
+    s: roles
+  - m: settings
+    s: permissions
+description: Let each organization define its own roles and permissions on the Kinde Scale plan, choose which business permissions organizations can use, and manage organization roles in Kinde, the self-serve portal, and the Management API.
+topics:
+  - manage-users
+  - roles-and-permissions
+  - organizations
+sdk: []
+languages:
+  - json
+audience:
+  - admins
+  - developers
+complexity: intermediate
+keywords:
+  - organization roles
+  - organization permissions
+  - organization-managed roles
+  - org scoped roles
+  - available to organization roles
+  - self-serve portal roles
+  - scale plan
+  - role keys
+  - token claims
+  - management api
+updated: 2026-10-27
+featured: false
+deprecated: false
+ai_summary: Guide to organization-managed roles and permissions in Kinde on the Scale plan, including making business permissions available to organizations, adding organization roles and permissions in Kinde and the self-serve portal, assigning them to members, managing them via the Management API, and what happens on downgrade.
+---
+
+<Aside type="upgrade">
+
+Organization-managed roles and permissions are available on the [Kinde Scale plan](https://kinde.com/pricing/).
+
+</Aside>
+
+By default, [roles](/manage-users/roles-and-permissions/user-roles/) and [permissions](/manage-users/roles-and-permissions/user-permissions/) are defined once for your whole business and shared by every organization. On the Scale plan, you can also let each organization define roles and permissions of its own. This is useful when your customers need role structures you cannot predict, for example a customer who wants a `billing-approver` role that only exists in their organization.
+
+This topic explains how organization-managed roles work, how to control which permissions organizations can use, and how to manage organization roles in Kinde, in the self-serve portal, and through the Kinde Management API.
+
+## How organization-managed roles work
+
+- **Business-wide roles still apply.** Roles you define under **Settings > User management > Roles** are available in every organization, as before. Organization roles are added on top of them.
+- **Organization roles belong to one organization.** A role an organization creates can only be assigned to members of that organization. Other organizations never see it.
+- **Organization roles hold two kinds of permissions.** The organization's own permissions, and the business-wide permissions you have marked as **Available to organization roles**. An organization cannot put any other business-wide permission into its roles.
+- **Organization permissions only reach users through organization roles.** You cannot grant an organization's permission directly to a user. Add it to one of the organization's roles and assign the role instead.
+- **They work in tokens like any other role or permission.** Organization roles appear in the `roles` claim and their permissions appear in the `permissions` claim, alongside business-wide ones. Your application code does not need to tell them apart.
+- **Keys must be unique.** An organization role or permission key must be unique within that organization and cannot reuse a business-wide key. Likewise, you cannot create a business-wide role or permission with a key that an organization is already using. Keys cannot be changed after creation.
+- **Limits apply.** Each organization can have up to 100 roles and 100 permissions of its own. Names and keys can be up to 64 characters and descriptions up to 255 characters.
+- **Organization roles do not affect MFA exemptions.** Only business-wide roles can be used as [MFA exempt roles](/authenticate/multi-factor-auth/mfa-per-org/) for an organization.
+
+## Choose which business permissions organizations can use
+
+Before an organization can build roles from your business-wide permissions, you need to mark those permissions as available to organization roles. Permissions that are not marked stay reserved for business-wide roles.
+
+1. In Kinde, go to **Settings > User management > Permissions**.
+2. Select **Add permission**, or select the three dots next to an existing permission and choose **Edit permission**.
+3. Switch on **Available to organization roles**.
+4. Select **Save**.
+
+<Aside type="warning">
+
+If you switch **Available to organization roles** off for a permission, it is removed from every organization role that includes it, in every environment. Members holding those roles lose the permission the next time their token is refreshed.
+
+</Aside>
+
+## Add an organization role in Kinde
+
+1. In Kinde, go to **Organizations** and select the organization.
+2. In the side menu, select **Roles**. The page lists the roles and permissions that belong only to this organization.
+3. Select **Add role**.
+4. Give the role a **Name**. Keep it short and descriptive, for example 'Billing approver'.
+5. Enter a **Key**. This is how the role appears in tokens, for example `billing-approver`. The key must be unique within the organization and cannot be changed later.
+6. Enter a **Description** of what the role is for and who should have it.
+7. Switch on the **Permissions** to include in the role. The list shows the business-wide permissions you have made available to organization roles and this organization's own permissions.
+8. Select **Save**.
+
+<Aside>
+
+If no permissions are listed, the organization has no permissions of its own yet and no business-wide permissions have been made available to organization roles. Add one of either kind first.
+
+</Aside>
+
+## Add an organization permission in Kinde
+
+An organization permission can only be used in that organization's roles.
+
+1. In Kinde, go to **Organizations** and select the organization.
+2. In the side menu, select **Roles**.
+3. In the **Permissions** section, select **Add permission**.
+4. Give the permission a **Name**, for example 'Approve invoices'.
+5. Enter a **Key**, for example `approve:invoices`. The key must be unique within the organization and cannot be changed later.
+6. Enter a **Description**.
+7. Select **Save**. The permission can now be added to the organization's roles.
+
+## Edit or delete organization roles and permissions
+
+Like business-wide roles, organization roles are refreshed through the issued token. Changes apply to all members with the role the next time their token is refreshed.
+
+1. In Kinde, go to **Organizations** and select the organization.
+2. In the side menu, select **Roles**.
+3. Select the three dots next to the role or permission and choose **Edit** or **Delete**.
+4. Make your changes and select **Save**, or confirm the deletion.
+
+Deleting an organization role removes it from every member who has it, and from the organization's default roles. Deleting an organization permission removes it from every organization role that includes it. Neither can be reversed.
+
+## Assign organization roles to members
+
+Organization roles are assigned the same way as business-wide roles. See [Apply roles and permissions to users](/manage-users/roles-and-permissions/apply-roles-and-permissions-to-users/).
+
+- In Kinde, open the user, select **Roles**, choose the organization, and switch on the role. The organization's own roles are listed alongside your business-wide roles for that organization.
+- In the self-serve portal, authorized members can assign organization roles when they [invite a member](/build/self-service-portal/self-serve-portal-for-orgs/#invite-members-from-the-portal) or edit a member's roles.
+- On the Scale plan with advanced organization features, you can also make an organization role a [default role for the organization](/manage-users/roles-and-permissions/default-user-roles/#enable-default-roles-in-an-organization), so new members get it automatically.
+
+## Let organization admins manage roles in the self-serve portal
+
+You can let an organization's own admins create and manage their roles and permissions without contacting you.
+
+1. In Kinde, go to **Settings > Environment > Self-serve portal**. To enable this for a single organization instead, see [Customize the self-serve portal for an organization](/build/organizations/self-serve-portal-per-org/).
+2. In the **Organization self-management** section, switch on **Roles**. The switch is off until you select it.
+3. Select **Save**.
+
+Access inside the portal is controlled by two system permissions:
+
+- `org:read:roles` lets a member view the organization's roles and permissions.
+- `org:write:roles` lets a member create, edit, and delete them.
+
+The Kinde-managed `owner` role includes both. To give other members access, add these permissions to the roles you assign them. See [Portal access control with system permissions](/build/self-service-portal/self-serve-portal-for-orgs/#portal-access-control-with-system-permissions).
+
+In the portal, members with access open **Roles** to add roles and permissions, and assign roles from **Members**.
+
+## Manage organization roles via the Kinde Management API
+
+Organization roles and permissions have their own endpoints under the organization. Business-wide endpoints such as [List roles](/kinde-apis/management#tag/roles/get/api/v1/roles) and [List permissions](/kinde-apis/management#tag/permissions/get/api/v1/permissions) return business-wide roles and permissions only.
+
+| Action | Endpoint | Scope |
+| --- | --- | --- |
+| List organization roles | `GET /api/v1/organizations/{org_code}/roles` | `read:organization_roles` |
+| Add organization role | `POST /api/v1/organizations/{org_code}/roles` | `create:organization_roles` |
+| Get organization role | `GET /api/v1/organizations/{org_code}/roles/{role_id}` | `read:organization_roles` |
+| Update organization role | `PATCH /api/v1/organizations/{org_code}/roles/{role_id}` | `update:organization_roles` |
+| Delete organization role | `DELETE /api/v1/organizations/{org_code}/roles/{role_id}` | `delete:organization_roles` |
+| List organization permissions | `GET /api/v1/organizations/{org_code}/permissions` | `read:organization_roles` |
+| Add organization permission | `POST /api/v1/organizations/{org_code}/permissions` | `create:organization_roles` |
+| Get organization permission | `GET /api/v1/organizations/{org_code}/permissions/{permission_id}` | `read:organization_roles` |
+| Update organization permission | `PATCH /api/v1/organizations/{org_code}/permissions/{permission_id}` | `update:organization_roles` |
+| Delete organization permission | `DELETE /api/v1/organizations/{org_code}/permissions/{permission_id}` | `delete:organization_roles` |
+
+See the [Organizations](/kinde-apis/management#tag/organizations) section of the Management API reference for request and response details.
+
+Things to know when using the API:
+
+- To make a business-wide permission available to organization roles, set `is_organization_role_assignable` to `true` when you [add](/kinde-apis/management#tag/permissions/post/api/v1/permissions) or [update](/kinde-apis/management#tag/permissions/patch/api/v1/permissions/{permission_id}) the permission. The field is also returned when you list permissions.
+- When you add a role, `permissions` is an array of permission IDs. The request fails with `PERMISSION_NOT_ASSIGNABLE` if any of them is not available to the organization's roles. When you update a role, `permissions` replaces the role's whole permission set.
+- Role and permission keys cannot be changed after creation. A `PATCH` that sends a different `key` fails with `KEY_IMMUTABLE`.
+- When you [add users to an organization](/kinde-apis/management#tag/organizations/post/api/v1/organizations/{org_code}/users) or [update their roles](/kinde-apis/management#tag/organizations/patch/api/v1/organizations/{org_code}/users), a role key can be a business-wide role or one of that organization's own roles. A key that is neither fails with `INVALID_ROLES`.
+- Adding a role or permission for an organization fails with `PLAN_LIMIT_REACHED` if your business is not on the Scale plan. Listing and deleting still work, so you can clean up after a downgrade.
+
+## Webhooks
+
+Organization roles and permissions use the same `role.created`, `role.updated`, `role.deleted`, `permission.created`, `permission.updated`, and `permission.deleted` [webhook events](/integrate/webhooks/add-manage-webhooks/) as business-wide ones. When the role or permission belongs to an organization, the payload includes an `organization_code` field. Business-wide permission events include `is_organization_role_assignable`.
+
+```json
+{
+  "role": {
+    "id": "018f3d4e-6f2a-7a1b-9c3d-2e4f5a6b7c8d",
+    "name": "Billing approver",
+    "key": "billing-approver",
+    "description": "Can approve invoices for this organization",
+    "organization_code": "org_7d8e9f0a1b2c"
+  }
+}
+```
+
+## What happens if you move off the Scale plan
+
+If your business moves to a plan without organization-managed roles:
+
+- Existing organization roles and permissions are kept, but they stop being issued in tokens and permission checks. Members keep their assignments in Kinde, and they come back if you upgrade again.
+- You cannot add or edit organization roles and permissions, in Kinde, in the portal, or through the API. You can still delete them.
+- The **Roles** page is hidden in the self-serve portal.
+- In Kinde, the organization's **Roles** tab shows an upgrade banner.
