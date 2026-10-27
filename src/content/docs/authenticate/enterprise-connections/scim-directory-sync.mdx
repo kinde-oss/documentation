@@ -1,0 +1,309 @@
+---
+page_id: b75abee0-d4b5-4fee-94da-c46673ea9271
+title: Sync users from your identity provider with SCIM
+sidebar:
+  order: 3
+  label: SCIM directory sync
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - 2c58dabc-fe5c-4919-ade7-4caab8da47e8
+  - fcf28a71-c3a8-4474-9564-ad089d3f2105
+description: "Provision, update, and suspend Kinde users from your IdP with SCIM, and map directory groups to roles."
+ai_summary: "Guide to setting up SCIM 2.0 directory sync so an identity provider keeps a Kinde organization's users and roles up to date. Explains that each organization has one directory tied to an enterprise connection, and that Kinde issues a SCIM endpoint URL and secret token for the IdP. Covers creating a directory, including choosing a connection when more than one is enabled, then configuring provisioning in Microsoft Entra ID and Okta, with the same credential fields for other SCIM 2.0 providers such as Google Workspace, OneLogin, JumpCloud, CyberArk, PingFederate, and Rippling. Describes linking synced groups to Kinde roles, automatic mapping of core user attributes and the enterprise extension, and mapping custom attributes to user properties. Explains create, update, suspend, reactivate, and unassign behavior, directory-managed read-only organizations, and how existing users are matched by enterprise identity. Includes token regeneration, connection changes, deletion through the Kinde Management API, the supported SCIM operations and error codes, and troubleshooting for failed syncs. Intended for developers, enterprise admins, and security engineers on the Scale or Enterprise plan."
+featured: false
+deprecated: false
+topics:
+  - authenticate
+  - enterprise-connections
+  - organizations
+sdk: []
+languages: []
+audience:
+  - developer
+  - enterprise-admin
+  - security-engineer
+complexity: intermediate
+keywords:
+  - SCIM 2.0
+  - directory sync
+  - user provisioning
+  - deprovisioning
+  - group to role mapping
+  - Entra ID
+  - Okta
+  - custom attributes
+updated: 2026-10-22
+---
+
+<Aside type="upgrade">
+
+SCIM directory sync is available on the Kinde **Scale** plan and **Enterprise** plan. The Scale plan includes 3 directories across all your environments, and each additional directory costs $35 per month. Directories are unlimited on the Enterprise plan. See [Kinde pricing](https://kinde.com/pricing/).
+
+</Aside>
+
+SCIM (System for Cross-domain Identity Management) lets your identity provider (IdP) keep a Kinde organization's users in sync with your directory. When someone joins, changes role, or leaves in your IdP, the change flows through to Kinde automatically, so you don't need to add, edit, or remove users by hand.
+
+With SCIM directory sync you can:
+
+- Create users in a Kinde organization as soon as they're assigned the app in your IdP.
+- Keep names, email addresses, and selected profile attributes up to date.
+- Suspend users when they're deactivated or unassigned in your IdP.
+- Link IdP groups to Kinde roles, so group membership controls what users can access.
+
+Kinde supports SCIM 2.0 and works with Microsoft Entra ID (Azure AD), Okta, Google Workspace, OneLogin, JumpCloud, CyberArk, PingFederate, Rippling, and any other IdP that supports SCIM 2.0.
+
+**How SCIM directory sync works**
+
+Directory sync is set up per organization. Each organization can have one directory, and the directory is tied to one of the organization's enterprise connections.
+
+1. You create a directory in Kinde. Kinde gives you a **SCIM Endpoint URL** and a **Secret Token**.
+2. You add these to your IdP's SCIM provisioning settings.
+3. Your IdP sends user and group changes to Kinde.
+4. Kinde creates each provisioned user in the organization and gives them an identity on the enterprise connection. Users then sign in through that connection with SSO.
+
+Kinde does not send password or SSO credentials to your IdP, and SCIM does not replace your enterprise connection. Users still authenticate through the connection. SCIM only manages who exists in the organization and what roles they have.
+
+## What you need
+
+- [Set up an enterprise connection](/authenticate/enterprise-connections/about-enterprise-connections/) for the organization (for example, SAML or Entra ID) and make sure it's enabled. You can't create a directory without one.
+- Make sure the organization's default roles are set the way you want. Kinde gives these roles to every user it provisions.
+- Decide which existing users will be managed by SCIM. See [Users who already exist in Kinde](#users-who-already-exist-in-kinde).
+
+## Configuration
+
+### 1. Create a directory in Kinde
+
+1. Go to **Organizations** and select your organization you want to enable SCIM directory sync for.
+2. In the menu, go to **Provisioning > Directory**.
+
+   ![scim directory page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8f86ab4b-d1ed-4f41-bbae-c06dc78d6f00/socialsharingimage)
+
+   If the organization has more than one enabled enterprise connection, select the **Enterprise connection** that provisioned users will sign in with. If there's only one, Kinde selects it for you.
+
+   ![create directory when multiple enterprise connections are available](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f972b8b8-d160-411f-711d-d692a8b04100/socialsharingimage)
+
+3. Select **Create directory**. The directory creation window opens.
+
+   ![manage directory window](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b748b514-1c23-4a59-6b9d-bf60d741ef00/socialsharingimage)
+
+The **Manage directory** window shows the details your IdP needs:
+
+- (Optional) Enter a **Directory name** to help you identify the directory, then select **Save**.
+- **SCIM Endpoint URL**: the base URL for SCIM requests, for example `https://yourbusiness.kinde.com/saml/scim/ksde_...`. For Entra ID, the URL ends with `/?aadOptscim062020`. This flag turns on Microsoft's SCIM 2.0-compliant behavior, so keep it.
+- **Secret Token**: the bearer token your IdP uses to authenticate with Kinde.
+
+You can come back to these details at any time by selecting **Manage** on the **Directory** page.
+
+<Aside type="warning">
+
+Treat the secret token like a password. Anyone who has it can create and change users in this organization.
+
+</Aside>
+
+### 2. Set up provisioning in your identity provider
+
+In your IdP, open the application you use for the enterprise connection (or add a new SCIM provisioning app) and turn on SCIM provisioning. Enter:
+
+| IdP field (names vary)                          | Value                                           |
+| ----------------------------------------------- | ----------------------------------------------- |
+| Base URL / Tenant URL / SCIM connector base URL | The **SCIM Endpoint URL** from Kinde            |
+| Authentication mode                             | HTTP header / Bearer token / OAuth bearer token |
+| Secret token / API token / Bearer token         | The **Secret Token** from Kinde                 |
+| Unique identifier field for users               | `userName` (usually the user's email)           |
+
+Then assign the users and groups you want to provision, and start provisioning.
+
+**Microsoft Entra ID**
+
+1. In the Microsoft Entra admin center, open **Enterprise applications** and select the application for your Kinde connection.
+2. Select **Provisioning**, then set **Provisioning Mode** to **Automatic**.
+3. Under **Admin Credentials**, paste the **SCIM Endpoint URL** into **Tenant URL** and the **Secret Token** into **Secret Token**.
+4. Select **Test Connection**, then **Save**.
+5. Assign users and groups under **Users and groups**, then turn **Provisioning Status** on.
+
+**Okta**
+
+1. In the Okta Admin Console, open the application for your Kinde connection and select **General** > **Edit**, then turn on **SCIM provisioning**.
+2. On the **Provisioning** tab, enter the **SCIM Endpoint URL** as the **SCIM connector base URL** and `userName` as the **Unique identifier field for users**.
+3. Under **Supported provisioning actions**, select **Push New Users**, **Push Profile Updates**, and **Push Groups**.
+4. Set **Authentication Mode** to **HTTP Header** and paste the **Secret Token** into **Authorization**.
+5. Select **Test Connector Configuration**, then **Save**.
+6. Under **Provisioning > To App**, turn on **Create Users**, **Update User Attributes**, and **Deactivate Users**.
+7. On the **Push Groups** tab, select **Push Groups**, then find and push each group you want to map to a Kinde role. Pushed groups appear under **Synced Groups** on the **Directory** page.
+
+Your IdP's first sync can take a few minutes. Provisioned users appear on the organization's **Users** page, and the **Synced users** and **Synced groups** counts on the **Directory** page update as requests arrive.
+
+### 3. Link directory groups to Kinde roles (optional)
+
+When your IdP pushes groups, they appear on the **Directory** page under **Synced Groups**. Groups don't create roles in Kinde. Instead, you link each group to one or more existing [roles](/manage-users/roles-and-permissions/user-roles/), and Kinde gives those roles to the group's members in this organization.
+
+1. On the **Directory** page, find the group in **Synced Groups**.
+2. Select the three dots menu on the group, then select **Link to role**.
+3. Select one or more **Roles**, then select **Save**.
+
+When a user is added to the group, they get the linked roles. When they're removed from the group, or the group is deleted, they lose those roles. The exception is a role they also get from another linked group they still belong to.
+
+To stop a group from granting roles, select **Unlink all roles** from the group's menu. Members lose the access those roles gave them.
+
+### 4. Map user attributes (optional)
+
+Kinde maps these SCIM user attributes automatically:
+
+| SCIM attribute                                 | Kinde field                                         |
+| ---------------------------------------------- | --------------------------------------------------- |
+| `emails` (the primary email, or the first one) | Email                                               |
+| `userName`                                     | Used as the email if your IdP doesn't send `emails` |
+| `name.givenName`                               | First name                                          |
+| `name.familyName`                              | Last name                                           |
+| `active`                                       | Suspended status (`false` suspends the user)        |
+| `externalId`                                   | Stored to match the user with your IdP              |
+
+An email address is required for every user.
+
+**Enterprise attributes**
+
+When you create a directory, Kinde adds an **Enterprise directory** category of [user properties](/properties/about-properties/) and maps the SCIM enterprise extension (`urn:ietf:params:scim:schemas:extension:enterprise:2.0:User`) to it:
+
+| SCIM attribute   | Kinde user property | Property key             |
+| ---------------- | ------------------- | ------------------------ |
+| `employeeNumber` | Employee number     | `kp_usr_employee_number` |
+| `costCenter`     | Cost center         | `kp_usr_cost_center`     |
+| `organization`   | Organization        | `kp_usr_organization`    |
+| `division`       | Division            | `kp_usr_division`        |
+| `department`     | Department          | `kp_usr_department`      |
+| `manager`        | Manager             | `kp_usr_manager`         |
+
+You can add these properties to tokens like any other user property.
+
+**Custom attributes**
+
+If your IdP sends attributes in the custom extension schema `urn:custom:extension:2.0:User`, they're listed under **Custom attribute mapping** on the **Directory** page once Kinde has received them. Map each one to a Kinde user property:
+
+1. On the **Directory** page, under **Custom attribute mapping**, find the attribute.
+2. Select the three dots menu, then select **Map to user property**.
+3. Select the **User property** to sync the attribute to, then select **Save**.
+
+Mapped values sync whenever a user is created or updated. Attributes only appear in the list after your IdP has sent them for at least one user, so provision a test user first. Boolean properties are only offered for attributes Kinde has received as `true` or `false`.
+
+Other SCIM attributes, such as phone numbers, addresses, and titles, are stored with the user's SCIM record but aren't mapped to Kinde fields. To see everything your IdP sent for a user, open the user's profile and select **View SCIM user data**.
+
+## What happens when users change in your IdP
+
+| Change in your IdP                 | What happens in Kinde                                                                                                                                                                                                                       |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| User assigned to the app           | The user is created in the organization with the organization's default roles and an identity on the enterprise connection.                                                                                                                 |
+| Profile updated                    | Name, email, and mapped attributes are updated. A changed email address is added to the user as a confirmed email.                                                                                                                          |
+| User deactivated (`active: false`) | The user is suspended and can't sign in. Group memberships are kept.                                                                                                                                                                        |
+| User reactivated (`active: true`)  | The user is unsuspended, unless an admin suspended them in Kinde.                                                                                                                                                                           |
+| User unassigned or deleted         | The user is suspended and removed from all directory groups, so they lose any roles granted by those groups. The user record stays in Kinde, so their history and references are kept. If your IdP provisions them again, they're restored. |
+| Group membership changed           | Roles linked to the group are added or removed.                                                                                                                                                                                             |
+
+When SCIM changes a user, Kinde sends a `user.updated` [webhook](/integrate/webhooks/about-webhooks/) event. SCIM creates and deletes don't send `user.created` or `user.deleted` events. Instead, a SCIM delete sends `user.updated` with the user suspended.
+
+## Directory-managed organizations
+
+Once an organization has a directory, your IdP is the source of truth for its members. To stop changes in Kinde from being overwritten by the next sync, Kinde makes the organization's users read-only:
+
+- User details can't be edited, and the user's profile shows that they're managed by the directory.
+- Users can't be added, invited, deleted, or suspended in the Kinde admin area, through the Management API, or in the self-serve portal.
+- Roles in the organization can't be changed manually. Use group-to-role links instead.
+- Identities can't be added, changed, or removed.
+- A directory-managed user can only belong to that one organization. They aren't added to other organizations, including through verified domain auto-join.
+
+This applies to every member of the organization, including members who were added before the directory was created. Make changes in your IdP instead.
+
+## Users who already exist in Kinde
+
+Kinde matches SCIM users to existing users through their enterprise identity, not their email address alone:
+
+- **Pre-provisioned users.** If you've already [added an enterprise identity](/authenticate/enterprise-connections/provision-users-enterprise/#provisioning-method-1-assign-a-connection-identity-to-a-user-recommended) for the user on the directory's connection, SCIM takes over that user.
+- **Users with another sign-in method.** A user with the same email who signs in with a password, email code, or social sign-in isn't linked. SCIM creates a separate user.
+- **Users who have already signed in through the connection.** Your IdP gets a `409 User already exists` error for these users.
+
+To avoid duplicates, set up directory sync before users start signing in through the enterprise connection, or [migrate them to an enterprise identity](/authenticate/enterprise-connections/migrate-users-to-enterprise-identity/) first.
+
+## Manage the directory
+
+### View SCIM request logs
+
+To see every request your IdP has sent, go to the organization and select **Provisioning > Logs**. Select a request to see its method, path, response status, request body, and any error Kinde returned. This is the first place to look if users aren't syncing.
+
+The **Status** shown in the **Manage directory** window reflects the most recent request: **Active** after a successful request, or **Error** with the HTTP status code after a failed one.
+
+### Regenerate the secret token
+
+If the token may have been exposed, regenerate it.
+
+1. On the **Directory** page, select **Manage**.
+2. Select **Regenerate secret token**, then confirm.
+3. Copy the new **Secret Token** into your IdP.
+
+The old token stops working immediately, so provisioning fails until you update your IdP.
+
+### Change the enterprise connection
+
+You can change which enterprise connection provisioned users sign in with until Kinde receives the first SCIM request. On the **Directory** page, select a connection under **Enterprise connection for provisioned users**, then select **Save connection**.
+
+After the first request, the connection is locked. To use a different connection, delete the directory and set it up again.
+
+If the directory's enterprise connection is deleted, provisioning stops working until you select another connection on the **Directory** page.
+
+### Delete a directory
+
+You can delete a directory with the [Management API](/kinde-apis/management/#tag/directories). Deleting a directory removes its SCIM user and group records and stops your IdP from syncing. Users, their organization membership, and their roles stay in Kinde.
+
+You can also create, list, update, and regenerate tokens for directories through the Management API. These endpoints require the `read:scim_directories`, `create:scim_directories`, `update:scim_directories`, and `delete:scim_directories` scopes.
+
+## SCIM API reference for IdP integrations
+
+If you're building or configuring a custom SCIM integration, Kinde's SCIM service supports:
+
+| Feature        | Support                                                                             |
+| -------------- | ----------------------------------------------------------------------------------- |
+| Resources      | `/Users`, `/Groups`                                                                 |
+| Discovery      | `/ServiceProviderConfig`, `/Schemas`, `/ResourceTypes`                              |
+| Operations     | `GET`, `POST`, `PUT`, `PATCH`, `DELETE`                                             |
+| Authentication | `Authorization: Bearer <secret token>`                                              |
+| Filtering      | `userName eq "..."` for users, `displayName eq "..."` for groups (case-insensitive) |
+| Pagination     | `startIndex` and `count` (maximum 100 per page)                                     |
+| Not supported  | Bulk operations, sorting, ETag preconditions, password changes, `/Me`               |
+
+Errors use the standard SCIM error format (`urn:ietf:params:scim:api:messages:2.0:Error`). Common errors:
+
+| Status | Meaning                                                                                                             |
+| ------ | ------------------------------------------------------------------------------------------------------------------- |
+| `401`  | The bearer token is missing or wrong. Check the token, or regenerate it.                                            |
+| `404`  | The directory, user, or group doesn't exist.                                                                        |
+| `409`  | The user, `userName`, email, or group name is already in use.                                                       |
+| `400`  | The request is invalid, for example a user without an email address, or the directory has no enterprise connection. |
+
+## Troubleshooting
+
+**You see an upgrade prompt on the Directory page**
+
+Your plan doesn't include SCIM directory sync. Upgrade to the Scale plan or Enterprise plan to create a directory.
+
+**"Set up an enterprise authentication connection before configuring directory sync"**
+
+The organization needs an enabled enterprise connection. Add or enable one under the organization's **Authentication** settings.
+
+**Your IdP's connection test fails with 401**
+
+The secret token is wrong or has been regenerated. Copy the current token from **Manage directory** into your IdP.
+
+**Users aren't being created**
+
+Check **Provisioning > Logs** for the failed requests. Common causes:
+
+- The user has no email address in your IdP.
+- The user already signed in through the enterprise connection before SCIM was set up (`409 User already exists`).
+- The user is already managed by a directory on another organization.
+
+**Duplicate users**
+
+The user had a non-SSO identity (such as an email and password) before SCIM was set up. See [Users who already exist in Kinde](#users-who-already-exist-in-kinde).
+
+**Roles aren't being assigned**
+
+Check that the group is linked to a role under **Synced Groups**, and that your IdP is pushing that group and its members.
