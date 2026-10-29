@@ -40,10 +40,12 @@ keywords:
   - private key
   - JIT provisioning
   - metadata URL
+  - metadata XML
   - metadata hosting
+  - certificate rotation
   - XML
-updated: 2026-04-20
-ai_summary: "Kinde acts as a SAML service provider (SP), requiring an external identity provider (IdP) such as Google, Microsoft, or Cloudflare. Before setup, users can be provisioned via bulk import, API, manual entry, or just-in-time (JIT) provisioning during connection setup. Security can optionally be increased by adding a signed certificate and private key pair (generated via OpenSSL or obtained from the IdP). To configure the connection, provide a unique Entity ID (must match exactly in both Kinde and the IdP; older Microsoft Azure apps may need an `spn:` prefix), the IdP metadata URL, sign-in URL, sign request algorithm, protocol binding, and Name ID format. The Email Key Attribute should always be set to ensure correct email retrieval from the SAML response. Home realm domains route users to the correct sign-in page and must be unique across all connections. The ACS URL (or custom domain URL) must be copied into the IdP configuration. JIT provisioning auto-creates user records on first sign-in. Upstream parameters can optionally be passed to the IdP if supported. Once configured, enable the connection, assign it to apps or organizations, save, and test by attempting a sign-in through the application."
+updated: 2026-10-29
+ai_summary: "Kinde acts as a SAML service provider (SP), requiring an external identity provider (IdP) such as Google, Microsoft, or Cloudflare. Before setup, users can be provisioned via bulk import, API, manual entry, or just-in-time (JIT) provisioning during connection setup. Security can optionally be increased by adding a signed certificate and private key pair (generated via OpenSSL or obtained from the IdP). To configure the connection, provide a unique Entity ID (must match exactly in both Kinde and the IdP; older Microsoft Azure apps may need an `spn:` prefix), IdP metadata via URL or pasted XML (XML takes precedence when both are set), sign-in URL, sign request algorithm, protocol binding, and Name ID format. Kinde trusts every signing certificate in the IdP metadata and verifies each response against the certificate that signed it, so IdP certificate rotation can overlap old and new certificates. Pasted metadata triggers dashboard warnings 30 days before the newest signing certificate expires. The Email Key Attribute should always be set to ensure correct email retrieval from the SAML response. Home realm domains route users to the correct sign-in page and must be unique across all connections. The ACS URL (or custom domain URL) must be copied into the IdP configuration. JIT provisioning auto-creates user records on first sign-in. Upstream parameters can optionally be passed to the IdP if supported. Once configured, enable the connection, assign it to apps or organizations, save, and test by attempting a sign-in through the application."
 ---
 
 In Kinde, you can use SAML as your authentication protocol. Kinde acts as a service provider (SP), so you still need to bring your own identity provider (IdP) to set it up. Identity providers can include Google, Microsoft, Cloudflare, and others.
@@ -101,12 +103,18 @@ Depending on your SAML set up, you may need to include advanced configurations f
    ![SAML configuration screen](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/740dba80-b1a3-410e-f03b-c07e9261f000/public)
 
 3. If Microsoft is your provider and your app is a bit older, you may need to add `spn:` to the beginning of the **Entity ID** string in Kinde, e.g. `spn:5836g209gbhw09r8y0913`. This is not required for newly created apps.
-4. Enter the **IdP metadata URL**. This URL comes from your identity provider.
+4. Provide the identity provider's metadata. Kinde uses it to find your IdP's sign-in endpoint and the certificates it signs responses with. There are two ways to do this; use one or the other.
 
+   - **IdP metadata URL**: Enter the metadata URL your identity provider gives you. Kinde reads the file from this URL at every sign-in, so any certificate your IdP adds to it is trusted automatically. Leave this blank if you paste the XML below.
+   - **IdP metadata XML**: If your identity provider only gives you the metadata as a file (Google Workspace, for example), paste the file contents here instead. Kinde stores this copy and uses it until you replace it, so you must re-paste the file whenever your IdP rotates its signing certificates.
 
-   <Aside title="No metadata URL? Host the XML file yourself">
+   If you fill in both fields, Kinde uses the pasted XML and ignores the URL.
 
-   If your identity provider gives you the SAML metadata as an XML file but does not provide a hosted metadata URL, upload the file to a publicly accessible location such as an [AWS S3](https://aws.amazon.com/s3/) bucket, [Cloudflare R2](https://developers.cloudflare.com/r2/), a [GitHub Gist](https://docs.github.com/en/get-started/writing-on-github/editing-and-sharing-content-with-gists/creating-gists/), or any public website. Then enter that file's URL in the **IdP metadata URL** field. Kinde reads the file from this URL so your signing certificates stay up to date.
+   <Aside title="Which option should I use?">
+
+   A metadata URL is lower maintenance, because Kinde always sees your IdP's current certificates. If your IdP does not host one, you can still get this behaviour by uploading the file to a publicly accessible location such as an [AWS S3](https://aws.amazon.com/s3/) bucket, [Cloudflare R2](https://developers.cloudflare.com/r2/), a [GitHub Gist](https://docs.github.com/en/get-started/writing-on-github/editing-and-sharing-content-with-gists/creating-gists/), or any public website, and entering that URL. Remember to re-upload the file when your IdP's certificates change, and make sure the URL is reachable from Kinde's servers: a CDN that blocks requests by country can block Kinde too.
+
+   Pasting the XML is simpler to set up and keeps the metadata private, but you own keeping it current. Kinde warns you on the home page 30 days before the certificate in a pasted file expires. See [Keep IdP signing certificates current](#keep-idp-signing-certificates-current).
 
    </Aside>
 
@@ -158,3 +166,50 @@ Once you have entered the ACS URL in your identity provider, the connection shou
 2. If you left the **Home realm domains** field blank in Kinde, when you launch your application, you should see a button to sign in. Click it and go to step 4.
 3. If you completed the **Home realm domains** field, you should be redirected immediately to your IdP sign in screen.
 4. Enter your IdP details and complete any additional authentication required.
+
+## Keep IdP signing certificates current
+
+Your identity provider signs every SAML response with a certificate, and Kinde checks that signature against the certificates published in the IdP metadata. Signing certificates expire, so at some point your IdP will rotate to a new one. This section explains how Kinde handles that, and what you need to do.
+
+### How Kinde trusts IdP certificates
+
+- Kinde trusts **every** signing certificate in the IdP metadata, not just one. If the metadata lists an old and a new certificate, both are trusted.
+- When a response arrives, Kinde finds the certificate that signed it among those in the metadata, and checks that this certificate is within its validity dates. The other certificates in the metadata are not checked, so an expired certificate can remain listed without breaking sign-in, as long as your IdP is signing with a valid one.
+- Kinde does not enforce the `validUntil` attribute on the metadata file itself. Some providers, including Google, set it to the expiry date of the current certificate.
+
+This means you can publish the new certificate alongside the old one, switch your IdP over whenever you are ready, and switch back if anything goes wrong, all without touching the connection in Kinde.
+
+### What to do when your IdP rotates its certificate
+
+The steps depend on how the connection receives the metadata.
+
+**Connection uses an IdP metadata URL**
+
+1. Make sure the file at that URL lists the new certificate. If your IdP hosts the file, this is automatic. If you host a copy yourself, download the updated metadata from your IdP and re-upload it.
+2. In your IdP, switch the SAML application to sign with the new certificate.
+3. Test a sign-in. No change is needed in Kinde: the next sign-in reads the updated file.
+
+**Connection uses pasted IdP metadata XML**
+
+1. Download the updated metadata from your IdP. It should list both the old and the new certificate.
+2. In Kinde, open the connection, paste the updated file into **IdP metadata XML**, and select **Save**.
+3. In your IdP, switch the SAML application to sign with the new certificate.
+4. Test a sign-in.
+
+Do the Kinde step first in either case. Once the new certificate is in the metadata Kinde reads, the switch in your IdP cannot interrupt sign-in.
+
+**Rolling back**
+
+If sign-in fails after the switch, change your IdP back to the previous certificate. It keeps working until its expiry date, as long as it is still listed in the metadata. You can remove the old certificate from the metadata after it expires, but leaving it there does no harm.
+
+### Expiry warnings in Kinde
+
+For connections that use pasted metadata XML, Kinde checks the certificates in the stored file. When the newest signing certificate expires within 30 days, or has already expired, you will see an **SSO connection issue** banner on the Kinde home page and on the connection's configuration dialog, naming the connection and the expiry date. Paste the updated metadata from your IdP to clear it.
+
+Connections that use a metadata URL are not checked, because Kinde reads the IdP's current certificates at every sign-in.
+
+<Aside type="warning">
+
+If a connection uses a metadata URL that you host yourself, Kinde cannot warn you when the certificate in your copy is about to expire. Put a reminder in your calendar ahead of the expiry date, or switch the connection to pasted XML so Kinde can warn you.
+
+</Aside>
