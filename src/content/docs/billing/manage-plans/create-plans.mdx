@@ -39,8 +39,9 @@ keywords:
   - free trial
   - Stripe Tax
   - one-time charges
-updated: 2026-10-14
-ai_summary: "Step-by-step guide to creating billing plans in the Kinde dashboard. Explains that all plans belong to a plan group scoped to users or organizations, and that charges, features, and one-time charges can be reused across plans. Covers adding a plan with name, description, key, and default currency; configuring plan settings including the Ask for credit card toggle, Collect tax automatically (use account setting, collect, or do not collect), and trial period with trial length and credit card prompt timing; adding fixed charges with daily, weekly, monthly, or yearly billing intervals; offering one charge per plan as annual at a custom yearly price while other charges keep their own intervals (mixed-interval pricing); previewing annual versus standard totals in the Pricing sidebar without changing the draft; creating free plans with a zero price; adding metered and unmetered features with flat or tiered graduated pricing; adding one-time charges with flat or package pricing, optional metering, and expiry; and verifying Stripe price sync status. Notes constraints such as credit card collection requirements for paid plans and trials, that priced one-time charges alone do not require a card at signup, Offer as annual only on non-yearly base intervals, one annual charge per plan, that subscribers can purchase one-time charges from the portal and admins can assign them from Billing, that plans with customer one-time purchases cannot be deleted, and that feature name, key, and type cannot be changed after creation. Intended for developers, product managers, and business owners setting up SaaS subscription plans."
+  - cancellation timing
+updated: 2026-10-30
+ai_summary: "Step-by-step guide to creating billing plans in the Kinde dashboard. Explains that all plans belong to a plan group scoped to users or organizations, and that charges, features, and one-time charges can be reused across plans. Covers adding a plan with name, description, key, and default currency; configuring plan settings including Cancellation takes effect, the Ask for credit card toggle, Collect tax automatically (use account setting, collect, or do not collect), and trial period with trial length and credit card prompt timing; adding fixed charges with daily, weekly, monthly, or yearly billing intervals; offering one charge per plan as annual at a custom yearly price while other charges keep their own intervals (mixed-interval pricing); previewing annual versus standard totals in the Pricing sidebar without changing the draft; creating free plans with a zero price; adding metered and unmetered features with flat or tiered graduated pricing; adding one-time charges with flat or package pricing, optional metering, and expiry; and verifying Stripe price sync status. Notes constraints such as credit card collection requirements for paid plans and trials, that priced one-time charges alone do not require a card at signup, Offer as annual only on non-yearly base intervals, one annual charge per plan, that subscribers can purchase one-time charges from the portal and admins can assign them from Billing, that plans with customer one-time purchases cannot be deleted, and that feature name, key, and type cannot be changed after creation. Intended for developers, product managers, and business owners setting up SaaS subscription plans."
 ---
 
 Once you’ve got a plan strategy along with a plan feature list, prices, and details, you’re ready to create plans in Kinde.
@@ -94,6 +95,34 @@ The account setting is off by default. Turn it on in **Settings > Environment > 
 Stripe still needs Stripe Tax configured (for example tax registrations) in the Stripe Dashboard. Until a customer has a billing country—such as during a trial before a card is added—tax may temporarily use your Stripe account’s registered address.
 
 Select **Save draft** or **Publish** to apply your changes.
+
+### Cancellation takes effect
+
+This setting controls when a self-serve cancellation ends the subscription. Billing admins see the same three options when they cancel from an organization's **Billing** page, preselected to this value.
+
+1. Open the plan you want to configure.
+2. Scroll to the **Plan settings** section.
+3. Under **Cancellation takes effect**, choose an option.
+
+[screenshot: Plan settings Cancellation takes effect radios — Immediately, At the end of the earliest billing period, At the end of the latest billing period]
+
+#### Cancellation timing options
+
+| Option | Behavior |
+| --- | --- |
+| **Immediately** (default) | The subscription ends as soon as it is cancelled |
+| **At the end of the earliest billing period** | The subscription stays active until the first charge on the plan renews |
+| **At the end of the latest billing period** | The subscription stays active until the last charge on the plan renews, for example the end of an annual charge |
+
+Use **earliest** vs **latest** when a plan has more than one billing interval — for example a monthly platform fee and an annual license. On a plan with a single interval, both dates are the same.
+
+The setting applies to the **next published version**. Existing subscribers keep the timing on the version they signed up to. Plans without a value cancel immediately.
+
+If there is no future period end to schedule against, a cancel still happens immediately. See [Cancel a subscription](/billing/manage-plans/cancel-plans/#when-a-cancellation-takes-effect).
+
+Select **Save** or **Publish** to apply your changes. On a published version this control is read-only, like the other plan settings.
+
+For customer, admin, and API cancel flows, see [Cancel a subscription](/billing/manage-plans/cancel-plans/).
 
 ### Ask for credit card
 

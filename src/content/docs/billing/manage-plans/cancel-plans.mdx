@@ -8,8 +8,9 @@ relatedArticles:
   - e6dde80d-2977-419f-a05a-62ad0a7ac6de
   - c4e8a1d2-6b37-4f9a-8c15-2d7e9f0a4b63
 description: >-
-  Guide to canceling subscriptions including customer self-service cancellation
-  and API-based cancellation methods.
+  Guide to canceling subscriptions via the self-serve portal, organization Billing
+  in the Kinde admin, or the Management API, including immediate and scheduled
+  cancellation timing and Keep plan.
 featured: false
 deprecated: false
 topics:
@@ -29,49 +30,143 @@ keywords:
   - billing role
   - cancellation workflow
   - one-time purchases
-updated: 2026-10-14
-ai_summary: "Guide to canceling a customer subscription in Kinde. Explains the two cancellation methods—customer self-service via the Plan page in the self-serve portal (when plan management and B2B billing permissions are enabled) and programmatic cancellation via the Management API DELETE /api/v1/billing/agreements endpoint using the customer agreement_id—and notes that canceling from the Kinde admin UI is not currently supported. Covers how cancellation syncs to Stripe and applies configured billing policies for unpaid metered usage or unused subscription days. Explains that canceling ends the billing agreement and forfeits any active one-time purchases without a refund, with an extra warning shown in the cancel confirmation dialog. Also links to the Plan cancellation request workflow for receiving alerts or approving cancellations. Intended for developers, business owners, and admins."
+  - cancellation timing
+  - keep plan
+  - scheduled cancellation
+updated: 2026-10-30
+ai_summary: "Guide to canceling a customer subscription in Kinde. Covers three methods: customer self-service on the Plan page in the self-serve portal, canceling an organization plan from that organization’s Billing page in the Kinde admin, and programmatic cancellation via the Management API. Explains the plan Cancellation takes effect setting (immediately by default, or at the end of the earliest or latest billing period), scheduled cancellations, Keep plan in the portal and admin, billing policies and Stripe sync, one-time purchase forfeiture rules, optional cancel_at and revert cancellation API paths, and the plan cancellation request workflow. Intended for developers, business owners, and admins."
 ---
 
-While we would rather customers didn't cancel their subscription to your services, they do need to be able to. There's two ways to do this.
+While we would rather customers didn't cancel their subscription to your services, they do need to be able to. There are three ways to do this.
 
-- The customer can cancel via the self-serve portal
-- You can cancel on behalf of a customer via API
+- The customer can cancel via the [self-serve portal](#how-a-customer-can-cancel-their-own-plan)
+- You can cancel on behalf of an organization from that organization's **Billing** page in Kinde
+- You can cancel on behalf of a customer via the Management API
+
+When the cancellation takes effect is set on the **plan**. You can also choose a different timing when you cancel from the admin or the API.
 
 <Aside>
 
-  There is not currently a way to cancel via the Kinde UI
+There is not currently a **Cancel plan** action on a **user** (B2C) Billing page in the Kinde admin. For user plans, cancel from the self-serve portal or the Management API.
 
 </Aside>
 
+## When a cancellation takes effect
+
+Each plan has a **Cancellation takes effect** setting in **Plan settings**. See [Create billing plans](/billing/manage-plans/create-plans/#cancellation-takes-effect).
+
+| Setting | What happens |
+| --- | --- |
+| **Immediately** (default) | The subscription ends as soon as it is cancelled. The customer loses access to the plan's features and entitlements. |
+| **At the end of the earliest billing period** | The subscription stays active until the first charge on the plan renews. The customer keeps access until that date. |
+| **At the end of the latest billing period** | The subscription stays active until the last charge on the plan renews — for example the end of an annual charge on a mixed-interval plan. |
+
+The setting is stored on the **published plan version** the customer agreed to. Changing it on a draft and publishing creates a new version for **new** subscribers only. Existing subscribers keep the timing on their current version.
+
+Plans created before this setting existed cancel **immediately**.
+
+If Kinde cannot find a future period end (for example there is no Stripe subscription and no billing cycle yet), or that date is about to pass, the cancellation happens **immediately** instead.
+
+### What a scheduled cancellation looks like
+
+Until the effective date:
+
+- The agreement stays **active**. Entitlements keep working.
+- The plan card shows **Cancels on** the date.
+- **Next invoice** still appears if it is due before that date, with the caption **No invoices after {date}**. Shorter-interval charges can still renew until a latest-period cancel.
+- The customer is charged for usage up to the date. Stripe issues the final period invoice at the effective date.
+
+On that date, Kinde ends the agreement. One-time purchases attached to it are then forfeited (they are not refunded).
+
+Dates in the portal and admin are shown in your **business time zone** (from Business details), or UTC if none is set — for example `27 Oct 2026, 14:00 (Sydney)`.
+
 ## How a customer can cancel their own plan
 
-Customers can only do this if you have enabled plan management in the [self-serve portal](/build/self-service-portal/self-serve-portal-for-orgs/) and the B2B customer has a [billing role](/billing/get-started/add-billing-role/) that allows them to make changes.
+Customers can only do this if you have enabled billing in the [self-serve portal](/build/self-service-portal/self-serve-portal-for-orgs/) and the B2B customer has a [billing role](/billing/get-started/add-billing-role/) that allows them to make changes (`org:write:billing`).
 
 1. In your app or product, they open the self-serve portal for managing their account. Here's an example of where users (B2C) and organizations (B2B) can manage plans.
    ![Self-serve portal selector for managing plans](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/1f7c8192-418b-412e-1728-54affbfeed00/public)
-2. On the **Plan** page, they can scroll to the bottom and select **Cancel plan**.
-3. They follow the prompts to cancel. This information is synced to Stripe. Depending on the [billing policies](/billing/manage-plans/upgrade-downgrade-plans/) you have set, they might receive a bill for unpaid usage, or be credited for unused subscription days.
+2. On the **Plan** page, they scroll to the bottom and select **Cancel plan**. If you have a live [plan cancellation request workflow](/workflows/example-workflows/plan-cancellation-request-workflow/), the button reads **Request to cancel**.
+3. They follow the prompts to cancel.
+
+The customer does **not** pick a date. The plan version decides when the cancel takes effect.
+
+- **Immediate:** They see your [billing policy](/billing/manage-plans/upgrade-downgrade-plans/) wording for unused subscription days and unpaid usage, plus "This action can't be reversed."
+- **Scheduled:** They see when the plan will end, that they will be charged for usage up to then, that one-time purchases stay available until then, and that they can change their mind before the date. There is no irreversible warning.
+
+This information is synced to Stripe.
+
+### Keep a plan after a scheduled cancel
+
+If the customer scheduled the cancellation themselves, the **Plan** page shows a **Cancellation scheduled** section: "Your plan will be cancelled on {date}. You can keep it until then."
+
+1. Select **Keep my plan**.
+2. Confirm **Keep plan**. The schedule is removed, the plan stays active, and billing continues as usual.
+
+If **you** scheduled the cancellation (from admin or the API), the customer still sees the date but they cannot keep the plan from the portal.
+
+After the date, the section explains that the plan is being cancelled and that this can take a few minutes.
+
+## Cancel an organization plan in the Kinde admin
+
+You can cancel an organization's subscription from that organization's **Billing** page.
+
+1. Go to **Organizations**, open the organization, and select **Billing**.
+2. Scroll to **Cancel plan** and select **Cancel plan**. You need the `delete:billing_agreements` permission.
+3. Choose when the cancellation takes effect. The radios are preselected to the plan's **Cancellation takes effect** value:
+   - **Immediately**
+   - **At the end of the earliest billing period** — with the date and time, or **not available for this subscription** if that date cannot be used
+   - **At the end of the latest billing period** — same date treatment
+4. Select **Cancel**.
+
+[screenshot: Admin cancel dialog with the three Cancellation takes effect radios and dated period-end options]
+
+### Keep plan or cancel now from admin
+
+While a cancellation is scheduled, the Billing page heading becomes **Cancellation scheduled**: "This organization's plan will be cancelled on {date}. It keeps access until then."
+
+- **Keep plan** (`update:billing_agreements`) — removes the schedule. You can do this whether the customer, an admin, or the API scheduled it.
+- **Cancel now** (`delete:billing_agreements`) — ends the plan immediately. The dialog only offers **Immediately**.
+
+[screenshot: Organization Billing page Cancellation scheduled section with Keep plan and Cancel now]
+
+The organization keeps access until you keep the plan, cancel now, or the scheduled date is reached.
 
 ## One-time purchases when cancelling
 
-If the customer has active one-time purchases, the cancel confirmation includes an extra warning that those purchases will be lost and are not refunded.
+If the customer has active one-time purchases:
 
-![Warning On Canceling - Losing One-time Purchases](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/574908ec-210a-4fa3-95b5-cd28fb5f5d00/socialsharingimage)
+- **Immediate cancel** — the confirmation includes an extra warning that those purchases will be lost and are not refunded.
 
-This applies in the self-serve portal and when you cancel via the Management API. Cancelling ends the billing agreement; one-time purchases tied to that agreement are forfeited.
+  ![Warning On Canceling - Losing One-time Purchases](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/574908ec-210a-4fa3-95b5-cd28fb5f5d00/socialsharingimage)
+
+- **Scheduled cancel** — those purchases stay available until the effective date. They are forfeited when the agreement ends, not when the cancel is requested. **Keep plan** before that date leaves them in place.
+
+This applies in the self-serve portal, on the organization Billing page, and when you cancel via the Management API. Cancelling ends the billing agreement when it takes effect; one-time purchases tied to that agreement are then forfeited.
 
 See [One-time purchases](/billing/manage-subscribers/one-time-purchases/).
 
 ## Cancel a plan via API
 
-1. Get the customer's Agreement ID. This is the unique ID associated with their subscription in Stripe. You can find it in their Kinde record under Billing.
-2. Using a DELETE request, hit the delete/api/v1/billing/agreements endpoint and include the `agreement_id` value in the call.
+1. Get the customer's Agreement ID. This is the unique ID associated with their subscription. You can find it in their Kinde record under **Billing**.
+2. Send a `DELETE` request to `/api/v1/billing/agreements/{agreement_id}`.
 
-   ![API cll to delete agreement](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d136fd54-7474-486f-2768-8fcb1deaaa00/public)
+   ![API call to delete agreement](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d136fd54-7474-486f-2768-8fcb1deaaa00/public)
+
+3. Optionally pass `cancel_at` as `immediately`, `min_period_end`, or `max_period_end`. If you omit it, Kinde uses the cancellation timing on the plan version the customer agreed to.
+
+An immediate cancel still returns `AGREEMENT_DELETED`. A scheduled cancel returns `AGREEMENT_CANCELLATION_SCHEDULED` and `cancels_on`. The agreement stays active until that time.
+
+To take a scheduled cancellation back (the same action as **Keep plan**), send `DELETE /api/v1/billing/agreements/{agreement_id}/cancellation`. You need `update:billing_agreements`.
+
+A further deferred cancel on an agreement that is already scheduled is ignored: Kinde returns the existing `cancels_on` and does not run the cancellation workflow again. Pass `cancel_at=immediately` if you want to end a scheduled agreement now.
+
+See the [Management API](/kinde-apis/management/#tag/billing-agreements) for the generated reference.
 
 ## Receive an alert when a customer cancels their plan
 
 You can set up a workflow that enables you to check and approve cancellations. You might want to do this, for example, to be alerted when high value customers cancel.
+
+The workflow also runs when you cancel from the organization Billing page or the Management API. It does not run when someone keeps a plan, or when a scheduled cancel is requested again.
 
 For details, refer to the [Plan cancellation request workflow](/workflows/example-workflows/plan-cancellation-request-workflow/).
