@@ -1,0 +1,130 @@
+---
+page_id: c4e8a1d2-6b37-4f9a-8c15-2d7e9f0a4b63
+title: One-time purchases
+sidebar:
+  order: 2
+relatedArticles:
+  - fe9fea0c-274c-4d6b-9cc5-eccdbaad85b7
+  - 68ac4570-4aae-4d78-afda-208a4f56aef0
+  - 7060212e-5e8c-4188-acd3-e055e3474988
+description: "Let subscribers buy credit packs and add-ons as one-time purchases, assign purchases from the admin, and manage metered one-time usage."
+featured: false
+deprecated: false
+topics:
+  - billing
+  - manage-subscribers
+  - one-time-purchases
+sdk: []
+languages: []
+audience:
+  - developer
+  - product-manager
+  - business-owner
+  - admin
+complexity: intermediate
+keywords:
+  - one-time purchases
+  - one-time charges
+  - credit packs
+  - assign purchase
+  - complimentary
+  - forfeiture
+  - meter usage
+updated: 2026-10-17
+ai_summary: "Guide to one-time purchases on a Kinde subscription. Explains flat and package pricing, metered and unmetered purchases, and expiry policies of never expires or expires with the billing cycle. Walks through subscriber purchase from the self-serve portal Plan page, including billing write permission and package quantity, and admin assignment from the customer Billing page with a choice to charge the default card or assign without charge. Describes how purchased units, usage, expiry, and amount paid appear on the plan. Explains that active one-time purchases are forfeited without refund when the customer changes plan or cancels, and that buying the same item again is a new purchase. Covers Management API endpoints to list purchases and to read or record meter usage after the first purchase or assignment, including running-total rules for never-expiring purchases, plus the guard that blocks deleting a plan while customer purchase records still reference it. Notes that these items are configured in the plan editor under One-time charges. Intended for developers, product managers, business owners, and admins."
+---
+
+One-time purchases are optional single purchases on a subscription plan. For example, AI credit packs, storage top-ups, or feature unlocks. You configure them on the plan under **One-time charges**. Customers buy them after they subscribe, or you assign them from the admin.
+
+## What you need
+
+- One-time purchases are configured per plan. See [Create billing plans — Add one-time charges](/billing/manage-plans/create-plans/#add-one-time-charges-to-a-plan).
+- Customers need a saved payment method to buy from the portal, unless you assign a complimentary purchase from the admin.
+- Purchases attach to the customer’s **current billing agreement**. They do not survive a plan change or cancellation.
+
+## What customers can buy
+
+Each one-time purchase on a plan can be:
+
+| Setting | Options |
+| --- | --- |
+| Usage | **Unmetered** (access only) or **Metered** (track consumption against purchased units) |
+| Pricing | **Flat** (fixed price per purchase) or **Package** (price per set number of units) |
+| Expiry | **Never expires** or **Expires with the billing cycle** |
+
+On the plan details page, purchased items show units granted, amount paid, expiry, and current usage for metered purchases.
+
+## Buy from the self-serve portal
+
+Authorized customers can buy one-time purchases from the portal **Plan** page.
+
+1. Enable the self-serve portal and plan management. See [Self-serve portal for users](/build/self-service-portal/self-serve-portal-for-users/) or [Self-serve portal for organizations](/build/self-service-portal/self-serve-portal-for-orgs/).
+2. For B2B organization billing, ensure the organization member has a role with the `org:write:billing` system permission (for B2C users, billing write access is granted automatically).
+3. The customer opens the portal and goes to **Plan**.
+4. In **One-time purchases**, they select **Purchase** or **Buy more**.
+5. For package-priced purchases, they choose how many packages to buy, then confirm payment.
+
+    ![Self-serve portal One-time purchases section with Purchase button](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/244af2f8-cddc-47c7-f5c7-b51f7a920200/socialsharingimage)
+
+If no payment method is on file, the customer is prompted to add one before checkout completes.
+
+## Assign from the Kinde admin
+
+You can grant a one-time purchase without the customer going through the portal:
+
+1. Open the user or organization and select **Billing**.
+2. In the **One-time purchases** section, select **Assign** or **Assign more**.
+
+    ![assign one-time purchase from the Kinde admin](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/bd46fa05-179a-4fbd-e0f8-f79421be8500/socialsharingimage)
+
+3. For package-priced purchases, enter the number of packages.
+4. Choose:
+    - **Charge default payment method** — invoices and charges the customer’s saved card
+    - **Assign without charge** — grants the purchase at no cost
+    ![Assign one-time purchase dialog with charge vs complimentary options](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7de29797-2647-416a-c7cf-3815e5a31f00/socialsharingimage)
+
+
+<Aside>
+
+You need permission to create billing agreements.
+
+</Aside>
+
+## Metered one-time purchases
+
+When a one-time purchase is **metered**, purchased or assigned units set the allowance. You can record consumption via the Management API after the first purchase or admin assignment (paid or complimentary) completes.
+
+- **Never expires** — usage is tracked as a lifetime total for that agreement and feature.
+- **Expires with the billing cycle** — usage resets each billing cycle, like recurring metered features.
+
+See [Add metered usage for a customer via API](/billing/manage-subscribers/add-metered-usage/).
+
+## Plan changes and cancellations
+
+One-time purchases belong to the current billing agreement.
+
+| Event | What happens |
+| --- | --- |
+| Customer changes plan | Active one-time purchases on the old agreement are forfeited. Kinde lists them in the confirmation dialog. No refund is issued. |
+| Customer cancels | The same forfeiture rules apply. The cancel dialog warns when active purchases exist. |
+| Customer buys again on a new plan | Treated as a new purchase. Prior payment is not credited. |
+
+![Warning On Canceling - Losing One-time Purchases](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/574908ec-210a-4fa3-95b5-cd28fb5f5d00/socialsharingimage)
+
+See [Subscription upgrade and downgrade methods](/billing/manage-subscribers/upgrade-downgrade-methods/#one-time-purchases-when-changing-plan) and [Cancel a subscription](/billing/manage-plans/cancel-plans/#one-time-purchases-when-cancelling).
+
+## Management API
+
+API reference for these endpoints is generated from the OpenAPI spec:
+
+| Endpoint | Purpose |
+| --- | --- |
+| [`GET /api/v1/billing/one_time_purchases`](https://docs.kinde.com/kinde-apis/management/#tag/billing-one-time-purchases/get/api/v1/billing/one_time_purchases/) | List current paid, non-expired purchases for a customer |
+| [`GET /api/v1/billing/meter_usage`](https://docs.kinde.com/kinde-apis/management/#tag/billing-meter-usage/get/api/v1/billing/meter_usage/) | Page usage records and read the grant snapshot |
+| [`POST /api/v1/billing/meter_usage`](https://docs.kinde.com/kinde-apis/management/#tag/billing-meter-usage/post/api/v1/billing/meter_usage/) | Record usage, including metered one-time purchases after the first purchase or assignment |
+
+Enable the `read:billing_one_time_purchases`, `read:meter_usage`, and `create:meter_usage` scopes on your M2M application as needed.
+
+## Deleting plans with one-time purchases
+
+You cannot delete a plan while customer one-time purchase records still reference a published plan version on that plan. Remove or migrate customers first.

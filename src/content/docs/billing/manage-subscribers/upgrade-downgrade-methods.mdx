@@ -5,6 +5,7 @@ sidebar:
   order: 1
 relatedArticles:
   - e73bafc3-0a9c-48de-9b1a-d91897ffc6cb
+  - c4e8a1d2-6b37-4f9a-8c15-2d7e9f0a4b63
 description: "Upgrade or downgrade subscriptions via self-serve Pay annually, admin Change plan, or API, and review Next invoice"
 featured: false
 deprecated: false
@@ -27,17 +28,20 @@ keywords:
   - next invoice
   - billing policies
   - subscription downgrade
-updated: 2026-08-22
-ai_summary: "Guide to changing a customer plan subscription in Kinde. Describes three methods: self-serve portal plan selection from the pricing table, including Pay annually when a displayed plan offers annual pricing; manual Change plan in the Kinde UI for an organization or user (annual selection is not available in this admin flow yet); and overwriting the agreement by creating a new one via the Management API. Notes that Pay annually applies only when moving to a different plan, not for switching monthly and annual on the current plan. Walks through admin Change plan steps and Stripe invoice credit or bill behavior based on billing policies. Explains that the billing details subscription card shows Plan and Next invoice like the customer portal, while Agreement ID, Customer ID, and feature counts remain admin-only. Intended for developers, business owners, and admins managing upgrades and downgrades."
+  - plan groups
+  - one-time purchases
+  - one-time charges
+updated: 2026-10-17
+ai_summary: "Guide to changing a customer plan subscription in Kinde. Describes three methods: self-serve portal plan selection from the pricing table (within that table's plan group), including Pay annually when a displayed plan offers annual pricing; manual Change plan in the Kinde UI for an organization or user across published plans grouped by plan group (annual selection is not available in this admin flow yet); and overwriting the agreement by creating a new one via the Management API, including across plan groups of the same customer type. Notes that Pay annually applies only when moving to a different plan, not for switching monthly and annual on the current plan. Walks through admin Change plan steps, moving a customer to a plan in a different plan group, and agreement cancellation and invoice credit or bill behavior based on billing policies. Explains that a plan change starts a new billing agreement and forfeits active one-time purchases without a refund; interactive changes in the portal or admin show a confirmation dialog listing affected purchases, while Management API callers must check active purchases and warn the customer before creating the new agreement. Explains that the billing details subscription card shows Plan and Next invoice like the customer portal, while Agreement ID, Customer ID, and feature counts remain admin-only. Intended for developers, business owners, and admins managing upgrades and downgrades."
 ---
 
 Customers will eventually want to change the plan they are on and you need a way to alter their subscription.
 
 ## How to upgrade or downgrade a plan subscription
 
-- Set up the self-serve portal and allow customers to manage their own subscriptions. See [self-serve portal for orgs](/build/self-service-portal/self-serve-portal-for-orgs/) and [self-serve portal for users](/build/self-service-portal/self-serve-portal-for-users/). In this scenario, the user selects the new plan from the pricing table. If any displayed plan offers annual pricing, they can turn on **Pay annually** to see and select yearly (or mixed yearly + monthly) prices — the same toggle used at sign-up. See [How customers choose annual pricing](/billing/billing-user-experience/plan-selection/#how-customers-choose-annual-pricing).
-- Manually upgrade or downgrade via the Kinde UI (see below). Choosing annual pricing when an admin assigns or changes a plan is not available in this flow yet.
-- Overwrite the current agreement (subscription) by [creating a new one via API](/kinde-apis/management/#tag/billing-agreements/post/api/v1/billing/agreements/)
+- Set up the self-serve portal and allow customers to manage their own subscriptions. See [self-serve portal for orgs](/build/self-service-portal/self-serve-portal-for-orgs/) and [self-serve portal for users](/build/self-service-portal/self-serve-portal-for-users/). In this scenario, the user selects the new plan from the pricing table. If any displayed plan offers annual pricing, they can turn on **Pay annually** to see and select yearly (or mixed yearly + monthly) prices — the same toggle used at sign-up. See [How customers choose annual pricing](/billing/billing-user-experience/plan-selection/#how-customers-choose-annual-pricing). Self-serve changes stay within the pricing table’s plan group.
+- Manually upgrade or downgrade via the Kinde UI (see below). The **Change plan** dialog lists published plans by plan group, so you can move a customer to a plan in a different group of the same type (organization or user). Choosing annual pricing when an admin assigns or changes a plan is not available in this flow yet.
+- Overwrite the current agreement (subscription) by [creating a new one via the Management API](/kinde-apis/management/#tag/billing-agreements/post/api/v1/billing/agreements/). The new plan can be in a different plan group. The current agreement is cancelled even if it belongs to a different group. The new plan must be the same customer type as the customer (organization or user).
 
 <Aside>
 
@@ -51,9 +55,44 @@ Self-serve **Pay annually** applies when moving to a **different** plan. Custome
 2. Go to **Organizations** and locate the org, or go to **Users** and locate the user.
 3. Select **Billing** in the side menu. Details of the org’s or user’s plan are shown.
 4. Select **Change plan**.
-5. In the dialog that appears, select the new plan.
+5. In the **Choose plan** dialog, plans are listed under their plan group. Select the new plan.
+   - The customer’s current plan is labeled **Current plan** and cannot be selected.
+   - A plan whose prices are not ready is labeled **Prices are still syncing** and cannot be selected.
 6. Select **Save**. The customer’s plan is now updated.
 
 Depending on the [billing policies](/billing/manage-plans/upgrade-downgrade-plans/) you have set, this information will be synced to Stripe and an invoice credit or bill will be issued.
 
+## Change to a plan in a different plan group
+
+When you change a plan in the Kinde admin, you can select any published plan of the same customer type whose prices have finished syncing — including a plan in a different plan group. You can also assign a published plan of the same customer type in a different plan group by creating a new billing agreement via the Management API.
+
+For example, you can move an organization from a plan in your default organization group to a plan in another organization group.
+
+When you do this:
+
+- The customer’s current agreement is cancelled, even if it belongs to a different plan group.
+- A new agreement is created for the selected plan.
+
+You cannot assign an organization plan to a user, or a user plan to an organization.
+
+Customers who change their own plan in the self-serve portal still choose from the pricing table, which includes plans from one plan group only.
+
 On the billing details page, the subscription card shows **Plan** and **Next invoice** in the same way as the customer portal (amount and date, including usage recorded so far when the plan has metered features). Agreement ID, Customer ID, and feature counts remain admin-only. See [Billing and invoice cycles](/billing/about-billing/kinde-billing-model/#billing-and-invoice-cycles).
+
+## One-time purchases when changing plan
+
+Changing plan starts a new subscription (a new billing agreement). **One-time purchases on the previous agreement are not carried over**.
+
+When a plan is changed interactively in the self-serve portal or the Kinde admin, Kinde shows a confirmation dialog listing any active one-time purchases the customer will lose—for example credit packs or add-on unlocks.
+
+![Warning example for losing already purchased one-time purchases](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d141f895-c278-470d-f2b5-cd2b3223e100/socialsharingimage)
+
+After the change:
+
+- Those purchases are no longer available on the new agreement.
+- **Amounts already paid are not refunded**.
+- If the same one-time purchase is available on the new plan, the customer must buy it again as a new purchase.
+
+These forfeiture rules also apply when you change a plan via the Management API. Because the API overwrites the agreement directly without a Kinde confirmation dialog, API callers must check active purchases (for example with [Get billing one-time purchases](https://docs.kinde.com/kinde-apis/management/#tag/billing-one-time-purchases/get/api/v1/billing/one_time_purchases/)) and warn the customer before creating the new agreement.
+
+See [One-time purchases](/billing/manage-subscribers/one-time-purchases/).

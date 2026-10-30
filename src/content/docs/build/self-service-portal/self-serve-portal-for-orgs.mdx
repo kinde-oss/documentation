@@ -32,18 +32,18 @@ keywords:
   - organization alias
   - portal link
   - kinde management api
-updated: 2026-07-01
+updated: 2026-10-20
 featured: false
 deprecated: false
-ai_summary: "Guide to enabling and configuring the Kinde self-serve portal for organizations (B2B). Covers dashboard setup including return URL, organization alias, and selecting which functions org admins can manage such as business details, payment details, API keys, members and roles, SSO connections, and MFA. Explains how authorized members can invite new users, assign roles with org:write:members and role-based gating, and revoke pending invitations when Members and roles is enabled and environment-level invitations are allowed. Describes portal access control through system permissions such as org:write:billing, custom role assignment, and auto-assignment options. Documents generating one-time portal links via the React PortalLink component or the Account API portal_link endpoint with optional subnav and return_url parameters. Notes Scale plan per-organization portal configuration. Intended for developers integrating org portal access into applications."
+ai_summary: "Guide to enabling and configuring the Kinde self-serve portal for organizations (B2B). Covers dashboard setup including return URL, organization alias, and selecting which functions org admins can manage such as business details, payment details, one-time purchases, API keys, members, SSO connections, and MFA. The Members switch is shown for every business under Organization self-management and is off until turned on. Explains how authorized members can view invitations with org:read:members, and invite new users or revoke pending invitations with org:write:members and role-based gating, when Members is enabled and Allow invitations is on with an Invite application selected. Describes portal access control through system permissions such as org:write:billing, custom role assignment, and auto-assignment options. Documents generating one-time portal links via the React PortalLink component or the Account API portal_link endpoint with optional subnav and return_url parameters. Notes Scale plan per-organization portal configuration. Intended for developers integrating org portal access into applications."
 ---
 
 You can configure a self-serve portal to enable authorized organization members to be able to self-manage functions provided by Kinde. Authorized org members can update:
 
 - [Business details](/manage-your-account/business-information/update-your-details/)
-- [Payment details](/manage-your-account/profile-and-plan/update-kinde-payment/) (if you have billing set up)
+- [Payment details](/manage-your-account/profile-and-plan/update-kinde-payment/) and [one-time purchases](/billing/manage-subscribers/one-time-purchases/) on the organization’s plan (if you have billing set up)
 - [API Keys](/manage-your-apis/add-manage-api-keys/self-serve-api-keys/)
-- [Members and roles](#invite-members-from-the-portal) — invite new members into the organization, assign their roles, and revoke pending invitations
+- [Members](#invite-members-from-the-portal) — view members, and when invitations are allowed, invite new members into the organization, assign their roles, and revoke pending invitations. The **Members** switch is shown for every business and is off until you turn it on.
 - [SSO enterprise connections](/authenticate/self-serve-sso/add-sso-self-serve/) (in beta)
 - Multi-factor auth settings (coming soon)
 
@@ -57,7 +57,7 @@ If you are on the Kinde Scale plan, you can configure the [portal per organizati
    ![Settings for self-serve portal for orgs](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/81169031-611b-402a-20f7-47c84f53b600/public)
 2. Enter the **Return URL** that you want users to land on when they exit the portal, e.g. your app dashboard.
 3. Add an **Organization alias** to represent how your customers are referred to in your business, e.g. Account, Partner, Workspace, etc. This will be visible in the interface in the portal.
-4. In the **Organization profile** section, select the functions you want organization admins to be able to manage.
+4. In the **Organization self-management** section, select the functions you want organization admins to be able to manage.
    ![Options for showing hiding settings for org members](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/5f99fef4-86e5-4a67-5a80-43ae34cbbd00/public)
 5. Select **Save**.
 
@@ -78,19 +78,18 @@ When [configuring org roles](/billing/get-started/add-billing-role/), you can sp
 
 ## Invite members from the portal
 
-When you enable the **Members and roles** function, authorized members can invite other people into their organization directly from the portal, without you adding users manually or via the API.
+Turn on **Members** under **Organization self-management** in **Settings > Environment > Self-serve portal**. The switch is off until you select it.
 
-<Aside>
+Authorized members can then invite other people into their organization directly from the portal, without you adding users manually or via the API.
 
-Member invitations must also be enabled at the environment level. Go to **Settings > Environment > Policies**, switch on **Allow invitations**, and choose the **Invite application** that invitation links should open. See [Set global access policies](/build/set-up-options/access-policies/).
-
-</Aside>
+Member invitations must also be enabled at the environment level. Go to **Settings > Environment > Policies**, switch on **Allow invitations**, and choose the **Invite application** that invitation links should open. **Allow invitations** is off until you switch it on. See [Set global access policies](/build/set-up-options/access-policies/).
 
 ### Who can invite members
 
-A member can only invite others and assign roles if they have sufficient permission in the organization:
+A member can view invitations, invite others, and revoke pending invitations only with the matching system permission:
 
-- The member needs the `org:write:members` permission to open the **Add member** flow.
+- The member needs the `org:read:members` permission to view pending invitations.
+- The member needs the `org:write:members` permission to open the **Add member** flow and send an invitation. **Revoke invitation** is shown only when the member has this permission.
 - Each role in the **Add member** dialog is gated individually—a member can only assign a role if they hold the permission required to grant it. Roles they can't assign appear disabled. This mirrors the role gating used for Kinde team members, so a member can never grant access broader than their own.
 
 ### Invite a member
@@ -100,16 +99,16 @@ A member can only invite others and assign roles if they have sufficient permiss
 
     ![add member dialog in the organization portal](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/bf8b9e65-af74-49fb-312f-d626f9a97400/socialsharingimage)
 3. Enter the new member's **First name**, **Last name**, and **Email**.
-4. Select the **Roles** the member will have in the organization. 
+4. Select the **Roles** the member will have in the organization.
     - You can select more than one.
     - Unavailable roles are disabled.
-5. Select **Save**. 
+5. Select **Save**.
 
     The person receives an email invitation to join the organization. They can set up a new account or sign in to an existing one to accept. For more on what the invitee sees, see [Invited user sign-up experience](/authenticate/custom-configurations/invited-user-experience/).
 
 ### Revoke a pending invitation
 
-Pending invitations appear in an **Invitations** list on the **Members** screen, showing each invitee's name, email, role, and the date invited.
+Pending invitations appear in an **Invitations** list on the **Members** screen, showing each invitee's name, email, role, and the date invited. **Revoke invitation** is shown only to members with the `org:write:members` permission.
 
 1. Find the invitation in the **Invitations** list.
 2. Select the actions menu next to it, then select **Revoke invitation**.
