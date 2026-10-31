@@ -12,14 +12,14 @@ tableOfContents:
 app_context:
   - m: billing
   - s: plans
-description: "Design Kinde billing plans, plan groups, mixed-interval charges, one-time charges, trials, tax, and draft vs published"
+description: "Design Kinde plans with groups, mixed-interval charges, trials, tax, one-time charges, and subscriber-safe versions"
 featured: false
 deprecated: false
 topics:
   - billing
   - manage-plans
   - plans
-  - pricing-models
+  - plan-versioning
 sdk: []
 languages: []
 audience:
@@ -32,13 +32,12 @@ keywords:
   - fixed charges
   - mixed-interval pricing
   - annual pricing
-  - metered features
   - free trial
   - collect tax automatically
-  - draft plans
+  - plan versions
   - one-time charges
-ai_summary: "Conceptual overview of billing plans in Kinde for structuring product features and charging customers. Explains plan groups for users or organizations, pricing table constraints, and the parts of a plan including profile details and settings such as Ask for credit card, Collect tax automatically with account or plan-level Stripe Tax options, and configurable free trial periods. Covers pricing building blocks: fixed charges with daily weekly monthly or yearly intervals, optional annual pricing on one charge per plan, mixed-interval totals such as yearly plus monthly; metered and unmetered features; and one-time charges with flat or package pricing and expiry. Describes reusing a shared pool of features, fixed charges, and one-time charges across plans with plan-specific prices and limits. Explains draft versus published states, Stripe price sync status, current limitations including no custom billing cycle changes and no per-subscription add-ons or discounts. Subscribers can purchase one-time charges from the self-serve portal, and admins can assign them from Billing. Intended for developers, product managers, and business owners designing SaaS pricing."
-updated: 2026-10-14
+ai_summary: "Conceptual overview of billing plans in Kinde for structuring features and charging customers. Explains plan groups for users or organizations, pricing table constraints, and moving a customer to a plan in another group of the same type from the Kinde admin or the Management API. Describes the plan profile, settings such as Ask for credit card, Collect tax automatically with account or plan-level Stripe Tax options, and free trial periods. Covers pricing building blocks: fixed charges on daily, weekly, monthly, or yearly intervals, annual pricing on one charge per plan, mixed-interval totals, metered and unmetered features, and one-time charges with flat or package pricing and expiry. Subscribers can buy one-time charges in the self-serve portal, and admins can assign them from Billing. Explains reusing a shared pool of features, fixed charges, and one-time charges with plan-specific prices and limits. Details draft versus published versions, the Versions table, Save as draft, price sync status, and the rule that existing subscribers stay on the version they joined while new sign-ups get the latest published version. Notes current limitations, including no custom billing-cycle changes and no per-subscription add-ons or discounts. Intended for developers, product managers, and business owners designing SaaS pricing."
+updated: 2026-10-31
 ---
 
 Plans enable you to structure your app features and charge your customers for using your services. Kinde supports both basic and more advanced plans for SaaS services. Here’s some examples:
@@ -147,21 +146,73 @@ The same reuse pattern applies to one-time purchases: define a top-up once, then
 
 Plans can be in two states:
 
-**Draft** - these plans are being developed and are not available for subscribers yet.
+- **Draft** — You are still configuring the plan. A draft is not available for new subscriptions until you publish it.
+- **Published** — The plan (or a specific **version** of the plan) is available for billing and can be sold to new subscribers manually, through a pricing table, or via API.
 
-**Published** - products and prices are synced to Stripe and the plan can be signed up to manually, or via API.
+When you **publish** a plan for the first time, Kinde creates **version v1**. Each time you publish again after editing a draft, Kinde creates a new version (v2, v3, and so on).
 
-- Once a plan has a subscriber, the plan cannot be changed, only versioned.
-- Published plans must be included in a pricing table for self-sign ups.
+### How versioning protects existing subscribers
 
-Plan versioning is being worked on, but is not currently available.
+Once someone is subscribed to a plan, they stay on the **version they signed up to**. Publishing a new version does **not** change pricing or features for existing subscribers.
 
-## When a plan feature price syncs to Stripe
+- **Existing subscribers** — Keep the version they joined until you move them through a supported upgrade or change flow (for example plan changes you manage in admin or API).
+- **New subscribers** — Get the **latest published version** when they sign up.
 
-Feature prices sync to Stripe when you are successfully connected to Strip and you publish the plan containing that feature. When you are creating a plan, you may notice that some features show `price synced` or `price not synced`.
+Pricing tables always offer the **latest published version** of each plan. When you publish a new version, new self-serve sign-ups through those tables switch to that version as soon as you publish.
 
-- Price synced - The price in Kinde and Stripe are the same. A plan with this feature is published.
-- Price not synced - The price in Kinde has not yet synced to Stripe. When you publish or re-publish the plan, this will change.
+### Working with drafts and versions in admin
 
-If you see a mix of synced and not synced feature prices on a plan, this might be because the synced ones are in a plan that is published.
-Unmetered (non-chargeable) features do not have a price sync status badge.
+Go to **Billing > Plans** and open a plan.
+
+- Plans that have never been published open in the plan editor.
+- Plans that have been published at least once open on the **Versions** table page, where you can see every published version plus any unpublished draft.
+
+    ![plan versions table page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0a0ebcf2-1d23-407b-ab8c-f8df4329eb00/socialsharingimage)
+
+On the **Versions** table page you can:
+
+- See version number, status, name, subscriber count, pricing summary, and publish date.
+- Open a **published** version to view the plan as it was sold (read-only except name and description).
+- Open the **draft** to change charges, features, settings, and other catalog details before you publish the next version.
+
+    <Aside>
+
+    Status badges on the plans list help you see at a glance whether a plan is an unpublished draft, a draft waiting to be published (for example **Draft v3**), or published (**Published** or **Published v2** when multiple versions exist).
+
+    </Aside>
+
+### Changing a plan that already has subscribers
+
+You cannot change charges, features, or most plan settings on a **published version** directly. To change pricing or entitlements for **new** customers:
+
+1. Open the published version (or use **Save as draft** on the Versions table page or plan editor).
+2. Edit the draft — Kinde copies the published catalog into a new draft you can change freely.
+3. When you are ready, **Publish** to create the next version for new subscribers only.
+
+    ![published plan page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0d64ee25-9daf-440f-bf63-567381640500/socialsharingimage)
+
+On a published version you can still update the plan **name** and **description** and select **Save**. Those updates apply to that version snapshot only.
+
+<Aside>
+
+**Save as draft** creates a new draft from a published version so you can change anything before publishing again. If you already have an unpublished draft, saving as draft **replaces** it. This action needs permission to update and delete plan catalog items (the same permission you need to remove charges or features from a plan).
+
+</Aside>
+
+### First-time publish vs new versions
+
+- **First publish** — Makes the plan subscribable and creates v1.
+- **Later publishes** — Create the next version number; existing subscribers stay on their version.
+
+Published plans must be included in a pricing table for self-serve sign-ups.
+
+Feature prices sync for billing when you are connected to billing and you publish the plan containing that feature. When you are creating a plan, you may notice that some features show `price synced` or `price not synced`.
+
+- **Price synced** — The price in Kinde matches your billing account. A plan with this feature is published.
+- **Price not synced** — The price in Kinde has not yet synced for billing. When you publish or re-publish the plan, this will change.
+
+<Aside>
+
+If you see a mix of synced and not synced feature prices on a plan, this might be because the synced ones are in a plan that is published. Unmetered (non-chargeable) features do not have a price sync status badge.
+
+</Aside>
