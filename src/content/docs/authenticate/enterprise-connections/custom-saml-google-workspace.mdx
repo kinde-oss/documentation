@@ -43,7 +43,7 @@ You can set up SAML to work with your Google Workspace.
 
 Google gives you the SAML metadata as a file to download, and does not host it at a URL. You can get it into Kinde in either of two ways:
 
-- **Paste it.** Open the downloaded file and paste its contents into the **IdP metadata XML** field on the connection. This is the simplest option. Kinde keeps this copy until you replace it, so when Google rotates its signing certificate you download the updated file and paste it again. Kinde warns you on the home page 30 days before the certificate in the pasted file expires.
+- **Paste it.** (recommended) Open the downloaded file and paste its contents into the **IdP metadata XML** field on the connection. This is the simplest option. Kinde keeps this copy until you replace it, so when Google rotates its signing certificate you download the updated file and paste it again. Kinde warns you on the home page 30 days before the newest signing certificate in pasted metadata expires.
 - **Host it.** Upload the file to a public location Kinde can reach, such as an [AWS S3](https://aws.amazon.com/s3/) bucket, [Cloudflare R2](https://developers.cloudflare.com/r2/), or a public website, and enter that URL in the **IdP metadata URL** field. Kinde reads the file at every sign-in, so you can update the certificates just by re-uploading the file. Make sure the URL stays reachable from Kinde's servers: a CDN rule that blocks requests by country can block Kinde too.
 
 If you fill in both fields, Kinde uses the pasted XML and ignores the URL. This guide shows both options where they differ.
@@ -111,14 +111,13 @@ You can make a connection available only to a specific organization, or you can 
 15. Enter any [upstream params](/authenticate/enterprise-connections/advanced-saml-configurations/#upstream-parameters) that you want to pass to the identity provider. Not all providers support this, so check their documentation first.
 16. Select **Save**.
 
-
 ## Step 3: Configure Google Workspace Admin Console
 
 1. Sign in to your [Google Workspace Admin Console](https://admin.google.com/).
 2. In the main menu, go to **Apps > Web and Mobile Apps**.
 3. Select **Add App > Add custom SAML app.**
 
-  ![adding custom saml app](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d02e7219-70e1-437c-41b3-b60263568900/public)
+    ![adding custom saml app](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d02e7219-70e1-437c-41b3-b60263568900/public)
 
 4. Complete the **App details** window:
 
@@ -127,12 +126,12 @@ You can make a connection available only to a specific organization, or you can 
    3. If you want, upload an icon for the app.
    4. Select **Continue**.
 
-   ![identity details](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/859218b5-4ca0-4fab-2475-3146088dc700/public)
+    ![identity details](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/859218b5-4ca0-4fab-2475-3146088dc700/public)
     
 5. Copy the **Google Identity Provider details** by selecting **DOWNLOAD METADATA** under Option 1. This is the file you will paste into Kinde or upload to a file storage location in Step 4.
 6. Select **Continue**.
 
-  ![Service provider details](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/91f8d1a9-bcd0-4b11-702e-c4593ac73d00/public)
+    ![Service provider details](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/91f8d1a9-bcd0-4b11-702e-c4593ac73d00/public)
 
 7. Enter the **Service provider details**:
    1. Enter or paste in the **ACS URL** you copied from Kinde earlier.
@@ -142,7 +141,7 @@ You can make a connection available only to a specific organization, or you can 
 8. On the **Attribute mapping** page, select **Finish**.
 9. If you want to grant access to other users, select the chevron in the right corner of the **User access** panel. This opens additional options.
 
-  ![user access panel](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c7e3c185-e1db-49b2-8e02-25ca7320cf00/public)
+    ![user access panel](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c7e3c185-e1db-49b2-8e02-25ca7320cf00/public)
 
 10. If you want, you can change the access to suit your organization’s needs. You can do this per Organizational unit or switch **ON for everyone.**
 11. Select **Save**.
@@ -151,11 +150,17 @@ You can make a connection available only to a specific organization, or you can 
 
 Use one of the following, depending on the option you chose at the start.
 
-**Option 1: Paste the file**
+**Option 1: Paste the file** (recommended)
 
 1. Open the metadata file you downloaded from Google in a text editor and copy all of its contents.
 2. In Kinde, open the connection's configuration page.
 3. Paste the contents into the **IdP metadata XML** field. Leave **IdP metadata URL** blank, or clear any placeholder you entered earlier.
+
+    <Aside>
+
+    Kinde will warn you 30 days before the newest signing certificate in pasted metadata expires.
+
+    </Aside>
 
 **Option 2: Host the file**
 
