@@ -736,7 +736,11 @@ To support the invitation sign-up flow in your iOS app, use one of the following
               WindowGroup {
                   ContentView()
       +                .onOpenURL { url in
-      +                    KindeSDKAPI.handle(url: url)
+      +                    if KindeSDKAPI.handle(url: url) {
+      +                        return
+      +                    }
+      +
+      +                    // Handle URLs not handled by Kinde here, if needed.
       +                }
               }
           }
@@ -759,7 +763,13 @@ To support the invitation sign-up flow in your iOS app, use one of the following
               open url: URL,
               options: [UIApplication.OpenURLOptionsKey: Any] = [:]
           ) -> Bool {
-      +        return KindeSDKAPI.handle(url: url)
+      +        if KindeSDKAPI.handle(url: url) {
+      +            return true
+      +        }
+      +
+      +        // Handle URLs not handled by Kinde here, if needed.
+      +        // Return true if your app handles the URL.
+      +        return false
           }
 
           func application(
@@ -772,7 +782,13 @@ To support the invitation sign-up flow in your iOS app, use one of the following
       +            return false
       +        }
       +
-      +        return KindeSDKAPI.handle(url: url)
+      +        if KindeSDKAPI.handle(url: url) {
+      +            return true
+      +        }
+      +
+      +        // Handle URLs not handled by Kinde here, if needed.
+      +        // Return true if your app handles the URL.
+      +        return false
           }
       }
       ```
@@ -797,14 +813,25 @@ To support the invitation sign-up flow in your iOS app, use one of the following
           ) {
               guard let _ = (scene as? UIWindowScene) else { return }
 
-      +        if let context = connectionOptions.urlContexts.first {
-      +            KindeSDKAPI.handle(url: context.url)
+      +        for context in connectionOptions.urlContexts {
+      +            if KindeSDKAPI.handle(url: context.url) {
+      +                continue
+      +            }
+      +
+      +            // Handle URLs not handled by Kinde here, if needed.
       +        }
       +
-      +        if let activity = connectionOptions.userActivities.first(where: {
-      +            $0.activityType == NSUserActivityTypeBrowsingWeb
-      +        }), let url = activity.webpageURL {
-      +            KindeSDKAPI.handle(url: url)
+      +        for activity in connectionOptions.userActivities {
+      +            guard activity.activityType == NSUserActivityTypeBrowsingWeb,
+      +                  let url = activity.webpageURL else {
+      +                continue
+      +            }
+      +
+      +            if KindeSDKAPI.handle(url: url) {
+      +                continue
+      +            }
+      +
+      +            // Handle URLs not handled by Kinde here, if needed.
       +        }
           }
 
@@ -812,11 +839,13 @@ To support the invitation sign-up flow in your iOS app, use one of the following
               _ scene: UIScene,
               openURLContexts URLContexts: Set<UIOpenURLContext>
           ) {
-      +        guard let url = URLContexts.first?.url else {
-      +            return
-      +        }
+      +        for context in URLContexts {
+      +            if KindeSDKAPI.handle(url: context.url) {
+      +                continue
+      +            }
       +
-      +        KindeSDKAPI.handle(url: url)
+      +            // Handle URLs not handled by Kinde here, if needed.
+      +        }
           }
 
           func scene(
@@ -828,7 +857,11 @@ To support the invitation sign-up flow in your iOS app, use one of the following
       +            return
       +        }
       +
-      +        KindeSDKAPI.handle(url: url)
+      +        if KindeSDKAPI.handle(url: url) {
+      +            return
+      +        }
+      +
+      +        // Handle URLs not handled by Kinde here, if needed.
           }
       }
       ```
