@@ -6,32 +6,30 @@ sidebar:
 relatedArticles:
   - 66b2a627-b24a-4ccf-a792-80a6a9fe35ef
   - 0dfcab9d-8610-4881-9293-8501bd472041
-description: >-
-  How to refresh the certificates involved in a SAML connection: your IdP's
-  signing certificate and Kinde's optional request-signing certificate and
-  private key.
+description: "Keep enterprise SSO online by rotating your IdP signing certificate and Kinde's request-signing certificate before they expire."
 featured: false
 deprecated: false
 topics:
   - authenticate
+  - enterprise-connections
+  - saml
 sdk: []
 languages: []
 audience:
   - developer
   - enterprise-admin
   - security-engineer
-complexity: intermediate
+complexity: advanced
 keywords:
-  - SAML certificate
-  - IdP certificate
-  - expiring certificate
-  - certificate rotation
-  - metadata
+  - IdP signing certificate
+  - request-signing certificate
   - private key
-  - certificate refresh
-  - enterprise auth
-  - security maintenance
-updated: 2026-10-29
+  - certificate rotation
+  - Sign SAML request
+  - enterprise SSO
+  - certificate expiry
+updated: 2026-11-01
+ai_summary: "Guide to refreshing the certificates used by a Kinde SAML connection. An identity provider signing certificate signs the SAML responses sent to Kinde and is read from IdP metadata. When the IdP rotates that certificate, follow the steps to keep IdP signing certificates current, with a separate path for rotating the Google Workspace signing certificate. Kinde's optional request-signing certificate and private key, entered in the Sign SAML request section, let Kinde sign the requests it sends to the IdP and must be replaced before they expire. The procedure covers opening an environment-level connection under Settings, Environment, Authentication, and Enterprise connections, or an organization-level connection under Organizations and Authentication, then replacing the signing certificate and private key and saving. The new certificate must also be added to the identity provider, and the certificate stored in Kinde must match the one in the IdP exactly. The certificate and private key may be issued by the IdP or generated separately. Intended for developers, enterprise admins, and security engineers maintaining an existing SAML connection."
 ---
 
 A SAML connection can involve two different certificates, and they are refreshed in different places:
@@ -45,7 +43,24 @@ Your IdP might issue new certificates, or you can generate a certificate and pri
 
 1. In Kinde, open the connection:
    - For an environment-level connection, go to **Settings > Environment > Authentication**, scroll to **Enterprise connections**, and select **Configure** on the connection.
-   - For an organization-level connection, go to **Organizations**, open the organization, select **Authentication**, and select **Configure** on the connection.
-2. Scroll to the **Sign SAML request** section and replace the **Signing certificate** and **Private key** with the new content.
+
+      ![configure environment-level connection](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4e785283-b417-4bec-0f30-b25212e15400/socialsharingimage)
+
+   - For an organization-level connection, go to **Organizations**, open the organization, select **Authentication**; select the **three dots** next to your connection and select **Configure**.
+
+      ![configure organization-level connection](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6349f1d6-1261-4696-4a7f-1d75158b2d00/socialsharingimage)
+
+2. Scroll to the **Sign SAML request** section and replace the following with new values:
+   - **Signing certificate:** The new certificate.
+   - **Private key:** The new private key.
+
+    ![sign saml request](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c0edbcf0-e42f-4d24-5cd6-cbd4b2dd6e00/socialsharingimage)
+
 3. Select **Save**.
-4. Add the new certificate to your identity provider. The certificate there and the one in Kinde must match exactly.
+4. Add the new certificate to your identity provider. 
+
+    <Aside type="warning">
+
+    The certificate in your **Identity Provider** and the one in **Kinde** must match exactly.
+
+    </Aside>
