@@ -26,7 +26,7 @@ keywords:
   - test configuration
   - test isolation
   - automated testing
-updated: 2026-01-20
+updated: 2026-11-02
 featured: false
 deprecated: false
 ai_summary: Guide to setting up test users and environments for Kinde authentication testing, covering test user creation, environment isolation, and secure credential management.
@@ -64,13 +64,236 @@ You are now in the test environment.
 
 ## Step 2: Create a test user
 
+You can create test users in two ways. Pick the one that fits how your suite runs:
+
+- **Option A: Add a user in the Kinde dashboard.** Best for one or two long-lived users that your whole suite shares. You sign in once by hand to verify the email and set a password.
+- **Option B: Create a pre-verified user with the Management API.** Best when your tests create and delete their own users, or when nobody can click through a verification code (for example in CI). The user is created with the email already verified and a password already set, so no inbox is involved.
+
+Both options give you a test user who signs in with **Email + password**.
+
+### Option A: Add a user in the Kinde dashboard
+
 1. Go to the **Users** tab and select **Add user**
 2. Enter test user details:
    - **First name** and **Last name**: (e.g., "John Doe")
    - **Email**: Use a clear test email (e.g., `e2e-test@yourcompany.com`)
 3. Select **Save**
 
-Repeat this process for each test user you need to create.
+Repeat this process for each test user you need to create. Finish the account in [Step 4](#step-4-finish-test-user-account-creation-option-a-only).
+
+### Option B: Create a pre-verified test user with the Management API
+
+The Management API lets you create a user whose email identity is already marked as verified, then set a password on it. Kinde treats a verified identity the same way whether it was verified by a one-time code or by the API, so the user signs in with email and password straight away and is never asked for a code.
+
+<Aside>
+A verified identity only removes the verification step for **Email + password** sign-in. With **Email + code** (passwordless), the code is the credential, so Kinde always sends one. Use this option to keep the inbox out of every test except the ones that test the passwordless screens themselves. For those, see [Test passwordless flows](/testing/playwright/test-passwordless-flows/).
+</Aside>
+
+#### What you need
+
+- A machine-to-machine (M2M) application in your **test environment** authorized for the Kinde Management API, with these scopes: `create:users`, `update:user_passwords`, `read:users`, `delete:users`. See [Call the Kinde Management API](/developer-tools/kinde-api/access-token-for-api/) for how to create one and get a token.
+- The M2M client ID and secret in your `.env` file, alongside the values from the [Playwright setup](/testing/playwright/#environment-variables):
+
+    ```env
+    # ... other environment variables ...
+    KINDE_DOMAIN=https://your-subdomain.kinde.com
+    KINDE_MANAGEMENT_CLIENT_ID=your-m2m-client-id
+    KINDE_MANAGEMENT_CLIENT_SECRET=your-m2m-client-secret
+    ```
+
+<Aside type="warning" title="Important">
+The M2M secret grants write access to the users in your environment. Keep it in your CI secret store and never commit it. Use an M2M application in your test environment, not production.
+</Aside>
+
+#### The three calls
+
+1. **Create the user with a verified email identity.** `POST /api/v1/user` (scope `create:users`). Set `is_verified` to `true` on the email identity. Pass `organization_code` if your application is B2B or the environment does not add new users to a default organization.
+
+    ```bash
+    curl --request POST \
+      --url "$KINDE_DOMAIN/api/v1/user" \
+      --header "Authorization: Bearer $KINDE_MANAGEMENT_TOKEN" \
+      --header "Content-Type: application/json" \
+      --data '{
+        "profile": { "given_name": "E2E", "family_name": "Test" },
+        "identities": [
+          {
+            "type": "email",
+            "is_verified": true,
+            "details": { "email": "e2e-1730000000@yourcompany.com" }
+          }
+        ]
+      }'
+    ```
+
+    The response includes the new user's `id` (for example `kp_c3143a4b50ad43c88e541d9077681782`). Keep it: you need it for the next call and for cleanup.
+
+2. **Set a password.** `PUT /api/v1/users/{user_id}/password` (scope `update:user_passwords`). The endpoint accepts a **hash**, not the plain-text password, so hash it first. The default `hashing_method` is `bcrypt`. Leave `is_temporary_password` unset so the user is not asked to change it on first sign-in.
+
+    ```bash
+    curl --request PUT \
+      --url "$KINDE_DOMAIN/api/v1/users/$USER_ID/password" \
+      --header "Authorization: Bearer $KINDE_MANAGEMENT_TOKEN" \
+      --header "Content-Type: application/json" \
+      --data '{
+        "hashed_password": "$2a$10$t8Jz3hJCCTFk/Acja7bw3OpamB3xuLPhpJlRHb31bXIjfzeTfn8rq",
+        "hashing_method": "bcrypt"
+      }'
+    ```
+
+    The first time the user signs in, Kinde checks the password against the hash you supplied and then stores it in its own format. Nothing else changes for the user.
+
+3. **Sign in.** The user can now sign in on Kinde's hosted pages with their email and the password you hashed, with no verification code. Store the email and password for your tests.
+
+<Aside>
+The **Block disposable email addresses** policy applies to sign-ups through Kinde's hosted pages. It is not applied to users created with the Management API, so you can create API test users on a Mailosaur or similar domain even while the policy is on.
+</Aside>
+
+#### A reusable helper for Playwright
+
+The helper below wraps the calls above so a test can ask for a fresh user in one line. It uses `bcryptjs` to hash the password locally.
+
+1. Install the dependency:
+
+    <PackageManagers pkg='bcryptjs @types/bcryptjs' dev />
+
+2. Create `tests/utils/kinde-users.ts`:
+
+    ```typescript
+    // tests/utils/kinde-users.ts
+    import bcrypt from "bcryptjs"
+    import "dotenv/config"
+
+    const domain = process.env.KINDE_DOMAIN!
+
+    export type TestUser = { id: string; email: string; password: string }
+
+    let cachedToken: { value: string; expiresAt: number } | undefined
+
+    async function managementToken(): Promise<string> {
+      if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) {
+        return cachedToken.value
+      }
+      const res = await fetch(`${domain}/oauth2/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "client_credentials",
+          client_id: process.env.KINDE_MANAGEMENT_CLIENT_ID!,
+          client_secret: process.env.KINDE_MANAGEMENT_CLIENT_SECRET!,
+          audience: `${domain}/api`,
+        }),
+      })
+      if (!res.ok) throw new Error(`Token request failed: ${res.status}`)
+      const json = (await res.json()) as { access_token: string; expires_in: number }
+      cachedToken = { value: json.access_token, expiresAt: Date.now() + json.expires_in * 1000 }
+      return cachedToken.value
+    }
+
+    async function api(path: string, init: RequestInit = {}) {
+      const res = await fetch(`${domain}/api/v1${path}`, {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${await managementToken()}`,
+          "Content-Type": "application/json",
+          ...(init.headers ?? {}),
+        },
+      })
+      if (!res.ok) {
+        throw new Error(`${init.method ?? "GET"} ${path} failed: ${res.status} ${await res.text()}`)
+      }
+      return res.json()
+    }
+
+    /**
+     * Creates a user with a verified email identity and a known password.
+     * Pass organizationCode for B2B applications.
+     */
+    export async function createTestUser(options: { organizationCode?: string } = {}): Promise<TestUser> {
+      const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@yourcompany.com`
+      const password = `Pw!${Math.random().toString(36).slice(2)}${Date.now()}`
+
+      const created = await api("/user", {
+        method: "POST",
+        body: JSON.stringify({
+          profile: { given_name: "E2E", family_name: "Test" },
+          organization_code: options.organizationCode,
+          identities: [{ type: "email", is_verified: true, details: { email } }],
+        }),
+      })
+
+      await api(`/users/${created.id}/password`, {
+        method: "PUT",
+        body: JSON.stringify({
+          hashed_password: await bcrypt.hash(password, 10),
+          hashing_method: "bcrypt",
+        }),
+      })
+
+      return { id: created.id, email, password }
+    }
+
+    /** Deletes the user and their profile so the email can be reused. */
+    export async function deleteTestUser(id: string): Promise<void> {
+      await api(`/user?id=${encodeURIComponent(id)}&is_delete_profile=true`, { method: "DELETE" })
+    }
+
+    /** Finds users by exact email. Useful for sweeping leftovers. */
+    export async function findUsersByEmail(...emails: string[]): Promise<Array<{ id: string; email: string }>> {
+      const query = encodeURIComponent(emails.join(","))
+      const json = await api(`/users?email=${query}&page_size=100`)
+      return json.users ?? []
+    }
+    ```
+
+    Replace `yourcompany.com` with a domain you control. The address never receives mail, so it only has to be unique.
+
+3. Expose the user as a Playwright fixture so every test gets its own and cleanup happens even when the test fails. Create `tests/fixtures.ts`:
+
+    ```typescript
+    // tests/fixtures.ts
+    import { test as base } from "@playwright/test"
+    import { createTestUser, deleteTestUser, type TestUser } from "./utils/kinde-users"
+
+    export const test = base.extend<{ testUser: TestUser }>({
+      testUser: async ({}, use) => {
+        const user = await createTestUser()
+        try {
+          await use(user)
+        } finally {
+          await deleteTestUser(user.id)
+        }
+      },
+    })
+
+    export { expect } from "@playwright/test"
+    ```
+
+4. Use it in a test. This signs in a brand-new user with no inbox involved:
+
+    ```typescript
+    // tests/fresh-user-signin.spec.ts
+    import { test, expect } from "./fixtures"
+
+    test("a freshly created user can sign in with email and password", async ({ page, testUser }) => {
+      await page.goto(process.env.TEST_APP_URL!)
+      await page.click('[data-testid="sign-in-button"]')
+
+      const authUrl = new URL(process.env.KINDE_ISSUER_URL!)
+      await expect(page).toHaveURL(new RegExp(authUrl.hostname.replaceAll(".", "\\.")))
+
+      await page.fill('input[name="p_email"]', testUser.email)
+      await page.click('button[type="submit"]')
+      await page.fill('input[name="p_password"]', testUser.password)
+      await page.click('button[type="submit"]')
+
+      const appUrl = new URL(process.env.TEST_APP_URL!)
+      await expect(page).toHaveURL(new RegExp(appUrl.hostname.replaceAll(".", "\\.")))
+      await expect(page.locator('[data-testid="user-profile"]')).toBeVisible()
+    })
+    ```
+
+If you already use the [`@kinde/management-api-js`](/developer-tools/kinde-api/management-api-js/) SDK, the same four calls are available as `Users.createUser`, `Users.setUserPassword`, `Users.getUsers` and `Users.deleteUser`.
 
 ## Step 3: Create test application credentials
 
@@ -90,29 +313,65 @@ You will need the client ID, client secret, and access token when running certai
 
     **Optional**: Go to **Tokens** to configure a custom token expiration time for this application.
 
-## Step 4: Finish test user account creation
+## Step 4: Finish test user account creation (Option A only)
+
+If you created the test user in the dashboard, finish the account by signing in once:
 
 1. Set up and run your test application
 2. Sign in with the test user you created
 3. Verify the email address and set up a strong password
 4. Store the test user email and password for use in your tests
 
+Users created with the Management API (Option B) are already verified and already have a password, so skip this step.
+
 ## Kinde starter test application
 
 If you are creating your tests from scratch, you can use the [Kinde Next.js end-to-end test application](https://github.com/kinde-starter-kits/kinde-nextjs-e2e-test-example-application) to get started.
 
+## Clean up test users
+
+Kinde does not expire or delete test users automatically. Every user your suite creates stays in the environment until something removes it, so build cleanup into the suite rather than leaving it to the dashboard.
+
+- **Per test:** create the user in setup and delete it in teardown. The `testUser` fixture in [Option B](#option-b-create-a-pre-verified-test-user-with-the-management-api) does this, and runs the delete even when the test fails.
+- **Users your tests sign up through the hosted pages** (for example the passwordless sign-up tests) are not created by the fixture, so delete them yourself at the end of the test or in a sweep.
+- **Sweep leftovers** on a schedule or at the end of a CI run: list users by email and delete any that match your test naming convention. Use `is_delete_profile=true` so the profile is removed as well and the address can be reused.
+
+The relevant calls are `GET /api/v1/users?email=<comma-separated emails>` (scope `read:users`) and `DELETE /api/v1/user?id=<user id>&is_delete_profile=true` (scope `delete:users`). A small sweep using the helper above:
+
+```typescript
+// tests/global-teardown.ts
+import { deleteTestUser, findUsersByEmail } from "./utils/kinde-users"
+
+export default async function globalTeardown() {
+  // Record the addresses your tests signed up (for example in a JSON file
+  // written during the run), then delete them here.
+  const emails: string[] = JSON.parse(process.env.E2E_SIGNED_UP_EMAILS ?? "[]")
+  if (emails.length === 0) return
+
+  const users = await findUsersByEmail(...emails)
+  await Promise.all(users.map((u) => deleteTestUser(u.id)))
+}
+```
+
+Register it in `playwright.config.ts` with `globalTeardown: "./tests/global-teardown.ts"`.
+
+<Aside>
+Deleting a user ends their sessions and revokes their tokens. If a test still needs the browser session after teardown, delete the user after the last assertion, not before.
+</Aside>
+
 ## Best practices
 
 - **Document test resources**: Keep track of test users, applications, and their purposes
-- **Regular maintenance**: Rotate test credentials periodically and clean up unused test data
-- **Clear naming**: Use consistent naming conventions for easy identification
+- **Regular maintenance**: Rotate test credentials periodically and [clean up test users](#clean-up-test-users) your suite creates
+- **Clear naming**: Use consistent naming conventions for easy identification. A fixed prefix such as `e2e-` makes sweeping leftovers safe.
+- **Scope the M2M application tightly**: Give the test M2M application only the user scopes it needs, and keep it in the test environment
 
 ## Next steps
 
 After completing the above steps, you now have:
 
 - A test environment
-- A test user with email and password
+- A test user with email and password, or a fixture that creates and deletes one per test
 - A test application
 
 You can now start testing your application with Kinde authentication.
