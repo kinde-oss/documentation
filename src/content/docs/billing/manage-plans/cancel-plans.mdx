@@ -33,7 +33,7 @@ keywords:
   - cancellation timing
   - keep plan
   - scheduled cancellation
-updated: 2026-10-30
+updated: 2026-11-02
 ai_summary: "Guide to canceling a customer subscription in Kinde. Covers three methods: customer self-service on the Plan page in the self-serve portal, canceling an organization plan from that organization’s Billing page in the Kinde admin, and programmatic cancellation via the Management API. Explains the plan Cancellation takes effect setting (immediately by default, or at the end of the earliest or latest billing period), scheduled cancellations, Keep plan in the portal and admin, billing policies and Stripe sync, one-time purchase forfeiture rules, optional cancel_at and revert cancellation API paths, and the plan cancellation request workflow. Intended for developers, business owners, and admins."
 ---
 
@@ -78,7 +78,7 @@ Until the effective date:
 - The agreement stays **active**. Entitlements keep working.
 - The plan card shows **Cancels on** the date.
 - **Next invoice** still appears if it is due before that date, with the caption **No invoices after [date]**. Shorter-interval charges can still renew until a latest-period cancel.
-- The customer is charged for usage up to the date. Stripe issues the final period invoice at the effective date.
+- Unpaid usage up to that date is charged only if your [usage policy](/billing/manage-plans/upgrade-downgrade-plans/) says to charge it. Stripe still issues the final period invoice at the effective date.
 
 On that date, Kinde ends the agreement. One-time purchases attached to it are then forfeited (they are not refunded).
 
@@ -100,7 +100,7 @@ Customers can only do this if you have enabled billing in the [self-serve portal
 The customer does **not** pick a date. The plan version decides when the cancel takes effect.
 
 - **Immediate:** They see your [billing policy](/billing/manage-plans/upgrade-downgrade-plans/) wording for unused subscription days and unpaid usage, plus "This action can't be reversed."
-- **Scheduled:** They see when the plan will end, that they will be charged for usage up to then, that one-time purchases stay available until then, and that they can change their mind before the date. There is no irreversible warning.
+- **Scheduled:** They see when the plan will end, that any charge for unpaid usage up to then depends on your usage policy, that one-time purchases stay available until then, and that they can change their mind before the date. There is no irreversible warning.
 
 This information is synced to Stripe.
 
@@ -170,7 +170,7 @@ Required scopes for your M2M app:
 
    ![API call to delete agreement](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d136fd54-7474-486f-2768-8fcb1deaaa00/public)
 
-3. Optionally pass `cancel_at` as `immediately`, `min_period_end`, or `max_period_end`. If you omit it, Kinde uses the cancellation timing on the plan version the customer agreed to.
+3. Optionally pass `cancel_at` as a query parameter set to `immediately`, `min_period_end`, or `max_period_end`. If you omit it, Kinde uses the cancellation timing on the plan version the customer agreed to.
 
 An immediate cancel still returns `AGREEMENT_DELETED`. A scheduled cancel returns `AGREEMENT_CANCELLATION_SCHEDULED` and `cancels_on`. The agreement stays active until that time.
 
