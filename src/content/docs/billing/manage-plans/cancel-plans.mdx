@@ -33,7 +33,7 @@ keywords:
   - cancellation timing
   - keep plan
   - scheduled cancellation
-updated: 2026-11-02
+updated: 2026-11-03
 ai_summary: "Guide to canceling a customer subscription in Kinde. Covers three methods: customer self-service on the Plan page in the self-serve portal, canceling an organization plan from that organization’s Billing page in the Kinde admin, and programmatic cancellation via the Management API. Explains the plan Cancellation takes effect setting (immediately by default, or at the end of the earliest or latest billing period), scheduled cancellations, Keep plan in the portal and admin, billing policies and Stripe sync, one-time purchase forfeiture rules, optional cancel_at and revert cancellation API paths, and the plan cancellation request workflow. Intended for developers, business owners, and admins."
 ---
 
@@ -70,6 +70,14 @@ Plans created before this setting existed cancel **immediately**.
 </Aside>
 
 If Kinde cannot find a future period end (for example there is no Stripe subscription and no billing cycle yet), or that date is about to pass, the cancellation happens **immediately** instead.
+
+### Mixed-interval plans and prepaid charges
+
+On a plan with more than one billing interval (for example monthly plus annual), **earliest** and **latest** period-end dates are often different. Access runs until the **effective date** of the cancellation - not until every charge on the plan would have renewed.
+
+If cancellation is at the **earliest** period end, a longer-interval charge (such as annual) can be **cut short** while prepaid time remains on that charge. **Proration** may apply on the final invoice at the effective date. Refunds or credits for unused prepaid time follow your [billing policies](/billing/manage-plans/upgrade-downgrade-plans/#immediate-and-scheduled-cancellations) and Stripe - not as a separate refund when the customer schedules the cancel.
+
+Use **At the end of the latest billing period** (in plan settings, or when you cancel from admin or the API) when you want access to continue through the longest charge on the subscription.
 
 ### What a scheduled cancellation looks like
 
