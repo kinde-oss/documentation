@@ -341,7 +341,7 @@ Kinde does not expire or delete test users automatically. Every user your suite 
 - **Users your tests sign up through the hosted pages** (for example the passwordless sign-up tests) are not created by the fixture, so delete them yourself at the end of the test or in a sweep.
 - **Sweep leftovers** on a schedule or at the end of a CI run: list users by email and delete any that match your test naming convention. Use `is_delete_profile=true` so the profile is removed as well and the address can be reused.
 
-The relevant calls are `GET /api/v1/users?email=<comma-separated emails>` (scope `read:users`) and `DELETE /api/v1/user?id=<user id>&is_delete_profile=true` (scope `delete:users`). A small sweep using the helper above:
+The relevant calls are `GET /api/v1/users?email=<comma-separated emails>` (scope `read:users`) and `DELETE /api/v1/user?id=<user id>&is_delete_profile=true` (scope `delete:users`). A small sweep using the helper above deletes users one at a time so you stay within the Management API [concurrency limits](/developer-tools/kinde-api/api-rate-limits/). If you need to remove many users at once and see `429` responses, add retries with exponential backoff as described in that guide.
 
 ```typescript
 // tests/global-teardown.ts
@@ -354,7 +354,9 @@ export default async function globalTeardown() {
   if (emails.length === 0) return
 
   const users = await findUsersByEmail(...emails)
-  await Promise.all(users.map((u) => deleteTestUser(u.id)))
+  for (const u of users) {
+    await deleteTestUser(u.id)
+  }
 }
 ```
 
