@@ -246,7 +246,7 @@ The helper below wraps the calls above so a test can ask for a fresh user in one
       await api(`/user?id=${encodeURIComponent(id)}&is_delete_profile=true`, { method: "DELETE" })
     }
 
-    /** Finds users by exact email. Useful for sweeping leftovers. */
+    /** Finds users by exact email. Use for addresses recorded during the run. */
     export async function findUsersByEmail(...emails: string[]): Promise<Array<{ id: string; email: string }>> {
       const query = encodeURIComponent(emails.join(","))
       const users: Array<{ id: string; email: string }> = []
@@ -255,6 +255,21 @@ The helper below wraps the calls above so a test can ask for a fresh user in one
         const token = nextToken ? `&next_token=${encodeURIComponent(nextToken)}` : ""
         const json = await api(`/users?email=${query}&page_size=100${token}`)
         users.push(...(json.users ?? []))
+        nextToken = json.next_token
+      } while (nextToken)
+      return users
+    }
+
+    /** Lists users whose email starts with a prefix. The email query parameter is exact match only. */
+    export async function findUsersByEmailPrefix(prefix: string): Promise<Array<{ id: string; email: string }>> {
+      const users: Array<{ id: string; email: string }> = []
+      let nextToken: string | undefined
+      do {
+        const token = nextToken ? `&next_token=${encodeURIComponent(nextToken)}` : ""
+        const json = await api(`/users?page_size=100${token}`)
+        for (const user of json.users ?? []) {
+          if (user.email?.startsWith(prefix)) users.push(user)
+        }
         nextToken = json.next_token
       } while (nextToken)
       return users
@@ -359,30 +374,33 @@ Kinde does not expire or delete test users automatically. Every user your suite 
 
 - **Per test:** create the user in setup and delete it in teardown. The `testUser` fixture in [Option B](#option-b-create-a-pre-verified-test-user-with-the-management-api) does this, and runs the delete even when the test fails.
 - **Users your tests sign up through the hosted pages** (for example the passwordless sign-up tests) are not created by the fixture, so delete them yourself at the end of the test or in a sweep.
-- **Sweep leftovers** on a schedule or at the end of a CI run: list users by email and delete any that match your test naming convention. Use `is_delete_profile=true` so the profile is removed as well and the address can be reused.
+- **Sweep leftovers** on a schedule or at the end of a CI run: delete users you recorded during the run (exact emails), and separately page through `GET /api/v1/users` to remove any whose email starts with your test prefix when a fixture never cleaned up. `GET /api/v1/users?email=` matches exact addresses only. Use `is_delete_profile=true` so the profile is removed and the address can be reused.
 
-The relevant calls are `GET /api/v1/users?email=<comma-separated emails>` (scope `read:users`) and `DELETE /api/v1/user?id=<user id>&is_delete_profile=true` (scope `delete:users`). A small sweep using the helper above deletes users one at a time so you stay within the Management API [concurrency limits](/developer-tools/kinde-api/api-rate-limits/). If you need to remove many users at once and see `429` responses, add retries with exponential backoff as described in that guide.
+The relevant calls are `GET /api/v1/users?email=<comma-separated emails>` (exact match, scope `read:users`) and `DELETE /api/v1/user?id=<user id>&is_delete_profile=true` (scope `delete:users`). A small sweep using the helper above deletes users one at a time so you stay within the Management API [concurrency limits](/developer-tools/kinde-api/api-rate-limits/). If you need to remove many users at once and see `429` responses, add retries with exponential backoff as described in that guide.
 
 ```typescript
 // tests/global-teardown.ts
 import fs from "node:fs"
 import path from "node:path"
-import { deleteTestUser, findUsersByEmail } from "./utils/kinde-users"
+import { deleteTestUser, findUsersByEmail, findUsersByEmailPrefix } from "./utils/kinde-users"
 
 const signedUpEmailsFile = path.join(process.cwd(), "tests/.e2e-signed-up-emails.json")
 
 export default async function globalTeardown() {
-  if (!fs.existsSync(signedUpEmailsFile)) return
+  const emails: string[] = fs.existsSync(signedUpEmailsFile)
+    ? JSON.parse(fs.readFileSync(signedUpEmailsFile, "utf8"))
+    : []
 
-  const emails: string[] = JSON.parse(fs.readFileSync(signedUpEmailsFile, "utf8"))
-  if (emails.length === 0) return
+  const recorded = emails.length > 0 ? await findUsersByEmail(...emails) : []
+  // Option B users use an e2e- prefix. Prefix search is not on the API, so filter each page locally.
+  const orphans = await findUsersByEmailPrefix("e2e-")
 
-  const users = await findUsersByEmail(...emails)
-  for (const u of users) {
-    await deleteTestUser(u.id)
+  const ids = new Set([...recorded, ...orphans].map((u) => u.id))
+  for (const id of ids) {
+    await deleteTestUser(id)
   }
 
-  fs.unlinkSync(signedUpEmailsFile)
+  if (fs.existsSync(signedUpEmailsFile)) fs.unlinkSync(signedUpEmailsFile)
 }
 ```
 
@@ -398,7 +416,7 @@ Deleting a user ends their sessions and invalidates their refresh tokens. Access
 
 - **Document test resources**: Keep track of test users, applications, and their purposes
 - **Regular maintenance**: Rotate test credentials periodically and [clean up test users](#clean-up-test-users) your suite creates
-- **Clear naming**: Use consistent naming conventions for easy identification. A fixed prefix such as `e2e-` makes sweeping leftovers safe.
+- **Clear naming**: Use consistent naming conventions for easy identification. A fixed prefix such as `e2e-` lets you page through users and delete leftovers on the client when a fixture does not run. `GET /api/v1/users?email=` does not support prefix search.
 - **Scope the M2M application tightly**: Give the test M2M application only the user scopes it needs, and keep it in the test environment
 
 ## Next steps
