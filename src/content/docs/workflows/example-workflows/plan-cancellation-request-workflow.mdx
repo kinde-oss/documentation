@@ -24,28 +24,36 @@ keywords:
   - "subscription"
   - "cancellation workflow"
   - "authentication triggers"
-updated: "2026-10-08"
+updated: "2026-10-30"
 featured: false
 deprecated: false
-ai_summary: "Documentation for plan cancellation request workflow trigger that fires when users request to cancel their subscription plans."
+ai_summary: "Documentation for the plan cancellation request workflow trigger that fires when a cancellation is requested from the self-serve portal, organization Billing page, or Management API, including cancellationTiming and source on the event request."
 ---
 
 Trigger: `user:plan_cancellation_request`
 
-This trigger fires when a plan cancellation request is made. This can be initiated by the user through the Kinde self-serve portal or via the Kinde Management API.
+This trigger fires when a plan cancellation request is made. This can be initiated by the user through the Kinde self-serve portal, by a billing admin on an organization's **Billing** page, or via the Kinde Management API.
 
-This is not a deprovisioning workflow, this occurs before a cancellation request is processed.
+This is not a deprovisioning workflow. It runs **before** a cancellation request is processed — including before a cancellation is **scheduled** for the end of a billing period.
 
 This event is triggered when:
 
 - the user asks to cancel their plan in the Kinde self-serve portal
+- you select **Cancel plan** (or **Cancel now**) on an organization's Billing page
 - plan cancellation is initiated via the Kinde Management API
+
+The workflow does **not** run when:
+
+- someone selects **Keep plan** (or calls the revert cancellation API)
+- a deferred cancel is requested again on an agreement that is already scheduled
 
 ## Example use cases
 
 ### Check if customer is eligible to cancel
 
 You may want to check if the customer is eligible to cancel their plan based on certain criteria, such as outstanding payments or minimum contract periods. If they are not eligible, you can prevent the cancellation and notify them.
+
+You can also branch on `event.request.cancellationTiming` (`immediately`, `min_period_end`, or `max_period_end`) or `event.request.source` (`self_serve_portal`, `admin_dashboard`, or `management_api`).
 
 ## Workflow code
 
@@ -61,7 +69,9 @@ The main argument provided to your code is the Kinde workflow `event` object whi
 {
   "request": {
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:135.0) Gecko/20100101 Firefox/135.0",
-    "ip": "192.168.0.1"
+    "ip": "192.168.0.1",
+    "source": "self_serve_portal",
+    "cancellationTiming": "min_period_end"
   },
   "context": {
     "domains": {
@@ -78,6 +88,8 @@ The main argument provided to your code is the Kinde workflow `event` object whi
   }
 }
 ```
+
+`cancellationTiming` is the timing that will actually run. If the plan (or `cancel_at`) asked for a period end but Kinde has no future date to schedule against, the value is `immediately`.
 
 ### Example workflows
 
