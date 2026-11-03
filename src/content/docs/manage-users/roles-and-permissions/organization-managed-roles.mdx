@@ -80,7 +80,7 @@ Before an organization can build roles from your business-wide permissions, you 
 
 <Aside type="warning">
 
-If you switch **Available to organization roles** off for a permission, it is removed from every organization role that includes it, in every environment. Members who have those roles lose the permission the next time their token is refreshed, unless a business-wide role they hold, or a direct grant, still grants it.
+If you switch **Available to organization roles** off for a permission, it is removed from every organization role that includes it, in every environment. Members who have those roles lose the permission the next time a new access token is issued for them, unless a business-wide role they hold, or a direct grant, still grants it. Tokens already issued keep the permission until they expire, because a [refresh returns the existing access token while it is unexpired](/build/tokens/about-access-tokens/#behaviour-of-access-tokens-on-refresh).
 
 </Aside>
 
@@ -127,7 +127,7 @@ If no permissions are listed, the organization has no permissions of its own yet
 
 ## Edit or delete organization roles and permissions
 
-Like business-wide roles, changes apply to every member who has the role the next time their token is refreshed.
+Like business-wide roles, changes apply to a member the next time a new access token is issued for them, for example when they sign in again or their current token expires. A [refresh returns the existing access token while it is unexpired](/build/tokens/about-access-tokens/#behaviour-of-access-tokens-on-refresh), so tokens already issued keep their claims until they expire. To apply a change to a member sooner, call the [Refresh User Claims](/kinde-apis/management#tag/users/post/api/v1/users/{user_id}/refresh_claims) endpoint for that user. See [Force-update of token claims](/authenticate/manage-authentication/sync-with-kinde/#force-update-of-token-claims).
 
 1. In Kinde, go to **Organizations** and select the organization.
 2. In the side menu, select **Roles**.
@@ -227,7 +227,7 @@ Here is a decoded `role.created` event for an organization role. See [About webh
 
 If your business moves to a plan without organization-managed roles:
 
-- Existing organization roles and permissions are kept, but they are no longer included in tokens or permission checks. Members keep their assignments in Kinde, and those roles and permissions are included again if you upgrade.
+- Existing organization roles and permissions are kept, but they are no longer included in new tokens or permission checks. Tokens issued before the downgrade keep their claims until they expire. Members keep their assignments in Kinde, and those roles and permissions are included again if you upgrade.
 - You cannot add or edit organization roles and permissions in Kinde, in the portal, or through the API. You can still delete them.
 - The **Roles** page is hidden in the self-serve portal.
 - In Kinde, the organization's **Roles** tab shows an upgrade banner.
