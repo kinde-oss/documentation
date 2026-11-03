@@ -120,7 +120,7 @@ The M2M secret grants write access to the users in your environment. Keep it in 
           {
             "type": "email",
             "is_verified": true,
-            "details": { "email": "e2e-1730000000@yourcompany.com" }
+            "details": { "email": "e2e-tmp-1730000000@yourcompany.com" }
           }
         ]
       }'
@@ -217,7 +217,7 @@ The helper below wraps the calls above so a test can ask for a fresh user in one
      * Pass organizationCode for B2B applications.
      */
     export async function createTestUser(options: { organizationCode?: string } = {}): Promise<TestUser> {
-      const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@yourcompany.com`
+      const email = `e2e-tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@yourcompany.com`
       const password = `Pw!${Math.random().toString(36).slice(2)}${Date.now()}`
 
       const created = await api("/user", {
@@ -266,15 +266,25 @@ The helper below wraps the calls above so a test can ask for a fresh user in one
       return users
     }
 
-    /** Lists users whose email starts with a prefix. The email query parameter is exact match only. */
-    export async function findUsersByEmailPrefix(prefix: string): Promise<Array<{ id: string; email: string }>> {
+    /**
+     * Lists users whose email starts with a prefix and who were created before
+     * `olderThanMs` ago. `GET /api/v1/users?email=` is exact match only, so the
+     * prefix is applied here. The age check leaves a parallel CI run's users alone.
+     */
+    export async function findUsersByEmailPrefix(
+      prefix: string,
+      olderThanMs: number,
+    ): Promise<Array<{ id: string; email: string }>> {
+      const cutoff = Date.now() - olderThanMs
       const users: Array<{ id: string; email: string }> = []
       let nextToken: string | undefined
       do {
         const token = nextToken ? `&next_token=${encodeURIComponent(nextToken)}` : ""
         const json = await api(`/users?page_size=100${token}`)
         for (const user of json.users ?? []) {
-          if (user.email?.startsWith(prefix)) users.push(user)
+          if (!user.email?.startsWith(prefix) || !user.created_on) continue
+          if (Date.parse(user.created_on) > cutoff) continue
+          users.push(user)
         }
         nextToken = json.next_token
       } while (nextToken)
@@ -380,7 +390,7 @@ Kinde does not expire or delete test users automatically. Every user your suite 
 
 - **Per test:** create the user in setup and delete it in teardown. The `testUser` fixture in [Option B](#option-b-create-a-pre-verified-test-user-with-the-management-api) does this, and runs the delete even when the test fails.
 - **Users your tests sign up through the hosted pages** (for example the passwordless sign-up tests) are not created by the fixture, so delete them yourself at the end of the test or in a sweep.
-- **Sweep leftovers** on a schedule or at the end of a CI run: delete users you recorded during the run (exact emails), and separately page through `GET /api/v1/users` to remove any whose email starts with your test prefix when a fixture never cleaned up. `GET /api/v1/users?email=` matches exact addresses only. Use `is_delete_profile=true` so the profile is removed and the address can be reused.
+- **Sweep leftovers** on a schedule or at the end of a CI run: delete users you recorded during the run (exact emails), and separately page through `GET /api/v1/users` for Option B leftovers. Use a prefix that shared dashboard users do not share (for example `e2e-tmp-`), and only delete matches whose `created_on` is older than about an hour so a parallel CI run still using its users is left alone. `GET /api/v1/users?email=` matches exact addresses only. Use `is_delete_profile=true` so the profile is removed and the address can be reused.
 
 The relevant calls are `GET /api/v1/users?email=<comma-separated emails>` (exact match, scope `read:users`) and `DELETE /api/v1/user?id=<user id>&is_delete_profile=true` (scope `delete:users`). A small sweep using the helper above deletes users one at a time so you stay within the Management API [concurrency limits](/developer-tools/kinde-api/api-rate-limits/). If you need to remove many users at once and see `429` responses, add retries with exponential backoff as described in that guide.
 
@@ -398,8 +408,9 @@ export default async function globalTeardown() {
     : []
 
   const recorded = emails.length > 0 ? await findUsersByEmail(...emails) : []
-  // Option B users use an e2e- prefix. Prefix search is not on the API, so filter each page locally.
-  const orphans = await findUsersByEmailPrefix("e2e-")
+  // Option B emails start with e2e-tmp-, which the shared dashboard user does not.
+  // Skip anyone created in the last hour so another CI run is not swept mid-flight.
+  const orphans = await findUsersByEmailPrefix("e2e-tmp-", 60 * 60 * 1000)
 
   const ids = new Set([...recorded, ...orphans].map((u) => u.id))
   for (const id of ids) {
@@ -422,7 +433,7 @@ Deleting a user ends their sessions and invalidates their refresh tokens. Access
 
 - **Document test resources**: Keep track of test users, applications, and their purposes
 - **Regular maintenance**: Rotate test credentials periodically and [clean up test users](#clean-up-test-users) your suite creates
-- **Clear naming**: Use consistent naming conventions for easy identification. A fixed prefix such as `e2e-` lets you page through users and delete leftovers on the client when a fixture does not run. `GET /api/v1/users?email=` does not support prefix search.
+- **Clear naming**: Use a prefix for disposable Management API users that shared dashboard users do not share, such as `e2e-tmp-`. Page through users and delete only matches older than about an hour. `GET /api/v1/users?email=` does not support prefix search.
 - **Scope the M2M application tightly**: Give the test M2M application only the user scopes it needs, and keep it in the test environment
 
 ## Next steps
