@@ -238,7 +238,9 @@ The helper below wraps the calls above so a test can ask for a fresh user in one
           }),
         })
       } catch (error) {
-        await deleteTestUser(created.id)
+        await deleteTestUser(created.id).catch((cleanupError) => {
+          console.error(`Failed to delete test user ${created.id}`, cleanupError)
+        })
         throw error
       }
 
