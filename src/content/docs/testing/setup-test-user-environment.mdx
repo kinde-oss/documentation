@@ -222,13 +222,18 @@ The helper below wraps the calls above so a test can ask for a fresh user in one
         }),
       })
 
-      await api(`/users/${created.id}/password`, {
-        method: "PUT",
-        body: JSON.stringify({
-          hashed_password: await bcrypt.hash(password, 10),
-          hashing_method: "bcrypt",
-        }),
-      })
+      try {
+        await api(`/users/${created.id}/password`, {
+          method: "PUT",
+          body: JSON.stringify({
+            hashed_password: await bcrypt.hash(password, 10),
+            hashing_method: "bcrypt",
+          }),
+        })
+      } catch (error) {
+        await deleteTestUser(created.id)
+        throw error
+      }
 
       return { id: created.id, email, password }
     }
