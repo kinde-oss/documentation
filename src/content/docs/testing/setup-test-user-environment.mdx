@@ -246,8 +246,15 @@ The helper below wraps the calls above so a test can ask for a fresh user in one
     /** Finds users by exact email. Useful for sweeping leftovers. */
     export async function findUsersByEmail(...emails: string[]): Promise<Array<{ id: string; email: string }>> {
       const query = encodeURIComponent(emails.join(","))
-      const json = await api(`/users?email=${query}&page_size=100`)
-      return json.users ?? []
+      const users: Array<{ id: string; email: string }> = []
+      let nextToken: string | undefined
+      do {
+        const token = nextToken ? `&next_token=${encodeURIComponent(nextToken)}` : ""
+        const json = await api(`/users?email=${query}&page_size=100${token}`)
+        users.push(...(json.users ?? []))
+        nextToken = json.next_token
+      } while (nextToken)
+      return users
     }
     ```
 
