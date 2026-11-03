@@ -162,9 +162,12 @@ The helper below wraps the calls above so a test can ask for a fresh user in one
     ```typescript
     // tests/utils/kinde-users.ts
     import bcrypt from "bcryptjs"
+    import fs from "node:fs"
+    import path from "node:path"
     import "dotenv/config"
 
     const domain = process.env.KINDE_DOMAIN!
+    const signedUpEmailsFile = path.join(process.cwd(), "tests/.e2e-signed-up-emails.json")
 
     export type TestUser = { id: string; email: string; password: string }
 
@@ -255,6 +258,16 @@ The helper below wraps the calls above so a test can ask for a fresh user in one
         nextToken = json.next_token
       } while (nextToken)
       return users
+    }
+
+    /** Call after a test signs up through hosted pages so globalTeardown can delete the user. */
+    export function recordSignedUpEmail(email: string): void {
+      const emails: string[] = fs.existsSync(signedUpEmailsFile)
+        ? JSON.parse(fs.readFileSync(signedUpEmailsFile, "utf8"))
+        : []
+      emails.push(email)
+      fs.mkdirSync(path.dirname(signedUpEmailsFile), { recursive: true })
+      fs.writeFileSync(signedUpEmailsFile, JSON.stringify(emails))
     }
     ```
 
@@ -352,20 +365,28 @@ The relevant calls are `GET /api/v1/users?email=<comma-separated emails>` (scope
 
 ```typescript
 // tests/global-teardown.ts
+import fs from "node:fs"
+import path from "node:path"
 import { deleteTestUser, findUsersByEmail } from "./utils/kinde-users"
 
+const signedUpEmailsFile = path.join(process.cwd(), "tests/.e2e-signed-up-emails.json")
+
 export default async function globalTeardown() {
-  // Record the addresses your tests signed up (for example in a JSON file
-  // written during the run), then delete them here.
-  const emails: string[] = JSON.parse(process.env.E2E_SIGNED_UP_EMAILS ?? "[]")
+  if (!fs.existsSync(signedUpEmailsFile)) return
+
+  const emails: string[] = JSON.parse(fs.readFileSync(signedUpEmailsFile, "utf8"))
   if (emails.length === 0) return
 
   const users = await findUsersByEmail(...emails)
   for (const u of users) {
     await deleteTestUser(u.id)
   }
+
+  fs.unlinkSync(signedUpEmailsFile)
 }
 ```
+
+In passwordless sign-up tests, call `recordSignedUpEmail(testEmail)` from `./utils/kinde-users` after the user completes sign-up. Add `tests/.e2e-signed-up-emails.json` to `.gitignore`.
 
 Register it in `playwright.config.ts` with `globalTeardown: "./tests/global-teardown.ts"`.
 
