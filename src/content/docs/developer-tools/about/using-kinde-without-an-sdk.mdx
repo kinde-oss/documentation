@@ -637,14 +637,14 @@ Required: No
 
 Request a minimum authentication context. Kinde recognises two values:
 
-- `mfa` - the user must complete a second factor that they have already enrolled
+- `mfa` - the user must complete a second factor. A step-up only verifies a factor that the user has already enrolled.
 - `phr` - the user must complete a phishing-resistant factor: a passkey, with the user verified by the device (PIN or biometrics)
 
 If the user's session already meets the requested context, Kinde issues tokens without prompting. If it does not, Kinde steps the user up - it asks only for the additional factor rather than making them sign in again from scratch.
 
 Accepts a space-separated list; the highest context requested is applied. Values are case-insensitive. Unrecognised values are ignored.
 
-Kinde also accepts some values that other providers use, so a client that you move to Kinde can keep its request: `http://schemas.openid.net/pape/policies/2007/06/multi-factor` and `urn:okta:loa:2fa:any` are read as `mfa`. Tokens always carry `mfa` or `phr`. `urn:okta:loa:2fa:any:ifpossible` is not accepted, because Kinde cannot make an optional requirement. Kinde ignores this value.
+Kinde also accepts some values that other providers use, so a client that you move to Kinde can keep its request: `http://schemas.openid.net/pape/policies/2007/06/multi-factor` and `urn:okta:loa:2fa:any` are read as `mfa`. Kinde does not return these values. When a token has an `acr` claim, its value is always `mfa` or `phr`. `urn:okta:loa:2fa:any:ifpossible` is not accepted, because Kinde cannot make an optional requirement. Kinde ignores this value.
 
 If the requested context cannot be met - for example `phr` for a user with no usable passkey - Kinde returns an error to your callback rather than issuing a token that does not satisfy the request. See [Step-up authentication](#step-up-authentication).
 
@@ -658,7 +658,7 @@ The maximum age, in seconds, of the user's last authentication. If the user auth
 
 If the user has a session, Kinde keeps the session. The user stays signed in to your other applications. What Kinde asks for depends on `acr_values`:
 
-- `max_age` without `acr_values`: the user enters their first factor again (for example, their password). Kinde does not ask for a second factor.
+- `max_age` without `acr_values`: the user signs in again with their first factor (for example, their password). `max_age` does not add a second factor. If your MFA policy requires a second factor, Kinde asks for it, as it does on every sign-in.
 - `max_age` with `acr_values=mfa` or `acr_values=phr`: the user verifies only the factor that `acr_values` requires. Kinde does not ask for the first factor again. Kinde asks for this verification even when the session already meets `acr_values`, and the verification sets a new `auth_time`.
 
 Use `max_age=0` to require re-authentication on every request.
@@ -793,7 +793,9 @@ Kinde implements [RFC 9470](https://datatracker.ietf.org/doc/html/rfc9470) step-
    - For `mfa`, the user verifies an MFA factor that they have already enrolled, for example an authenticator app or a one-time code. If the user has an enrolled factor, Kinde can also send a one-time code to the email address on their profile. Kinde does not ask the user to enrol a new factor to meet the request.
    - For `phr`, the user verifies with a passkey.
    - For `max_age` with `acr_values`, the user verifies only the factor that `acr_values` requires, as above. Kinde does not ask for the first factor again.
-   - For `max_age` without `acr_values`, the user enters their first factor again.
+   - For `max_age` without `acr_values`, the user signs in again with their first factor. If your MFA policy requires a second factor, Kinde also asks for it.
+
+If Kinde has no record of how the user signed in, it cannot tell which factors are still independent of the first factor. This can occur for a session that started before Kinde recorded `amr`. In this case, for an `mfa` request, Kinde offers only an authenticator app. If the user has no authenticator app, Kinde asks the user to sign in again with their first factor.
 
 Because the user keeps their session throughout, a step-up does not sign them out of your other applications.
 
@@ -801,12 +803,12 @@ After a step-up, use the new tokens from that callback. If you refresh a token t
 
 ### **Authentication claims**
 
-Tokens carry three claims. They are present when you do not request a context, so you can read them on each sign-in:
+Tokens can carry three claims. Kinde adds them when you do not request a context too, so you can read them on each sign-in:
 
 | Claim | Meaning |
 | --- | --- |
 | `acr` | The context that was met: `mfa` or `phr`. Omitted when the user authenticated with a single factor. |
-| `amr` | The methods that were used, as an array. |
+| `amr` | The methods that were used, as an array. Omitted when Kinde has no record of the methods, for example for a session that started before Kinde recorded them. |
 | `auth_time` | When the user last actively authenticated, as seconds since the Unix epoch. Always present on the ID token; present on the access token when Kinde can establish it. Read it from the ID token. |
 
 `acr` is deliberately absent for a single-factor login. A single factor is the baseline every authenticated session meets. Read `amr` if you need to know what was used. An absent `acr` means "neither `mfa` nor `phr`":
@@ -835,7 +837,8 @@ Do this check on a token that you have verified. See [Protecting an API with ste
 If the user cannot satisfy the request, Kinde redirects to your callback with an error rather than issuing a token that does not meet it. For example:
 
 - A `phr` request when passkeys are not enabled for the environment or organization, or the user has no passkey.
-- An `mfa` request from a user who has no enrolled MFA factor.
+- An `mfa` step-up from a user who has no enrolled MFA factor. A step-up only verifies a factor. It does not enrol one.
+- An `mfa` request on a new sign-in from a user who has no enrolled MFA factor, when your MFA policy does not ask the user to enrol one. If your policy asks the user to enrol, the user sees the usual enrolment screens and the request can be met. If the policy lets the user skip enrolment and the user skips, Kinde returns the error. The skip applies to this request only. Kinde does not record it as an opt-out.
 - An `mfa` request where the only factor left would prove the same channel again. For example, a one-time code to the email address or phone number that the user used for a passwordless sign-in does not count as a second factor.
 
 The error is:
@@ -848,6 +851,8 @@ state=YOUR_STATE
 ```
 
 Handle this as a definite answer, not a transient failure. Retrying the same request will produce the same error.
+
+This error is for a requirement that the user cannot meet. If a step-up that has started fails for a different reason, Kinde shows its own error page. It does not redirect to your callback, so your app does not receive an OAuth error in that case.
 
 With `prompt=none`, Kinde cannot show a screen to collect the extra factor, so it does not start a step-up:
 
@@ -879,6 +884,8 @@ The contexts Kinde can return are advertised at `https://<your_kinde_subdomain>.
 "acr_values_supported": ["mfa", "phr"],
 "claims_supported": ["aud", "exp", "iat", "iss", "sub", "acr", "amr", "auth_time"]
 ```
+
+Check for `acr_values_supported` before you rely on step-up. If the document does not list it, Kinde ignores `acr_values` and `max_age`, and does not add the `acr`, `amr` and `auth_time` claims.
 
 <Aside type="warning" title="What the mfa context does and does not assert">
 
