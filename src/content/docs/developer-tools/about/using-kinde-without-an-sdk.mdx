@@ -656,7 +656,10 @@ Required: No
 
 The maximum age, in seconds, of the user's last authentication. If the user authenticated longer ago than this, Kinde asks them to authenticate again before issuing tokens.
 
-If the user has a session, Kinde asks for their first factor again (for example, their password) and keeps the session. The user stays signed in to your other applications. `max_age` alone does not ask for a second factor. To get a second factor, also send `acr_values`.
+If the user has a session, Kinde keeps the session. The user stays signed in to your other applications. What Kinde asks for depends on `acr_values`:
+
+- `max_age` without `acr_values`: the user enters their first factor again (for example, their password). Kinde does not ask for a second factor.
+- `max_age` with `acr_values=mfa` or `acr_values=phr`: the user verifies only the factor that `acr_values` requires. Kinde does not ask for the first factor again. Kinde asks for this verification even when the session already meets `acr_values`, and the verification sets a new `auth_time`.
 
 Use `max_age=0` to require re-authentication on every request.
 
@@ -785,10 +788,11 @@ Kinde implements [RFC 9470](https://datatracker.ietf.org/doc/html/rfc9470) step-
 ### **How a step-up works**
 
 1. Your app sends the user to `/oauth2/auth` with `acr_values`, and optionally `max_age`.
-2. If the user's session already satisfies the request, Kinde issues tokens straight away.
+2. If the user's session already satisfies the request, Kinde issues tokens straight away. To satisfy the request, the session must meet `acr_values`, and its last authentication must be more recent than `max_age`.
 3. If it does not, Kinde prompts for the additional factor only, then returns to your callback:
    - For `mfa`, the user verifies an MFA factor that they have already enrolled, for example an authenticator app or a one-time code. If the user has an enrolled factor, Kinde can also send a one-time code to the email address on their profile. Kinde does not ask the user to enrol a new factor to meet the request.
    - For `phr`, the user verifies with a passkey.
+   - For `max_age` with `acr_values`, the user verifies only the factor that `acr_values` requires, as above. Kinde does not ask for the first factor again.
    - For `max_age` without `acr_values`, the user enters their first factor again.
 
 Because the user keeps their session throughout, a step-up does not sign them out of your other applications.
