@@ -795,15 +795,13 @@ Kinde implements [RFC 9470](https://datatracker.ietf.org/doc/html/rfc9470) step-
    - For `max_age` with `acr_values`, the user verifies only the factor that `acr_values` requires, as above. Kinde does not ask for the first factor again.
    - For `max_age` without `acr_values`, the user signs in again with their first factor. If your MFA policy requires a second factor, Kinde also asks for it.
 
-If Kinde has no record of how the user signed in, it cannot tell which factors are still independent of the first factor. This can occur for a session that started before Kinde recorded `amr`. In this case, for an `mfa` request, Kinde offers only an authenticator app. If the user has no authenticator app, Kinde asks the user to sign in again with their first factor.
-
 Because the user keeps their session throughout, a step-up does not sign them out of your other applications.
 
 After a step-up, use the new tokens from that callback. If you refresh a token that was issued before the step-up, the refreshed token keeps the `acr`, `amr` and `auth_time` of the earlier authentication.
 
 ### **Authentication claims**
 
-Tokens can carry three claims. Kinde adds them when you do not request a context too, so you can read them on each sign-in:
+Tokens can carry three claims. Kinde adds them to tokens whether or not you request a context, so you can read them on each sign-in:
 
 | Claim | Meaning |
 | --- | --- |
@@ -885,7 +883,7 @@ The contexts Kinde can return are advertised at `https://<your_kinde_subdomain>.
 "claims_supported": ["aud", "exp", "iat", "iss", "sub", "acr", "amr", "auth_time"]
 ```
 
-Check for `acr_values_supported` before you rely on step-up. If the document does not list it, Kinde ignores `acr_values` and `max_age`, and does not add the `acr`, `amr` and `auth_time` claims.
+Check for `acr_values_supported` before you rely on step-up. If the document does not list it, Kinde ignores `acr_values` and `max_age`, and does not add the `acr` and `amr` claims. Do not use `auth_time` to check `max_age` in this case.
 
 <Aside type="warning" title="What the mfa context does and does not assert">
 
