@@ -1,15 +1,18 @@
 ---
 page_id: 55350C9F-88FA-4996-B648-A4B5C11C8FFF
-title: Kinde and Mailgun for email delivery
-description: Guide to sending emails using Mailgun with Kinde including SMTP setup, webhook integration, and Mailgun API configuration
+title: Kinde and Mailgun for custom SMTP
+description: Guide to configuring Kinde with Mailgun for custom SMTP, and to sending your own emails with the Mailgun API when a user is created.
 sidebar:
   order: 13
 tableOfContents:
   maxHeadingLevel: 3
 relatedArticles:
   - 0222489b-3478-48a7-a5c9-c99c6044f0e9
-  - 28ed3700-9ee4-4525-9b5d-1fefe4f89dcd
+  - c4182a6d-64ca-4c82-ba33-e5fc5d8b8cad
+  - 90134c89-16e4-4981-b988-b0cb4f1722c5
+  - 0979c63d-fc54-461d-9a83-a81bea7353f6
   - 5d958ce9-27ee-420a-9e20-09a2ed7fb179
+  - 9ab800a9-608c-421c-87fb-ba9438c7491f
 topics:
   - integrate
   - third-party-tools
@@ -27,42 +30,27 @@ keywords:
   - webhooks
   - api integration
   - email deliverability
-updated: 2026-04-14
+updated: 2026-11-02
 featured: false
 deprecated: false
-ai_summary: Guide to sending emails using Mailgun with Kinde including SMTP setup, webhook integration, and Mailgun API configuration.
+ai_summary: Guide to configuring Kinde with Mailgun for custom SMTP, and to sending your own emails with the Mailgun API when a user is created.
 ---
 
-Integrate Mailgun with Kinde to send welcome emails and other communications to your users. This guide covers two approaches: configuring Mailgun SMTP in Kinde for automatic email delivery, or using webhooks with Mailgun's API for custom email templates and workflows.
+You can configure Kinde to send sign-up, sign-in, one-time passcode (OTP), and password reset emails through Mailgun. Users receive these emails from your business’s email address.
 
-### What you need
+See [Customize email sender](/get-started/connect/customize-email-sender/) for which emails still come from Kinde, and for alerts, editing, and resetting the sender.
 
-- A [Kinde](https://www.kinde.com/) account (Sign up for free)
-- A [Mailgun](https://www.mailgun.com/) account (Sign up for free)
+To send your own template after a user is created, see [Send additional emails with the Mailgun API](#send-additional-emails-with-the-mailgun-api).
 
-You can send emails to your users using Mailgun in two ways:
+## Verify your domain
 
-1. **Configure Mailgun SMTP in Kinde** - This allows Kinde to send authentication emails (including welcome emails) directly through Mailgun
-2. **Use webhooks with Mailgun API** - This gives you more control over email content and timing by triggering Mailgun's API when users are created
-
-## Option 1: Configure Mailgun SMTP in Kinde
-
-You can configure Kinde to send emails using your Mailgun account. This means your users will receive communications from your business's email address, and not Kinde's.
-
-Other benefits include better control of email deliverability, analytics and tracking, scalability, email compliance, etc.
-
-Please review the documentation at [Customize email sender](/get-started/connect/customize-email-sender/) for details about how custom SMTP works with Kinde and third-party providers.
-
-### Set up your Mailgun domain
-
-Before configuring SMTP in Kinde, you need to set up and verify your domain in Mailgun:
+Mailgun SMTP credentials belong to a verified domain. Add and verify the domain before you copy them:
 
 1. Sign in to your [Mailgun dashboard](https://app.mailgun.com/)
 2. Go to **Sending** > **Domains**
 3. Add and verify your domain following Mailgun's [domain verification guide](https://documentation.mailgun.com/docs/dashboard/domains/introduction)
-4. Once verified, navigate to your domain settings to find your SMTP credentials
 
-### Get Mailgun SMTP credentials
+## Create an SMTP credential
 
 1. In Mailgun, go to **Sending** > **Domains** and select your verified domain
 2. Navigate to the **SMTP credentials** section
@@ -74,7 +62,7 @@ Before configuring SMTP in Kinde, you need to set up and verify your domain in M
 
 See Mailgun's [SMTP documentation](https://documentation.mailgun.com/docs/mailgun/user-manual/sending-messages) for more details.
 
-### Add email sender SMTP details in Kinde
+## Add email sender SMTP details
 
 If you are setting this up and your production environment is already live, we recommend testing this in a staging or test environment first.
 
@@ -84,20 +72,31 @@ If you are setting this up and your production environment is already live, we r
 
     ![Add email sender SMTP details in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d4c4b57d-9f1a-4b1c-638c-0a770c4fe400/socialsharingimage)
 
-
 4. Enter the **Sender email**. This is the address your users will receive emails from and should be one of your verified domains from your Mailgun account (e.g., `noreply@yourdomain.com`).
 5. Enter the SMTP details of your email provider:
-   - Server name: `smtp.mailgun.org`
-   - Port: `587` (for TLS) or `465` (for SSL)
-   - Username: Your Mailgun SMTP username (typically `postmaster@your-domain.mailgun.org`)
-   - Password: Your Mailgun SMTP password
+   - Server name - `smtp.mailgun.org`
+   - Port - `587` (for TLS) or `465` (for SSL)
+   - User - Your Mailgun SMTP username (typically `postmaster@your-domain.mailgun.org`)
+   - Password - Your Mailgun SMTP password
 6. Select **Send test email**. This sends a test email to the email address you are logged into Kinde with.
 7. If the test is successful, select **Save**.
 8. If the test is not successful, check the SMTP details (step 5) and try sending a test email again. If this does not work, see the troubleshooting section below.
 
-## Option 2: Use webhooks with Mailgun API
+## Troubleshooting
 
-For more control over welcome email content and design, you can use Kinde webhooks to trigger Mailgun's API when new users are created.
+If sending a test email fails:
+
+- Verify network connectivity to `smtp.mailgun.org`
+- Confirm the port, username, and password are correct
+- Ensure your domain is verified in Mailgun
+- Check that you're using the correct SMTP username format (typically `postmaster@your-domain.mailgun.org`)
+- Review error messages in the Mailgun dashboard
+
+For more details, see Mailgun's [SMTP troubleshooting guide](https://documentation.mailgun.com/docs/mailgun/user-manual/sending-messages).
+
+## Send additional emails with the Mailgun API
+
+This does not change the Kinde email sender. Use it when you want your own template after a user is created. To sync users into a marketing tool, see [Connect Loops to Kinde (via Zapier)](/integrate/third-party-tools/kinde-loops/).
 
 ### Set up a webhook in Kinde
 
@@ -225,20 +224,6 @@ Similarly, if you add users using the Kinde API, you can filter the event source
 - **Respond quickly** - Respond with a 2xx status code quickly after queuing work; use retries and make processing idempotent (e.g., de-duplicate by event ID)
 - **Handle errors gracefully** - If email sending fails, log the error but still respond to Kinde to prevent unnecessary retries
 - **Filter by source** - The `source` field indicates whether the user was created manually (`admin`), via API (`api`), or by the user themselves (`user`). You may want to treat these differently
-
-## Troubleshooting
-
-### SMTP connection issues
-
-If sending a test email fails:
-
-- Verify network connectivity to `smtp.mailgun.org`
-- Confirm the port, username, and password are correct
-- Ensure your domain is verified in Mailgun
-- Check that you're using the correct SMTP username format (typically `postmaster@your-domain.mailgun.org`)
-- Review error messages in the Mailgun dashboard
-
-For more details, see Mailgun's [SMTP troubleshooting guide](https://documentation.mailgun.com/docs/mailgun/user-manual/sending-messages).
 
 ### Webhook issues
 
