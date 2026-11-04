@@ -891,7 +891,10 @@ Check for `acr_values_supported` before you rely on step-up. If the document doe
 
 `acr: "mfa"` means two factors were presented and accepted under your environment's MFA policy. It does not assert that the two factors are independent of one another - for example, a user who signs in with a social provider and then receives a one-time code at that same mailbox has proven one channel twice.
 
-`phr` is stronger: an enrolled passkey cannot be used by someone who only controls the account that provided the first factor, because the private key never leaves the authenticator. It is not a guarantee of independence, though - like most identity providers, Kinde allows a passkey to be enrolled from a session established by a single factor, so an attacker who compromises the first factor may be able to register one.
+`phr` is stronger: a passkey sign-in needs the passkey's private key, and a phishing site cannot use it. But `phr` does not assert that the passkey is independent of the first factor either:
+
+- Synced passkeys qualify for `phr`. The platform copies a synced passkey to the user's iCloud or Google account. If the user also signs in to Kinde with that Apple or Google account, whoever controls the account also controls the passkey.
+- Like most identity providers, Kinde lets a session that proved only the first factor register a passkey. An attacker who has the first factor may be able to register one. This is possible when your MFA policy lets a sign-in finish without a second factor.
 
 For payments and regulated workloads, assess factor independence, enrolment and recovery against your own configuration rather than relying on the `acr` value alone.
 
