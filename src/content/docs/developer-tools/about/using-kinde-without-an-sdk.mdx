@@ -659,7 +659,7 @@ The maximum age, in seconds, of the user's last authentication. If the user auth
 If the user has a session, Kinde keeps the session. The user stays signed in to your other applications. What Kinde asks for depends on `acr_values`:
 
 - `max_age` without `acr_values`: the user signs in again with their first factor (for example, their password). `max_age` does not add a second factor. If your MFA policy requires a second factor, Kinde asks for it, as it does on every sign-in.
-- `max_age` with `acr_values=mfa` or `acr_values=phr`: the user verifies only the factor that `acr_values` requires. Kinde does not ask for the first factor again. Kinde asks for this verification even when the session already meets `acr_values`, and the verification sets a new `auth_time`.
+- `max_age` with `acr_values=mfa` or `acr_values=phr`: the user verifies only the factor that `acr_values` requires. Kinde does not ask for the first factor again. Kinde asks for this verification whenever the session is older than `max_age`, even if it already meets `acr_values`. The verification sets a new `auth_time`.
 
 Use `max_age=0` to require re-authentication on every request.
 
@@ -807,7 +807,7 @@ Tokens can carry three claims. Kinde adds them to tokens whether or not you requ
 | --- | --- |
 | `acr` | The context that was met: `mfa` or `phr`. Omitted when the user authenticated with a single factor. |
 | `amr` | The methods that were used, as an array. Omitted when Kinde has no record of the methods, for example for a session that started before Kinde recorded them. |
-| `auth_time` | When the user last actively authenticated, as seconds since the Unix epoch. Always present on the ID token; present on the access token when Kinde can establish it. Read it from the ID token. |
+| `auth_time` | When the user last actively authenticated, as seconds since the Unix epoch. Always present on the ID token; present on the access token when Kinde can establish it. Read it from the ID token. If step-up is not available (see [Discovery](#discovery)), the ID token still has `auth_time`, but its value can be the time a token was issued rather than the time the user authenticated. |
 
 `acr` is deliberately absent for a single-factor login. A single factor is the baseline every authenticated session meets. Read `amr` if you need to know what was used. An absent `acr` means "neither `mfa` nor `phr`":
 
@@ -822,7 +822,7 @@ Do this check on a token that you have verified. See [Protecting an API with ste
 | --- | --- |
 | `pwd` | Password |
 | `passkey` | Passkey, with the user verified by the device |
-| `pop` | Passkey, where the device confirmed presence but did not verify the user |
+| `pop` | Passkey, where the device confirmed presence but did not verify the user. On its own, this does not meet `mfa` or `phr`. |
 | `email`, `sms` | A one-time code used as the *first* factor (passwordless sign-in) |
 | `otp:email`, `otp:sms` | A one-time code used as a *second* factor |
 | `totp` | Authenticator app |
@@ -883,16 +883,13 @@ The contexts Kinde can return are advertised at `https://<your_kinde_subdomain>.
 "claims_supported": ["aud", "exp", "iat", "iss", "sub", "acr", "amr", "auth_time"]
 ```
 
-Check for `acr_values_supported` before you rely on step-up. If the document does not list it, Kinde ignores `acr_values` and `max_age`, and does not add the `acr` and `amr` claims. Do not use `auth_time` to check `max_age` in this case.
+Check for `acr_values_supported` before you rely on step-up. If the document does not list it, Kinde ignores `acr_values` and `max_age`, and does not add the `acr` and `amr` claims. The ID token still has `auth_time`, but its value can be the time a token was issued rather than the time the user authenticated. Do not use it to check recency in this case. To require a fresh sign-in, send `prompt=login`.
 
 <Aside type="warning" title="What the mfa context does and does not assert">
 
 `acr: "mfa"` means two factors were presented and accepted under your environment's MFA policy. It does not assert that the two factors are independent of one another - for example, a user who signs in with a social provider and then receives a one-time code at that same mailbox has proven one channel twice.
 
-`phr` is stronger: a passkey sign-in needs the passkey's private key, and a phishing site cannot use it. But `phr` does not assert that the passkey is independent of the first factor either:
-
-- Synced passkeys qualify for `phr`. A synced passkey is not bound to one device. The platform syncs it through the user's iCloud or Google account. To restore it on a new device, the user also needs a device passcode or screen lock, the Google Password Manager PIN, or an Apple account recovery method. Control of the account alone is not enough. But if the user also signs in to Kinde with that Apple or Google account, the passkey and the first factor share that account and its recovery process.
-- Like most identity providers, Kinde lets a session that proved only the first factor register a passkey. An attacker who has the first factor may be able to register one. This is possible when MFA does not stop the sign-in: for example, MFA is off, the user opted out of optional MFA, the user's role or connection is exempt from MFA, or a workflow skips MFA. It is also possible for a user with no MFA factor, because the attacker can set up a factor of their own in the same sign-in. After a password or one-time code sign-in, the sign-in that registers the passkey already gets `phr` if the device verified the user. After a social or enterprise sign-in, the passkey gives `phr` from the next sign-in.
+`phr` is stronger: a phishing site cannot use a passkey. But `phr` does not assert independence either. Synced passkeys qualify for `phr`, and a passkey can be registered from a session that proved only the first factor.
 
 For payments and regulated workloads, assess factor independence, enrolment and recovery against your own configuration rather than relying on the `acr` value alone.
 
