@@ -216,6 +216,7 @@ For serverless functions (AWS Lambda, Google Cloud Functions, Azure Functions), 
 
 ```python
 import json
+import uuid
 from kinde_sdk.auth.async_oauth import AsyncOAuth
 
 # Initialize client (can be outside handler for reuse)
@@ -243,7 +244,9 @@ async def lambda_handler(event, context):
                     'body': json.dumps({'error': 'No code provided'})
                 }
             
-            result = await oauth.handle_redirect(code, state)
+            # Use an identifier you persist for this user (for example, in a cookie)
+            user_id = str(uuid.uuid4())
+            await oauth.handle_redirect(code, user_id, state)
             return {
                 'statusCode': 200,
                 'body': json.dumps({'message': 'Authenticated successfully'})
@@ -274,9 +277,10 @@ async def lambda_handler(event, context):
 ### Google Cloud Functions example
 
 ```python
-from flask import Request
-from kinde_sdk.auth.async_oauth import AsyncOAuth
 import asyncio
+import uuid
+from flask import Request, redirect
+from kinde_sdk.auth.async_oauth import AsyncOAuth
 
 oauth = AsyncOAuth()
 
@@ -290,7 +294,9 @@ def cloud_function_handler(request: Request):
         if request.path == '/callback':
             code = request.args.get('code')
             state = request.args.get('state')
-            await oauth.handle_redirect(code, state)
+            # Use an identifier you persist for this user (for example, in a cookie)
+            user_id = str(uuid.uuid4())
+            await oauth.handle_redirect(code, user_id, state)
             return {'message': 'Authenticated'}, 200
     
     return asyncio.run(handle_request())
@@ -379,9 +385,10 @@ Flask applications use the `OAuth` client with framework support, or `AsyncOAuth
 **Using OAuth client (recommended for Flask):**
 
 ```python
+import asyncio
+import uuid
 from flask import Flask, request, session, redirect, url_for
 from kinde_sdk.auth.oauth import OAuth
-import asyncio
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key'
@@ -394,15 +401,13 @@ oauth = OAuth(
 @app.route('/login')
 def login():
     """Redirect to Kinde login page."""
-    loop = asyncio.get_event_loop()
-    login_url = loop.run_until_complete(oauth.login())
+    login_url = asyncio.run(oauth.login())
     return redirect(login_url)
 
 @app.route('/register')
 def register():
     """Redirect to Kinde registration page."""
-    loop = asyncio.get_event_loop()
-    register_url = loop.run_until_complete(oauth.register())
+    register_url = asyncio.run(oauth.register())
     return redirect(register_url)
 
 @app.route('/callback')
@@ -416,8 +421,7 @@ def callback():
             return "Authentication failed: No code provided", 400
         
         user_id = session.get('user_id') or str(uuid.uuid4())
-        loop = asyncio.get_event_loop()
-        result = loop.run_until_complete(oauth.handle_redirect(code, user_id, state))
+        result = asyncio.run(oauth.handle_redirect(code, user_id, state))
         session['user_id'] = user_id
         return redirect(url_for('index'))
     except Exception as e:
@@ -428,8 +432,7 @@ def logout():
     """Logout the user and redirect to Kinde logout page."""
     user_id = session.get('user_id')
     session.clear()
-    loop = asyncio.get_event_loop()
-    logout_url = loop.run_until_complete(oauth.logout(user_id))
+    logout_url = asyncio.run(oauth.logout(user_id))
     return redirect(logout_url)
 
 @app.route('/user')
@@ -437,8 +440,7 @@ def get_user():
     """Get the current user's information."""
     try:
         if not oauth.is_authenticated():
-            loop = asyncio.get_event_loop()
-            login_url = loop.run_until_complete(oauth.login())
+            login_url = asyncio.run(oauth.login())
             return redirect(login_url)
         return oauth.get_user_info()
     except Exception as e:
@@ -453,6 +455,7 @@ FastAPI natively supports async/await, making it ideal for async operations.
 
 ```python
 import asyncio
+import uuid
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import RedirectResponse
 from kinde_sdk.auth.oauth import OAuth
@@ -480,7 +483,10 @@ async def register(request: Request):
 async def callback(request: Request, code: str, state: str = None):
     """Handle the OAuth callback from Kinde."""
     try:
-        result = await oauth.handle_redirect(code, state)
+        # request.session requires Starlette's SessionMiddleware
+        user_id = request.session.get("user_id") or str(uuid.uuid4())
+        await oauth.handle_redirect(code, user_id, state)
+        request.session["user_id"] = user_id
         return RedirectResponse(url="/")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Authentication failed: {str(e)}")
@@ -504,6 +510,7 @@ async def get_user(request: Request):
 **Using AsyncOAuth client with FastAPI (for more control):**
 
 ```python
+import uuid
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import RedirectResponse
 from kinde_sdk.auth.async_oauth import AsyncOAuth
@@ -519,7 +526,10 @@ async def login(request: Request):
 @app.get("/callback")
 async def callback(request: Request, code: str, state: str = None):
     try:
-        result = await oauth.handle_redirect(code, state)
+        # request.session requires Starlette's SessionMiddleware
+        user_id = request.session.get("user_id") or str(uuid.uuid4())
+        await oauth.handle_redirect(code, user_id, state)
+        request.session["user_id"] = user_id
         return RedirectResponse(url="/")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -533,6 +543,7 @@ For Flask:
 
 ```python
 import asyncio
+import uuid
 from flask import Flask, request, session, redirect
 from kinde_sdk.auth.oauth import OAuth
 
@@ -544,21 +555,19 @@ oauth = OAuth(
 
 @app.route('/login')
 def login():
-    """Redirect to Kinde login page.""
-    loop = asyncio.get_event_loop()
-    login_url = loop.run_until_complete(oauth.login())
+    """Redirect to Kinde login page."""
+    login_url = asyncio.run(oauth.login())
     return redirect(login_url)
 
 @app.route('/register')
 def register():
-    """Redirect to Kinde registration page.""
-    loop = asyncio.get_event_loop()
-    register_url = loop.run_until_complete(oauth.register())
+    """Redirect to Kinde registration page."""
+    register_url = asyncio.run(oauth.register())
     return redirect(register_url)
 
 @app.route('/callback')
 def callback():
-    """Handle the OAuth callback from Kinde.""
+    """Handle the OAuth callback from Kinde."""
     try:
         code = request.args.get('code')
         state = request.args.get('state')
@@ -570,8 +579,7 @@ def callback():
         user_id = session.get('user_id') or str(uuid.uuid4())
         
         # Use OAuth's handle_redirect method to process the callback
-        loop = asyncio.get_event_loop()
-        result = loop.run_until_complete(oauth.handle_redirect(code, user_id, state))
+        result = asyncio.run(oauth.handle_redirect(code, user_id, state))
         
         # Store user ID in session
         session['user_id'] = user_id
@@ -582,20 +590,18 @@ def callback():
 
 @app.route('/logout')
 def logout():
-    """Logout the user and redirect to Kinde logout page.""
+    """Logout the user and redirect to Kinde logout page."""
     user_id = session.get('user_id')
     session.clear()
-    loop = asyncio.get_event_loop()
-    logout_url = loop.run_until_complete(oauth.logout(user_id))
+    logout_url = asyncio.run(oauth.logout(user_id))
     return redirect(logout_url)
 
 @app.route('/user')
 def get_user():
-    """Get the current user's information.""
+    """Get the current user's information."""
     try:
         if not oauth.is_authenticated():
-            loop = asyncio.get_event_loop()
-            login_url = loop.run_until_complete(oauth.login())
+            login_url = asyncio.run(oauth.login())
             return redirect(login_url)
         
         return oauth.get_user_info()
@@ -607,8 +613,14 @@ For FastAPI:
 
 ```python
 import asyncio
+import uuid
+from typing import Optional
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
+from kinde_sdk.auth.oauth import OAuth
+
+app = FastAPI()
+oauth = OAuth(framework="fastapi", app=app)
 
 @app.get("/login")
 async def login(request: Request):
@@ -623,7 +635,10 @@ async def register(request: Request):
 @app.get("/callback")
 async def callback(request: Request, code: str, state: Optional[str] = None):
     try:
-        result = await oauth.handle_redirect(code, state)
+        # request.session requires Starlette's SessionMiddleware
+        user_id = request.session.get("user_id") or str(uuid.uuid4())
+        await oauth.handle_redirect(code, user_id, state)
+        request.session["user_id"] = user_id
         return RedirectResponse(url="/")
     except Exception as e:
         return HTMLResponse(f"Authentication failed: {str(e)}")
@@ -721,12 +736,11 @@ oauth = OAuth(framework="flask", app=app)
 
 @app.route("/dashboard")
 def dashboard():
-    loop = asyncio.get_event_loop()
-    can_create = loop.run_until_complete(
+    can_create = asyncio.run(
         permissions.get_permission("create:todos")
     )["isGranted"]
 
-    can_delete = loop.run_until_complete(
+    can_delete = asyncio.run(
         permissions.get_permission("delete:todos")
     )["isGranted"]
 
@@ -846,11 +860,10 @@ oauth = OAuth(framework="flask", app=app)
 
 @app.route("/settings")
 def get_settings():
-    loop = asyncio.get_event_loop()
-    theme = loop.run_until_complete(
+    theme = asyncio.run(
         feature_flags.get_flag("theme", default_value="light")
     )
-    dark_mode = loop.run_until_complete(
+    dark_mode = asyncio.run(
         feature_flags.get_flag("is_dark_mode", default_value=False)
     )
     return {
@@ -1006,11 +1019,10 @@ oauth = OAuth(framework="flask", app=app)
 
 @app.route("/profile")
 def get_profile():
-    loop = asyncio.get_event_loop()
-    given_name = loop.run_until_complete(
+    given_name = asyncio.run(
         claims.get_claim("given_name", token_type="id_token")
     )
-    email = loop.run_until_complete(
+    email = asyncio.run(
         claims.get_claim("email", token_type="id_token")
     )
     return {
@@ -1537,7 +1549,7 @@ from kinde_sdk.auth.oauth import OAuth
 import asyncio
 
 oauth = OAuth(framework="flask", app=app)
-login_url = asyncio.get_event_loop().run_until_complete(oauth.login())
+login_url = asyncio.run(oauth.login())
 ```
 
 ### Choosing the right client for migration
@@ -1550,7 +1562,7 @@ login_url = asyncio.get_event_loop().run_until_complete(oauth.login())
 
 1. **Update imports**: Change from `kinde_sdk.kinde_api_client` to the appropriate client type
 2. **Update initialization**: Use the new client initialization pattern
-3. **Update method calls**: Most methods are now async. Use `await`, or run them with `asyncio.run()` or `loop.run_until_complete()`
+3. **Update method calls**: Most methods are now async. Use `await` in async code, or `asyncio.run()` from sync code such as Flask routes
 4. **Update error handling**: Use the exception types from `kinde_sdk.core.exceptions` (authentication) and `kinde_sdk.management.exceptions` (Management API)
 5. **Test thoroughly**: Verify all authentication flows work correctly
 
@@ -1637,13 +1649,16 @@ management = ManagementClient(
 )
 
 def safe_get_user(user_id: str):
+    """Return the user, or None if they don't exist. Other API errors propagate."""
     try:
         return management.users_api.get_user_data(id=user_id)
     except NotFoundException:
         return None
     except ApiException as e:
+        # Auth, permission, and server errors aren't "user not found",
+        # so log and re-raise instead of returning None
         logger.error(f"Kinde Management API error {e.status}: {e.reason}")
-        return None
+        raise
 ```
 
 **Pattern 3: Permission checking**
