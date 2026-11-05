@@ -34,12 +34,14 @@ keywords:
   - Stripe Tax
   - VAT
   - collect tax automatically
+  - collect billing details
+  - organization billing
   - free trial
   - pricing table
   - self-serve portal
   - one-time charges
-updated: 2026-10-14
-ai_summary: "Overview of the Kinde billing feature for charging customers and collecting revenue. Covers creating and versioning plans and pricing tables in the dashboard, billing fixed charges on daily weekly monthly or yearly intervals, mixed-interval charges on one plan, annual pricing with a Pay annually choice at sign-up and in the self-serve portal, usage-based entitlements, one-time charges on plans, free plans, and free trials that can convert to paid subscriptions. Also covers Stripe for payments invoicing and tax, linking B2B organizations and B2C users to plans, and upgrades downgrades and cancellations from the dashboard or portal. Explains how Collect tax automatically in Settings Environment Billing enables Stripe Tax on new subscriptions, with per-plan Use account setting Collect or Do not collect overrides, and that Stripe still calculates tax from billing country or the Stripe registered address until a country is known. Lists known limitations including no custom intervals such as quarterly, no custom billing anniversaries, and no per-subscription add-ons or discounts. Subscribers can purchase one-time charges from the self-serve portal, and admins can assign them. Purchases are forfeited on plan change or cancellation. Intended for developers, product managers, and business owners evaluating or adopting Kinde billing."
+updated: 2026-10-25
+ai_summary: "Overview of the Kinde billing feature for charging customers and collecting revenue. Covers creating and versioning plans and pricing tables in the dashboard, billing fixed charges on daily weekly monthly or yearly intervals, mixed-interval charges on one plan, annual pricing with a Pay annually choice at sign-up and in the self-serve portal, usage-based entitlements, one-time charges on plans, free plans, and free trials that can convert to paid subscriptions. Also covers Stripe for payments invoicing and tax, linking B2B organizations and B2C users to plans, and upgrades downgrades and cancellations from the dashboard or portal. Explains how Collect tax automatically in Settings Environment Billing enables Stripe Tax on new subscriptions, with per-plan Use account setting Collect or Do not collect overrides, and that Stripe still calculates tax from billing country or the Stripe registered address until a country is known. Organization customers can supply a Bill-to address and optional tax ID on the payment step when Collect billing details on payment step for organization billing is on. That setting is off for environments that already had billing and on for new environments. User plans stay payment-method-only at checkout. Billing information can be edited later in the portal and on the admin Billing page. Lists known limitations including no custom intervals such as quarterly, no custom billing anniversaries, and no per-subscription add-ons or discounts. Subscribers can purchase one-time charges from the self-serve portal, and admins can assign them. Purchases are forfeited on plan change or cancellation. Intended for developers, product managers, and business owners evaluating or adopting Kinde billing."
 ---
 
 Kinde billing gives you the ability to charge customers for your services and collect revenue.
@@ -90,9 +92,39 @@ Automatic tax only works when Stripe Tax is set up on your connected Stripe acco
 
 ### How Kinde determines tax location
 
-Stripe needs a customer location to calculate tax. Kinde uses the customer’s billing country when available (for example from the payment method). Until a customer has a billing country—such as during a trial before a card is added—tax may temporarily use your Stripe account’s registered address.
+Stripe needs a customer location to calculate tax.
+
+- **Organization customers**, when **Collect billing details on payment step for organization billing** is on, supply a Bill-to address (and optional tax ID) on the payment step. Kinde writes that address to the Stripe customer before the subscription invoice is created, so tax can use the collected country.
+- **User customers**, and organization customers when that setting is off, still get a billing country from the payment method when Stripe has one.
+
+Until a customer has a billing country—such as during a trial before a card or billing address is added—tax may temporarily use your Stripe account’s registered address.
 
 If you need help mapping this to your Kinde plans, contact [Kinde support](https://kinde.com/support).
+
+## Collect billing details for organizations
+
+You can collect a business name, billing address, and optional tax ID from organization customers when they add a payment method.
+
+1. Go to **Settings > Environment > Billing**.
+2. In the **Settings** section, turn on **Collect billing details on payment step for organization billing**.
+3. Select **Save**.
+
+Environments that already had billing keep this **off** until you enable it. New environments start with it **on**. User (B2C) plans never show this block at checkout.
+
+On the payment screen, organization customers see:
+
+- **Billing details** — full name, billing address, business name (required), and tax ID (optional)
+- **Payment method details** — card or other Stripe payment method
+
+If the tax ID does not match the billing country, the customer can correct it or leave it blank and continue.
+
+After they subscribe, they can update billing information in the self-serve portal. You can also edit it from the customer’s **Billing** page in Kinde. See [Connect to Stripe and set policies](/billing/get-started/connect-to-stripe/#collect-billing-details-for-organization-customers).
+
+<Aside>
+
+If an organization is created during sign-up with the placeholder name `Organization` followed by a number, and the customer enters a business name of 64 characters or fewer, Kinde uses that name as the organization name. Organizations that already have a name are not renamed.
+
+</Aside>
 
 ## Known limitations
 
