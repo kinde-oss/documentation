@@ -849,6 +849,39 @@ final portalUrl = await sdk.generatePortalUrl(
 );
 ```
 
+## Logging
+
+The SDK includes built-in logging to help you debug authentication flows during development. Logs are prefixed with `KINDE:` and include the method name, a message, and optional structured context.
+
+**Example log output:**
+
+```text title="Log output"
+KINDE: initializeSDK - SDK initialized | domain=myapp.kinde.com, platform=android
+KINDE: logout - Logout completed
+```
+
+### Default behavior
+
+Logging is **enabled automatically in debug mode** and **disabled in profile and release builds**.
+
+### Configure logging
+
+To explicitly enable or disable SDK log output, use the `configureLogging` method:
+
+```dart
+// Turn logging off
+KindeFlutterSDK.configureLogging(enabled: false);
+
+// Turn logging on
+KindeFlutterSDK.configureLogging(enabled: true);
+```
+
+<Aside type="info">
+
+You can call `configureLogging` at any point, before or after SDK initialization. It takes effect immediately for all subsequent SDK operations.
+
+</Aside>
+
 ## Limitations
 
 - **WebView authentication on mobile:** When using the Flutter SDK on mobile platforms (iOS/Android), users will need to authenticate separately when accessing content in in-app WebViews. This occurs because the SDK uses ephemeral web authentication sessions for security, which do not share authentication state with WebViews. Authentication tokens are stored in native secure storage (Keychain/KeyStore) and are not accessible to WebView contexts, which maintain separate cookie storage. For applications requiring seamless authentication between native and web contexts, contact [support@kinde.com](mailto:support@kinde.com) for guidance.
@@ -1308,6 +1341,25 @@ sdk.generatePortalUrl(returnUrl: "https://yourapp.com/dashboard");
 
 ```dart
 "https://yourapp.kinde.com/portal/..."
+```
+
+### `configureLogging`
+
+Enables or disables SDK logging. 
+
+By default, logging is enabled in debug builds and disabled in profile and release builds.
+
+**Arguments:**
+
+```dart
+enabled: bool
+```
+
+**Usage:**
+
+```dart
+KindeFlutterSDK.configureLogging(enabled: false); // disable logging
+KindeFlutterSDK.configureLogging(enabled: true);  // re-enable logging
 ```
 
 If you need help connecting to Kinde, contact us at [support@kinde.com](mailto:support@kinde.com).
