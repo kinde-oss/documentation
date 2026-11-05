@@ -1,9 +1,10 @@
 ---
 page_id: 5d958ce9-27ee-420a-9e20-09a2ed7fb179
 title: Kinde and Resend for custom SMTP
-description: Guide to configuring Kinde with Resend for custom SMTP email delivery including API key setup, domain verification, and SMTP configuration
+description: "Connect Resend to Kinde for custom SMTP. Send sign-up, sign-in, and OTP emails from your own domain using a Resend API key on port 465."
 sidebar:
   order: 12
+  label: Resend (SMTP)
 relatedArticles:
   - 0222489b-3478-48a7-a5c9-c99c6044f0e9
   - c4182a6d-64ca-4c82-ba33-e5fc5d8b8cad
@@ -14,6 +15,8 @@ relatedArticles:
 topics:
   - integrate
   - third-party-tools
+  - email-delivery
+  - smtp
 sdk: []
 languages: []
 audience:
@@ -21,48 +24,44 @@ audience:
   - admins
 complexity: intermediate
 keywords:
-  - resend
-  - smtp
-  - email
-  - api key
+  - resend smtp
+  - resend api key
+  - custom smtp
+  - smtp settings
+  - email sender
   - domain verification
   - email deliverability
-  - troubleshooting
-updated: 2026-11-02
+  - sender email
+updated: 2026-11-05
 featured: false
 deprecated: false
-ai_summary: Guide to configuring Kinde with Resend for custom SMTP email delivery including API key setup, domain verification, and SMTP configuration.
+ai_summary: "Guide to configuring Kinde to send sign-up, sign-in, one-time passcode (OTP), and password reset emails through Resend as a custom SMTP provider. Covers creating or reusing a Resend API key for the SMTP password, verifying your sending domain in Resend, and entering the sender name and sender email in Kinde under Settings > Environment > Messaging > Email Sender. Provides the SMTP settings: server smtp.resend.com, port 465, user resend, and the Resend API key as the password. Explains sending a test email, saving the configuration, and troubleshooting failed tests by checking network access, credentials, verified domains, and Resend dashboard error messages. Intended for developers and admins setting up custom email delivery for a Kinde environment."
 ---
 
-You can configure Kinde to send sign-up, sign-in, one-time passcode (OTP), and password reset emails through Resend. Users receive these emails from your business’s email address.
+You can configure Kinde to send sign-up, sign-in, one-time passcode (OTP), and password reset emails through Resend. Users receive these emails from your business’s email address. Each email also appears in the Resend dashboard with its delivery status.
 
 See [Customize email sender](/get-started/connect/customize-email-sender/) for which emails still come from Kinde, and for alerts, editing, and resetting the sender.
 
-## Generate an API key
+## What you need
 
-You'll need an API key from Resend to use as the password for authenticating with their SMTP server.
+- A [Kinde](https://kinde.com/) account (Sign up for free)
+- A [Resend](https://resend.com/) account (Sign up for free)
 
-You can use an existing API key from Resend if you have one already.
+## Resend configuration
 
-Or you can create a new API key from the Resend dashboard by going to the API keys section and selecting **Create API key**.
+1. In the Resend dashboard, go to **API Keys** and select **Create API key**. You can use an existing API key if you already have one. See Resend's [API keys](https://resend.com/docs/dashboard/api-keys/introduction) documentation for more details.
+2. Copy the API key, as a new key is only shown once. You use this key as the SMTP password.
+3. Resend requires you to verify the domain being used for the emails. See Resend's [Managing domains](https://resend.com/docs/dashboard/domains/introduction) documentation for verifying your domain.
 
-See Resend's [API keys](https://resend.com/docs/dashboard/api-keys/introduction) documentation for more details.
-
-## Verify your domain
-
-Resend requires you to verify the domain being used for the emails. See Resend's [Managing domains](https://resend.com/docs/dashboard/domains/introduction) documentation for verifying your domain.
-
-## Add email sender SMTP details
-
-If you are setting this up and your production environment is already live, we recommend testing this in a staging or test environment first.
+## Configure Kinde email sender
 
 1. In Kinde, go to **Settings > Environment > Messaging > Email Sender**.
 2. Enter a **Sender name**. This is usually your business name, but might be a specific person.
 3. Enable the **Use custom sender** switch. The SMTP details section opens.
 
-    ![Add email sender SMTP details in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d4c4b57d-9f1a-4b1c-638c-0a770c4fe400/socialsharingimage)
+    ![Add email sender SMTP details in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/263a1128-00ee-4e17-6f23-e019b282aa00/socialsharingimage)
 
-4. Enter the **Sender email**. This is the address your users will receive emails from and should be one of the verified domains from your Resend account.
+4. Enter the **Sender email**. This is the address your users will receive emails from and should be on one of the verified domains in your Resend account.
 5. Enter the SMTP details of your email provider:
    - Server name - `smtp.resend.com`
    - Port - `465`
@@ -77,7 +76,8 @@ If you are setting this up and your production environment is already live, we r
 If sending a test email fails:
 
 - Verify network connectivity to `smtp.resend.com`.
-- Confirm the port, user, and API key are correct.
+- Confirm the user is `resend`, the port is `465`, and the password is the Resend API key.
+- Confirm the sender email is on a domain verified in Resend.
 - Review error messages on the Resend dashboard.
 
 For more details, see Resend's [API key troubleshooting guide](https://resend.com/docs/dashboard/api-keys/troubleshooting).

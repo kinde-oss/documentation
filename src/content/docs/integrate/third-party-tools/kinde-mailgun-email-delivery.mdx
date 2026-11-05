@@ -1,9 +1,10 @@
 ---
 page_id: 55350C9F-88FA-4996-B648-A4B5C11C8FFF
 title: Kinde and Mailgun for custom SMTP
-description: Guide to configuring Kinde with Mailgun for custom SMTP, and to sending your own emails with the Mailgun API when a user is created.
+description: "Send Kinde auth emails through Mailgun SMTP, then trigger your own welcome emails with the Mailgun API from user.created webhooks."
 sidebar:
   order: 13
+  label: Mailgun (SMTP)
 tableOfContents:
   maxHeadingLevel: 3
 relatedArticles:
@@ -16,63 +17,67 @@ relatedArticles:
 topics:
   - integrate
   - third-party-tools
-sdk: []
-languages: []
+  - email-delivery
+  - webhooks
+sdk:
+  - javascript
+languages:
+  - javascript
+  - json
 audience:
   - developers
   - admins
 complexity: intermediate
 keywords:
-  - mailgun
+  - mailgun smtp
+  - mailgun api
+  - custom smtp
   - welcome email
-  - smtp
-  - email
-  - webhooks
-  - api integration
+  - user.created webhook
+  - webhook validation
   - email deliverability
-updated: 2026-11-02
+  - email sender
+updated: 2026-11-05
 featured: false
 deprecated: false
-ai_summary: Guide to configuring Kinde with Mailgun for custom SMTP, and to sending your own emails with the Mailgun API when a user is created.
+ai_summary: "Guide to configuring Kinde with Mailgun as a custom SMTP provider for sign-up, sign-in, one-time passcode (OTP), and password reset emails, and to sending your own welcome emails with the Mailgun API when a user is created. Covers verifying a sending domain in Mailgun, copying the SMTP hostname, port, username, and password, and entering them in Kinde under Settings > Environment > Messaging > Email Sender. Explains creating a Kinde webhook for the user.created event, validating the webhook JWT with the @kinde-oss/webhook package in a JavaScript backend, and sending email with the mailgun.js and form-data packages. Also covers testing the webhook, using the source field (admin, api, or user), webhook troubleshooting, and email deliverability tips. Intended for developers and admins."
 ---
 
-You can configure Kinde to send sign-up, sign-in, one-time passcode (OTP), and password reset emails through Mailgun. Users receive these emails from your business’s email address.
+You can configure Kinde to send sign-up, sign-in, one-time passcode (OTP), and password reset emails through Mailgun. Users receive these emails from your business’s email address. Each email also appears in the Mailgun dashboard with its delivery status.
 
 See [Customize email sender](/get-started/connect/customize-email-sender/) for which emails still come from Kinde, and for alerts, editing, and resetting the sender.
 
 To send your own template after a user is created, see [Send additional emails with the Mailgun API](#send-additional-emails-with-the-mailgun-api).
 
-## Verify your domain
+## What you need
 
-Mailgun SMTP credentials belong to a verified domain. Add and verify the domain before you copy them:
+- A [Kinde](https://kinde.com/) account (Sign up for free)
+- A [Mailgun](https://www.mailgun.com/) account
 
-1. Sign in to your [Mailgun dashboard](https://app.mailgun.com/)
-2. Go to **Sending** > **Domains**
-3. Add and verify your domain following Mailgun's [domain verification guide](https://documentation.mailgun.com/docs/dashboard/domains/introduction)
+## Mailgun configuration
 
-## Create an SMTP credential
+Mailgun SMTP credentials belong to a verified domain. Add and verify the domain before you copy them.
 
-1. In Mailgun, go to **Sending** > **Domains** and select your verified domain
-2. Navigate to the **SMTP credentials** section
-3. Note your SMTP credentials:
+1. Sign in to your [Mailgun dashboard](https://app.mailgun.com/).
+2. Go to **Sending** > **Domains** and add your domain. See Mailgun's [domain verification guide](https://documentation.mailgun.com/docs/dashboard/domains/introduction) for verifying your domain.
+3. Select your verified domain and open **SMTP credentials**.
+4. Note your SMTP credentials:
    - **SMTP hostname** - typically `smtp.mailgun.org`
-   - **Port** - use `587` for TLS or `465` for SSL
-   - **SMTP username** - typically `postmaster@your-domain.mailgun.org` or your custom SMTP username
+   - **Port** - `587` for TLS or `465` for SSL
+   - **SMTP username** - typically `postmaster@your-domain.mailgun.org`, or your custom SMTP username
    - **SMTP password** - your Mailgun SMTP password
 
 See Mailgun's [SMTP documentation](https://documentation.mailgun.com/docs/mailgun/user-manual/sending-messages) for more details.
 
-## Add email sender SMTP details
-
-If you are setting this up and your production environment is already live, we recommend testing this in a staging or test environment first.
+## Configure Kinde email sender
 
 1. In Kinde, go to **Settings > Environment > Messaging > Email Sender**.
 2. Enter a **Sender name**. This is usually your business name, but might be a specific person.
 3. Enable the **Use custom sender** switch. The SMTP details section opens.
 
-    ![Add email sender SMTP details in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d4c4b57d-9f1a-4b1c-638c-0a770c4fe400/socialsharingimage)
+    ![Add email sender SMTP details in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/263a1128-00ee-4e17-6f23-e019b282aa00/socialsharingimage)
 
-4. Enter the **Sender email**. This is the address your users will receive emails from and should be one of your verified domains from your Mailgun account (e.g., `noreply@yourdomain.com`).
+4. Enter the **Sender email**. This is the address your users will receive emails from and should be on one of the verified domains in your Mailgun account, for example `noreply@yourdomain.com`.
 5. Enter the SMTP details of your email provider:
    - Server name - `smtp.mailgun.org`
    - Port - `587` (for TLS) or `465` (for SSL)
@@ -86,11 +91,11 @@ If you are setting this up and your production environment is already live, we r
 
 If sending a test email fails:
 
-- Verify network connectivity to `smtp.mailgun.org`
-- Confirm the port, username, and password are correct
-- Ensure your domain is verified in Mailgun
-- Check that you're using the correct SMTP username format (typically `postmaster@your-domain.mailgun.org`)
-- Review error messages in the Mailgun dashboard
+- Verify network connectivity to `smtp.mailgun.org`.
+- Confirm the port, username, and password are correct.
+- Confirm the sender email is on a domain verified in Mailgun.
+- Confirm the SMTP username format, typically `postmaster@your-domain.mailgun.org`.
+- Review error messages in the Mailgun dashboard.
 
 For more details, see Mailgun's [SMTP troubleshooting guide](https://documentation.mailgun.com/docs/mailgun/user-manual/sending-messages).
 
