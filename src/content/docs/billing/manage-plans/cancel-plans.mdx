@@ -8,9 +8,9 @@ relatedArticles:
   - e6dde80d-2977-419f-a05a-62ad0a7ac6de
   - c4e8a1d2-6b37-4f9a-8c15-2d7e9f0a4b63
 description: >-
-  Guide to canceling subscriptions via the self-serve portal, organization Billing
-  in the Kinde admin, or the Management API, including immediate and scheduled
-  cancellation timing and Keep plan.
+  Guide to canceling subscriptions via the self-serve portal, a user's or an
+  organization's Billing page in the Kinde admin, or the Management API,
+  including immediate and scheduled cancellation timing and Keep plan.
 featured: false
 deprecated: false
 topics:
@@ -33,23 +33,17 @@ keywords:
   - cancellation timing
   - keep plan
   - scheduled cancellation
-updated: 2026-11-03
-ai_summary: "Guide to canceling a customer subscription in Kinde. Covers three methods: customer self-service on the Plan page in the self-serve portal, canceling an organization plan from that organization’s Billing page in the Kinde admin, and programmatic cancellation via the Management API. Explains the plan Cancellation takes effect setting (immediately by default, or at the end of the earliest or latest billing period), scheduled cancellations, Keep plan in the portal and admin, billing policies and Stripe sync, one-time purchase forfeiture rules, optional cancel_at and revert cancellation API paths, and the plan cancellation request workflow. Intended for developers, business owners, and admins."
+updated: 2026-11-05
+ai_summary: "Guide to canceling a customer subscription in Kinde. Covers three methods: customer self-service on the Plan page in the self-serve portal, canceling a user (B2C) or organization (B2B) plan from their Billing page in the Kinde admin, and programmatic cancellation via the Management API. Explains the plan Cancellation takes effect setting (immediately by default, or at the end of the earliest or latest billing period), scheduled cancellations, Keep plan and Cancel now in the portal and admin, billing policies and Stripe sync, one-time purchase forfeiture rules, optional cancel_at and revert cancellation API paths, and the plan cancellation request workflow. Intended for developers, business owners, and admins."
 ---
 
 While we would rather customers didn't cancel their subscription to your services, they do need to be able to. There are three ways to do this.
 
 - The customer can cancel via the [self-serve portal](#how-a-customer-can-cancel-their-own-plan)
-- You can cancel on behalf of an organization from that organization's **Billing** page in Kinde
+- You can cancel on behalf of a user or an organization from their **Billing** page in Kinde
 - You can cancel on behalf of a customer via the Management API
 
 When the cancellation takes effect is set on the **plan**. You can also choose a different timing when you cancel from the admin or the API.
-
-<Aside type="warning">
-
-There is not currently a **Cancel plan** action on a **user** (B2C) Billing page in the Kinde admin. For user plans, cancel from the self-serve portal or the Management API.
-
-</Aside>
 
 ## When a cancellation takes effect
 
@@ -123,11 +117,13 @@ If **you** scheduled the cancellation (from admin or the API), the customer stil
 
 After the date, the section explains that the plan is being cancelled and that this can take a few minutes.
 
-## Cancel an organization plan in the Kinde admin
+## Cancel a plan in the Kinde admin
 
-You can cancel an organization's subscription from that organization's **Billing** page.
+You can cancel a user's or an organization's subscription from their **Billing** page. The steps and the dialog are the same for both.
 
-1. Go to **Organizations**, open the organization, and select **Billing**.
+1. Open the customer's Billing page:
+   - For a user (B2C), go to **Users**, open the user, and select **Billing**.
+   - For an organization (B2B), go to **Organizations**, open the organization, and select **Billing**.
 2. Scroll to **Cancel plan** and select **Cancel plan**.
 
     ![organization billing setting screen](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c8448c9b-dc30-4c3e-833b-247a9d2e7d00/socialsharingimage)
@@ -141,16 +137,27 @@ You can cancel an organization's subscription from that organization's **Billing
 
 4. Select **Cancel**.
 
+The confirmation names the customer whose plan you are cancelling: the organization's name, or the user's name. If the user's profile has no name, their email address is shown instead.
+
+You need the `delete:billing_agreements` permission to see **Cancel plan**. This section is shown only when no cancellation is pending.
+
 ### Keep plan or cancel now from admin
 
-While a cancellation is scheduled, the Billing page heading becomes **Cancellation scheduled**: "This organization's plan will be cancelled on [date]. It keeps access until then."
+While a cancellation is scheduled, the plan card shows **Cancels on** the date, and **Cancel plan** is replaced by **Cancellation scheduled**. Anyone with `update:billing_agreements` or `delete:billing_agreements` can see **Cancellation scheduled**.
 
-- **Keep plan** — removes the schedule. You can do this whether the customer, an admin, or the API scheduled it.
-- **Cancel now** — ends the plan immediately. The dialog only offers **Immediately**.
+- On an organization's Billing page: "This organization's plan will be cancelled on [date]. It keeps access until then."
+- On a user's Billing page: "This user's plan will be cancelled on [date]. They keep access until then."
+
+Each button is shown only when you have its permission:
+
+- **Keep plan** — removes the schedule. You can do this whether the customer, an admin, or the API scheduled it. This needs only the `update:billing_agreements` permission.
+- **Cancel now** — ends the plan immediately. The dialog only offers **Immediately**. This needs only the `delete:billing_agreements` permission.
 
     ![cancellation scheduled section](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/716cce0d-03f8-4769-1232-da4226ca8900/socialsharingimage)
 
-The organization keeps access until the scheduled date unless you cancel now. If you keep the plan, access continues as usual.
+The customer keeps access until the scheduled date unless you cancel now. If you keep the plan, access continues as usual.
+
+After the date, the section becomes **Cancellation in progress** while Kinde ends the agreement. This can take a few minutes, and the plan can no longer be kept.
 
 ## One-time purchases when cancelling
 
@@ -162,7 +169,7 @@ If the customer has active one-time purchases:
 
 - **Scheduled cancel** - active purchases stay available until the effective cancellation date or until they expire on their own schedule (**Expires with the billing cycle**), whichever comes first. **Keep plan** removes the schedule but does not extend expiry. Purchases still on the agreement when it ends are forfeited, not when the cancel is first requested.
 
-This applies in the self-serve portal, on the organization Billing page, and when you cancel via the Management API. When the cancellation takes effect, the billing agreement ends; any one-time purchases still on that agreement are forfeited (this is separate from a purchase expiring at the end of a billing cycle).
+This applies in the self-serve portal, on a user's or an organization's Billing page in the Kinde admin, and when you cancel via the Management API. When the cancellation takes effect, the billing agreement ends; any one-time purchases still on that agreement are forfeited (this is separate from a purchase expiring at the end of a billing cycle).
 
 See [One-time purchases](/billing/manage-subscribers/one-time-purchases/).
 
@@ -192,6 +199,6 @@ See the [Management API](/kinde-apis/management/#tag/billing-agreements) for the
 
 You can set up a workflow that enables you to check and approve cancellations. You might want to do this, for example, to be alerted when high value customers cancel.
 
-The workflow also runs when you cancel from the organization Billing page or the Management API. It does not run when someone keeps a plan, or when a scheduled cancel is requested again.
+The workflow also runs when you cancel from a user's or an organization's Billing page in the Kinde admin, or from the Management API. It does not run when someone keeps a plan, or when a scheduled cancel is requested again.
 
 For details, refer to the [Plan cancellation request workflow](/workflows/example-workflows/plan-cancellation-request-workflow/).
