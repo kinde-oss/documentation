@@ -1,18 +1,24 @@
 ---
 page_id: 0222489b-3478-48a7-a5c9-c99c6044f0e9
-title: Customize email sender
+title: Send auth emails from your own SMTP server
 sidebar:
   order: 3
+  label: Custom email sender (SMTP)
 tableOfContents:
   maxHeadingLevel: 3
-description: Guide to customizing email sender configuration in Kinde including SMTP setup, email provider integration, and troubleshooting common issues.
+description: "Send sign-in and password emails from your own address. Connect any SMTP provider, test delivery, and fix sending alerts in Kinde."
 relatedArticles:
   - c4182a6d-64ca-4c82-ba33-e5fc5d8b8cad
   - 90134c89-16e4-4981-b988-b0cb4f1722c5
   - 0979c63d-fc54-461d-9a83-a81bea7353f6
+  - 5d958ce9-27ee-420a-9e20-09a2ed7fb179
+  - 55350C9F-88FA-4996-B648-A4B5C11C8FFF
+  - 9ab800a9-608c-421c-87fb-ba9438c7491f
 topics:
   - get-started
   - connect
+  - smtp
+  - email-delivery
 sdk: []
 languages: []
 audience:
@@ -21,136 +27,140 @@ audience:
   - business owners
 complexity: intermediate
 keywords:
+  - custom smtp
   - email sender
-  - smtp
-  - email provider
-  - deliverability
-  - sendgrid
+  - smtp settings
+  - sender email
+  - email sending alerts
+  - email deliverability
+  - resend
   - mailgun
-  - postmark
-  - troubleshooting
-updated: 2026-10-15
+updated: 2026-11-05
 featured: false
 deprecated: false
-ai_summary: Guide to customizing email sender configuration in Kinde including SMTP setup, email provider integration, and troubleshooting common issues.
+ai_summary: "Guide to configuring a custom email sender in Kinde so authentication emails come from your own address through an SMTP provider. Covers SMTP provider requirements (username and password sign-in, TLS encryption, and one provider at a time), and which emails use the custom sender versus Kinde's default sender, such as sign-up and sign-in emails, one-time passcodes, and password reset codes. Explains the setup steps in Settings > Environment > Messaging > Email Sender, including the sender name, sender email, server name, port, and sign-in details, then sending a test email and saving. Also covers editing and resetting the sender, the email sending alerts shown on the home page, status page, and Email Sender page when SMTP delivery fails, what triggers and clears an alert, and how to fix sending errors. Links to provider-specific guides for Resend, Mailgun, and Groundmail, and to SMTP error references. Intended for developers and admins configuring email delivery for a production environment. Custom email providers may enforce their own limitations."
 ---
 
-You can configure Kinde to send emails from your own preferred email provider. This means your users will receive communications from your business’s email address, and not Kinde’s.
+You can configure Kinde to send emails from your preferred email provider. Users then receive those emails from your business address.
 
-There are also other benefits, such as better control of email deliverability, analytics and tracking, scalability, email compliance, etc.
+A custom sender also gives you more control over deliverability, analytics, tracking, scalability, and compliance.
 
-## Emails that will be sent from you
+## Custom email provider requirements
 
-When you set your own email provider details, the following emails will be sent from your preferred email address:
+Kinde sends authentication emails through any SMTP provider that supports:
 
-- Sign up and sign in emails
+- Username and password sign-in
+- TLS encryption
+
+You can connect only one provider at a time.
+
+Enter the server, port, username, and password from your provider. Popular choices include Resend, Mailgun, SendGrid, Mailchimp, Postmark, and MailerSend.
+
+### Emails sent from your address
+
+When you set your own provider details, Kinde sends these emails from your address:
+
+- Sign-up and sign-in emails
 - One-time passcode (OTP) emails
 - Password reset codes
 
-Emails will come from `no-reply@kinde.com` if you choose not to set this up.
+If you do not set this up, these emails come from `no-reply@kinde.com`.
 
-## Emails sent from Kinde
+### Emails sent from Kinde
 
-Even if you enter custom sender details, these emails will still be sent from Kinde.
+Kinde still sends these emails, even when you use a custom sender:
 
-- Invitation to join business team - triggered by manual or API addition of team member
-- Warnings and notifications of data export
+- Invitations to join the business team, when you add a team member manually or through the API
+- Warnings and notifications about data exports
 
-## Requirements and recommendations
+## Configure email sender
 
-- You can only have one email sender set up in Kinde
-- You need to set up provider details before making your environment live
-- The provider must support user/password sign in and TLS
-- Check the limitations of your provider (e.g. Microsoft O365 has daily send limits). We recommend using bulk email service providers such as SendGrid, Mailgun, Mailchimp, Postmark, etc.
+1. In Kinde, go to **Settings > Environment > Messaging > Email Sender**.
+2. Enter a **Sender name**. This is usually your business name, or a specific person's name.
+3. Enable the **Use custom sender** switch. The SMTP details section opens.
 
-## Add email sender SMTP details
+    ![use custom email sender setting page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/576b53fa-35d0-4747-dc0d-1fc9f6dda600/socialsharingimage)
+
+4. Enter the **Sender email**. This is the address users receive email from. Use an address on a domain verified with your email provider. Resend, Mailgun, and Groundmail require domain verification.
+5. Enter the SMTP details from your email provider:
+
+   - Server name - for example, `yourbusiness.smtp.providername.com`
+   - Port - use the port your provider recommends
+   - Sign-in details - username and password
+
+   ![smtp settings options](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/955a1ef1-f101-44b5-14c0-df04f6535e00/socialsharingimage)
+
+6. Select **Send test email**. Kinde sends the test to the email address you are signed in with.
+7. If the test succeeds, select **Save**.
+8. If the test fails, check the SMTP details in step 5 and send the test again. If it still fails, see [External resources](#external-resources).
+
+For provider-specific steps, see:
+
+- [Resend](/integrate/third-party-tools/kinde-resend-custom-smtp/)
+- [Mailgun](/integrate/third-party-tools/kinde-mailgun-email-delivery/)
+- [Groundmail](/integrate/third-party-tools/kinde-groundmail-custom-smtp/)
 
 <Aside>
 
-Users who are in the process of signing in to your application when you enable this setting will not receive emails from the new address until they start a new authenticated session.
+Users who are signing in when you enable this setting do not receive emails from the new address until they start a new authenticated session.
 
 </Aside>
 
-If you are setting this up and your production environment is already live, we recommend testing this in a staging or test environment first.
-
-1. In Kinde, go to **Settings > Environment > Messaging > Email Sender**.
-2. Enter a **Sender name**. This is usually your business name, but might be a specific person.
-3. Enable the **Use custom sender** switch. The SMTP details section opens.
-
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d4c4b57d-9f1a-4b1c-638c-0a770c4fe400/public"
-  alt=""
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
-
-4. Enter the **Sender email**. This is the address your users will receive emails from.
-5. Enter the SMTP details of your email provider:
-   - Server name - this will be something like `yourbusiness.smtp.providername.com`
-   - Port - use the one recommended by your email provider
-   - Sign-in details - Username and password
-6. Select **Send test email**. This sends a test email to the email address you are logged into Kinde with.
-7. If the test is successful, select **Save**.
-8. If the test is not successful, check the SMTP details (step 5) and try sending a test email again. If this does not work, see the troubleshooting section below.
-
 ## Edit email sender
 
-We recommend testing any changes to SMTP details in a non-production environment first.
+Test SMTP changes in a non-production environment first.
 
 1. In Kinde, go to **Settings > Environment > Messaging > Email Sender**.
-2. Change any of the details that you want.
-3. Select **Send test email**. This sends a test email to the email address you are logged into Kinde with.
-4. If the test is successful, select **Save**.
+2. Update the details you want to change.
+3. Select **Send test email**. Kinde sends the test to the email address you are signed in with.
+4. If the test succeeds, select **Save**.
 
 ## Reset email sender
 
-You should only do this if your environment is not live.
+Only do this if the environment is not live.
 
 1. In Kinde, go to **Settings > Environment > Messaging > Email Sender**.
-2. Disable the **Use custom sender** switch. This reverts back to use the default Kinde email address and removes SMTP details.
+2. Disable the **Use custom sender** switch. This switches back to the default Kinde email address and removes the SMTP details.
 3. Select **Save**.
 
 ## Email sending alerts
 
-If your SMTP provider starts rejecting emails from Kinde, for example because the password was changed at the provider, Kinde lets you know in the dashboard. This helps you fix the problem before your users miss sign-in codes and password reset emails.
+If your SMTP provider starts rejecting emails from Kinde, for example because the password changed, Kinde shows an alert in the dashboard so you can fix the problem before users miss sign-in codes and password reset emails.
 
 ### Error banners
 
-When an email fails to send using your custom SMTP details:
+When an email fails to send through your custom SMTP details:
 
-- **Home page** - An **Email sending issue** banner appears. Select **View email settings** to go to the Email Sender page. 
+- **Home page** - An **Email sending issue** banner appears. Select **View email settings** to open the Email Sender page.
 
     ![kinde home dashboard with an email sending issue banner and a view email settings link](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d1d65644-e1b0-4b58-af00-b9abb98a7a00/socialsharingimage)
 
-- **Alternatively**, if there are other issues at the same time, a **Multiple issues detected** banner appears instead, with a link to the status page.
+- **Home page (multiple issues)** - If other issues are present at the same time, a **Multiple issues detected** banner appears instead, with a link to the status page.
 
     ![kinde home dashboard with a multiple issues detected banner and a view status page link](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ab7c12e6-7f0c-466c-a0a6-578890194700/socialsharingimage)
 
-- **Status page** - Open the status page by selecting **View status page** on the **Multiple issues detected** home banner. The **Email sender** card appears there with an error when custom SMTP sending has failed.
+- **Status page** - Select **View status page** on the **Multiple issues detected** banner. The **Email sender** card shows an error when custom SMTP sending has failed.
 
     ![kinde status page with a multiple issues detected banner and an email sender card showing issue detected](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d5434817-81c4-40ab-9f01-248cfc76f800/socialsharingimage)
 
-- **Email Sender page** - A banner at the top of the page shows when the last attempt failed and the latest sending error.
+- **Email Sender page** - A banner at the top of the page shows the latest sending error from the last failed attempt.
 
     ![email sender settings page with an error banner showing the latest sending error from the last failed send attempt](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/fcf76338-1167-4b2a-c317-066a65aa6600/socialsharingimage)
 
-Kinde only keeps the most recent failure. If another email fails, the banner shows the newer error.
+Kinde keeps only the most recent failure. A new failure replaces the error in the banner.
 
 ### What triggers an alert
 
-An alert is shown when your SMTP server rejects an email because of a problem with your sender settings, for example:
+Kinde shows an alert when your SMTP server rejects an email because of a problem with your sender settings, for example:
 
 - The username or password is wrong
 - Kinde can't connect to the server or port
 - The server rejects your sender email address
-- The server refuses to relay the email, or blocks it for policy reasons
+- The server refuses to relay the email or blocks it for policy reasons
 
-Problems with an individual recipient, such as an email address that doesn't exist or a full mailbox, don't trigger an alert. These don't mean anything is wrong with your settings.
+Problems with an individual recipient, such as an email address that doesn't exist or a full mailbox, don't trigger an alert. Those failures do not mean your settings are wrong.
 
-Alerts are only shown for your custom SMTP sender. If you use Kinde's default email sender, Kinde monitors delivery for you.
+Kinde shows these alerts only when you use a custom SMTP sender. If you use Kinde's default email sender, Kinde monitors delivery for you.
 
 ### Clear an alert
 
@@ -158,7 +168,9 @@ The alert clears automatically when:
 
 - An email sends successfully through your SMTP server.
 - You save your email sender details.
-- You send a successful test email using the same details that are saved. If you test new details, you need to save them too. Kinde keeps using your saved details for real emails until you do.
+- You send a successful test email with the details that are already saved.
+
+If you test new details, save them as well. Kinde keeps using the saved details for real emails until you do.
 
 To fix the problem:
 
@@ -166,17 +178,24 @@ To fix the problem:
 2. Read the latest sending error in the banner at the top of the page.
 3. Check your **Sender email** and SMTP details, and update the password if it has changed at your provider.
 4. Select **Send test email**.
-5. If the test is successful, select **Save**. The alert clears.
+5. If the test succeeds, select **Save**. The alert clears.
 
-If the error continues, see [Troubleshoot the SMTP provider connection](#troubleshoot-the-smtp-provider-connection).
+If the error continues, see [External resources](#external-resources).
 
-## Troubleshoot the SMTP provider connection
+## Best practices
 
-Sometimes things go wrong with server connections and external provider configuration. There’s only so much we can assist with on our side, but if you get an SMTP error, check your provider documentation.
+- Test SMTP changes in a non-production environment first. See [Environments in Kinde](/build/environments/environments/).
+- Use a reputable email provider with a low spam score.
+- Use TLS to protect the connection.
+- Use a strong password for your email provider account.
 
-If emails stop sending after your custom sender was working, go to **Settings > Environment > Messaging > Email Sender**. The banner at the top of the page shows the latest sending error from the last failed attempt. See [Email sending alerts](#email-sending-alerts).
+## Email provider limitations
 
-Here’s a [list of errors](https://datatracker.ietf.org/doc/html/rfc2821#section-4.2.3) you might see (from the IETF), and here’s link to SMTP docs from some common providers.
+Some email providers have limitations on the number of emails you can send per day or month (such as Microsoft 365). Check your provider's limits before you start using a custom sender.
+
+## External resources
+
+The IETF publishes a [list of errors](https://datatracker.ietf.org/doc/html/rfc2821#section-4.2.3) you might see. These providers also document their SMTP codes:
 
 - [SendGrid](https://sendgrid.com/en-us/blog/smtp-server-response-codes-explained)
 - [Mailchimp](https://mailchimp.com/developer/transactional/docs/smtp-integration/)
