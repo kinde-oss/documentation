@@ -38,7 +38,7 @@ deprecated: false
 ai_summary: Complete guide for React SDK including installation, provider setup, authentication hooks, callback handling, and API integration for React 18+ applications.
 ---
 
-The Kinde React SDK allows developers to quickly and securely integrate a new or existing React application to the Kinde platform.
+The Kinde React SDK lets you quickly and securely integrate a new or existing React application with the Kinde platform.
 
 <Aside>
 
@@ -60,8 +60,14 @@ New to Kinde? Kinde is the all-in-one developer platform for authentication, acc
 2. Enter a name for the application (e.g., "My React App")
 3. Select **Front-end and mobile** as the application type, then select **Save**.
 4. On the **Quick start** page, select **React** from the list of Front-end SDKs, then select **Save**.
+5. On the **Quick start** page, select **Set** for both callback URL and logout URL. This sets `http://localhost:3000` as the default for both URLs. To use a different URL, change it on the **Details** page.
+6. To manually set the callback URLs, go to the **Details** page and scroll down to the **Callback URLs** section. Enter the following:
+    - **Allowed callback URL:** `http://localhost:3000`
+    - **Allowed logout redirect URL:** `http://localhost:3000`
 
-![react sdk](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/fda86327-9282-4864-0969-d1809d9a2300/socialsharingimage)
+    <Aside>
+    Replace `http://localhost:3000` with your server domain when you deploy to production. You can add multiple callback URLs. Add each URL on a new line.
+    </Aside>
 
 ### Using non-production environments
 
@@ -69,46 +75,39 @@ Kinde allows you to have one production environment and multiple non-production 
 
 ## Option 1: Install the Starter kit
 
-1. On the **Quick start** page, select **Set** for both callback URL and logout URL. This will set `http://localhost:3000` as your default URLs. If you want to use a different URL, you can change it in the **Details** page.
-
-2. Download the [React starter kit](https://github.com/kinde-starter-kits/react-starter-kit)
-
-3. Go to the root of your project and install the dependencies:
+1. Download the [React starter kit](https://github.com/kinde-starter-kits/react-starter-kit)
+2. Go to the root of your project and install the dependencies:
 
     ```bash
     cd react-starter-kit
     npm install
     ```
 
-4. Create an environment variable file:
+3. Create an environment variable file:
 
     ```bash
     cp .env_sample .env
     ```
 
-5. Copy the environment variables from the **Quick start** page to the `.env` file and save changes.
+4. Copy the environment variables from the **Quick start** page to the `.env` file and save changes.
 
-6. Start the development server:
+5. Start the development server:
 
     <PackageManagers type='run' pkg='dev' />
 
-7. Open the browser and navigate to http://localhost:3000 to see the application.
+6. Open the browser and navigate to http://localhost:3000 to see the application.
 
-8. Sign up for a new user.
+7. Sign up for a new user.
 
-9. Go to your **Kinde dashboard > Users** to find your newly created user.
+8. Go to your **Kinde dashboard > Users** to find your newly created user.
 
 ## Option 2: Install for an existing project
 
-1. On the **Quick start** page, select **Existing codebase** and edit your project URL (defaults to `http://localhost:3000`)
-
-2. Select **Set** for both callback URL and logout URL.
-
-3. Open your project in your terminal and install the Kinde dependency with the following command:
+1. Open your project in your terminal and install the Kinde dependency with the following command:
 
     <PackageManagers pkg="@kinde-oss/kinde-auth-react" />
 
-4. Import the `KindeProvider` component and wrap your application in it.
+2. Import the `KindeProvider` component and wrap your application in it.
 
     ```jsx
     // app.jsx
@@ -128,13 +127,13 @@ Kinde allows you to have one production environment and multiple non-production 
 
     Kinde uses a React Context Provider to maintain its internal state in your application.
 
-    Replace the `<your_kinde_client_id>` and `<your_kinde_domain>` placeholders in the code block above with the values from the **Details > App keys** section.
+    Replace the `<your_kinde_client_id>` and `<your_kinde_domain>` placeholders in the code block above with the values from **Details > App keys**.
 
-Now that you have set up your Kinde React application, check out the rest of the documentation to configure your app.
+See the sections below to configure your app.
 
 ## Authentication
 
-### Sign-in and sign-up
+### Sign up and sign in
 
 **Link components:**
 
@@ -150,7 +149,7 @@ import { LoginLink, RegisterLink } from '@kinde-oss/kinde-auth-react/components'
 
 **Hook methods:**
 
-Kinde also comes with a `useKindeAuth` hook with the methods `login` and `register` to start the flow.
+The SDK also includes a `useKindeAuth` hook with `login` and `register` methods to start the flow.
 
 ```jsx
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
@@ -168,8 +167,8 @@ You can also pass additional parameters to the auth URL.
 
 Both the `login` and `register` methods accept all the extra authentication params that can be passed to Kinde as part of the auth flow:
 
-- `loginHint` - this allows you to ask Kinde to prepopulate a user's email address on the sign-up and sign-in screens.
-- `lang` - if you offer multi-language support, Kinde will automatically figure out the best language for your user based on their browser. However, if you want to force a language and override the user's preference, you can do so by passing this attribute.
+- `loginHint` - prepopulates a user's email address on the sign-up and sign-in screens.
+- `lang` - if you offer multi-language support, Kinde automatically selects the best language for your user based on their browser. To force a language and override the user's preference, pass this attribute.
 
 ```jsx
 <button onClick={() => 
@@ -191,9 +190,9 @@ You can use these params as attributes to the `LoginLink` and `RegisterLink` com
 ```
 See the [login](#login) API reference for more available parameters for both `login` and `register` methods.
 
-### Callback Events
+### Callback events
 
-To handle the result of authentication, there are three callback events. 
+To handle the result of authentication, there are three callback events.
 
 - `onSuccess` - On successful authentication, this includes the authenticated user along with the passed state and context to the Kinde hook
 - `onError` - When an error occurs during authentication, this includes the error along with the passed state and context to the Kinde hook
@@ -216,7 +215,7 @@ To handle the result of authentication, there are three callback events.
 
 ### Signing out
 
-Similar to sign-in and sign-up, Kinde also provides the `logout` method and `LogoutLink` component which can be used to end the current session.
+Similar to sign-in and sign-up flows, Kinde also provides the `logout` method and `LogoutLink` component, which you can use to end the current session.
 
 **Link component:**
 
@@ -284,7 +283,7 @@ const Profile = () => {
 
 ## Check if user is authenticated
 
-To be on the safe side, we have also provided `isAuthenticated` and `isLoading` state to prevent rendering errors.
+The SDK also provides `isAuthenticated` and `isLoading` state to prevent rendering errors.
 
 ```jsx
 // Profile.jsx
@@ -700,16 +699,16 @@ To create a new organization with the user registration, you can use the `isCrea
 <button onClick={() => login({isCreateOrg: true})} type="button">Sign In</button>
 ```
 
-### Sign up/sign in users to organizations
+### Sign up and sign in users to organizations
 
-To sign up a user to a particular organization, you must pass the `orgCode` from your Kinde account as the user is created. You can find the `orgCode` on the **Details** page of each organization in Kinde.
+To sign up a user to a particular organization, pass the `orgCode` from your Kinde account when the user is created. You can find the `orgCode` on the **Details** page of each organization in Kinde.
 
 ```jsx
 <LoginLink orgCode="org_1234">Sign in</LoginLink>
 <button onClick={() => login({orgCode: "org_1234"})} type="button">Sign In</button>
 ```
 
-Following authentication, Kinde provides a JSON Web Token (JWT) to your application. Along with the standard information, we also include the `org_code` and the `permissions` for that organization (this is important as a user can belong to multiple organizations and have different permissions for each). Example of a returned token:
+Following authentication, Kinde provides a JSON Web Token (JWT) to your application. In addition to standard claims, the token includes the `org_code` and the `permissions` for that organization (this is important because a user can belong to multiple organizations and have different permissions for each). Example of a returned token:
 
 ```json
 {
@@ -729,7 +728,7 @@ For more information about how organizations work in Kinde, see [Kinde organizat
 
 ## User Permissions
 
-Once a user has been verified as signed in, your project/application will receive a JWT token containing an array of permissions for that user. You need to configure your project to read permissions and unlock the respective functions.
+After a user signs in, your project or application receives a JWT token containing an array of permissions for that user. Configure your project to read permissions and unlock the respective functions.
 
 [Configure permissions](/manage-users/roles-and-permissions/user-permissions/) in Kinde first. Here is an example set of permissions.
 
@@ -758,7 +757,7 @@ await getPermissions();
 // {orgCode: "org_1234", permissions: ["create:todos", "update:todos", "read:todos"]}
 ```
 
-A practical example in code might look something like:
+Example:
 
 ```jsx
 {
@@ -789,7 +788,7 @@ feature_flags: {
 }
 ```
 
-In order to minimize the payload in the token we have used single letter keys / values where possible. The single letters represent the following:
+To minimize the payload in the token, we use single-letter keys and values where possible. The single letters represent the following:
 
 `t` = `type`
 
@@ -826,7 +825,7 @@ await getFlag('create_competition', {defaultValue: false});
 }*/
 ```
 
-A practical example in code might look something like:
+Example:
 
 ```tsx
 import { useState, useEffect } from 'react';
@@ -889,7 +888,7 @@ await getClaim("given_name", "idToken");
 
 ### How to prevent authentication state from being lost on page refresh or new tab?
 
-You will find that when you refresh the browser using a front-end based SDK that the authentication state is lost. This is because there is no secure way to persist this in the front-end.
+When you refresh the browser using a front-end SDK, the authentication state is lost. There is no secure way to persist this in the front end.
 
 There are two ways to work around this.
 
@@ -942,7 +941,7 @@ The trade-off with this approach, however, is that if a page is refreshed or a n
 
 1. Use the Kinde custom domain feature. We can then set a secure, `httpOnly` cookie against your domain containing only the refresh token. This reduces token exposure to JavaScript; CSRF protection still relies on controls such as SameSite and server-side request validation.
 
-2. There is an escape hatch which can be used for local development: `useInsecureForRefreshToken`. This SHOULD NOT be used in production. We recommend you use a custom domain. This will store only the refresh token in local storage and is used to silently re-authenticate.
+2. For local development, use the escape hatch `useInsecureForRefreshToken`. Do **not** use this in production. We recommend using a custom domain instead. This stores only the refresh token in local storage and is used to silently re-authenticate.
 
 ```jsx
 <KindeProvider
@@ -1617,9 +1616,9 @@ login({
 
 ### Callbacks
 
-`onRedirectCallback` has been removed in favor of a richer event system. 
+`onRedirectCallback` has been removed in favor of a richer event system.
 
-This has been replaced by `callbacks > onSuccess`.
+It has been replaced by `callbacks > onSuccess`.
 
 ### Create organization
 
