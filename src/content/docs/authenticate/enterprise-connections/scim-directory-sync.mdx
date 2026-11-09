@@ -215,6 +215,12 @@ Other SCIM attributes, such as phone numbers, addresses, and titles, are stored 
 | User deleted (SCIM `DELETE` request)             | The user is suspended and removed from all directory groups, so they lose any roles granted by those groups. The user record stays in Kinde, so their history and references are kept. If your IdP provisions them again, they're restored. |
 | Group membership changed                         | Roles linked to the group are added or removed.                                                                                                                                                                                             |
 
+<Aside type="info" title="Group changes while a user is unassigned">
+
+Okta and Entra ID stop sending group changes for a user once they're unassigned from the app. If the IdP admin removes an unassigned user from a group, Kinde isn't told, so the user keeps that group's roles while suspended. This only matters if the user is reassigned later. The IdP admin can clear it by re-pushing the group, or by removing the user from groups before unassigning them.
+
+</Aside>
+
 When SCIM changes a user, Kinde sends a `user.updated` [webhook](/integrate/webhooks/about-webhooks/) event. SCIM creates and deletes don't send `user.created` or `user.deleted` events. Instead, a SCIM delete sends `user.updated` with the user suspended.
 
 ## Directory-managed organizations
