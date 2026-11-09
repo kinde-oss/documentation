@@ -33,7 +33,7 @@ keywords:
   - Entra ID
   - Okta
   - custom attributes
-updated: 2026-11-06
+updated: 2026-11-09
 ---
 
 <Aside type="upgrade">
@@ -69,6 +69,7 @@ Kinde does not send password or SSO credentials to your IdP, and SCIM does not r
 - [Set up an enterprise connection](/authenticate/enterprise-connections/about-enterprise-connections/) for the organization (for example, SAML or Entra ID) and make sure it's enabled. You can't create a directory without one.
 - Make sure the organization's default roles are set the way you want. Kinde gives these roles to every user it provisions.
 - Decide which existing users will be managed by SCIM. See [Users who already exist in Kinde](#users-who-already-exist-in-kinde).
+- Decide what to do with the organization's current members before you create the directory. Once the directory exists, every member becomes read-only, including users your IdP will never provision. You can't edit, suspend, or delete them in Kinde, or change their roles. Remove anyone you don't want in the organization first, or plan to manage them through your IdP. See [Directory-managed organizations](#directory-managed-organizations).
 
 ## Configuration
 
@@ -178,7 +179,22 @@ You can add these properties to tokens like any other user property.
 
 **Custom attributes**
 
-If your IdP sends attributes in the custom extension schema `urn:custom:extension:2.0:User`, they're listed under **Custom attribute mapping** on the **Directory** page once Kinde has received them. Map each one to a Kinde user property:
+Kinde reads custom attributes from the custom extension schema `urn:custom:extension:2.0:User`. Neither Entra ID nor Okta sends custom attributes by default, so first add each attribute to your IdP's SCIM app under that schema. The examples below use an attribute called `badgeNumber`.
+
+In **Microsoft Entra ID**:
+
+1. In your enterprise application, go to **Provisioning** > **Mappings** and select **Provision Microsoft Entra ID Users**.
+2. Select **Show advanced options** > **Edit attribute list for** your app.
+3. Add an attribute with the **Name** `urn:custom:extension:2.0:User:badgeNumber` and the **Type** that matches your data (for example, **String**), then select **Save**.
+4. Back on the **Attribute Mapping** page, select **Add New Mapping**. Choose the Entra ID **Source attribute** and set **Target attribute** to `urn:custom:extension:2.0:User:badgeNumber`. Select **OK**, then **Save**.
+
+In **Okta**:
+
+1. Go to **Directory** > **Profile Editor** and select your app's user profile.
+2. Select **Add Attribute**. Enter a **Display name** and **Variable name**, set **External name** to `badgeNumber` and **External namespace** to `urn:custom:extension:2.0:User`, then select **Save**.
+3. Open the app's **Provisioning** tab, go to **To App**, and map an Okta user attribute to the new attribute under **Attribute Mappings**.
+
+Once Kinde receives a custom attribute, it's listed under **Custom attribute mapping** on the **Directory** page. Kinde ignores attributes sent under any other custom schema URN. Map each attribute to a Kinde user property:
 
 1. On the **Directory** page, under **Custom attribute mapping**, find the attribute.
 2. Select the three dots menu, then select **Map to user property**.
@@ -190,14 +206,14 @@ Other SCIM attributes, such as phone numbers, addresses, and titles, are stored 
 
 ## What happens when users change in your IdP
 
-| Change in your IdP                 | What happens in Kinde                                                                                                                                                                                                                       |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| User assigned to the app           | The user is created in the organization with the organization's default roles and an identity on the enterprise connection.                                                                                                                 |
-| Profile updated                    | Name, email, and mapped attributes are updated. A changed email address is added to the user as a confirmed email.                                                                                                                          |
-| User deactivated (`active: false`) | The user is suspended and can't sign in. Group memberships are kept.                                                                                                                                                                        |
-| User reactivated (`active: true`)  | The user is unsuspended, unless an admin suspended them in Kinde.                                                                                                                                                                           |
-| User unassigned or deleted         | The user is suspended and removed from all directory groups, so they lose any roles granted by those groups. The user record stays in Kinde, so their history and references are kept. If your IdP provisions them again, they're restored. |
-| Group membership changed           | Roles linked to the group are added or removed.                                                                                                                                                                                             |
+| Change in your IdP                               | What happens in Kinde                                                                                                                                                                                                                       |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| User assigned to the app                         | The user is created in the organization with the organization's default roles and an identity on the enterprise connection.                                                                                                                 |
+| Profile updated                                  | Name, email, and mapped attributes are updated. A changed email address is added to the user as a confirmed email.                                                                                                                          |
+| User deactivated or unassigned (`active: false`) | The user is suspended and can't sign in. Group memberships and the roles they grant are kept. Okta and Entra ID send this update when you unassign a user from the app.                                                                     |
+| User reactivated (`active: true`)                | The user is unsuspended, unless an admin suspended them in Kinde.                                                                                                                                                                           |
+| User deleted (SCIM `DELETE` request)             | The user is suspended and removed from all directory groups, so they lose any roles granted by those groups. The user record stays in Kinde, so their history and references are kept. If your IdP provisions them again, they're restored. |
+| Group membership changed                         | Roles linked to the group are added or removed.                                                                                                                                                                                             |
 
 When SCIM changes a user, Kinde sends a `user.updated` [webhook](/integrate/webhooks/about-webhooks/) event. SCIM creates and deletes don't send `user.created` or `user.deleted` events. Instead, a SCIM delete sends `user.updated` with the user suspended.
 
