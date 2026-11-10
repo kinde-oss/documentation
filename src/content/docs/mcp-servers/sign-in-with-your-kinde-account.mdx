@@ -1,0 +1,168 @@
+---
+page_id: 08e5abe4-5d6d-4639-bffa-8be76327f31b
+title: Sign in to the Management MCP server with your Kinde account
+description: "Let your team connect AI assistants to the Kinde Management MCP server by signing in with their Kinde account, with access scoped to their team role instead of a shared API key"
+sidebar:
+  order: 4
+  label: Sign in with your Kinde account
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - 2219e226-2b23-5132-a2a7-c578b1cfb0c1
+  - 1119f226-3b22-4131-b2a6-a568b1dfb011
+  - f3a4b5c6-d7e8-4f9a-b0c1-d2e3f4a5b6c7
+  - fbb561f0-f8fc-4aad-b557-19939cef6b97
+  - e20dc04e-84cc-403c-82bc-8690cddb306c
+  - 8c4a1882-5fce-4e3c-87de-9e0190ab31b1
+app_context:
+  - m: api_details
+    s: api_keys
+topics:
+  - mcp-servers
+  - developer-tools
+  - kinde-api
+sdk: []
+languages: []
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - mcp server
+  - model context protocol
+  - oauth sign-in
+  - ai agent sign-in
+  - access levels
+  - team roles
+  - claude
+  - chatgpt
+  - grok
+  - kinde management api
+updated: 2026-11-10
+featured: false
+deprecated: false
+ai_summary: "Explains how owners and admins enable AI agent sign-in (OAuth) for the Kinde Management MCP server, how each team role's access level (No access, Read only, Read and write, Full access) limits what a signed-in assistant can do, how Kinde provisions and revokes the credential behind the scenes, and how to troubleshoot sign-in."
+---
+
+The Kinde Management MCP server lets AI assistants such as Claude, ChatGPT and Grok work with your Kinde environment. You can connect an assistant with an [Environment API key](/mcp-servers/manage-kinde-account-with-ai-agents/), or you can let people **sign in with their Kinde account**. With sign-in there is no key to create, share or paste, and each person's access is scoped to their own team role.
+
+Sign-in is off by default. An owner or admin turns it on once for the environment, and sets how much of the Management API each team role can use.
+
+### What you need
+
+- A Kinde business with the **Environment API keys** feature enabled. If you don't see **API keys** on the Kinde Management API page, ask your Kinde account owner to enable it.
+- The **Owner** or **Admin** team role in Kinde to enable sign-in and set access levels. Members can connect once sign-in is enabled, but can't change the settings.
+- An assistant that supports remote MCP servers with OAuth sign-in. See the setup guides for [Claude](/mcp-servers/connect-claude/), [ChatGPT](/mcp-servers/connect-chatgpt/) and [Grok](/mcp-servers/connect-grok/).
+
+## Step 1: Enable sign-in for the environment
+
+1. In Kinde, go to **Settings > APIs > Kinde Management API**.
+2. Under **AI agent sign-in (OAuth)**, select **Enable OAuth sign-in**.
+3. Copy the **MCP URL** that appears. It is your environment's domain followed by `/mcp`, for example `https://YOUR_BUSINESS.kinde.com/mcp`. If you use a custom domain, the URL uses that domain.
+
+{/* TODO: screenshot of the Kinde Management API page with the AI agent sign-in (OAuth) section enabled, showing the MCP URL and the access level table */}
+
+Sign-in applies to one environment. Repeat these steps in each environment you want people to connect to.
+
+## Step 2: Set access levels for each team role
+
+Once sign-in is enabled, the **AI agent sign-in (OAuth)** section shows an access level for each Kinde team role. Choose a level for **Owner**, **Admin** and **Member**, then select **Save access levels**.
+
+| Access level                       | What a signed-in assistant can do                                                                          |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **No access**                      | People with this role can't connect.                                                                       |
+| **Read only**                      | Look things up: users, organizations, roles, permissions, feature flags, properties and so on. No changes. |
+| **Read and write (no delete)**     | Everything in _Read only_, plus create and update. Nothing can be deleted.                                 |
+| **Full access (including delete)** | The whole Management API, including delete.                                                                |
+
+By default, Owners and Admins get **Full access** and Members get **No access**.
+
+Actions that mint a credential are only available at **Full access**: creating API keys, creating applications, authorizing applications on an API, and rotating application secrets. At _Read and write_, an assistant can't use them even though it can create other things. This keeps a lower level from turning into a lasting credential that outlives the person's access.
+
+<Aside type="warning" title="Full access is full access">
+  Full access gives an assistant the same reach as a machine-to-machine application authorized on
+  the Management API, including deleting users and organizations. Give it only to roles that already
+  have that reach in Kinde, and review each write action the assistant asks you to confirm.
+</Aside>
+
+Changing a level re-provisions people who already connected at the new level on their next sign-in. Lowering a level revokes the credentials Kinde provisioned at the old level straight away.
+
+## Step 3: Connect from your assistant
+
+Give people the **MCP URL** from Step 1. In their assistant they add it as a custom connector with no API key or request header, choose to sign in, and are sent to Kinde. They sign in with their Kinde account, approve access, and the assistant loads the Management API tools their role allows.
+
+Setup differs by assistant. Follow the guide for yours:
+
+- [Connect Kinde to Claude](/mcp-servers/connect-claude/)
+- [Connect Kinde to ChatGPT](/mcp-servers/connect-chatgpt/)
+- [Connect Kinde to Grok](/mcp-servers/connect-grok/)
+
+Other MCP clients that sign in with OAuth 2.1, such as Cursor and Claude Code, can also connect to the same URL. Clients identify themselves to Kinde through [Dynamic Client Registration](https://datatracker.ietf.org/doc/html/rfc7591) or a hosted client ID metadata document; no client ID or secret needs to be entered.
+
+## How sign-in works
+
+The Kinde Management API only accepts machine credentials, so your sign-in token is never sent to it. When you connect:
+
+1. Kinde checks your team role in the business and the access level set for that role.
+2. Kinde provisions a Management API credential for the environment, scoped to that level, and keeps it on Kinde's side.
+3. Your assistant's requests use that credential. Your own sign-in token stays with Kinde.
+
+Access is re-checked on **every request**. If you are removed from the team or your role changes, access stops right away. Reconnect to pick up a new role's level.
+
+Sign-in uses OAuth 2.1 with PKCE. Each assistant's session is bound to the environment's MCP URL, so a token issued for one environment can't be used against another.
+
+### What a signed-in assistant can see
+
+The assistant sees one tool per Management API operation that your access level covers. Each tool is annotated so the assistant knows how to treat it:
+
+- **Read-only tools**, such as listing users, run without asking.
+- **Tools that change or delete data**, such as creating a role or removing a user, ask you to confirm before they run.
+
+Credentials never reach the assistant. Fields that carry one are redacted from tool results before the assistant sees them: application client secrets, connected-app access tokens, SCIM directory tokens, and the value of a newly created or rotated API key. The rest of the response is unchanged. If you need one of those values, use the Kinde dashboard. For the same reason, the tool that rotates a SCIM directory's secret isn't offered.
+
+## Disable sign-in
+
+To stop everyone connecting with their Kinde account, go to **Settings > APIs > Kinde Management API** and select **Disable OAuth sign-in** under **AI agent sign-in (OAuth)**. Every credential Kinde provisioned for sign-in is revoked immediately, and connected assistants lose access on their next request. Assistants connected with an Environment API key are not affected.
+
+### Troubleshooting FAQs
+
+<details>
+<summary>No sign-in option appears in my assistant</summary>
+
+Sign-in isn't enabled for that environment yet, or the assistant is using a request header. Ask an owner or admin to enable it under **Settings > APIs > Kinde Management API > AI agent sign-in (OAuth)**, and add the connector without an `Authorization` header.
+
+</details>
+
+<details>
+<summary>I signed in, but no tools appear</summary>
+
+Your team role's access level is **No access**. Ask an owner or admin to set a level for your role, then reconnect.
+
+</details>
+
+<details>
+<summary>A tool I expect is missing</summary>
+
+Your access level doesn't cover it. _Read only_ excludes every create, update and delete tool. _Read and write_ excludes delete tools and the credential-minting tools listed in Step 2. Ask an owner or admin to raise your role's level, then reconnect.
+
+</details>
+
+<details>
+<summary>Tools disappeared, or calls started failing</summary>
+
+Access is re-checked on every request. You were removed from the team, your role changed, or sign-in was disabled for the environment. Reconnect to pick up your current access, or ask an owner or admin.
+
+</details>
+
+<details>
+<summary>The assistant shows "[redacted]" instead of a secret</summary>
+
+That's expected. Credentials are redacted from every tool result. Read the value in the Kinde dashboard instead.
+
+</details>
+
+## Next steps
+
+- [Connect Kinde to Claude](/mcp-servers/connect-claude/), [ChatGPT](/mcp-servers/connect-chatgpt/) or [Grok](/mcp-servers/connect-grok/)
+- [Operations and scopes for the Kinde MCP server](/mcp-servers/operations-and-scopes/) — what each access level covers
+- [Manage Kinde account with AI agents](/mcp-servers/manage-kinde-account-with-ai-agents/) — connect with an Environment API key instead

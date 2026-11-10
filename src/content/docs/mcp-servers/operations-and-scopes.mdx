@@ -1,12 +1,16 @@
 ---
 page_id: f3a4b5c6-d7e8-4f9a-b0c1-d2e3f4a5b6c7
 title: Operations and Scopes for Kinde MCP server
-description: "Complete reference guide to all operations and scopes available in the Kinde Management MCP server including user management, organizations, roles, permissions, and configuration operations"
+description: "Reference for what the Kinde Management MCP server covers: one tool per Management API operation across users, organizations, roles, permissions, applications and configuration, what each sign-in access level and API key scope unlocks, and which secrets are redacted"
 sidebar:
-  order: 4
+  order: 5
 relatedArticles:
   - 2219e226-2b23-5132-a2a7-c578b1cfb0c1
   - 1119f226-3b22-4131-b2a6-a568b1dfb011
+  - 08e5abe4-5d6d-4639-bffa-8be76327f31b
+  - fbb561f0-f8fc-4aad-b557-19939cef6b97
+  - e20dc04e-84cc-403c-82bc-8690cddb306c
+  - 8c4a1882-5fce-4e3c-87de-9e0190ab31b1
   - edb34665-0eda-47a1-b8e1-89f705c6ac87
   - 50284476-2442-414c-af20-01ed3ef4ca4e
 app_context: []
@@ -27,6 +31,8 @@ keywords:
   - operations
   - scopes
   - api scopes
+  - access levels
+  - oauth sign-in
   - read users
   - create roles
   - create permissions
@@ -40,86 +46,71 @@ keywords:
   - api integration
   - ai clients
   - claude
+  - chatgpt
+  - grok
   - cursor
   - vs code
   - ide integration
   - environment api key
   - natural language
   - api access
-updated: 2025-12-01
+updated: 2026-11-10
 featured: false
-deprecated: false 
-ai_summary: Complete reference guide to all operations and scopes available in the Kinde MCP Server. Learn about user operations (GetUsers, GetUserData), organization operations (GetOrganizations, GetOrganizationUsers), roles and permissions (CreateRole, CreatePermission), and configuration operations (CreateProperty, CreateFeatureFlag). Understand why MCP Server scopes are limited to read and create operations for AI safety.
+deprecated: false
+ai_summary: Reference for the Kinde Management MCP server's coverage of the Management API. The server exposes one tool per operation, covering create, read, update and delete across users, organizations, roles and permissions, applications and APIs, authentication, feature flags and properties, access and provisioning, and environment and business settings. Explains that an Environment API key's scopes, or a signed-in person's team role access level (No access, Read only, Read and write, Full access), decide which tools appear, that credential-minting tools are Full access only, which operations are intentionally not exposed, and which secret fields are redacted from tool results.
 ---
 
-The MCP Server uses a subset of the scopes available in the [Kinde Management API](/developer-tools/kinde-api/). It exposes the following operations to you:
+The Kinde Management MCP server exposes the [Kinde Management API](/kinde-apis/management/) as tools, one per operation, covering create, read, update and delete wherever the API supports them. What an assistant can actually use depends on how it connected:
 
-## Users
+- With an **Environment API key**, the assistant sees the tools covered by the scopes on the key.
+- With **[sign-in](/mcp-servers/sign-in-with-your-kinde-account/)**, the assistant sees the tools covered by the access level set for the person's team role.
 
-<Aside>
-  You can only get data for users. You cannot create or update users via the MCP server.
-</Aside>
+Each tool is annotated so assistants treat it correctly: read-only tools run without asking, and tools that create, change or delete data ask for confirmation first.
 
-| Operation | Description | Scope |
-| --- | --- | --- |
-| GetUsers | List all users | read:users |
-| GetUserData | Get user details | read:users |
-| GetUserIdentities | Get linked identity providers | read:user_identities |
+## What the server covers
 
-## Organizations
+| Area                        | What you can manage                                                                                                                                                    |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Users                       | List, get, create, update and delete users; identities, properties, feature flag overrides, password, sessions and MFA                                                  |
+| Organizations               | List, get, create and update organizations; membership, user roles and permissions, properties, feature flag overrides, connections, MFA, passkeys, logo and handle    |
+| Roles and permissions       | Full create, read, update and delete for roles and permissions; role permissions and system permissions                                                                |
+| Applications and APIs       | Application create, read, update and delete, plus connections, access roles, properties and token settings; APIs, API scopes, and API-to-application scope grants      |
+| Authentication              | Connections (SSO and social), callback and logout URLs, passkey and MFA policy                                                                                         |
+| Feature flags and properties | Feature flag create, read, update and delete; custom properties and categories                                                                                        |
+| Access and provisioning     | API keys (create, rotate, revoke, verify), organization invites, SCIM directories                                                                                       |
+| Environment and business    | Environment settings and variables, subscribers, webhooks, events, business profile, and reference data such as industries and time zones                              |
 
-<Aside>
-  You can only get data for organizations. You cannot create or update organizations with the MCP server.
-</Aside>
+A few operations are intentionally not exposed: deleting an organization, billing operations, and rotating a SCIM directory's secret.
 
-| Operation | Description | Scope |
-| --- | --- | --- |
-| GetOrganizations | List all organizations | read:organizations |
-| GetOrganization | Get organization details | read:organizations |
-| GetOrganizationUsers | List users in org | read:organization_users |
-| GetOrganizationUserRoles | Get user's roles in org | read:organization_users |
-| GetOrganizationUserPermissions | Get user's permissions in org | read:organization_users |
-| GetOrganizationFeatureFlags | Get org's feature flags | read:feature_flags |
+## Access levels for sign-in
 
-## Roles & Permissions
+When someone connects by signing in with their Kinde account, their team role's access level decides which tools appear:
 
-| Operation | Description | Scope |
-| --- | --- | --- |
-| GetRoles | List all roles | read:roles |
-| GetRole | Get role details | read:roles |
-| CreateRole | Create a new role | create:roles |
-| GetPermissions | List all permissions | read:permissions |
-| CreatePermission | Create a permission | create:permissions |
-| GetRolePermissions | Get role's permissions | read:role_permissions |
+| Access level                        | Tools                                                                            |
+| ----------------------------------- | -------------------------------------------------------------------------------- |
+| **No access**                       | None. The person can't connect.                                                  |
+| **Read only**                       | Every read tool.                                                                 |
+| **Read and write (no delete)**      | Every read, create and update tool, except the credential-minting tools below.   |
+| **Full access (including delete)** | Every tool.                                                                      |
 
+Credential-minting tools are available at **Full access** only: creating API keys, creating applications, authorizing applications on an API, and rotating application secrets. They are held back from _Read and write_ because a credential created through them would outlive the person's access to the connector.
 
+## Secrets are redacted
 
-## Configuration
-
-| Operation | Description | Scope |
-| --- | --- | --- |
-| GetEnvironment | Get environment details | read:environments |
-| GetProperties | List custom properties | read:properties |
-| CreateProperty | Create a custom property | create:properties |
-| CreateFeatureFlag | Create a feature flag | create:feature_flags |
-| CreateEnvironmentVariable | Create env variable | create:environment_variables |
-| GetSubscribers | List subscribers | read:subscribers |
-| CreateSubscriber | Create a subscriber | create:subscribers |
-
-### Why are the MCP Server scopes limited to read and create operations only?
-
-As AI can misinterpret requests or hallucinate, the scopes that the Kinde MCP server can be assigned are currently limited to **gets and creates** only. This ensures that AI clients can query information and create new resources, but cannot modify or delete existing data, providing an additional layer of safety when using AI to interact with your Kinde account. As AI matures, we will be able to expand the scopes with new capabilities.
-
-If you need a broader scope for pragmatic use, check out the [Kinde Management API](/developer-tools/kinde-api/).
+Whichever way an assistant connects, credentials never reach it. These fields are replaced with `[redacted]` in every tool result: an application's `client_secret`, a connected app's `access_token`, a SCIM directory's `secret_token`, and the `key` value of a newly created or rotated API key. The rest of the response is unchanged. Read those values in the Kinde dashboard instead.
 
 ### How do I grant scopes to my MCP server?
 
-When creating an Environment API key, select the scopes you want to grant to your API key. Always follow the principle of least privilege when granting API scopes, i.e., only grant access to what's needed.
+Scopes are granted when you [create an Environment API key](/mcp-servers/manage-kinde-account-with-ai-agents/#step-1-create-an-environment-api-key). Select the scopes you need, and only those. You can create a second, more privileged key later once you're comfortable with what the assistant does.
 
-### How do I check which scopes are enabled for my API key?
+For sign-in, there are no scopes to pick. An owner or admin sets an [access level for each team role](/mcp-servers/sign-in-with-your-kinde-account/#step-2-set-access-levels-for-each-team-role).
 
-You can ask your AI agent "What tools do you have available from Kinde?" to see the available operations and scopes.
+### How do I check which tools my assistant has?
+
+Ask it. For example, "What Kinde tools do you have?" lists the tools the current key or access level covers. If a tool you expect is missing, add the scope to the key and reconnect, or ask an owner or admin to raise your role's access level.
 
 ## Next steps
 
-See [Manage Kinde account with AI agents](/mcp-servers/manage-kinde-account-with-ai-agents/) to set up the Management MCP server.
+- [Manage Kinde account with AI agents](/mcp-servers/manage-kinde-account-with-ai-agents/) — set up the Management MCP server with an Environment API key
+- [Sign in with your Kinde account](/mcp-servers/sign-in-with-your-kinde-account/) — enable sign-in and set access levels
+- [Connect Kinde to Claude](/mcp-servers/connect-claude/), [ChatGPT](/mcp-servers/connect-chatgpt/) or [Grok](/mcp-servers/connect-grok/)

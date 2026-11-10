@@ -1,0 +1,131 @@
+---
+page_id: e20dc04e-84cc-403c-82bc-8690cddb306c
+title: Connect Kinde to ChatGPT
+description: "Add the Kinde Management MCP server to ChatGPT as a custom MCP server plugin and sign in with your Kinde account to manage users, organizations, roles and more from a chat"
+sidebar:
+  order: 7
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - 08e5abe4-5d6d-4639-bffa-8be76327f31b
+  - 1119f226-3b22-4131-b2a6-a568b1dfb011
+  - f3a4b5c6-d7e8-4f9a-b0c1-d2e3f4a5b6c7
+  - fbb561f0-f8fc-4aad-b557-19939cef6b97
+  - 8c4a1882-5fce-4e3c-87de-9e0190ab31b1
+app_context:
+  - m: api_details
+    s: api_keys
+topics:
+  - mcp-servers
+  - developer-tools
+  - kinde-api
+sdk: []
+languages: []
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - chatgpt
+  - chatgpt plugins
+  - custom mcp server
+  - developer mode
+  - mcp server
+  - oauth sign-in
+updated: 2026-11-10
+featured: false
+deprecated: false
+ai_summary: "Step-by-step guide to adding the Kinde Management MCP server to ChatGPT as a custom MCP server, signing in with a Kinde account (ChatGPT supports OAuth only, not API-key headers), installing the plugin, using it in a chat with @-mentions, confirming write actions, and troubleshooting."
+---
+
+Kinde publishes a remote [MCP](https://modelcontextprotocol.io) server that lets ChatGPT work with your Kinde environment in natural language. Once connected, you can ask ChatGPT to look up users, inspect organizations, review roles and permissions, and make routine changes from a chat.
+
+ChatGPT connects to custom MCP servers with **OAuth sign-in** only; it has no option to send an API key as a header. So to use Kinde from ChatGPT, an owner or admin first [enables AI agent sign-in](/mcp-servers/sign-in-with-your-kinde-account/) for the environment, and each person signs in with their own Kinde account.
+
+### What you need
+
+- A Kinde business with the **Environment API keys** feature enabled, and **AI agent sign-in (OAuth)** enabled for the environment by an owner or admin.
+- A Kinde team role whose [access level](/mcp-servers/sign-in-with-your-kinde-account/#step-2-set-access-levels-for-each-team-role) is not _No access_.
+- A ChatGPT plan that allows custom MCP servers. On Business, Enterprise and Edu workspaces an admin can restrict who may add them; if you don't see the option, ask your workspace admin.
+- Your environment's MCP URL: `https://YOUR_BUSINESS.kinde.com/mcp`. If you use a custom domain, use that domain instead.
+
+Custom MCP servers are added in the web version of ChatGPT.
+
+## Step 1: Add Kinde as a custom MCP server
+
+1. In ChatGPT on the web, go to **Plugins** at `chatgpt.com/plugins`.
+2. Select the **+** button, then **Add custom MCP server**.
+3. Enter a name, such as `Kinde`, and an optional description.
+4. Under **Connection**, enter your **Server URL**: `https://YOUR_BUSINESS.kinde.com/mcp`.
+5. Under authentication, choose **OAuth**. Leave the client ID and secret empty. ChatGPT identifies itself to Kinde with its published client metadata, so there is nothing to register.
+6. Review the risk warning and select **I understand and want to continue**.
+7. Select **Create as a plugin**.
+
+<Aside>
+  Earlier versions of ChatGPT called this **Connectors** and put custom servers under **Settings >
+  Connectors > Advanced > Developer mode**. If your account still shows that layout, enable
+  Developer mode there and select **Create** to add the server; the fields are the same.
+</Aside>
+
+## Step 2: Install and sign in
+
+1. Find the plugin under your personal plugins, or in the workspace where you created it, and select **Install**.
+2. The first time you use it, ChatGPT opens a Kinde sign-in window. Sign in with your Kinde account and approve access.
+
+ChatGPT loads the Management API tools your team role allows.
+
+## Step 3: Use the plugin in a chat
+
+Type `@` in the prompt box and select **Kinde**, then ask in plain language, for example:
+
+- "How many users are in the _Acme_ organization?"
+- "List every user who has the _admin_ role and which organizations they hold it in."
+- "Create a new role called _Support Agent_."
+
+Naming what you want helps ChatGPT pick the right tool, for example "use Kinde to list organizations".
+
+Read-only tools run without asking. Any tool that creates, changes or deletes data asks you to confirm first. ChatGPT can remember an approve or deny decision for a tool within a conversation; only do that for actions you trust it to repeat. New conversations ask again.
+
+ChatGPT only sees the tools your team role's access level covers. If a tool you expect is missing, that's almost always why.
+
+### Troubleshooting FAQs
+
+<details>
+<summary>I can't add a custom MCP server</summary>
+
+Your plan doesn't include custom MCP servers, or your workspace admin has restricted them. Ask your admin, or connect from the [Grok CLI](/mcp-servers/connect-grok/) or [Claude](/mcp-servers/connect-claude/) with an Environment API key instead.
+
+</details>
+
+<details>
+<summary>The sign-in window reports an error, or ChatGPT says the server has no authentication</summary>
+
+AI agent sign-in isn't enabled for the environment. Ask an owner or admin to enable it under **Settings > APIs > Kinde Management API > AI agent sign-in (OAuth)**, then try again.
+
+</details>
+
+<details>
+<summary>I signed in, but no tools appear</summary>
+
+Your team role's access level is **No access**. Ask an owner or admin to set a level for your role, then reconnect.
+
+</details>
+
+<details>
+<summary>Tools disappeared, or calls started failing</summary>
+
+Access is re-checked on every request. Your role changed, you were removed from the team, or sign-in was disabled for the environment. Reconnect to pick up your current access.
+
+</details>
+
+### Security best practices
+
+- Review every write action before you approve it, and avoid remembering approvals for destructive tools.
+- Keep the plugin to the workspace that needs it. Anyone who installs it still signs in with their own Kinde account, so a shared plugin never shares access.
+- If someone should lose access, change their Kinde team role or remove them from the team. Access stops on their next request.
+
+## Next steps
+
+- [Sign in with your Kinde account](/mcp-servers/sign-in-with-your-kinde-account/) — enable sign-in and set access levels
+- [Operations and scopes for the Kinde MCP server](/mcp-servers/operations-and-scopes/)
+- [Add custom MCP server](https://developers.openai.com/api/docs/guides/custom-mcp-server) in OpenAI's documentation
