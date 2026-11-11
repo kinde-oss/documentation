@@ -51,6 +51,7 @@ Use the webhook approach on this page when you want full control over the email 
 - Verify the webhook signature before processing to ensure the request is authentic.
 - Respond with a 2xx quickly after queuing work; use retries and make processing idempotent (e.g., de-duplicate by event ID).
 - Filter the webhook payload to determine whether the user was created manually or via API. The `source` field is `admin` or `api`. Treat these differently if needed.
+- If you subscribe to `user.updated`, don't send an email for every event. `user.updated` also fires when a user's roles or permissions change, and the payload has no field that says why it was sent. Store each user's organization memberships, compare the incoming `organizations` array with what you stored, and only send the email when a new organization code appears.
 
 Payload example:
 
