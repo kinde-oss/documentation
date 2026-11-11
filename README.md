@@ -17,13 +17,15 @@ This is the repo for our documentation site at [docs.kinde.com](https://docs.kin
 Wrangler is **already available for this repo**. You should not need to log in to
 Cloudflare or configure anything in the dashboard to work on docs.
 
-**Use Wrangler only to upload and store images that are linked from the docs.**
-The site itself is Astro. Wrangler is not how you develop or deploy docs.kinde.com.
+**Locally, use Wrangler only to upload and store images that are linked from the
+docs.** The site itself is Astro. Do not use Wrangler to develop or deploy
+docs.kinde.com locally. The only Wrangler deploy is the CI-only Unlighthouse
+report publish (see below).
 
 ### How it is wired
 
-- **Wrangler is a global CLI**, not a package dependency — run it as
-  `npx wrangler` from the repo root. Do not add it to `package.json`.
+- **Wrangler is not a package dependency.** Run it as `npx wrangler` from the
+  repo root. Do not add it to `package.json`.
 - **Authentication is already in place.** Global Wrangler OAuth can see more than
   one Cloudflare account; docs images live on the **Kinde** account.
   `wrangler login` is not part of this project's setup.

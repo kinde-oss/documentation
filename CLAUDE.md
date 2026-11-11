@@ -6,10 +6,11 @@
 > described here — is wrong, and it is the most common mistake agents make in this
 > codebase.
 
-**Wrangler in this repo is only for uploading and storing documentation images
-that are then linked from MDX.** It is not how the docs site is developed or
-deployed. Do not use it to create Workers, deploy Pages, mutate D1/KV/Queues, or
-“set up Cloudflare” for the Astro app.
+**In local and agent sessions, Wrangler in this repo is only for uploading and
+storing documentation images that are then linked from MDX.** It is not how the
+docs site is developed or deployed. Do not use it to create Workers, deploy Pages,
+mutate D1/KV/Queues, or “set up Cloudflare” for the Astro app. The one exception
+is the CI-only Unlighthouse publish described below.
 
 ### What is already true
 
@@ -17,7 +18,7 @@ deployed. Do not use it to create Workers, deploy Pages, mutate D1/KV/Queues, or
 |------|--------|
 | **This is an Astro docs site** | Local app commands are `npm run dev` / `npm start` (`astro dev`), `npm run build`, and `npm run preview` (`astro preview`). None of these are Wrangler. |
 | **There is no `wrangler.toml` / `wrangler.jsonc`** | That is deliberate. This repo is not a Worker or Pages project. Do **not** add a Wrangler config, `--name`, or `account_id` to “fix” Wrangler. |
-| **Wrangler is a global CLI, not a package dependency** | Run it as `npx wrangler` or `wrangler` from the repo root. Do **not** add it to `package.json` or ask the user to install it globally. |
+| **Wrangler is not a package dependency** | Run it as `npx wrangler` from the repo root. `npx` uses the Wrangler already on your `PATH`, or fetches it if there isn't one. Do **not** add it to `package.json` or ask the user to install it globally. |
 | **Wrangler is already authenticated** | Global Wrangler OAuth is in place. **Do not run `wrangler login`.** The login can see more than one Cloudflare account; the **Kinde** account is the one that holds docs images. |
 | **The account is scoped by `.envrc`** | This repo uses [direnv](https://direnv.net). A local `.envrc` (gitignored, including via the global gitignore) should export `CLOUDFLARE_ACCOUNT_ID` so every Cloudflare command targets the **Kinde** account. Optionally `CLOUDFLARE_API_TOKEN` lives in `.envrc.local`. |
 | **Docs images are Cloudflare Images** | Live pages link `https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/<image-id>/<variant>`. Variants used in this repo are `public` and `socialsharingimage`. Do not commit large screenshots into git when an imagedelivery URL is the existing pattern. |
@@ -35,8 +36,8 @@ local agent session.
 
 ### Workflow for agents
 
-**0. Be in the repo.** Every Wrangler / Cloudflare command runs from
-`/Users/andreselton/Kinde-codebases/documentation` (the git root). This repo has
+**0. Be in the repo.** Every Wrangler / Cloudflare command runs from the git
+root of this repository (`git rev-parse --show-toplevel`). This repo has
 no Wrangler config, so `wrangler deploy` / `wrangler dev` fail with:
 
 ```
@@ -53,7 +54,7 @@ interactive session here already has it when `.envrc` exists. A tool-invoked
 shell may not — prefix with `direnv exec .`, which is correct either way:
 
 ```bash
-cd /Users/andreselton/Kinde-codebases/documentation && direnv exec . npx wrangler whoami
+cd "$(git rev-parse --show-toplevel)" && direnv exec . npx wrangler whoami
 ```
 
 If direnv says `.envrc is blocked`, the file was edited since it was approved. The
@@ -84,7 +85,7 @@ scripts and **no** `npm run deploy`.
 
 Do **not** invent `npm run deploy` or `npx wrangler pages deploy` for this site.
 
-### Documentation images (the only Wrangler/Cloudflare write path)
+### Documentation images (the only local Wrangler/Cloudflare write path)
 
 When a page needs a screenshot or figure:
 
@@ -140,7 +141,8 @@ Diagnose in this order before escalating to the user:
    missing or unallowed → local `.envrc` + `direnv allow`, not `wrangler login`.
 3. `direnv exec . npx wrangler whoami` — reports the identity and every visible
    account. **Only** if this says *not logged in* is authentication genuinely the
-   problem, and only then raise `wrangler login`.
+   problem. Report that to the user and let them decide how to fix it. Do not
+   run or recommend `wrangler login` yourself.
 4. An empty `wrangler pages project list` does **not** mean auth is broken and
    does **not** mean you should create a Pages project for the docs site.
 
