@@ -36,7 +36,7 @@ keywords:
   - send email
   - rate limits
   - error codes
-updated: 2026-09-10
+updated: 2026-11-11
 featured: false
 deprecated: false
 ai_summary: "Guide to inviting people into a Kinde organization from your own application using the Kinde Management API. Covers switching on Allow invitations, choosing an invite application with a valid Application login URI, enabling organization-level sign-up because organizations do not accept sign-ups by default, and using an M2M application with create:organization_invites, read:organization_invites, and delete:organization_invites scopes. Documents creating an invitation with POST using email (max 254 characters), first and last name (max 64 characters each), a JSON array of role keys, and send_email which defaults to false. Notes that a 201 response does not guarantee email delivery: is_sent true means the email was queued, not delivered. There are no invitation webhook events; user.created, user.updated, or accepted_on is the signal that someone joined. Explains that Kinde invitation email uses your sender, logo, and colours but the wording is fixed, so delivering invite_link yourself gives full copy control. Also covers per-organization rate limits of 100 invitations per rolling 24 hours and 500 outstanding invitations, listing pending invitations by default, retrieving a single invitation, and revoking an invitation which does not expire automatically. Documents create-endpoint error codes including FEATURE_DISABLED, EMAIL_ALREADY_IN_USE, EMAIL_ALREADY_INVITED, ORGANIZATION_DIRECTORY_PROVIDED, and the two rate-limit codes."
@@ -253,7 +253,7 @@ Invitations are limited per organization:
 - **100 invitations** per rolling 24-hour window. The error code is `INVITE_LIMIT_DAILY_REACHED`.
 - **500 outstanding invitations** at any time. Outstanding means neither accepted nor revoked. The error code is `INVITE_LIMIT_ACTIVE_REACHED`.
 
-Accepting or revoking an invitation frees up capacity against the outstanding limit. These limits matter most if you're bulk-inviting from your own portal.
+Both limits return HTTP `400` with the error code in the response body. Accepting or revoking an invitation frees up capacity against the outstanding limit. These limits matter most if you're bulk-inviting from your own portal.
 
 ## Send the invitation email from your own domain
 
