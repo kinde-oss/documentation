@@ -64,7 +64,7 @@ function deterministicUuid(name) {
 }
 
 // Keep the Markdown structure (headings, lists, code blocks) so the text stays readable for LLMs.
-// Drops MDX component imports and collapses runs of blank lines; code blocks are left untouched.
+// Drops MDX component imports (code blocks are kept verbatim) and collapses runs of blank lines.
 function cleanContent(content) {
   const out = [];
   let fence = null;
@@ -102,12 +102,12 @@ function loadDocs() {
   for (const relativePath of files) {
     try {
       const { data: fm, content } = matter(fs.readFileSync(path.join(DOCS_DIR, relativePath), 'utf8'));
-      const [section, subsection] = relativePath.split('/');
+      const parts = relativePath.split('/');
 
       docs.push({
         path: relativePath,
-        section,
-        subsection: relativePath.split('/').length > 2 ? subsection : '',
+        section: parts[0],
+        subsection: parts.length > 2 ? parts[1] : '',
         fileName: path.basename(relativePath, '.mdx'),
         title: fm.title || '',
         description: fm.description || '',
@@ -119,6 +119,7 @@ function loadDocs() {
       });
     } catch (error) {
       console.error(`Error processing ${relativePath}:`, error.message);
+      process.exitCode = 1;
     }
   }
 
@@ -144,14 +145,15 @@ function getSections(docs) {
   });
 }
 
-function buildFrontmatter({ pageId, title, description, topic, extraKeywords }) {
+// Frontmatter plus an optional "# heading" and intro paragraph, shared by every generated file.
+// Values are JSON-quoted, which is valid YAML and safe for quotes or colons in descriptions.
+function renderHeader({ pageId, title, description, topic, extraKeywords, intro }) {
   const keywords = ['llm training', 'documentation', ...extraKeywords, 'frontmatter', 'metadata', 'kinde'];
-  const updated = new Date().toISOString().split('T')[0];
 
-  return `---
+  let out = `---
 page_id: ${pageId}
-title: ${title}
-description: "${description}"
+title: ${JSON.stringify(title)}
+description: ${JSON.stringify(description)}
 sidebar:
   order: 1
 topics:
@@ -167,16 +169,17 @@ audience: developers
 complexity: beginner
 keywords:
 ${keywords.map((keyword) => `  - ${keyword}`).join('\n')}
-updated: ${updated}
+updated: ${formatDate(new Date())}
 featured: false
 deprecated: false
-ai_summary: "${description}"
+ai_summary: ${JSON.stringify(description)}
 ---
 
 `;
+  if (intro) out += `# ${title}\n\n${intro}\n\n`;
+  return out;
 }
 
-// Full-content rendering shared by llms-full.txt and the section files.
 function renderFullPage(doc) {
   let titleWithPath = formatFolderName(doc.section);
   if (doc.subsection) titleWithPath += ` - ${formatFolderName(doc.subsection)}`;
@@ -191,64 +194,54 @@ function renderFullPage(doc) {
   return out;
 }
 
-function renderAbridged(docs) {
-  const description = 'Abridged version of Kinde documentation containing titles, descriptions, keywords, and topics from all documentation files for LLM training';
-  let out = buildFrontmatter({
+function renderAbridged(docs, sectionLabels) {
+  let out = renderHeader({
     pageId: '7f8a9b2c-4d5e-6f7a-8b9c-0d1e2f3a4b5c',
     title: 'Kinde Documentation - Abridged',
-    description,
+    description: 'Abridged version of Kinde documentation containing titles, descriptions, keywords, and topics from all documentation files for LLM training',
     topic: 'abridged',
     extraKeywords: ['abridged'],
+    intro: 'This is an abridged version of the Kinde documentation containing titles, descriptions, keywords, and topics from all documentation files.',
   });
-  out += '# Kinde Documentation - Abridged\n\n';
-  out += 'This is an abridged version of the Kinde documentation containing titles, descriptions, keywords, and topics from all documentation files.\n\n';
 
   let currentSection = '';
   for (const doc of docs) {
     if (doc.section !== currentSection) {
       currentSection = doc.section;
-      out += `\n## ${formatFolderName(doc.section)}\n\n`;
+      out += `\n## ${sectionLabels.get(doc.section) ?? formatFolderName(doc.section)}\n\n`;
     }
 
     out += `### ${doc.title || doc.fileName}\n\n`;
-    const lines = [
-      doc.updated && `Last updated: ${doc.updated}\n`,
-      doc.aiSummary || doc.description,
-      doc.keywords,
-      doc.topics,
+    const blocks = [
+      doc.updated && `Last updated: ${doc.updated}`,
+      [doc.aiSummary || doc.description, doc.keywords, doc.topics].filter(Boolean).join('\n'),
     ].filter(Boolean);
-    if (lines.length) out += `${lines.join('\n')}\n\n`;
+    if (blocks.length) out += `${blocks.join('\n\n')}\n\n`;
   }
   return out;
 }
 
 function renderFull(docs) {
-  const description = 'Complete documentation for Kinde containing titles, descriptions, keywords, topics, and full content from all documentation files for LLM training';
-  let out = buildFrontmatter({
+  return renderHeader({
     pageId: '8a9b0c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d',
     title: 'Kinde Documentation - Complete',
-    description,
+    description: 'Complete documentation for Kinde containing titles, descriptions, keywords, topics, and full content from all documentation files for LLM training',
     topic: 'complete',
     extraKeywords: ['complete', 'full content'],
-  });
-  out += '# Kinde Documentation - Complete\n\n';
-  out += 'This is the complete documentation for Kinde containing titles, descriptions, keywords, topics, and full content from all documentation files.\n\n';
-  return out + docs.map(renderFullPage).join('');
+    intro: 'This is the complete documentation for Kinde containing titles, descriptions, keywords, topics, and full content from all documentation files.',
+  }) + docs.map(renderFullPage).join('');
 }
 
 function renderSection(section, docs) {
-  const sectionTitle = formatFolderName(section.name);
-  const description = `Complete documentation for Kinde's ${sectionTitle.toLowerCase()} section containing titles, descriptions, keywords, topics, and full content from all documentation files in this section for LLM training`;
-  let out = buildFrontmatter({
+  const scope = `Kinde's ${section.label} section containing titles, descriptions, keywords, topics, and full content from all documentation files in this section`;
+  return renderHeader({
     pageId: section.pageId,
-    title: `Kinde Documentation - ${sectionTitle}`,
-    description,
+    title: `Kinde Documentation - ${section.label}`,
+    description: `Complete documentation for ${scope} for LLM training`,
     topic: section.name,
     extraKeywords: [section.name, 'section'],
-  });
-  out += `# Kinde Documentation - ${sectionTitle}\n\n`;
-  out += `This is the complete documentation for Kinde's ${sectionTitle.toLowerCase()} section containing titles, descriptions, keywords, topics, and full content from all documentation files in this section.\n\n`;
-  return out + docs.map(renderFullPage).join('');
+    intro: `This is the complete documentation for ${scope}.`,
+  }) + docs.map(renderFullPage).join('');
 }
 
 function renderIndex(sections) {
@@ -261,15 +254,13 @@ function renderIndex(sections) {
     .map((s) => `- [${s.label}](${SITE_URL}/_llms-txt/${s.name}.txt): ${s.description}`)
     .join('\n');
 
-  const description = 'Index of LLM training files for Kinde documentation including abridged, complete, and section-specific documentation files';
-  const frontmatter = buildFrontmatter({
+  return renderHeader({
     pageId: '5f6a7b8c-9d0e-1f2a-3b4c-5d6e7f8a9b0c',
     title: 'Kinde Documentation - LLM Training Files',
-    description,
+    description: 'Index of LLM training files for Kinde documentation including abridged, complete, and section-specific documentation files',
     topic: 'index',
     extraKeywords: ['index'],
-  });
-  return frontmatter + template.replace(SECTION_LINKS_PLACEHOLDER, links);
+  }) + template.replace(SECTION_LINKS_PLACEHOLDER, links);
 }
 
 function write(relativePath, content) {
@@ -282,7 +273,7 @@ function write(relativePath, content) {
 const docs = loadDocs();
 const sections = getSections(docs);
 
-write('llms-abridged.txt', renderAbridged(docs));
+write('llms-abridged.txt', renderAbridged(docs, new Map(sections.map((s) => [s.name, s.label]))));
 write('llms-full.txt', renderFull(docs));
 for (const section of sections) {
   write(`_llms-txt/${section.name}.txt`, renderSection(section, docs.filter((doc) => doc.section === section.name)));
