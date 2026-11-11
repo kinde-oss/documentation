@@ -1,0 +1,489 @@
+---
+page_id: f6886655-e356-4abb-bf0a-6d69d9503178
+title: Manage Kinde with the Terraform provider
+description: "Use the Kinde Terraform provider to manage applications, APIs, connections, organizations, users, roles, and permissions as code, with M2M authentication, required scopes, and import support."
+sidebar:
+  order: 10
+  label: Terraform provider
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - 37e847e2-b6c7-4cf1-86d3-7c607b2bffbd
+  - 50284476-2442-414c-af20-01ed3ef4ca4e
+  - 6bf993fc-a195-4836-8eaf-133812be8876
+  - d95a8edd-f61a-4095-a80e-ffd67f90a438
+  - 601dd8c5-6ee1-474f-ad36-201e65280462
+app_context:
+  - m: settings
+    s: applications
+topics:
+  - developer-tools
+  - kinde-api
+  - sdks
+  - terraform
+  - infrastructure-as-code
+sdk:
+  - terraform
+  - kinde-management-api
+languages:
+  - hcl
+  - bash
+audience:
+  - developers
+  - devops
+complexity: intermediate
+keywords:
+  - terraform
+  - terraform provider
+  - kinde-oss/kinde
+  - infrastructure as code
+  - configuration as code
+  - IaC
+  - HCL
+  - terraform import
+  - terraform registry
+  - m2m application
+  - management api scopes
+  - applications
+  - apis
+  - connections
+  - organizations
+  - users
+  - roles
+  - permissions
+  - multi-environment setup
+  - terraform workspaces
+updated: 2026-08-21
+featured: false
+deprecated: false
+ai_summary: "The Kinde Terraform provider (kinde-oss/kinde on the Terraform Registry) lets you manage a Kinde business as code using the standard plan and apply workflow. It is built on the Kinde Management API and authenticates as a machine-to-machine (M2M) application using a domain, audience, client ID, and client secret, all of which can be supplied through KINDE_DOMAIN, KINDE_AUDIENCE, KINDE_CLIENT_ID, and KINDE_CLIENT_SECRET environment variables. The provider ships ten resources — kinde_api, kinde_application, kinde_application_connection, kinde_connection, kinde_organization, kinde_organization_user, kinde_permission, kinde_role, kinde_user, and kinde_user_role — and three data sources: kinde_api, kinde_application, and kinde_connections. This guide starts with a quickstart that creates an M2M application, installs and configures the provider, and applies a first permission and role. Later sections cover the resource-specific Management API scopes, provider configuration, managing applications, adding users to organizations with role assignments, enabling connections on applications, importing existing Kinde configuration including composite import IDs, managing multiple Kinde environments, and behavioral notes such as attributes that force replacement, required fields, and sensitive values stored in Terraform state."
+---
+
+{/* @case-police-ignore Api */}
+
+Manage your Kinde business as code — applications, APIs, connections, organizations, users, roles, and permissions — with the [Kinde Terraform provider](https://registry.terraform.io/providers/kinde-oss/kinde/latest) ([source on GitHub](https://github.com/kinde-oss/terraform-provider-kinde)).
+
+## What you need
+
+- A [Kinde](/get-started/guides/first-things-first/) account with **Admin** or **Engineer** access (Sign up for free)
+- [Terraform](https://developer.hashicorp.com/terraform/install) version 1.0 or higher
+- An M2M application authorized for the **Kinde Management API** — see [Set up Kinde Management API access](/developer-tools/kinde-api/connect-to-kinde-api/)
+
+## Quickstart
+
+### 1. Create an M2M application
+
+The provider authenticates as a machine-to-machine (M2M) application.
+
+1. In Kinde, go to **Settings > Applications**, add a **Machine to Machine** application, and authorize it for the **Kinde Management API**. See the [quick start guide](/developer-tools/kinde-api/connect-to-kinde-api/) for the full steps.
+2. Grant the following scopes, which cover the permission and role created in this quickstart:
+
+   ```text
+   create:permissions read:permissions update:permissions delete:permissions
+   create:roles read:roles update:roles delete:roles
+   read:role_permissions update:role_permissions delete:role_permissions
+   ```
+
+   Each resource needs its own scopes — see [Required scopes](#required-scopes) for the full list.
+
+3. Select **View details** on the application and copy the **Domain**, **Client ID**, and **Client secret**.
+
+### 2. Install the provider
+
+1. Add the provider to your configuration file `versions.tf`, then initialize the working directory.
+
+   ```hcl title="versions.tf"
+   terraform {
+     required_providers {
+       kinde = {
+         source  = "kinde-oss/kinde"
+         version = "~> 0.1.0"
+       }
+     }
+   }
+   ```
+
+   ```bash
+   terraform init
+   ```
+
+### 3. Configure authentication
+
+1. Export your M2M credentials with the following terminal command. Include the `https://` scheme in the domain. The audience is your domain followed by `/api`.
+
+   ```bash
+   export KINDE_DOMAIN="https://<your_subdomain>.kinde.com"
+   export KINDE_AUDIENCE="https://<your_subdomain>.kinde.com/api"
+   export KINDE_CLIENT_ID="<your_m2m_client_id>"
+   read -rs KINDE_CLIENT_SECRET && export KINDE_CLIENT_SECRET
+   ```
+
+The `read -rs` prompt keeps the client secret out of your shell history — paste the secret when prompted. In CI, inject all four values from your secret store.
+
+With the environment variables set, the provider block can be empty.
+
+```hcl title="provider.tf"
+provider "kinde" {}
+```
+
+### 4. Create a permission and a role
+
+1. Add the following code to `main.tf` to create a permission and a role.
+
+   ```hcl title="main.tf"
+   resource "kinde_permission" "read_billing" {
+     name        = "Read billing"
+     key         = "read:billing"
+     description = "Grants read access to billing"
+   }
+
+   resource "kinde_role" "finance" {
+     name        = "Finance"
+     key         = "finance"
+     description = "Finance team role"
+     permissions = [kinde_permission.read_billing.id]
+   }
+   ```
+
+### 5. Run the code
+
+1. Apply your configuration with the following terminal command.
+
+   ```bash
+   terraform apply
+   ```
+
+   ```text title="Terminal output"
+   kinde_permission.read_billing: Creating...
+   kinde_permission.read_billing: Creation complete after 1s [id=<permission_id>]
+   kinde_role.finance: Creating...
+   kinde_role.finance: Creation complete after 1s [id=<role_id>]
+
+   Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
+   ```
+
+### 6. Verify in Kinde
+
+Go to **Settings > Roles** and **Settings > Permissions** to see the new role and permission. Make sure you are viewing the environment your M2M application belongs to.
+
+Run `terraform plan` again at any time to detect drift between your configuration and what is in Kinde.
+
+## Required scopes
+
+Management API scopes are resource-specific. Grant only the scopes for the resources in your configuration.
+
+| Resource                       | Required scopes                                                                                                                             |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kinde_api`                    | `create:apis`, `read:apis`, `delete:apis`                                                                                                   |
+| `kinde_application`            | `create:applications`, `read:applications`, `update:applications`, `delete:applications`                                                    |
+| `kinde_application_connection` | `create:application_connections`, `read:application_connections`, `delete:application_connections`                                          |
+| `kinde_connection`             | `create:connections`, `read:connections`, `update:connections`, `delete:connections`                                                        |
+| `kinde_organization`           | `create:organizations`, `read:organizations`, `update:organizations`, `delete:organizations`                                                |
+| `kinde_organization_user`      | `create:organization_users`, `read:organization_users`, `update:organization_users`, `delete:organization_users`                            |
+| `kinde_permission`             | `create:permissions`, `read:permissions`, `update:permissions`, `delete:permissions`                                                        |
+| `kinde_role`                   | `create:roles`, `read:roles`, `update:roles`, `delete:roles`, `read:role_permissions`, `update:role_permissions`, `delete:role_permissions` |
+| `kinde_user`                   | `create:users`, `read:users`, `update:users`, `delete:users`, `create:user_identities`, `read:user_identities`                              |
+| `kinde_user_role`              | `create:organization_user_roles`, `read:organization_user_roles`, `delete:organization_user_roles`                                          |
+
+| Data source         | Required scopes     |
+| ------------------- | ------------------- |
+| `kinde_api`         | `read:apis`         |
+| `kinde_application` | `read:applications` |
+| `kinde_connections` | `read:connections`  |
+
+Setting the `roles` attribute on `kinde_organization_user` also requires the `organization_user_roles` scopes listed for `kinde_user_role`. `kinde_api` has no update scope because the Kinde API does not support updating an API — changing one replaces it.
+
+<Aside type="warning" title="Grant the delete scopes">
+
+Grant the `delete:` scopes for everything you manage. Without them Terraform cannot destroy what it creates, and a failed apply may leave resources behind that you need to clean up by hand in Kinde.
+
+</Aside>
+
+## Provider configuration
+
+Every attribute can be set in the provider block or through the environment. Attributes take precedence over environment variables.
+
+| Attribute       | Environment variable  |
+| --------------- | --------------------- |
+| `domain`        | `KINDE_DOMAIN`        |
+| `audience`      | `KINDE_AUDIENCE`      |
+| `client_id`     | `KINDE_CLIENT_ID`     |
+| `client_secret` | `KINDE_CLIENT_SECRET` |
+
+```hcl title="provider.tf"
+provider "kinde" {
+  domain        = var.kinde_domain
+  audience      = var.kinde_audience
+  client_id     = var.kinde_client_id
+  client_secret = var.kinde_client_secret
+}
+```
+
+<Aside type="warning" title="Protect your state">
+
+Terraform state is not encrypted by default. Values such as an application's `client_secret` and a connection's OAuth credentials are stored in state even when they are marked sensitive. Use an encrypted remote backend, and never commit state or credentials to source control. See [Sensitive data in state](https://developer.hashicorp.com/terraform/language/state/sensitive-data) in the Terraform docs.
+
+</Aside>
+
+## Create an application
+
+Register an application with its callback URLs. Kinde issues the client ID and secret, which you can reference as outputs.
+
+1. Grant the following scopes on the M2M application that authenticates the provider:
+
+   ```text
+   create:applications read:applications update:applications delete:applications
+   ```
+
+   See [Required scopes](#required-scopes) for the full list.
+
+2. Add the following code to `applications.tf` to create a regular web application.
+
+   ```hcl title="applications.tf"
+   resource "kinde_application" "web" {
+     name          = "Web app"
+     type          = "reg"
+     login_uri     = "https://example.com/oauth/login"
+     homepage_uri  = "https://example.com"
+     logout_uris   = ["https://example.com/oauth/logout"]
+     redirect_uris = ["https://example.com/oauth/callback"]
+   }
+
+   output "web_app_client_id" {
+     value = kinde_application.web.client_id
+   }
+   ```
+
+Application types:
+
+- `reg` back-end web app
+- `spa` single-page app
+- `m2m` machine-to-machine
+
+Changing `name` or `type` forces a replacement, which issues a new client ID and secret — the URIs are updatable in place.
+
+## Add users to organizations and assign roles
+
+Memberships and role assignments are separate resources. Because a role can only be assigned to a user who is already a member of the organization, declare the ordering with `depends_on`.
+
+1. Grant the following scopes on the M2M application that authenticates the provider:
+
+   ```text
+   create:organizations read:organizations update:organizations delete:organizations
+   create:users read:users update:users delete:users create:user_identities read:user_identities
+   create:organization_users read:organization_users update:organization_users delete:organization_users
+   create:organization_user_roles read:organization_user_roles delete:organization_user_roles
+   ```
+
+   This example also uses the `finance` role from the [quickstart](#quickstart), so keep the role scopes enabled. See [Required scopes](#required-scopes) for the full list.
+
+2. Add the following code to `organizations.tf` to create an organization, add a user, and assign a role.
+
+   ```hcl title="organizations.tf"
+   resource "kinde_organization" "acme" {
+     name = "Acme"
+   }
+
+   resource "kinde_user" "jane" {
+     first_name = "Jane"
+     last_name  = "Doe"
+
+     identities = [
+       {
+         type  = "email"
+         value = "jane@example.com"
+       }
+     ]
+   }
+
+   resource "kinde_organization_user" "jane_acme" {
+     organization_code = kinde_organization.acme.code
+     user_id           = kinde_user.jane.id
+
+     # kinde_user_role manages role assignments for this membership.
+     lifecycle {
+       ignore_changes = [roles]
+     }
+   }
+
+   resource "kinde_user_role" "jane_finance" {
+     organization_code = kinde_organization.acme.code
+     user_id           = kinde_user.jane.id
+     role_id           = kinde_role.finance.id
+
+     # A user must be a member of the organization before roles can be assigned.
+     depends_on = [kinde_organization_user.jane_acme]
+   }
+   ```
+
+Choose one way to manage roles for a membership:
+
+- **`kinde_user_role`** (shown above): one resource per assignment. Add `ignore_changes = [roles]` to the membership so the two resources do not fight over the same list.
+- **`roles` on `kinde_organization_user`**: pass the full list of role IDs on the membership itself, and do not create `kinde_user_role` resources for that user.
+
+A `kinde_user` needs a `first_name`, a `last_name`, and at least one `email` identity. You can add `username` and `phone` identities alongside it. Social and enterprise identities are created when a user signs in and are not managed by Terraform.
+
+## Enable connections on an application
+
+Use the `kinde_connections` data source to look up built-in connections, or create a social connection with `kinde_connection`, then enable it on an application with `kinde_application_connection`.
+
+```hcl title="connections.tf"
+# Look up a built-in connection by strategy
+data "kinde_connections" "builtin" {
+  filter = "builtin"
+}
+
+locals {
+  password_connection_id = one([
+    for c in data.kinde_connections.builtin.connections : c.id
+    if c.strategy == "username:password"
+  ])
+}
+
+resource "kinde_application_connection" "web_password" {
+  application_id = kinde_application.web.id
+  connection_id  = local.password_connection_id
+}
+
+# Create a social connection and enable it
+resource "kinde_connection" "google" {
+  name         = "google"
+  display_name = "Google"
+  strategy     = "oauth2:google"
+
+  options = {
+    client_id     = var.google_client_id
+    client_secret = var.google_client_secret
+  }
+}
+
+resource "kinde_application_connection" "web_google" {
+  application_id = kinde_application.web.id
+  connection_id  = kinde_connection.google.id
+}
+```
+
+The `filter` attribute accepts `builtin`, `custom`, or `all`. Connection `strategy` values follow the Management API, for example `email:otp`, `username:password`, `oauth2:google`, `oauth2:github`, `oauth2:azure_ad`, and `saml:custom`.
+
+## Resources and data sources
+
+Full schema documentation for every resource and data source is on the [Terraform Registry](https://registry.terraform.io/providers/kinde-oss/kinde/latest/docs).
+
+| Resource                                                                                                                               | Description                                                                                 |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| [`kinde_api`](https://registry.terraform.io/providers/kinde-oss/kinde/latest/docs/resources/api)                                       | APIs registered with your business                                                          |
+| [`kinde_application`](https://registry.terraform.io/providers/kinde-oss/kinde/latest/docs/resources/application)                       | Applications (`reg`, `spa`, or `m2m`), including login, homepage, redirect, and logout URIs |
+| [`kinde_application_connection`](https://registry.terraform.io/providers/kinde-oss/kinde/latest/docs/resources/application_connection) | Enables a connection on an application                                                      |
+| [`kinde_connection`](https://registry.terraform.io/providers/kinde-oss/kinde/latest/docs/resources/connection)                         | Social and enterprise identity connections                                                  |
+| [`kinde_organization`](https://registry.terraform.io/providers/kinde-oss/kinde/latest/docs/resources/organization)                     | Organizations, including theme colors and handle                                            |
+| [`kinde_organization_user`](https://registry.terraform.io/providers/kinde-oss/kinde/latest/docs/resources/organization_user)           | Membership of a user in an organization                                                     |
+| [`kinde_permission`](https://registry.terraform.io/providers/kinde-oss/kinde/latest/docs/resources/permission)                         | Permissions                                                                                 |
+| [`kinde_role`](https://registry.terraform.io/providers/kinde-oss/kinde/latest/docs/resources/role)                                     | Roles and their assigned permissions                                                        |
+| [`kinde_user`](https://registry.terraform.io/providers/kinde-oss/kinde/latest/docs/resources/user)                                     | Users and their identities                                                                  |
+| [`kinde_user_role`](https://registry.terraform.io/providers/kinde-oss/kinde/latest/docs/resources/user_role)                           | Assignment of a role to a user in an organization                                           |
+
+| Data source                                                                                                         | Description                           |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| [`kinde_api`](https://registry.terraform.io/providers/kinde-oss/kinde/latest/docs/data-sources/api)                 | Look up an existing API by ID         |
+| [`kinde_application`](https://registry.terraform.io/providers/kinde-oss/kinde/latest/docs/data-sources/application) | Look up an existing application by ID |
+| [`kinde_connections`](https://registry.terraform.io/providers/kinde-oss/kinde/latest/docs/data-sources/connections) | List connections in your business     |
+
+### Behavior to know about
+
+- **Some changes force replacement.** Changing the `name` or `audience` of a `kinde_api`, the `name` or `type` of a `kinde_application`, or the `strategy` of a `kinde_connection` destroys and recreates the resource, because the Management API does not support updating those fields. A replaced application gets a new client ID and client secret.
+- **`kinde_role` requires a `description`.** The Management API cannot unset a description once it is set, so the provider requires one to avoid state drift.
+- **`kinde_user` restrictions.** `is_suspended` cannot be `true` when creating a user — create the user first, then update it. `organization_code` is sent only on create.
+- **Large lists are read in full.** Roles, permissions, and other list endpoints are paginated by the provider, so nothing is silently truncated.
+- **Create rollback is best effort and resource-scoped.** If a single resource's multi-step create fails part way — for example, `kinde_organization_user` adds the membership but one of its `roles` fails — the provider attempts to remove what that resource created. It does not span resources: a failed `kinde_user_role` does not remove the membership it depends on. After an apply error, run `terraform plan` to see what exists before resuming or destroying.
+- **Rate limits apply.** The provider calls the Management API, so large applies are subject to [API rate limits](/developer-tools/kinde-api/api-rate-limits/).
+
+## Import existing resources
+
+Every resource supports `terraform import`, so you can bring existing Kinde configuration under Terraform management.
+
+1. Add a resource block that matches the existing object.
+2. Import it using its Kinde ID. Find IDs in the Kinde dashboard or through the [Management API](/kinde-apis/management/).
+
+   ```bash
+   terraform import kinde_role.finance <role_id>
+   ```
+
+   On Terraform 1.5 or later you can use an `import` block instead and generate the configuration with `terraform plan -generate-config-out=generated.tf`.
+
+   ```hcl
+   import {
+     to = kinde_role.finance
+     id = "<role_id>"
+   }
+   ```
+
+3. Run `terraform plan` and adjust the configuration until it shows no changes.
+
+Resources that exist in the context of another resource use a composite ID separated by colons. Organizations are imported by their code.
+
+| Resource                       | Import ID                          |
+| ------------------------------ | ---------------------------------- |
+| `kinde_organization`           | `<org_code>`                       |
+| `kinde_application_connection` | `<application_id>:<connection_id>` |
+| `kinde_organization_user`      | `<org_code>:<user_id>`             |
+| `kinde_user_role`              | `<org_code>:<user_id>:<role_id>`   |
+
+## Manage multiple environments
+
+Kinde environments are isolated, and each one has its own domain and M2M application keys. Keep one Terraform state per environment and swap the credentials per run.
+
+- **Workspaces or separate root modules.** Use `terraform workspace` or one directory per environment, and pass environment-specific values with `.tfvars` files.
+- **Provider aliases.** If you manage several environments from one configuration, declare one `provider "kinde"` block per environment with an `alias`, and select it on each resource with `provider = kinde.<alias>`.
+- **CI secrets.** In CI, set the four `KINDE_*` environment variables from your secret store for the target environment.
+
+```yaml title=".github/workflows/kinde-terraform.yml"
+name: Kinde Terraform
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Kinde environment to apply"
+        required: true
+        type: choice
+        options: [dev, staging, prod]
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      KINDE_DOMAIN: ${{ secrets.KINDE_DOMAIN }}
+      KINDE_AUDIENCE: ${{ secrets.KINDE_AUDIENCE }}
+      KINDE_CLIENT_ID: ${{ secrets.KINDE_CLIENT_ID }}
+      KINDE_CLIENT_SECRET: ${{ secrets.KINDE_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform init
+      - run: terraform plan -out=tfplan -var-file="${{ inputs.environment }}.tfvars"
+      - run: terraform apply tfplan
+```
+
+The `environment` input selects the matching GitHub environment, so its protection rules — such as required reviewers on `prod` — gate the job. Saving the plan with `-out` and applying that file means the apply executes exactly the plan that was produced, not a recomputed one.
+
+For how to create additional Kinde environments, see [Manage Kinde environments](/build/environments/environments/).
+
+## FAQs
+
+### What can't the provider manage yet?
+
+Environment variables, feature flags, API scopes, and business or environment settings are not covered in the current release. Use the [Management API seed script](/developer-tools/guides/manage-kinde-configuration/) for those, or open an issue on the [provider repository](https://github.com/kinde-oss/terraform-provider-kinde/issues) to request a resource. If you run the seed script alongside Terraform, keep Terraform as the only owner of applications, APIs, connections, organizations, users, roles, and permissions, and limit the seed script to the settings listed above — two owners for the same resource create duplicates and drift.
+
+### Which Terraform versions are supported?
+
+Terraform 1.0 and later. The provider uses Terraform plugin protocol 6.
+
+### Where is the full schema reference?
+
+On the [Terraform Registry](https://registry.terraform.io/providers/kinde-oss/kinde/latest/docs). The registry docs are generated from the provider code, so they always match the published version.
+
+### How do I report a bug or contribute?
+
+Open an issue or pull request on [GitHub](https://github.com/kinde-oss/terraform-provider-kinde). The provider is open source under the Mozilla Public License 2.0.
+
+If you need help getting Kinde connected, contact us at [support@kinde.com](mailto:support@kinde.com).

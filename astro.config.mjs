@@ -62,8 +62,12 @@ export default defineConfig({
       "/design/content-customization/set-language-for-pages/",
     "/design/pages/internationalization/":
       "/design/content-customization/set-language-for-pages/",
+    "/integrate/third-party-tools/shopify-multipass/":
+      "/integrate/third-party-tools/kinde-shopify/",
     "/get-started/guides/start-with-starter-kit/":
       "/get-started/guides/byo-code/",
+    "/manage-your-account/business-information/change-your-business-time-zone/":
+      "/manage-your-account/business-information/update-your-details/",
     
     // Section-level redirects to prevent 404s when users truncate URLs
     "/authenticate/":
@@ -137,6 +141,9 @@ export default defineConfig({
     "/authenticate/social-sign-in/":
       "/authenticate/social-sign-in/add-social-sign-in/",
     
+    "/billing/manage-subscribers/one-time-charges/":
+      "/billing/manage-subscribers/one-time-purchases/",
+
     // Billing section subfolder redirects
     "/billing/about-billing/":
       "/billing/about-billing/about-billing/",
@@ -156,6 +163,10 @@ export default defineConfig({
     // Build section subfolder redirects
     "/build/applications/":
       "/build/applications/about-applications/",
+    "/build/self-service-portal/":
+      "/build/self-service-portal/about-self-service-portal/",
+    "/build/set-up-options/self-serve-portal-for-users/":
+      "/build/self-service-portal/self-serve-portal-for-users/",
     "/build/domains/":
       "/build/domains/pointing-your-domain/",
     "/build/env-variables/":
@@ -241,7 +252,7 @@ export default defineConfig({
     
     // Manage your account section subfolder redirects
     "/manage-your-account/business-information/":
-      "/manage-your-account/business-information/change-your-business-time-zone/",
+      "/manage-your-account/business-information/update-your-details/",
     "/manage-your-account/profile-and-plan/":
       "/manage-your-account/profile-and-plan/change-kinde-plan/",
     "/manage-your-account/your-data/":

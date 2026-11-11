@@ -1,0 +1,186 @@
+---
+page_id: 758b6a4d-e28f-4676-8942-78769b33f6be
+title: Call the Kinde Management API from JavaScript Backends
+description: "Install and configure @kinde/management-api-js on the server to call the Kinde Management API with M2M credentials."
+sidebar:
+  order: 4
+  label: "Call the API - JavaScript Backends"
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - 50284476-2442-414c-af20-01ed3ef4ca4e
+  - fa5b704d-1682-47df-ac41-524b56096e79
+  - 6bf993fc-a195-4836-8eaf-133812be8876
+app_context:
+  - m: settings
+    s: applications
+topics:
+  - developer-tools
+  - kinde-api
+  - backend
+  - javascript
+  - sdk
+  - m2m
+  - user-management
+sdk:
+  - management-api-js
+languages:
+  - javascript
+  - typescript
+audience:
+  - developers
+complexity: intermediate
+keywords:
+  - management api
+  - javascript sdk
+  - typescript sdk
+  - m2m
+  - machine to machine
+  - backend
+  - server
+  - server-side
+  - "@kinde/management-api-js"
+  - init
+  - getUsers
+  - createUser
+  - getUserData
+  - environment variables
+  - KINDE_DOMAIN
+  - KINDE_MANAGEMENT_CLIENT_ID
+  - KINDE_MANAGEMENT_CLIENT_SECRET
+  - client credentials
+  - node.js
+  - user management
+updated: 2026-05-03
+featured: false
+deprecated: false
+ai_summary: "This guide explains how to use the @kinde/management-api-js JavaScript SDK to call the Kinde Management API from a server-side application. The SDK abstracts the OAuth2 client credentials flow, so you don't need to manually request tokens or construct raw HTTP requests. It is strictly for backend use — the M2M client secret must never be exposed in browser or client-side code. The guide covers three setup steps: installing the package via npm, yarn, or pnpm; setting the three required environment variables (KINDE_DOMAIN, KINDE_MANAGEMENT_CLIENT_ID, KINDE_MANAGEMENT_CLIENT_SECRET); and calling init() once to configure the SDK before making any API calls. Alternatively, credentials can be passed directly to init() as an object. Two worked examples are included: fetching all users with Users.getUsers(), fetching a single user by ID with Users.getUserData(), and creating a new user with Users.createUser() using a profile and identities array. The expected JSON response for user creation is shown, including the generated user ID and a created flag per identity. The guide links to the full Kinde Management API reference for all available resources and parameters."
+---
+
+The `@kinde/management-api-js` package is a JavaScript SDK that wraps the Kinde Management API. Instead of manually handling token exchange and raw HTTP requests, you import typed functions for each resource and call them directly.
+
+<Aside type="warning">
+  This package is for **server-side use only**. It requires your M2M client secret, which must never be exposed in browser or client-side code.
+</Aside>
+
+### What you need
+
+- A Kinde M2M application with Management API access and the required scopes — see the [quickstart guide](/developer-tools/kinde-api/connect-to-kinde-api/)
+- A JavaScript backend project such as the [Kinde Next.js SDK](/developer-tools/sdks/backend/nextjs-sdk/)
+- Node.js 20 or higher
+
+## Setup guide
+
+### 1. Install the package
+
+<PackageManagers pkg="@kinde/management-api-js" />
+
+### 2. Set environment variables
+
+1. Add the following to your project's `.env` file. You can find these values on the **Details** page in your Kinde M2M application. [Read the quickstart guide](/developer-tools/kinde-api/connect-to-kinde-api/#quickstart-guide).
+
+    ```bash
+    KINDE_DOMAIN=https://<your_subdomain>.kinde.com
+    KINDE_MANAGEMENT_CLIENT_ID=<your_m2m_client_id>
+    KINDE_MANAGEMENT_CLIENT_SECRET=<your_m2m_client_secret>
+    ```
+
+2. You can also pass configuration directly to `init()` if you prefer not to use environment variables:
+
+    ```typescript
+    import { init } from "@kinde/management-api-js";
+
+    init({
+      kindeDomain: "https://<your_subdomain>.kinde.com",
+      clientId: "<your_m2m_client_id>",
+      clientSecret: "<your_m2m_client_secret>",
+    });
+    ```
+
+### 3. Initialize and call the API
+
+1. Import and call `init()` once before making any API calls — this sets up the SDK with your environment variables.
+
+    ```typescript
+    import { init } from "@kinde/management-api-js";
+
+    init();
+    ```
+
+## Examples
+
+### Get users
+
+Fetch a list of all users in your Kinde business:
+
+```typescript
+import { Users, init } from "@kinde/management-api-js";
+
+init();
+
+const { users } = await Users.getUsers();
+console.log(users);
+```
+
+To fetch a specific user by ID, pass an object with the user's `id`:
+
+```typescript
+import { Users, init } from "@kinde/management-api-js";
+
+init();
+
+const userData = await Users.getUserData({ id: "kp_xxx" });
+console.log(userData);
+```
+
+### Create a user
+
+1. Use `Users.createUser()` to create a new user. Pass an `identities` array with one or more identity objects:
+
+    ```typescript
+    import { Users, init } from "@kinde/management-api-js";
+
+    init();
+
+    const newUser = await Users.createUser({
+      profile: {
+        given_name: "James",
+        family_name: "Bond",
+      },
+      identities: [
+        {
+          type: "email",
+          is_verified: true,
+          details: { email: "jamesbond@mi6.com" },
+        },
+        {
+          type: "username",
+          details: { username: "jamesbond007" },
+        },
+      ],
+    });
+
+    console.log(newUser.id);
+    ```
+
+2. A successful response includes the new user's ID and a `created` flag for each identity:
+
+    ```json
+    {
+      "id": "kp_1234",
+      "created": true,
+      "identities": [
+        { "type": "email", "result": { "created": true } },
+        { "type": "username", "result": { "created": true } }
+      ]
+    }
+    ```
+
+3. Go to your Kinde dashboard > **Users** and you should see the new user in the list.
+
+## Next steps
+
+Now that you have the SDK set up, you can start calling the Management API to automate account actions.
+
+- [Kinde Management API reference](/kinde-apis/management/)
+- [@kinde/management-api-js GitHub repository](https://github.com/kinde-oss/management-api-js)

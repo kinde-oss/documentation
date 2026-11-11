@@ -2,7 +2,7 @@
 page_id: 8a3f4e2d-9c1b-4a7d-8e2f-1a5b6c7d8e9f
 title: IdP-initiated SAML SSO
 sidebar:
-  order: 10
+  order: 14
 tableOfContents:
   maxHeadingLevel: 3
 relatedArticles:
@@ -18,7 +18,7 @@ app_context:
 description: "Let users open your app from their IdP portal with IdP-initiated SAML SSO, RelayState, and a standard Kinde login"
 featured: false
 deprecated: false
-ai_summary: "Guide to configuring IdP-initiated SAML single sign-on in Kinde, where login starts at the identity provider rather than the application. Explains the two-hop flow: the IdP posts an unsolicited SAML assertion to the Kinde ACS endpoint, then Kinde redirects to a RelayState URL that starts a normal Kinde login. Covers creating environment-level and organization-level enterprise connections, completing provider-specific SAML setup for Custom SAML, Google Workspace, Okta, Cloudflare, Microsoft Entra ID, and LastPass, then enabling IdP-initiated settings including Accept requests, Use IdP email as login hint, ACS URL, and optional provisioning. Details how to build a full RelayState URL with client_id, connection_id, and org_code, and how the application login route must forward those values. Includes a Next.js login example and a raw OAuth authorization request without an SDK, plus IdP RelayState field names, testing of SP-initiated and IdP-initiated flows, troubleshooting, and security guidance. Intended for developers, enterprise admins, and security engineers."
+ai_summary: "Guide to configuring IdP-initiated SAML single sign-on in Kinde, where login starts at the identity provider rather than the application. Explains the two-hop flow: the IdP posts an unsolicited SAML assertion to the Kinde ACS endpoint, then Kinde redirects to a RelayState URL that starts a normal Kinde login. Covers creating environment-level and organization-level enterprise connections, completing provider-specific SAML setup for Custom SAML, Google Workspace, Okta, Cloudflare, Microsoft Entra ID, and LastPass, then enabling IdP-initiated settings including Accept requests, Use IdP email as login hint, ACS URL, and optional provisioning with Verify, then trust for Email address trust. Details how to build a full RelayState URL with client_id, connection_id, and org_code, and how the application login route must forward those values. Includes a Next.js login example and a raw OAuth authorization request without an SDK, plus IdP RelayState field names, testing of SP-initiated and IdP-initiated flows, troubleshooting, and security guidance. Intended for developers, enterprise admins, and security engineers."
 topics:
   - authenticate
   - enterprise-connections
@@ -39,7 +39,8 @@ keywords:
   - login_hint
   - Accept requests
   - unsolicited SAML
-updated: 2026-10-26
+  - email address trust
+updated: 2026-11-11
 ---
 
 In this guide, you'll learn how to configure IdP-initiated SSO in Kinde, including setting up the SAML connection, configuring RelayState, configuring your Identity Provider, and testing both SP-initiated and IdP-initiated authentication flows.
@@ -141,10 +142,7 @@ Then return to the connection in Kinde and complete the settings that IdP-initia
 4. (Optional) Set [provisioning](/authenticate/enterprise-connections/provision-users-enterprise/) so users are created or added to the organization on first sign-in:
 
     - **Create a user record in Kinde**: When enabled, users who don't exist in Kinde are automatically created on first sign-in
-    - **Trust email addresses provided by this connection**: Merge accounts when email matches an existing Kinde user
-
-        ![sso provisioning create a user record switch](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/31860fbb-b57e-49f5-ea89-71e0446a3000/socialsharingimage)
-
+    - **Email address trust** (environment-level only): Select **Verify, then trust**. For details about the options, see [Trusting emails from providers](/authenticate/about-auth/identity-and-verification/#trusting-emails-from-providers).
     - **Auto-add users** (org-level only): Users are automatically added as members of the organization
 
         ![auto add users in kinde organization](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/a4736783-6aaf-4a69-b66a-e380f63a4300/socialsharingimage)
