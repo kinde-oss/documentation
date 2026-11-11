@@ -75,7 +75,7 @@ See Mailgun's [SMTP documentation](https://documentation.mailgun.com/docs/mailgu
 2. Enter a **Sender name**. This is usually your business name, but might be a specific person.
 3. Enable the **Use custom sender** switch. The SMTP details section opens.
 
-    ![Email Sender page with the Use custom sender switch turned on](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/576b53fa-35d0-4747-dc0d-1fc9f6dda600/socialsharingimage)
+   ![Email Sender page with the Use custom sender switch turned on](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/576b53fa-35d0-4747-dc0d-1fc9f6dda600/socialsharingimage)
 
 4. Enter the **Sender email**. This is the address your users will receive emails from and should be on one of the verified domains in your Mailgun account, for example `noreply@yourdomain.com`.
 5. Enter the SMTP details of your email provider:
@@ -115,7 +115,7 @@ This does not change the Kinde email sender. Use it when you want your own templ
 5. From the **Events** section, select the **Add Events** link. This will open a dialog box to select the event types you will subscribe to
 6. Select **user.created** from the events list and select **Save** to continue
 
-    ![user.created webhook in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b5182d5e-07a9-429f-7fb2-740231138300/socialsharingimage)
+   ![user.created webhook in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b5182d5e-07a9-429f-7fb2-740231138300/socialsharingimage)
 
 7. Select **Save** to save the webhook
 
@@ -151,31 +151,31 @@ When a user is created, Kinde sends a webhook payload (as a JWT token) that cont
 
 Use the `@kinde-oss/webhook` package to verify Kinde webhook tokens.
 
-<PackageManagers pkg='@kinde-oss/webhook' />
+<PackageManagers pkg="@kinde-oss/webhook" />
 
 **JavaScript backend example:**
 
 ```javascript
 // your-route.js
-import { decodeWebhook } from "@kinde-oss/webhook"
+import {decodeWebhook} from "@kinde-oss/webhook";
 
 try {
   // Get the token from the request
-  const token = await req.text()
+  const token = await req.text();
 
   // Validate and decode the webhook token
   const event = await decodeWebhook(token, {
-    issuerUrl: process.env.KINDE_ISSUER_URL,
-  })
+    issuerUrl: process.env.KINDE_ISSUER_URL
+  });
 
-  if(event.type === "user.created") {
+  if (event.type === "user.created") {
     // send welcome email
   }
 
-  return { status: 200 }
+  return {status: 200};
 } catch (err) {
-  console.error("Webhook validation error:", err)
-  return { status: 400, error: err.message }
+  console.error("Webhook validation error:", err);
+  return {status: 400, error: err.message};
 }
 ```
 
@@ -183,20 +183,20 @@ try {
 
 Use the `mailgun.js` and `form-data` packages to send the email via Mailgun API from your JavaScript backend.
 
-<PackageManagers pkg='mailgun.js form-data' />
+<PackageManagers pkg="mailgun.js form-data" />
 
 Here's how to send a custom email from your endpoint:
 
 ```javascript
 // your-route.js
-import Mailgun from "mailgun.js"
-import formData from "form-data"
+import Mailgun from "mailgun.js";
+import formData from "form-data";
 
-const mailgun = new Mailgun(formData)
+const mailgun = new Mailgun(formData);
 const mg = mailgun.client({
   username: "api",
-  key: process.env.MAILGUN_API_KEY || "key-yourkeyhere",
-})
+  key: process.env.MAILGUN_API_KEY || "key-yourkeyhere"
+});
 
 async function sendWelcomeEmail(email) {
   await mg.messages.create(process.env.MAILGUN_DOMAIN || "mg.yourdomain.com", {
@@ -206,8 +206,8 @@ async function sendWelcomeEmail(email) {
     text: "To sign in to your account, click here: https://yourwebsite.com/api/auth/login",
     html: `<h1>Your Sign In Information</h1>
           <p>To sign in to your account, <a href="https://yourwebsite.com/api/auth/login">click here</a> and enter your email.</p>
-          <p>Kinde.</p>`,
-  })
+          <p>Kinde.</p>`
+  });
 }
 ```
 
