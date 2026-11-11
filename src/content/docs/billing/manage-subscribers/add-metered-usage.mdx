@@ -5,9 +5,12 @@ sidebar:
   order: 3
 relatedArticles:
   - 7f59a705-ac5d-4b07-a44e-1421dcdeffe8
+  - c4e8a1d2-6b37-4f9a-8c15-2d7e9f0a4b63
+tableOfContents:
+  maxHeadingLevel: 3
 description: >-
-  Guide to manually adding metered usage for customers via the Kinde API
-  including agreement ID and feature code requirements.
+  Record metered usage for recurring plan features and metered one-time purchases
+  via the Kinde Management API.
 featured: false
 deprecated: false
 topics:
@@ -25,36 +28,81 @@ keywords:
   - feature code
   - usage data
   - billing cycle
-updated: 2025-01-16
+  - one-time charges
+  - meter usage
+updated: 2026-10-17
+ai_summary: "Guide to recording metered usage for an individual customer via the Kinde Management API. Distinguishes recurring metered features on a subscription from metered one-time purchases, which can only receive usage after the customer has completed at least one purchase or received an admin assignment. Explains how to find the agreement ID and feature key, and how to POST a meter usage record with absolute or delta meter types. Describes running totals: recurring features and one-time purchases that expire with the billing cycle reset each cycle, while never-expiring one-time purchases keep a lifetime total for that agreement and feature. Notes that meter_usage_timestamp is stored but does not select a billing cycle or change the running-total arithmetic. Covers the GET meter usage endpoint for paging records and reading the grant snapshot, and the GET one-time purchases endpoint for listing current purchases. Intended for developers and integration engineers."
 ---
 
-From time to time, you may need to manually add metered usage for an individual customer. You can do this via the Kinde API.
+From time to time, you may need to manually add metered usage for an individual customer. You can do this via the Kinde Management API.
 
-Adding usage values requires two key pieces of information:
+This guide covers usage for:
 
-- your customer's agreement ID
-- the feature code you want to record usage against
+- **Recurring metered features** on a subscription plan
+- **Metered one-time purchases** the customer has bought or been assigned (for example a credit pack)
+
+Adding usage values requires:
+
+- your customer’s **agreement ID**
+- the feature **code** you want to record usage against
+
+For metered one-time purchases, the customer must have completed at least one purchase or received an admin assignment (paid or complimentary) of that feature before you can record usage.
 
 ## Get the agreement ID
 
-- [Via API](https://docs.kinde.com/kinde-apis/management/#tag/billing-agreements/get/api/v1/billing/agreements/). Include the `billing` expand parameter in your request to access the agreement ID.
+- **Via API** — Include the `billing` expand parameter in your request to [get billing agreements](https://docs.kinde.com/kinde-apis/management/#tag/billing-agreements/get/api/v1/billing/agreements/) and access the agreement ID.
+- **Via the Kinde UI** — Open the user or organization record in Kinde and select **Billing** in the menu. The customer agreement shows as part of the subscription details.
 
-- Via the Kinde UI - Open the user or organization record in Kinde and select **Billing** in the menu. The customer agreement shows as part of the subscription details. 
+    ![Example of agreement ID in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6488a69d-a47d-413b-a3b3-47a39398b600/public)
 
-![Example of agreement ID in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/6488a69d-a47d-413b-a3b3-47a39398b600/public)
-
-## Get the feature ID
+## Get the feature code
 
 1. Open the plan the feature belongs to.
-2. Edit the feature (to view it) in the plan.
-3. Take note of the **Key**.
+2. Click on the top-right three-dot drop-out menu.
+3. Click on "Copy key" and the value of the key is copied to your clipboard OR
+4. Edit the feature or one-time charge (to view it) on the plan.
+5. Take note of the **Key**.
+
+For one-time charges, the key is on the one-time charge card under **One-time charges**.
 
 ## Submit usage data
 
-POST the usage to the [meter usage record API](https://docs.kinde.com/kinde-apis/management/#tag/billing-meter-usage/post/api/v1/billing/meter_usage/) including the feature code and agreement ID to record a usage value.
+POST usage to the [Create meter usage record](https://docs.kinde.com/kinde-apis/management/#tag/billing-meter-usage/post/api/v1/billing/meter_usage/) endpoint with the feature code and agreement ID.
 
-<Aside>
+```json
+{
+  "customer_agreement_id": "agreement_0195ac80a14c2ca2cec97d026d864de0",
+  "billing_feature_code": "ai_credits",
+  "meter_value": 25,
+  "meter_type_code": "delta"
+}
+```
 
-Usage gets assigned to your customer's current billing cycle. Any usage submitted after a billing cycle ends will be recorded against the next billing cycle.
+### Running totals
 
-</Aside>
+How usage accumulates depends on the feature type and expiry:
+
+| Feature type | Running total |
+| --- | --- |
+| Recurring metered feature on a plan | Current billing cycle total. Resets when the cycle rolls. |
+| Metered one-time purchase — **Expires with the billing cycle** | Current billing cycle total. Resets when the cycle rolls. |
+| Metered one-time purchase — **Never expires** | Lifetime total for that agreement and feature. Does not reset when the billing cycle rolls. |
+
+`meter_type_code` controls how each record updates the running total:
+
+- `absolute` (default) — sets the running total to `meter_value`
+- `delta` — adds `meter_value` to the last calculated running total
+
+`meter_usage_timestamp` is stored on the record but does not choose a billing cycle, insert the record in timestamp order, or change the running-total arithmetic.
+
+The response includes a grant snapshot (`units_granted`, `current_usage`, and `expiration_policy_code` when the grant is a one-time purchase) so you can see whether usage has exceeded the purchased allowance without a follow-up request.
+
+### Read usage records
+
+Use [Get billing meter usage](https://docs.kinde.com/kinde-apis/management/#tag/billing-meter-usage/get/api/v1/billing/meter_usage/) to page usage records for an agreement and feature. By default only records in the **current billing cycle** are returned. Pass `all_cycles=true` to include every record.
+
+### List one-time purchases
+
+To see what a customer has bought, use [Get billing one-time purchases](https://docs.kinde.com/kinde-apis/management/#tag/billing-one-time-purchases/get/api/v1/billing/one_time_purchases/). This returns paid, non-expired purchases on the active agreement. Purchases on a previous agreement (for example after a plan change) are omitted.
+
+See [One-time purchases](/billing/manage-subscribers/one-time-purchases/) for how customers buy these purchases and how assignments work.

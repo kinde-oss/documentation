@@ -71,11 +71,6 @@ const sidebarData = [
     items: [
       {label: "Overview", autogenerate: {directory: "developer-tools/about"}, collapsed: false},
       {
-        label: "Special guides",
-        autogenerate: {directory: "developer-tools/guides"},
-        collapsed: false
-      },
-      {
         label: "Front end SDKs",
         autogenerate: {directory: "developer-tools/sdks/frontend"},
         collapsed: false
@@ -98,6 +93,11 @@ const sidebarData = [
       {
         label: "Account API",
         autogenerate: {directory: "developer-tools/account-api"},
+        collapsed: false
+      },
+      {
+        label: "Special guides",
+        autogenerate: {directory: "developer-tools/guides"},
         collapsed: false
       }
     ]
@@ -199,6 +199,15 @@ const sidebarData = [
     ]
   },
   {
+    label: "Workforce identity",
+    description:
+      "Use Kinde as a SAML identity provider so your team can sign in to third-party tools",
+    icon: "workforce-identity",
+    collapsed: true,
+    cardLink: "/workforce-identity/",
+    autogenerate: {directory: "workforce-identity"}
+  },
+  {
     label: "Testing",
     description:
       "Test your application's authentication flows, passwordless flows, and backend APIs",
@@ -274,7 +283,7 @@ const sidebarData = [
     description: "Integrate your brand, and update content for pages and screens",
     icon: "brand",
     collapsed: true,
-    cardLink: "/design/brand/apply-branding-for-an-organization/",
+    cardLink: "/design/brand/global-brand-defaults/",
     items: [
       {label: "Brand", autogenerate: {directory: "design/brand"}, collapsed: false},
       {label: "Page layout", autogenerate: {directory: "design/pages"}, collapsed: false},

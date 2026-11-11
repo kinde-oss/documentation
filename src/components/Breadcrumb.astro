@@ -1,24 +1,45 @@
 ---
 const sidebar = Astro.props.sidebar;
 
-function getCurrentArticleTaxonomy() {
-  for (const mainTopic of sidebar) {
-    for (const subtopic of mainTopic.entries) {
-      if (subtopic.entries) {
-        for (const article of subtopic.entries) {
-          if (article.isCurrent) {
-            return `<ul class="flex list-none items-center p-0 text-sm text-zinc-500 dark:text-zinc-400">
-              <li>${mainTopic.label}</li>
-              <li class="before:px-2 before:content-['/']">${subtopic.label}</li>
-            </ul><span hidden id="docsearch-lvl0">${mainTopic.label} / ${subtopic.label}</span>`;
-          }
-        }
-      }
+// Sidebar entries are either links or groups, and groups nest to different depths.
+// Most sections go section > group > article ("Build on Kinde / Applications"), but
+// flat sections such as Workforce identity, MCP Servers and Testing autogenerate
+// their articles directly under the section ("Workforce identity").
+// Walk to whichever depth the current article sits at and use the labels above it.
+function getCurrentArticleTaxonomy(entries, ancestors = []) {
+  for (const entry of entries ?? []) {
+    if (entry.type === "group") {
+      const trail = getCurrentArticleTaxonomy(entry.entries, [...ancestors, entry.label]);
+      if (trail) return trail;
+    } else if (entry.isCurrent) {
+      return ancestors;
     }
   }
 }
 
-const breadcrumb = getCurrentArticleTaxonomy();
+const escapeHtml = (value) =>
+  String(value).replace(
+    /[&<>"']/g,
+    (char) =>
+      ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"})[char]
+  );
+
+// Pages left out of the sidebar (`hidden: true`, or a section with no sidebar entry)
+// have no trail to show.
+const trail = getCurrentArticleTaxonomy(sidebar) ?? [];
+
+const crumbs = trail
+  .map(
+    (label, index) =>
+      `<li${index > 0 ? ` class="before:px-2 before:content-['/']"` : ""}>${escapeHtml(label)}</li>`
+  )
+  .join("\n              ");
+
+const breadcrumb = trail.length
+  ? `<ul class="flex list-none items-center p-0 text-sm text-zinc-500 dark:text-zinc-400">
+              ${crumbs}
+            </ul><span hidden id="docsearch-lvl0">${escapeHtml(trail.join(" / "))}</span>`
+  : undefined;
 ---
 
 <div class="c-breadcrumb" set:html={breadcrumb} />
