@@ -31,7 +31,7 @@ keywords:
   - pricing table
   - org signup
   - B2B
-updated: 2025-01-16
+updated: 2026-10-19
 ---
 
 This topic explains how to customize billing flows with Kinde, including URL parameters, direct auth URLs, and SDK usage in React.
@@ -57,9 +57,9 @@ Add these parameters as needed:
 
 | Parameter | Description |
 | --- | --- |
-| `plan_interest` | Pre-selects a plan (skips plan selection) |
-| `pricing_table_key` | Displays a specific pricing table |
-| `is_create_org` | Triggers org sign-up flow |
+| `plan_interest` | Pre-selects a plan by its key and skips the plan selection screen |
+| `pricing_table_key` | Displays a specific live pricing table during sign-up |
+| `is_create_org` | Triggers the organization (B2B) sign-up flow (`is_create_org=true`). Requires a role with **Assign to the creator** and the `org:write:billing` system permission so the creator can subscribe the new organization to a plan |
 
 ### Examples
 
@@ -69,17 +69,21 @@ Add these parameters as needed:
     ...&plan_interest=pro_monthly
     ```
     
-- Show specific pricing:
+- Show a specific pricing table:
     
     ```
     ...&pricing_table_key=spring_promo
     ```
     
-- Org sign-up:
+- Organization (B2B) sign-up with a pricing table:
 
     ```
-    ...&is_create_org=true
+    ...&is_create_org=true&pricing_table_key=pricing_table_schools&prompt=create
     ```
+
+<Aside type="warning" title="Important">
+When combining `is_create_org=true` with billing (`pricing_table_key`, `plan_interest`, or a default organization pricing table), the user creating the organization must be automatically assigned a role that includes the `org:write:billing` system permission (and `org:read:billing` to view billing in the self-serve portal). If no role has **Assign to the creator** and `org:write:billing` enabled in **Settings > Roles**, Kinde will create the organization and user but skip the pricing table and billing steps. See [Step 1: Add billing role (B2B)](/billing/get-started/add-billing-role/).
+</Aside>
 
 ## Integrate billing using the React SDK
 
