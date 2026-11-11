@@ -9,7 +9,7 @@ tableOfContents:
 relatedArticles:
   - c4bc277a-5ec7-418c-ba1c-4d58c9ddfd7d
   - f6eaf29b-d8d9-4caf-bc1d-5319b6fb8ffc
-  - b338980f-7dd6-4ba5-90aa-330247a45536
+  - 1977cf9a-cde0-4d88-85a7-92173771b191
   - e89d246a-5cdf-4993-9cee-94b31ec27583
 description: Export FusionAuth users and password hashes as NDJSON and import into Kinde—users sign in with existing credentials, no reset required
 topics:
@@ -32,7 +32,7 @@ keywords:
   - pbkdf2
   - bcrypt
   - bulk user import
-updated: 2026-06-18
+updated: 2026-08-05
 featured: false
 deprecated: false
 ai_summary: "Step-by-step guide for migrating users from FusionAuth to Kinde using bulk NDJSON import via Users > Import users > FusionAuth. FusionAuth exports user details and password hashes together, so Kinde imports both in one step with no separate password import. Covers exporting from FusionAuth via direct database export (snake_case fields) or the FusionAuth API (camelCase fields), both of which Kinde accepts. Documents field mapping for email, username, phone, names, verification status, and password hash attributes. Supported password schemes include salted-pbkdf2-hmac-sha256, salted-pbkdf2-hmac-sha256-512, salted-pbkdf2-hmac-sha512-512, and bcrypt; users on unsupported schemes import successfully but reset on first sign-in. Social and federated logins are not included. Import files must be 49MB or less. Includes guidance on username case sensitivity, testing migrated sign-in, re-import behavior, migration window edge cases, and user communication. Intended for developers and admins moving authentication from FusionAuth to Kinde."
@@ -66,19 +66,19 @@ Kinde accepts both naming styles, so use whichever export method suits you. Each
 
 Kinde reads the following fields from each user record:
 
-| FusionAuth field | Used for |
-|---|---|
-| `id` | Stable external identifier — used to match records on re-import |
-| `email` | Email identity |
-| `username` | Username identity |
-| `mobile_phone` / `mobilePhone` | Phone identity |
-| `first_name` / `firstName` | Given name |
-| `last_name` / `lastName` | Family name |
-| `verified` | Whether the identity is verified |
-| `encryption_scheme` / `encryptionScheme` | Password hashing variant |
-| `salt` | Password salt (base64) |
-| `factor` / `iterations` | PBKDF2 iteration count |
-| `password` | Password hash (base64 derived key) |
+| FusionAuth field                         | Used for                                                        |
+| ---------------------------------------- | --------------------------------------------------------------- |
+| `id`                                     | Stable external identifier — used to match records on re-import |
+| `email`                                  | Email identity                                                  |
+| `username`                               | Username identity                                               |
+| `mobile_phone` / `mobilePhone`           | Phone identity                                                  |
+| `first_name` / `firstName`               | Given name                                                      |
+| `last_name` / `lastName`                 | Family name                                                     |
+| `verified`                               | Whether the identity is verified                                |
+| `encryption_scheme` / `encryptionScheme` | Password hashing variant                                        |
+| `salt`                                   | Password salt (base64)                                          |
+| `factor` / `iterations`                  | PBKDF2 iteration count                                          |
+| `password`                               | Password hash (base64 derived key)                              |
 
 #### Supported password hashing
 
@@ -100,7 +100,7 @@ Kinde imports the email, username, and phone identities found on each FusionAuth
 1. In Kinde, go to **Users**, then select **Import users**.
 2. Select **FusionAuth**.
 
-    ![import from fusionauth](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7101c8f3-4f88-4410-fd1e-02477cbd9500/socialsharingimage)
+   ![import from fusionauth](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7101c8f3-4f88-4410-fd1e-02477cbd9500/socialsharingimage)
 
 3. Follow the on-screen prompts to upload your NDJSON file (49MB or less).
 4. Review any [import errors](/manage-users/add-and-edit/troubleshoot-user-import-errors/) reported after import. Fix the file and re-import to resolve them.
