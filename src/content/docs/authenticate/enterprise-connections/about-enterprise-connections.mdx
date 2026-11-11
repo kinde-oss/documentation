@@ -12,14 +12,14 @@ relatedArticles:
 app_context:
   - m: settings
     s: authentication
-description: >-
-  Comprehensive overview of enterprise authentication connections including
-  SAML, Microsoft Entra ID, Google Workspace, Okta, and Cloudflare with
-  provisioning options.
+description: "Give customers SSO through their own IdP. Manage SAML, Entra ID, Okta, and Google Workspace in one place."
+ai_summary: "Overview of enterprise connections in Kinde, where Kinde is the service provider and a customer brings their own identity provider. Lists supported connection types: Microsoft Entra ID with OAuth 2.0 and WS-Fed, Microsoft Entra ID SAML, Cloudflare, Google Workspace, LastPass, Okta, and custom SAML. Explains plan limits for service-provider-initiated connections, provisioning options including just-in-time, pre-provisioning, and SCIM directory sync, and the rule that an enterprise identity cannot be combined with other identity types. Covers organization-level B2B setup and sign-out behavior including single logout on Entra ID SAML. Recommends Verify, then trust for environment-level Email address trust and explains that organization-level connections show Auto-add users instead. Also covers home realm discovery for email-domain routing, showing or hiding the SSO button, and the difference between service-provider-initiated and identity-provider-initiated SSO. Includes steps to disable or delete a connection at organization or environment level, and a warning that deleting a connection used by SCIM directory sync stops provisioning until another connection is selected. Intended for developers, enterprise admins, and security engineers."
 featured: false
 deprecated: false
 topics:
   - authenticate
+  - enterprise-connections
+  - saml
 sdk: []
 languages: []
 audience:
@@ -28,15 +28,16 @@ audience:
   - security-engineer
 complexity: intermediate
 keywords:
-  - enterprise connections
   - SAML
   - Microsoft Entra ID
-  - Google Workspace
   - Okta
-  - Cloudflare
-  - SSO
+  - Google Workspace
+  - home realm discovery
+  - email address trust
+  - IdP-initiated SSO
   - JIT provisioning
-updated: 2026-03-26
+  - SCIM
+updated: 2026-10-22
 ---
 
 Enterprise authentication is a common method for managing user access to systems in large organizations.
@@ -67,9 +68,15 @@ See [full plan details and pricing](https://kinde.com/pricing/).
 
 ## Provisioning for enterprise connections
 
-Kinde offer a number of provisioning options for enterprise connections, including **just in time (JIT)** provisioning and **pre-provisioning** options.
+Kinde offers a number of provisioning options for enterprise connections, including **just in time (JIT)** provisioning, **pre-provisioning**, and automated provisioning with **SCIM**.
 
-See [Provisioning users with enterprise connections](/authenticate/enterprise-connections/provision-users-enterprise/)
+See [Provisioning users with enterprise connections](/authenticate/enterprise-connections/provision-users-enterprise/) and [Sync users from your identity provider with SCIM](/authenticate/enterprise-connections/scim-directory-sync/).
+
+<Aside type="warning">
+
+If an organization uses SCIM directory sync, deleting its enterprise connection stops provisioning, and users who were provisioned with SCIM can no longer sign in. Select another connection on the organization's **Directory** page to restore provisioning.
+
+</Aside>
 
 ## How identities are handled in enterprise connections
 
@@ -83,18 +90,13 @@ Many businesses have businesses for customers (B2B), and use Kinde organizations
 
 Unless you are using a Microsoft Entra ID SAML connection with single logout switched on, when enterprise connection users sign out, they are only signed out of the Kinde session and are not signed out of the identity provider. We do not force sign out of the IdP because this could break existing sessions the user is signed into, for other applications. This behavior also applies for social connections, where a third party is the identity provider.
 
-## Trust email addresses provided by this connection option
+## Email address trust option
 
-When you set up a connection, you can choose to trust email addresses provided by the identity provider you are using, e.g. your SAML provider.
+For an environment-level enterprise connection, under **Provisioning**, set **Email address trust** to **Verify, then trust**.
 
-- If you switch this on - Kinde will look for a user with the same email address and match the record as part of authentication. This can make for a more seamless sign in experience.
-- If you do not switch this on - Kinde does not try to match the user's email to an existing account, even if one exists. Instead, a new user identity is created in Kinde.
+Organization-level connections, such as self-serve SSO, do not show this option. They show **Auto-add users** in its place.
 
-<Aside type="warning">
-
-This option should be disabled unless you understand the impact of having this enabled. We recommend leaving this off for maximum security, as you will be trusting email addresses from providers who don't verify the email address is correct and valid.
-
-</Aside> 
+For details about the options, see [Trusting emails from providers](/authenticate/about-auth/identity-and-verification/#trusting-emails-from-providers).
 
 ## Routing in enterprise connections
 
