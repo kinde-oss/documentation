@@ -30,7 +30,7 @@ keywords:
   - environment variables
   - callback URLs
   - session management
-updated: 2026-01-23
+updated: 2026-11-12
 featured: false
 deprecated: false
 ai_summary: Complete guide for Python SDK including Flask and FastAPI integration, OAuth configuration, environment variables, and session management for Python 3.9+ applications.
@@ -1280,71 +1280,93 @@ Here are some common claims you might want to access:
 
 ## Organizations
 
+Organization actions use the same `login()` and `register()` methods as standard sign-in. Pass organization options in `login_options`. The examples below use Flask, so they run the async methods with `asyncio.run()`. In FastAPI or other async code, `await` the same calls.
+
 ### Create an organization
 
-To create a new organization within your application, you will need to run a similar function to below:
+To let a user create a new organization when they sign up, call `register()` with `is_create_org` set to `True`. You can also pass `org_name` to set the name of the new organization.
 
 ```python
-return app.redirect(oauth.create_org())
+import asyncio
+from flask import Flask, redirect
+from kinde_sdk.auth.oauth import OAuth
+
+app = Flask(__name__)
+oauth = OAuth(framework="flask", app=app)
+
+@app.route("/create-org")
+def create_org():
+    register_url = asyncio.run(oauth.register(login_options={
+        "is_create_org": True,
+        "org_name": "My Organization",  # Optional
+    }))
+    return redirect(register_url)
 ```
 
 ### Sign up and sign in to organizations
 
-Kinde has a unique code for every organization. You'll have to pass this code through when you register a new user or sign in to a particular organization. Example function below:
+Kinde has a unique code for every organization. To sign a user in to, or register a user in, a particular organization, pass its code as `org_code`:
 
 ```python
-oauth.get_claim("org_code")
+@app.route("/login/<org_code>")
+def login_to_org(org_code):
+    login_url = asyncio.run(oauth.login(login_options={"org_code": org_code}))
+    return redirect(login_url)
 
-@app.route("/login")
-def login():
-    return app.redirect(oauth.get_login_url())
-
-
-@app.route("/register")
-def register():
-    return app.redirect(oauth.get_register_url())
+@app.route("/register/<org_code>")
+def register_to_org(org_code):
+    register_url = asyncio.run(oauth.register(login_options={"org_code": org_code}))
+    return redirect(register_url)
 ```
 
-Following authentication, Kinde provides a json web token (jwt) to your application. Along with the standard information we also include the `org_code` and the permissions for that organization (this is important as a user can belong to multiple organizations and have different permissions for each).
+The option names are also available as constants on `LoginOptions` (for example, `LoginOptions.ORG_CODE` and `LoginOptions.IS_CREATE_ORG`), imported from `kinde_sdk.auth.login_options`.
 
-Example of a returned token:
+Following authentication, Kinde provides a JSON web token (JWT) to your application. Along with the standard information, the access token includes the `org_code` and the permissions for that organization. This is important because a user can belong to multiple organizations and have different permissions in each.
 
-```python
+Example of a returned access token:
+
+```json
 {
-   "aud": [],
-   "exp": 1658475930,
-   "iat": 1658472329,
-   "iss": "https://your_subdomain.kinde.com",
-   "jti": "123457890",
-   "org_code": "org_1234",
-   "permissions": ["read:todos", "create:todos"],
-   "scp": [
-		   "openid",
-		   "profile",
-		   "email",
-		   "offline
-   ],
-   "sub": "kp:123457890"
+  "aud": [],
+  "exp": 1658475930,
+  "iat": 1658472329,
+  "iss": "https://your_subdomain.kinde.com",
+  "jti": "123457890",
+  "org_code": "org_1234",
+  "permissions": ["read:todos", "create:todos"],
+  "scp": ["openid", "profile", "email", "offline"],
+  "sub": "kp:123457890"
 }
 ```
 
-The `id_token` will also contain an array of organizations that a user belongs to - this is useful if you wanted to build out an organization switcher for example.
+The ID token also contains an `org_codes` array listing every organization the user belongs to. This is useful if you want to build an organization switcher, for example.
 
-```python
+```json
 {
-		...
-		"org_codes": ["org_1234", "org_4567"],
-		...
-};
+  "org_codes": ["org_1234", "org_4567"]
+}
 ```
 
-There are two helper functions you can use to extract information:
+Use the `claims` helper to read this information. The methods are async, so in a Flask route run them with `asyncio.run()`:
 
 ```python
-oauth.get_organization()
+from kinde_sdk.auth import claims
 
-oauth.get_user_organizations()
+@app.route("/orgs")
+def orgs():
+    # The organization the user is signed in to (access token)
+    org_code = asyncio.run(claims.get_claim("org_code"))
+
+    # Every organization the user belongs to (ID token)
+    org_codes = asyncio.run(claims.get_claim("org_codes", token_type="id_token"))
+
+    return {
+        "current": org_code["value"],  # "org_1234"
+        "all": org_codes["value"],     # ["org_1234", "org_4567"]
+    }
 ```
+
+In FastAPI or other async code, `await` the same calls inside an `async def` route.
 
 For more information about how organizations work in Kinde, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
 
