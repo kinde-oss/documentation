@@ -30,7 +30,7 @@ keywords:
   - environment variables
   - callback URLs
   - session management
-updated: 2026-01-23
+updated: 2026-11-12
 featured: false
 deprecated: false
 ai_summary: Complete guide for Python SDK including Flask and FastAPI integration, OAuth configuration, environment variables, and session management for Python 3.9+ applications.
@@ -1347,19 +1347,26 @@ The ID token also contains an `org_codes` array listing every organization the u
 }
 ```
 
-Use the `claims` helper to read this information:
+Use the `claims` helper to read this information. The methods are async, so in a Flask route run them with `asyncio.run()`:
 
 ```python
 from kinde_sdk.auth import claims
 
-# The organization the user is signed in to (access token)
-org_code = await claims.get_claim("org_code")
-print(org_code["value"])  # "org_1234"
+@app.route("/orgs")
+def orgs():
+    # The organization the user is signed in to (access token)
+    org_code = asyncio.run(claims.get_claim("org_code"))
 
-# Every organization the user belongs to (ID token)
-org_codes = await claims.get_claim("org_codes", token_type="id_token")
-print(org_codes["value"])  # ["org_1234", "org_4567"]
+    # Every organization the user belongs to (ID token)
+    org_codes = asyncio.run(claims.get_claim("org_codes", token_type="id_token"))
+
+    return {
+        "current": org_code["value"],  # "org_1234"
+        "all": org_codes["value"],     # ["org_1234", "org_4567"]
+    }
 ```
+
+In FastAPI or other async code, `await` the same calls inside an `async def` route.
 
 For more information about how organizations work in Kinde, see [Kinde organizations for developers](/build/organizations/orgs-for-developers/).
 
