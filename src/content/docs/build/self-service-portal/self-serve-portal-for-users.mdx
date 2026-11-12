@@ -29,7 +29,7 @@ keywords:
   - billing information
   - portal link
   - account API
-updated: 2026-10-25
+updated: 2026-11-12
 featured: false
 deprecated: false
 ai_summary: Guide for enabling and configuring self-service portals for users including profile management, billing access, editing billing information on Payment details, one-time charge purchases on the plan page, and generating portal links with SDK and Account API examples. User-plan checkout still collects payment method details only.
@@ -56,7 +56,7 @@ A self-serve portal means your customers can make basic account changes without 
 ### User profile
 
 Allows users to update their profile information, including first name, and last name.
-    
+
 If you do not want users to change these fields, disable **User profile**.
 
 When users sign in with a social provider (for example, Google), the social profile can take priority and overwrite name values the next time they sign in.
@@ -128,24 +128,7 @@ Optional parameters:
 
 See [Get self-serve portal link](https://docs.kinde.com/kinde-apis/frontend/#tag/self-serve-portal/get/account_api/v1/portal_link) for all the supported values.
 
-### Using the Kinde Management API
-
-This option is useful for server-side applications or if you're using Kinde billing features without Kinde Authentication.
-
-Make a request to the `POST /api/v1/portal/generate_url` endpoint using an M2M token.
-
-**Request body**
-
-```js
-{
-  "user_id": "kp_1234567890", // The ID of the user for whom you want to generate the portal link
-  "organization_code": "org_123456789", // Optional: the organization code for which the portal link is generated
-  "return_url": "https://yourapp.com/dashboard", // Optional: where to redirect the user after exiting the portal
-  "sub_nav": "profile" // Optional: specify the portal section to open (e.g., `organization_billing`, `profile`)
-}
-```
-
-This will return a one-time portal link for the specified user.
+The link opens the portal for the organization in the user's access token (`org_code` claim). The plan and payment pages manage the signed-in user's own subscription (a user plan), not an organization's subscription. Kinde still ties each user plan to an organization, so a user who belongs to multiple organizations can hold a different user plan in each — the `org_code` in the token selects which subscription the portal shows. If the token has no `org_code`, or names an organization the user is no longer a member of, those billing pages are not available and the link opens on `profile` instead.
 
 ## How the self-serve portal looks
 
