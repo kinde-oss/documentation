@@ -33,7 +33,8 @@ keywords:
   - ios setup
   - pkce flow
   - custom schemes
-updated: 2025-11-21
+  - logging
+updated: 2026-11-11
 featured: false
 deprecated: false
 ai_summary: Complete guide for Flutter SDK including authentication setup, Android/iOS configuration, PKCE flow, and mobile app integration for Flutter 3.10+ applications.
@@ -849,6 +850,49 @@ final portalUrl = await sdk.generatePortalUrl(
 );
 ```
 
+## Logging
+
+The SDK includes built-in logging to help you debug authentication flows during development. Logs are prefixed with `KINDE:` and include the method name, a message, and optional structured context.
+
+```text title="Log output"
+KINDE: initializeSDK - SDK initialized | domain=myapp.kinde.com, platform=android
+KINDE: logout - Logout completed
+```
+
+### Default behavior
+
+Logging is **enabled automatically in debug mode** and **disabled in profile and release builds**.
+
+<Aside type="info">
+
+Logging controls require `kinde_flutter_sdk` 2.1.0 or later. Earlier versions always log, in every build mode, and don't include `configureLogging`.
+
+</Aside>
+
+### Configure logging
+
+To explicitly enable or disable SDK log output, call the static `configureLogging` method on the `KindeFlutterSDK` class:
+
+```dart
+// Turn logging off
+KindeFlutterSDK.configureLogging(enabled: false);
+
+// Turn logging on
+KindeFlutterSDK.configureLogging(enabled: true);
+```
+
+<Aside type="info">
+
+You can call `configureLogging` at any point, before or after SDK initialization. It takes effect immediately for all subsequent SDK operations.
+
+</Aside>
+
+<Aside type="warning">
+
+`configureLogging(enabled: true)` turns logging on in every build mode, including release. Logs can include your Kinde domain and error details, and other tools on the device can read them. To avoid shipping logs to production, only enable logging in debug builds, for example with `KindeFlutterSDK.configureLogging(enabled: kDebugMode)` from `package:flutter/foundation.dart`.
+
+</Aside>
+
 ## Limitations
 
 - **WebView authentication on mobile:** When using the Flutter SDK on mobile platforms (iOS/Android), users will need to authenticate separately when accessing content in in-app WebViews. This occurs because the SDK uses ephemeral web authentication sessions for security, which do not share authentication state with WebViews. Authentication tokens are stored in native secure storage (Keychain/KeyStore) and are not accessible to WebView contexts, which maintain separate cookie storage. For applications requiring seamless authentication between native and web contexts, contact [support@kinde.com](mailto:support@kinde.com) for guidance.
@@ -994,7 +1038,7 @@ sdk.logout();
 
 ### `isAuthenticated`
 
-Check if the user is authenticated.
+Checks if the user is authenticated.
 
 **Usage:**
 
@@ -1038,7 +1082,9 @@ sdk.createOrg(
 
 ### `getClaim`
 
-Extract the provided claim from the provided token type in the current session, the returned object includes the provided claim.
+Extracts the provided claim from the provided token type in the current session.
+
+Returns a `Claim` object with the claim's `name` and `value`.
 
 **Arguments:**
 
@@ -1093,7 +1139,7 @@ sdk.getPermissions();
 
 ### `getOrganization`
 
-Get details for the organization your user is logged into.
+Gets details for the organization your user is logged into.
 
 **Usage:**
 
@@ -1166,7 +1212,7 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 
 ### `getUserProfile`
 
-Extracts makes use of the `getToken` method above to fetch user details
+Uses the `getToken` method above to fetch user details.
 
 **Usage:**
 
@@ -1182,7 +1228,7 @@ sdk.getUserProfile();
 
 ### `getFlag`
 
-Get a flag from the feature_flags claim of the `access_token`
+Gets a flag from the `feature_flags` claim of the `access_token`.
 
 **Arguments:**
 
@@ -1218,7 +1264,7 @@ sdk.getFlag(code:"theme");
 
 ### `getBooleanFlag`
 
-Get a boolean flag from the feature_flags claim of the `access_token`
+Gets a boolean flag from the `feature_flags` claim of the `access_token`.
 
 **Arguments:**
 
@@ -1241,7 +1287,7 @@ true or false
 
 ### `getStringFlag`
 
-Get a string flag from the feature_flags claim of the `access_token`
+Gets a string flag from the `feature_flags` claim of the `access_token`.
 
 **Arguments:**
 
@@ -1264,7 +1310,7 @@ pink
 
 ### `getIntegerFlag`
 
-Get an integer flag from the feature_flags claim of the `access_token`
+Gets an integer flag from the `feature_flags` claim of the `access_token`.
 
 **Arguments:**
 
@@ -1287,7 +1333,7 @@ sdk.getIntegerFlag(code:"team_count");
 
 ### `generatePortalUrl`
 
-Generate a one-time link to the self-serve portal.
+Generates a one-time link to the self-serve portal.
 
 **Arguments:**
 
@@ -1308,6 +1354,24 @@ sdk.generatePortalUrl(returnUrl: "https://yourapp.com/dashboard");
 
 ```dart
 "https://yourapp.kinde.com/portal/..."
+```
+
+### `configureLogging`
+
+Enables or disables SDK logging. Requires `kinde_flutter_sdk` 2.1.0 or later.
+
+This is a static method. Call it on the `KindeFlutterSDK` class, not on an SDK instance. You can call it before or after `initializeSDK`. For default behavior and guidance on release builds, see [Logging](#logging).
+
+**Arguments:**
+
+```dart
+enabled: bool
+```
+
+**Usage:**
+
+```dart
+KindeFlutterSDK.configureLogging(enabled: false);
 ```
 
 If you need help connecting to Kinde, contact us at [support@kinde.com](mailto:support@kinde.com).
