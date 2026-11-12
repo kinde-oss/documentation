@@ -40,7 +40,7 @@ keywords:
   - Accept requests
   - unsolicited SAML
   - email address trust
-updated: 2026-11-11
+updated: 2026-11-12
 ---
 
 In this guide, you'll learn how to configure IdP-initiated SSO in Kinde, including setting up the SAML connection, configuring RelayState, configuring your Identity Provider, and testing both SP-initiated and IdP-initiated authentication flows.
@@ -198,6 +198,8 @@ Kinde redirects the browser to the exact RelayState URL you supply. It does **no
 
 If either `client_id` or `connection_id` is missing from the RelayState URL, Kinde does not recognize the request as IdP-initiated and sign-in fails with error 9055. Include both, even though Kinde does not use `client_id` to look up your **Application login URI**.
 
+Don't add a `#fragment` or your own `login_hint` parameter to the RelayState URL. When **Use IdP email as login hint** is switched on, Kinde appends `login_hint` to the end of the URL.
+
 #### Where to find these parameters
 
 - `client_id`: Go to **Settings > Environment > Applications**, select **View details** on the application tile, and copy the **Client ID**.
@@ -212,6 +214,12 @@ The route you point RelayState at is responsible for turning the parameters it r
 2. **Include callback, `state`, and PKCE values.** Your SDK adds these. If you are not using an SDK, you must add them yourself.
 3. **Pass `org_code` too, if the connection is organization-level.**
 4. **Pass `login_hint` through as well, if it is present.** If **Use IdP email as login hint** is switched on for the connection (Step 2), Kinde appends the user's email to the RelayState redirect as a `login_hint` query parameter. Forward it so the IdP can skip account selection on the second hop.
+5. **Treat the incoming request as untrusted.** Anyone can send a browser to this route with any query string, so use it only to start a Kinde login:
+    - Forward only `connection_id`, `org_code`, and `login_hint`. Don't redirect anywhere else based on the query string.
+    - Check that `connection_id` and `org_code` are values you expect for your application.
+    - Treat `login_hint` as a hint, not a verified identity.
+
+    The user is signed in only after the authorization request completes and your application receives tokens.
 
 <Tabs>
 
@@ -347,7 +355,7 @@ Your browser should be sent to your RelayState URL, which starts Kinde login. Be
 | The IdP shows an account picker on the second hop | `login_hint` is not forwarded | Switch on **Use IdP email as login hint** and pass `login_hint` / `loginHint` through to the authorization request |
 | ACS or audience errors | The ACS URL or Entity ID in the IdP does not match Kinde, or you mixed a custom domain ACS with the default `*.kinde.com` ACS | Copy the ACS URL shown on the connection you are using, including custom domain if configured |
 | The IdP rejects the RelayState value, or the browser lands at a truncated URL | The RelayState URL exceeds the 80-byte limit in the SAML 2.0 specification and your IdP enforces it | Shorten the host and path of your login route. If it still doesn't fit, contact Kinde support |
-| "Invalid client", or the connection isn't recognized. Error 6722 | The client ID and connection ID are from different Kinde environments, or the connection ID in RelayState doesn't match a SAML connection | Confirm both values come from the same Kinde environment and the connection ID is copied from the connection you configured |
+| The connection isn't recognized. Error 6722 | The `connection_id` in RelayState doesn't match a SAML connection in this Kinde environment, or the connection's settings can't be loaded | Copy the connection ID from the connection you configured, in the same environment as your application, and check the connection's metadata URL, Entity ID, and certificate |
 
 ### Error codes
 
