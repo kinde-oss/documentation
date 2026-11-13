@@ -33,7 +33,7 @@ keywords:
   - billing webhooks
   - jwt validation
   - local webhook testing
-updated: 2026-06-19
+updated: 2026-11-13
 featured: false
 deprecated: false
 ai_summary: "Guide to adding and managing webhooks in Kinde through the dashboard and Kinde Management API. Covers webhook security including JWT-signed payloads and JWKS validation, plus the Kinde webhooks decoder package for JavaScript backends. Explains how to add, edit, and delete webhooks in Settings > Environment > Webhooks, and lists available webhook triggers by category: authentication (organization.created, user.created, user.authenticated, and others), passkey (passkey.added and passkey.removed), user management (roles, permissions, organizations, users), and billing (customer plan and payment events). Includes Management API endpoints for creating, updating, deleting, and listing webhooks and events. Notes that user.created does not fire on user import. Covers local testing with proxy tools such as localtunnel, ngrok, and webhook.site. Intended for developers and admins integrating Kinde event notifications."
@@ -96,14 +96,16 @@ Everything you can do with webhooks in the Kinde dashboard, you can also do thro
 - `PATCH /api/v1/webhooks/{webhook_id}` — update a webhook
 - `DELETE /api/v1/webhooks/{webhook_id}` — delete a webhook
 
-Events can also be retrieved using:
+Event types and events can also be retrieved using:
 
-- `GET /api/v1/event_types` — list available event types
-- `GET /api/v1/events/{event_id}` — get an event by its event_id from a webhook payload
+- `GET /api/v1/event_types` — list the available event types, including a JSON Schema that describes the payload of each one. See [Get the payload schema for an event type](/integrate/webhooks/about-webhooks/#get-the-payload-schema-for-an-event-type).
+- `GET /api/v1/events/{event_id}` — get an event by its `event_id` from a webhook payload
 
 Learn more in the [Kinde Management API reference](/kinde-apis/management).
 
 ## Webhook triggers
+
+These are the events you can subscribe a webhook to. Each event type sends a different `data` object. To see the fields for a specific event, [get its payload schema](/integrate/webhooks/about-webhooks/#get-the-payload-schema-for-an-event-type).
 
 ### Authentication webhooks
 
@@ -114,6 +116,7 @@ user.authentication_failed;
 user.authenticated;
 subscriber.created;
 access_request.created;
+saml_application.sso_succeeded;
 ```
 
 ### Passkey webhooks
@@ -147,9 +150,9 @@ customer.invoice_overdue;
 customer.meter_usage_updated;
 customer.payment_failed;
 customer.payment_succeeded;
-customer.plan_created;
 customer.plan_assigned;
 customer.plan_changed;
+plan.published;
 ```
 
 <Aside>

@@ -30,7 +30,7 @@ keywords:
   - security
   - retry policy
   - endpoints
-updated: 2026-04-03
+updated: 2026-11-13
 featured: false
 deprecated: false
 ai_summary: Comprehensive guide to Kinde webhooks including event monitoring, security best practices, JWT handling, and retry policies for real-time notifications.
@@ -125,6 +125,121 @@ You can use the [Kinde webhook package](https://www.npmjs.com/package/@kinde/web
   "type": "user.created"
 }
 ```
+
+## Webhook payload structure
+
+Every decoded webhook payload has the same top-level fields. Only the contents of `data` change from one event type to another.
+
+| Field | Description |
+| --- | --- |
+| `type` | The event type, for example `user.created` or `customer.agreement_cancelled`. |
+| `event_id` | The ID of the event, prefixed with `event_`. You can use it to retrieve the event via `GET /api/v1/events/{event_id}`. |
+| `event_timestamp` | When the event occurred in Kinde, in ISO 8601 format. |
+| `timestamp` | When Kinde sent the request, in ISO 8601 format. Use it to guard against replay attacks. |
+| `source` | Where the event originated: `admin`, `user`, `api`, or `scim`. |
+| `ip_address` | The client IP address for the request that caused the event, when Kinde has one. This field is present on every webhook payload and may be `null` for events that did not come from a client request (for example many billing events). The JSON Schema for `user.authenticated` and `user.authentication_failed` describes this field in detail. |
+| `data` | The details of the event. The fields in this object depend on the event type. |
+
+### Get the payload schema for an event type
+
+Kinde publishes a [JSON Schema](https://json-schema.org/) for every event type, describing the fields in the payload and their types. You can retrieve the schemas from the Kinde Management API using the `GET /api/v1/event_types` endpoint.
+
+To call the endpoint, you need a machine-to-machine (M2M) application that is authorized for the Kinde Management API with the `read:event_types` scope. See [Connect to the Kinde Management API](/developer-tools/kinde-api/connect-to-kinde-api/) for how to set one up and get an access token.
+
+1. Call the endpoint with your M2M access token:
+
+    ```bash
+    curl --request GET \
+      --url 'https://<your_business>.kinde.com/api/v1/event_types' \
+      --header 'Accept: application/json' \
+      --header 'Authorization: Bearer <your_m2m_access_token>'
+    ```
+
+2. In the response, find the event type you are interested in by its `code`. The `schema` field contains the JSON Schema for that event's payload.
+
+    Here is the entry for `customer.agreement_cancelled`:
+
+    ```json
+    {
+      "code": "OK",
+      "message": "Success",
+      "event_types": [
+        {
+          "id": "et_0195ac80a14e8d71f42b98e75d3c61ad",
+          "code": "customer.agreement_cancelled",
+          "name": "Customer agreement cancelled",
+          "origin": "kinde",
+          "version": 1,
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "https://kinde.com/customer_agreement_cancelled.schema.json",
+            "title": "Customer Agreement Cancelled Webhook Event",
+            "description": "Webhook for customer agreement cancelled event",
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "object",
+                "description": "Webhook event data",
+                "properties": {
+                  "agreement_id": {
+                    "type": "string",
+                    "pattern": "^agreement_[0-9a-f]{32}$",
+                    "description": "ID of the agreement"
+                  },
+                  "customer_id": {
+                    "type": "string",
+                    "pattern": "^customer_[0-9a-f]{32}$",
+                    "description": "ID of the customer"
+                  },
+                  "provider": {
+                    "type": "string",
+                    "description": "Provider name (e.g., stripe)"
+                  },
+                  "provider_customer_id": {
+                    "type": "string",
+                    "description": "Customer ID within the provider system"
+                  }
+                }
+              },
+              "event_id": {
+                "type": "string",
+                "pattern": "^event_[0-9a-f]{32}$",
+                "description": "ID of the event"
+              },
+              "event_timestamp": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Datetimestamp of the event itself"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Datetimestamp of the action"
+              },
+              "type": {
+                "const": "customer.agreement_cancelled"
+              }
+            }
+          }
+        }
+      ]
+    }
+    ```
+
+If you use [jq](https://jqlang.github.io/jq/), you can filter the response down to a single event type:
+
+```bash
+curl --silent --request GET \
+  --url 'https://<your_business>.kinde.com/api/v1/event_types' \
+  --header 'Authorization: Bearer <your_m2m_access_token>' \
+  | jq '.event_types[] | select(.code=="customer.agreement_cancelled")'
+```
+
+<Aside>
+
+Use the schema as the reference for field names and types. Kinde may add new fields to a payload over time, so write your handler to ignore fields it does not recognize.
+
+</Aside>
 
 ## Webhooks identifiers
 
