@@ -31,7 +31,7 @@ keywords:
   - automation
   - subscription events
   - payment events
-updated: 2025-01-16
+updated: 2026-11-13
 ---
 
 Kinde's billing webhooks are outbound calls Kinde makes to your specified endpoint when particular billing events occur. You can use them to keep your application synchronized with Kinde's billing events, trigger automated actions to provide a seamless experience for your customers, and reduce the load on your support team. 
@@ -42,12 +42,40 @@ Kinde webhooks use HTTPS REST to send information about events to a verified ext
 
 More about webhooks: Manage [Kinde webhooks](/integrate/webhooks/about-webhooks/) via the Kinde interface, or via the [Kinde Management API](https://docs.kinde.com/kinde-apis/management/#tag/webhooks).
 
+## Billing webhook payloads
+
+Each billing event sends a different `data` object in the decoded webhook payload. Kinde publishes a JSON Schema for every event type, which you can retrieve from the Kinde Management API. See [Get the payload schema for an event type](/integrate/webhooks/about-webhooks/#get-the-payload-schema-for-an-event-type).
+
+For example, this is the `data` object for the `customer.agreement_cancelled` event:
+
+```json
+{
+  "agreement_id": "agreement_0195ac80a14e8d71f42b98e75d3c61ad",
+  "customer_id": "customer_0195ac80a14c820792bd730e0ccc59b8",
+  "provider": "stripe",
+  "provider_customer_id": "cus_S9xK2mPq4LrT8v"
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `agreement_id` | The ID of the agreement that was cancelled. |
+| `customer_id` | The ID of the Kinde billing customer. |
+| `provider` | The name of the billing provider, for example `stripe`. |
+| `provider_customer_id` | The ID of the customer in the billing provider's system. |
+
+<Aside type="warning">
+
+For `customer.agreement_cancelled`, Kinde reads `customer_id` and `agreement_id` from metadata on the Stripe subscription. If that metadata is missing, those fields can arrive as `null` even though the JSON Schema describes them as strings. Check for `null` before you use them.
+
+</Aside>
+
 ## Billing webhook triggers and examples
 
 ### A customer cancels their subscription
 * **Trigger**:`customer.agreement_cancelled`
-* **Description**: Triggered when a customer subscription is cancelled, this might be by the customer or by an admin
-* **Example**: Automatically deactivate premium features for a user in your application, initiate an offboarding sequence, or update their status in your CRM to "cancelled.
+* **Description**: Triggered when the customer's subscription agreement ends in the billing provider—for example when Stripe sends `customer.subscription.deleted`. If someone only **schedules** a cancellation for the end of a billing period, the webhook does not fire until that effective date (when the subscription is actually removed), not at the moment they click cancel. See [When a cancellation takes effect](/billing/manage-plans/cancel-plans/#when-a-cancellation-takes-effect).
+* **Example**: Automatically deactivate premium features for a user in your application, initiate an offboarding sequence, or update their status in your CRM to "cancelled".
 
 ### A new agreement is created for a customer
 - **Trigger:** `customer.agreement_created`
@@ -59,7 +87,7 @@ More about webhooks: Manage [Kinde webhooks](/integrate/webhooks/about-webhooks/
 * **Description**: Triggered when a customer's invoice becomes overdue. Usually only triggered in cases where payment is not automated.
 * **Example**: Send automated reminders to the customer about their outstanding payment, trigger a temporary suspension of services, or notify your accounts receivable team for follow-up.
 
-### Metered usaage is recorded against a plan feature
+### Metered usage is recorded against a plan feature
 * **Trigger:** `customer.meter_usage_updated`
 * **Description**: Triggered when a customer's metered usage data is updated.
 * **Example**: Ideal for displaying real-time usage statistics to the customer within your app, calculating potential overage charges, or sending notifications if their usage approaches a predefined limit.
@@ -83,3 +111,8 @@ More about webhooks: Manage [Kinde webhooks](/integrate/webhooks/about-webhooks/
 * **Trigger:** `customer.plan_changed`
 * **Description**: Triggered when a customer's billing plan is changed (e.g., upgraded or downgraded).
 * **Example**: Adjust the customer's feature access based on the new plan, update their billing cycle information, or notify relevant internal teams about the plan changes.
+
+### A billing plan is published
+- **Trigger:** `plan.published`
+- **Description**: Triggered when a new version of a billing plan is published in Kinde.
+- **Example**: Refresh your product's cached plan catalog, update pricing pages, or sync plan features to your own configuration store.
