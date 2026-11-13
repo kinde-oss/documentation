@@ -193,28 +193,32 @@ To take a scheduled cancellation back (the same action as **Keep plan**), send `
 
 A further deferred cancel on an agreement that is already scheduled is ignored: Kinde returns the existing `cancels_on` and does not run the cancellation workflow again. Pass `cancel_at=immediately` if you want to end a scheduled agreement now.
 
+This call still ends the plan in Kinde when the Stripe subscription is already cancelled or deleted. Kinde ends the agreement first; any follow-up step to sync cancellation to Stripe is separate and does not block the plan from ending in Kinde.
+
 See the [Management API](/kinde-apis/management/#tag/billing-agreements) for the generated reference.
 
 ## Subscriptions cancelled in Stripe
 
 Always cancel a plan in Kinde, using one of the methods on this page. Kinde then cancels the subscription in Stripe for you.
 
-If a subscription is cancelled or deleted in Stripe instead, the plan stays active in Kinde. This includes subscriptions you cancel from the Stripe dashboard. Kinde keeps its own record of each customer's plan, and a change made only in Stripe does not end it.
+If a subscription is cancelled or deleted in Stripe instead, the plan stays active in Kinde. This includes subscriptions you cancel from the Stripe Dashboard, and subscriptions Stripe ends on its own (for example after failed payment retries). Kinde keeps its own record of each customer's plan, and a change made only in Stripe does not end it.
 
 While the plan is still active in Kinde:
 
-- The customer still shows as subscribed on their Billing page.
+- The customer still shows as subscribed on their Billing page and keeps the plan's features and entitlements.
 - You cannot [disconnect Stripe](/billing/payment-management/manage-stripe-connection/#disconnect-stripe) from the environment.
 
 To fix this, cancel the plan in Kinde as well. You can do this from the customer's Billing page or with the Management API.
 
 ### Cancel a plan for a deleted user
 
+This situation applies to users (B2C). Kinde does not let you delete an organization that still has billing agreements, so cancel the organization's plan before you delete the organization.
+
 Deleting a user does not cancel their plan. Cancel the plan before you delete the user.
 
 If the user is already deleted, their Billing page is no longer available, but you can still cancel the plan with the Management API:
 
-1. Find the agreement ID. In the Stripe dashboard, open the customer's subscription and look for `kinde_agreement_id` in the subscription's metadata.
+1. Find the agreement ID. In the Stripe Dashboard for the Stripe account Kinde created for this environment, open the customer's subscription and look for `kinde_agreement_id` in the subscription's metadata. Open that Dashboard from **Settings > Environment > Billing** by selecting **Update Stripe information**.
 2. Send a `DELETE` request to `/api/v1/billing/agreements/{agreement_id}`. See [Cancel a plan via API](#cancel-a-plan-via-api).
 
 If you cannot find the agreement ID, contact support and include your Kinde domain.
