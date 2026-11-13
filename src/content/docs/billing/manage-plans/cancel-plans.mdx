@@ -33,7 +33,7 @@ keywords:
   - cancellation timing
   - keep plan
   - scheduled cancellation
-updated: 2026-11-05
+updated: 2026-11-13
 ai_summary: "Guide to canceling a customer subscription in Kinde. Covers three methods: customer self-service on the Plan page in the self-serve portal, canceling a user (B2C) or organization (B2B) plan from their Billing page in the Kinde admin, and programmatic cancellation via the Management API. Explains the plan Cancellation takes effect setting (immediately by default, or at the end of the earliest or latest billing period), scheduled cancellations, Keep plan and Cancel now in the portal and admin, billing policies and Stripe sync, one-time purchase forfeiture rules, optional cancel_at and revert cancellation API paths, and the plan cancellation request workflow. Intended for developers, business owners, and admins."
 ---
 
@@ -180,7 +180,7 @@ Required scopes for your M2M app:
 - `delete:billing_agreements` — to cancel immediately
 - `update:billing_agreements` — to schedule a cancellation
 
-1. Get the customer's Agreement ID. This is the unique ID associated with their subscription. You can find it in their Kinde record under **Billing**.
+1. Get the customer's Agreement ID. This is the unique ID associated with their subscription. You can find it in their Kinde record under **Billing**. If the user has been deleted, see [Cancel a plan for a deleted user](#cancel-a-plan-for-a-deleted-user).
 2. Send a `DELETE` request to `/api/v1/billing/agreements/{agreement_id}`.
 
    ![API call to delete agreement](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/d136fd54-7474-486f-2768-8fcb1deaaa00/public)
@@ -194,6 +194,30 @@ To take a scheduled cancellation back (the same action as **Keep plan**), send `
 A further deferred cancel on an agreement that is already scheduled is ignored: Kinde returns the existing `cancels_on` and does not run the cancellation workflow again. Pass `cancel_at=immediately` if you want to end a scheduled agreement now.
 
 See the [Management API](/kinde-apis/management/#tag/billing-agreements) for the generated reference.
+
+## Subscriptions cancelled in Stripe
+
+Always cancel a plan in Kinde, using one of the methods on this page. Kinde then cancels the subscription in Stripe for you.
+
+If a subscription is cancelled or deleted in Stripe instead, the plan stays active in Kinde. This includes subscriptions you cancel from the Stripe dashboard. Kinde keeps its own record of each customer's plan, and a change made only in Stripe does not end it.
+
+While the plan is still active in Kinde:
+
+- The customer still shows as subscribed on their Billing page.
+- You cannot [disconnect Stripe](/billing/payment-management/manage-stripe-connection/#disconnect-stripe) from the environment.
+
+To fix this, cancel the plan in Kinde as well. You can do this from the customer's Billing page or with the Management API.
+
+### Cancel a plan for a deleted user
+
+Deleting a user does not cancel their plan. Cancel the plan before you delete the user.
+
+If the user is already deleted, their Billing page is no longer available, but you can still cancel the plan with the Management API:
+
+1. Find the agreement ID. In the Stripe dashboard, open the customer's subscription and look for `kinde_agreement_id` in the subscription's metadata.
+2. Send a `DELETE` request to `/api/v1/billing/agreements/{agreement_id}`. See [Cancel a plan via API](#cancel-a-plan-via-api).
+
+If you cannot find the agreement ID, contact support and include your Kinde domain.
 
 ## Receive an alert when a customer cancels their plan
 
