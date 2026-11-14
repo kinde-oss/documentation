@@ -1,0 +1,206 @@
+---
+page_id: fbb561f0-f8fc-4aad-b557-19939cef6b97
+title: Connect Kinde to Claude
+description: "Add the Kinde Management MCP server to Claude as a connector, either by signing in with your Kinde account or with an Environment API key, and manage your Kinde environment from a chat"
+sidebar:
+  order: 6
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - 08e5abe4-5d6d-4639-bffa-8be76327f31b
+  - 1119f226-3b22-4131-b2a6-a568b1dfb011
+  - f3a4b5c6-d7e8-4f9a-b0c1-d2e3f4a5b6c7
+  - e20dc04e-84cc-403c-82bc-8690cddb306c
+  - 8c4a1882-5fce-4e3c-87de-9e0190ab31b1
+app_context:
+  - m: api_details
+    s: api_keys
+topics:
+  - mcp-servers
+  - developer-tools
+  - kinde-api
+sdk: []
+languages: []
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - claude
+  - claude connector
+  - custom connector
+  - claude code
+  - claude desktop
+  - mcp server
+  - oauth sign-in
+  - environment api key
+updated: 2026-11-10
+featured: false
+deprecated: false
+ai_summary: "Step-by-step guide to adding the Kinde Management MCP server to Claude (web, desktop, Team and Enterprise organizations, and Claude Code): signing in with a Kinde account via a custom connector, or using an Environment API key as a request header, with example prompts and troubleshooting."
+---
+
+Kinde publishes a remote [MCP](https://modelcontextprotocol.io) server that lets Claude work with your Kinde environment in natural language. Once connected, you can ask Claude to look up users, inspect organizations, review roles and permissions, and make routine changes without leaving the chat.
+
+You can connect in two ways. Both limit Claude to a set of Management API operations; the difference is where the credential comes from.
+
+| Method                              | Best for                                          | How access is scoped                                                                                                                                                     |
+| ----------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Sign in with your Kinde account** | Per-person access on a team                       | Each person signs in with their Kinde account. Access follows their team role's [access level](/mcp-servers/sign-in-with-your-kinde-account/). Nothing to copy or share. |
+| **Environment API key**             | A quick start, or one shared assistant for a team | You create a key and choose its scopes. Everyone using the connector shares it.                                                                                          |
+
+## What you need
+
+- A Kinde business with the **Environment API keys** feature enabled.
+- For sign-in, an owner or admin must first [enable AI agent sign-in](/mcp-servers/sign-in-with-your-kinde-account/) for the environment.
+- A Claude account. Custom connectors work on Free, Pro, Max, Ultra, Team and Enterprise plans. The Free plan allows one custom connector. On Team and Enterprise plans an **Owner** adds the connector for the organization.
+- Your environment's MCP URL: `https://YOUR_BUSINESS.kinde.com/mcp`. If you use a custom domain, use that domain instead.
+
+Connectors are added on the web or in the desktop app, not in the Claude mobile apps. Once added, they are available in the mobile apps too.
+
+## Option 1: Sign in with your Kinde account
+
+### On a Free, Pro, Max or Ultra plan
+
+1. In Claude, go to **Customize > Connectors**.
+2. Select **Add custom connector**.
+3. Enter a name, such as `Kinde`, and your MCP URL: `https://YOUR_BUSINESS.kinde.com/mcp`.
+
+    ![Add custom connector dialog in Claude with the Kinde name and MCP URL](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/0b767f79-26ed-480f-f409-680875bb3900/socialsharingimage)
+
+4. If Claude asks how people connect, choose **Sign in now**. For **OAuth client**, keep **Use Claude's published identity**. Kinde supports it, so there is nothing to enter. Leave **Request headers** empty.
+5. Select **Add**, then **Connect**.
+
+    ![Claude page showing you are not connected to Kinde yet](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/44c2d848-d770-4e5a-2c99-f37d83f3dc00/socialsharingimage)
+
+6. Claude opens a Kinde sign-in window. Sign in with your Kinde account and approve access.
+
+Claude loads the Management API tools your team role allows.
+
+### Claude Code
+
+Add the server from the terminal and sign in when prompted:
+
+```bash
+claude mcp add --transport http kinde https://YOUR_BUSINESS.kinde.com/mcp
+```
+
+Then run `/mcp` in Claude Code to authenticate. Kinde opens in your browser; sign in and approve access.
+
+### On a Team or Enterprise plan
+
+An Owner adds the connector once; each member then connects with their own Kinde account.
+
+**Owner:**
+
+1. Go to **Organization settings > Connectors**.
+2. Select **Add**, then **Custom**. If Claude asks for the connector type, choose **Web**.
+3. Enter your MCP URL: `https://YOUR_BUSINESS.kinde.com/mcp`.
+4. Leave the OAuth client ID and secret empty, and select **Add**.
+
+**Each member:**
+
+1. Go to **Customize > Connectors** and find the connector with the **Custom** label.
+2. Select **Connect**, sign in with your Kinde account, and approve access.
+
+## Option 2: Use an Environment API key
+
+First, [create an Environment API key](/mcp-servers/manage-kinde-account-with-ai-agents/#step-1-create-an-environment-api-key) in **Settings > APIs > Kinde Management API > API keys**, enable it for the MCP server, and choose its scopes. Copy the key value; Kinde shows it only once.
+
+Then add the connector with the key as a request header:
+
+1. In Claude, go to **Customize > Connectors** and select **Add custom connector**.
+2. Enter a name and your MCP URL: `https://YOUR_BUSINESS.kinde.com/mcp`.
+3. For **Authentication**, choose **No sign-in**.
+4. Open **Request headers**, choose the `authorization` header, and enter the value `Bearer YOUR_API_KEY`. Include `Bearer ` and the space: Claude sends the value exactly as you enter it. Mark the header **Required**.
+5. Select **Add**.
+
+<Aside>
+  Request header authentication is in beta on Claude and shares one credential across everyone who
+  uses the connector. If you don't see **Request headers** in the dialog, your organization doesn't
+  have access yet. Use sign-in instead, or add the key through Claude Code.
+</Aside>
+
+For Claude Code or Claude Desktop, the equivalent configuration is:
+
+```bash
+claude mcp add --transport http kinde https://YOUR_BUSINESS.kinde.com/mcp \
+  --header "Authorization: Bearer YOUR_API_KEY"
+```
+
+```json
+{
+  "mcpServers": {
+    "kinde": {
+      "url": "https://YOUR_BUSINESS.kinde.com/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+## Use the connector in a chat
+
+Select the **+** button in a chat, choose **Connectors**, and turn **Kinde** on for that conversation. Then ask in plain language, for example:
+
+![Kinde turned on in the Claude chat connectors menu](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/ab74aecc-6f55-47cb-625d-a7422f558300/socialsharingimage)
+
+- "How many users are in the _Acme_ organization?"
+- "List every user who has the _admin_ role and which organizations they hold it in."
+- "Show me the feature flags set for the _Beta Testers_ organization."
+- "Create a new role called _Support Agent_."
+- "Add a custom user property called _Department_."
+
+![Claude confirming the Support Agent role was created in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/c575de67-498b-4991-8c52-365fa5204300/socialsharingimage)
+
+![Support Agent role in the Kinde roles list](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/be33ad78-8ea7-43f4-bd6f-0e74df954c00/socialsharingimage)
+
+Read operations run without interruption. Anything that creates, changes or deletes data asks you to confirm first. Read the details before you approve, and only choose **Always allow** for actions you trust Claude to repeat.
+
+Claude only sees the tools your access covers: the scopes on your API key, or your team role's access level after sign-in. If a tool you expect is missing, that's almost always why.
+
+### Troubleshooting FAQs
+
+<details>
+<summary>No tools appear after connecting</summary>
+
+With an API key: the key is missing scopes, isn't enabled for the MCP server, or the Environment API keys feature isn't enabled. Add the scopes and reconnect. With sign-in: your team role's access level is **No access**. Ask an owner or admin to raise it, then reconnect.
+
+</details>
+
+<details>
+<summary>Claude never offers to sign in</summary>
+
+Sign-in isn't enabled for the environment, or the connector was added with an `Authorization` request header, which switches Claude to key authentication. Ask an owner or admin to enable **AI agent sign-in (OAuth)**, then remove the connector and add it again without a header. Claude doesn't let you change a connector's authentication after adding it.
+
+</details>
+
+<details>
+<summary>"Authentication required" or the connection is rejected</summary>
+
+Check that the key is active, that it is the environment key created for the MCP server (it starts with `k_live_`), that the header value starts with `Bearer ` followed by a space, and that the MCP URL belongs to the environment the key was created in.
+
+</details>
+
+<details>
+<summary>Tools disappeared after I was working</summary>
+
+After sign-in, access is re-checked on every request. Your role changed, you were removed from the team, or sign-in was disabled for the environment. Reconnect to pick up your current access.
+
+</details>
+
+### Security best practices
+
+- Prefer sign-in over a shared key where your Claude plan allows it. Each person gets their own access and revocation.
+- If you use a key, scope it tightly, keep a separate key for the connector, and rotate or revoke it from **Settings > APIs > Kinde Management API > API keys** if it is exposed.
+- Never paste a key into a chat message. It belongs only in the connector's header configuration.
+- Review every write action before approving it.
+- Block individual tools you don't need under **Customize > Connectors** by selecting the connector and setting the tool's permission to **Blocked**.
+
+## Next steps
+
+- [Sign in with your Kinde account](/mcp-servers/sign-in-with-your-kinde-account/) — enable sign-in and set access levels
+- [Operations and scopes for the Kinde MCP server](/mcp-servers/operations-and-scopes/)
+- [Add a connector that isn't in the directory](https://claude.com/docs/connectors/custom) in Claude's documentation
