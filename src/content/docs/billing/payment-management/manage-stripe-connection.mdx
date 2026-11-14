@@ -3,17 +3,21 @@ page_id: 8770ef89-e805-475f-b4f5-a86c1e1eccc1
 title: Manage Stripe connection
 sidebar:
   order: 2
+tableOfContents:
+  maxHeadingLevel: 3
 relatedArticles:
   - acdd8b64-d5b7-43ab-b47b-6244d8f5b82e
   - d980a089-d9c1-447b-930a-de0f2c00d3bf
-description: >-
-  Guide to managing the Stripe connection in Kinde including connection status
-  monitoring, troubleshooting, and disconnection procedures.
+description: "Track Stripe connection status, complete onboarding, and disconnect billing in Kinde once every paid plan is cancelled."
 featured: false
 deprecated: false
 topics:
   - billing
-sdk: []
+  - payment-management
+  - stripe-connection
+  - disconnect-stripe
+sdk:
+  - kinde-management-api
 languages: []
 audience:
   - developer
@@ -21,13 +25,16 @@ audience:
   - admin
 complexity: intermediate
 keywords:
-  - Stripe connection
   - connection status
-  - troubleshooting
-  - business information
+  - disconnect Stripe
+  - active paying subscribers
+  - Stripe onboarding
+  - update Stripe information
   - identity verification
-  - disconnect
-updated: 2026-11-13
+  - delete billing connections
+  - in progress status
+ai_summary: "Guide to managing the Stripe connection for Kinde billing in the admin billing settings. Explains that a new Stripe account is created automatically and that existing Stripe accounts cannot be connected. Describes the Connecting, In progress, and Connected statuses, and how to complete onboarding with Update Stripe information before publishing plans. Covers the requirement to cancel or migrate every active paid plan before disconnecting, including plans with scheduled cancellations, and why subscriptions cancelled only in the Stripe Dashboard stay active in Kinde. Provides step-by-step disconnect instructions that require the delete:billing_connections permission, a troubleshooting list for when the Disconnect option is missing, and guidance on cancelling plans for deleted users through the Management API. Also covers resolving In progress status issues such as incomplete business information and identity verification. Intended for developers, business owners, and admins."
+updated: 2026-11-14
 ---
 
 When you connect to Stripe as part of Kinde's billing feature, a new Stripe account is created for you. You cannot connect an existing Stripe account.
@@ -50,13 +57,19 @@ To add and edit Stripe business information, select **Update Stripe information*
 
 ## Disconnect Stripe
 
+<Aside type="danger">
+
 Disconnecting Stripe disables billing in the environment. This action is not reversible.
+
+</Aside>
 
 ### Before you disconnect
 
-You can only disconnect Stripe when no customer has an active paid plan in the environment. Until then, the **Disconnect** option is not shown, and the Stripe connection card shows:
+You can only disconnect Stripe when no customer has an active paid plan in the environment. Until then, the **Disconnect** option is not shown, and the Stripe connection card reads:
 
 > You have active paying subscribers on this billing connection. To disconnect Stripe, first cancel or migrate every active subscription that requires a Stripe subscription. Once no active paid agreements remain, the disconnect action will become available.
+
+![stripe connection card with active paying subscribers message](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/db93f98e-59fc-4463-ac0b-5c1cb5a33e00/socialsharingimage)
 
 A plan counts as active and paid when both of these are true:
 
