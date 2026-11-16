@@ -5,7 +5,7 @@ sidebar:
   order: 10
   label: Google
 description: "Add Google sign-in with your own OAuth client and choose how Kinde handles the email address Google returns"
-ai_summary: "Step-by-step guide to Google social sign-in. Explains the Google Cloud prerequisites, copying the Kinde callback URL, configuring the OAuth consent screen, and creating a web OAuth client. Shows where to paste the client ID and client secret in Kinde, notes that Email address trust uses Trust by default, and presents Verify, then trust as a safer middle ground. Also covers optional upstream parameters, application selection, and known webview limitations. Intended for developers and integration engineers."
+ai_summary: "Step-by-step guide to Google social sign-in. Explains the Google Cloud prerequisites, including 2-step verification, copying the Kinde callback URL, and creating a web OAuth client in Google Auth Platform. Covers Branding, Audience, Clients, and optional Data Access scopes, plus how to set Testing versus In production. Shows where to paste the client ID and client secret in Kinde, notes that the client secret is shown only once, and explains that Email address trust should stay on Trust for Google. Also covers how to show your own domain on the Google sign-in screen with a custom-domain callback, and that brand verification is what displays the app name and logo. Includes optional upstream parameters, application selection, and known webview limitations. Intended for developers and integration engineers."
 featured: false
 deprecated: false
 topics:
@@ -20,23 +20,24 @@ complexity: intermediate
 keywords:
   - Google sign-in
   - Google Cloud
+  - Google Auth Platform
   - OAuth consent
   - client ID
   - client secret
   - callback URL
   - email address trust
-updated: 2026-10-12
+  - 2-step verification
+  - custom domain
+updated: 2026-11-16
 ---
 
 You can enable users to sign up and sign in using their Google credentials. To set this up, you need a Google cloud account and project, and a little technical know-how.
 
 <Aside type="warning" title="Social sign in for production environments">
 
-Before you make your production environment live, you must add your own social app's Client ID and Client secret in the Kinde connection (as per below). Do not use Kinde's app credentials by leaving the fields blank, as this poses a security and performance risk, and makes it difficult to change auth providers without service disruptions for your users.
+Before you make your production environment live, you must add your own social app's Client ID and Client secret in the Kinde connection (as per below). The **Client ID** helper says "Leave blank to use Kinde ID (not recommended)" and the **Client secret** helper says "Leave blank to use Kinde client secret (not recommended)". Do not leave the fields blank in production. Leaving the fields blank uses Kinde's app credentials, which poses a security and performance risk, and makes it difficult to change auth providers without service disruptions for your users.
 
 </Aside>
-
-Note that Google has provided a topic about [Google’s Create authorization credentials](https://developers.google.com/identity/sign-in/web/sign-in#create_authorization_credentials), but the steps don’t quite work. Until they update their docs, we recommend you use ours.
 
 <Aside title="Google does not allow sign in auth to work in webview">
 
@@ -46,73 +47,147 @@ Before connecting Google as a sign in option, be aware that Google does not supp
 
 ## Before you begin
 
-1. Create a [Google Cloud](https://cloud.google.com/) account.
-2. Create a [Google Project](https://cloud.google.com/resource-manager/docs/creating-managing-projects#console).
-3. Get Google credentials (see below).
+1. Create a [Google Cloud](https://cloud.google.com/) account.
+2. Create a [Google project](https://cloud.google.com/resource-manager/docs/creating-managing-projects#console).
+3. Turn on [2-Step Verification](https://myaccount.google.com/signinoptions/twosv) for that Google account. Google Cloud console requires **2-Step Verification** (also called MFA). Until it is on, the console shows **Google Cloud access blocked**, and says this has been enforced since 13 May 2025, with an **Enable MFA** button. It can take a few minutes after you turn on 2-Step Verification before access works.
 
-### Get the Kinde Callback URL
+## Get the Kinde Callback URL
 
 1. Sign in to Kinde.
-2. Go to the **Settings** page and select **Authentication**.
-3. In the **Social connections** section, select **Add connection.**
-4. In the window that opens, select **Google**, then select **Next**.
-5. In the **Callback URL** section:
-   1. If you use Kinde’s domain as your default, copy the Kinde domain URL.
-   2. If you use custom domains, select the **Use custom domain instead** switch.
-   3. If you have only one custom domain, copy the Custom domain URL. If you have custom domains for multiple organizations, select each one from the list and copy the callbacks for each. You need to enter all custom domain callbacks in the Google app.
+2. Go to **Settings > Environment > Authentication**.
+3. In **Social connections**, select **Configure** on the existing Google tile if you already have one. The dialog is titled **Configure Google connection**, or **Configure Google (n) connection** when another Google connection already exists.
+
+   ![kinde authentication page showing the google social connection](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/254caf8d-8320-467b-8fa5-1e98b064b000/socialsharingimage)
+
+4. If you are adding Google for the first time, select **Add connection**. In the **Add social connection** dialog, select **Google**, then **Next**. **Next** creates the connection immediately. The connection remains if you later select **Cancel**.
+5. In **Callback URL**, copy the callback. The helper says "Copy your Kinde domain or custom domain to your Google app". The connection name may be inserted in that sentence.
+   1. The **Kinde domain** value is a full HTTPS URL, for example `https://yourdomain.kinde.com/login/callback`. The hostname can include a region and an environment suffix.
+   2. To show your own domain on the Google sign-in screen, turn on **Use custom domain instead**. See [Show your own domain on the Google sign-in screen](#show-your-own-domain-on-the-google-sign-in-screen). When the toggle is on, **Custom domain** shows the selected callback, for example `https://auth.yourdomain.com/login/callback`. The helper says "Use any custom domain instead of the Kinde domain. You will need to ensure your application is set up to use this URL as its callback URL".
+   3. If you use custom domains for more than one organization, copy every organization callback. Add each one in the Google client, and include `https://` on every URL.
 6. Select **Save**.
-7. Use the copied Callback URL to set up the app, see below.
 
 ## Get Google credentials
 
-1. Navigate to the [Google Cloud](https://cloud.google.com/) home page.
-2. Click **Console** in the top menu bar.
-3. In the left menu, select **APIs & Services.**
-4. If you are prompted to, create a new project.
-5. Select **OAuth consent** **screen.**
-6. Select if your project is **Internal** or **External,** then select **Create**.
+The following steps were correct when we published this, but Google sometimes changes the console. For the current screens, see:
 
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/412af691-19cd-45b2-3af7-f5db15677a00/public"
-  alt=""
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
+- [Get started with the Google Auth Platform](https://support.google.com/cloud/answer/15544987?hl=en)
+- [Manage OAuth Clients](https://support.google.com/cloud/answer/15549257?hl=en)
+- [Manage App Audience](https://support.google.com/cloud/answer/15549945?hl=en)
+- [Manage OAuth App Branding](https://support.google.com/cloud/answer/15549049?hl=en)
 
-7. Complete all the app details (noting that you may need to go through the verification process if you upload a logo).
-8. Select **Save** **and Continue**.
-9. In the **Scopes** step, select **Add or remove scopes.**
-10. In the screen that appears, add the following non-sensitive scopes: `./auth/userinfo.email` and `./auth/userinfo.profile` then select **Update**.
-11. Select **Save and continue.**
-12. Add test users if you want, then select **Save and continue**.
-13. Back in the main menu, select **Credentials**.
-14. Click **Create Credentials** at the top of the page and select **OAuth client ID**.
-15. In the **Web application** dropdown menu, choose **Web Application**.
+Sign in to Google Cloud with the account that has 2-Step Verification turned on.
 
-<img
-  src="https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/3518f0a9-6232-41b8-2e37-0293fed41200/public"
-  alt=""
-  width="672px"
-  height="auto"
-  fetchpriority="low"
-  loading="lazy"
-  decoding="async"
-/>
+### Set up Google Auth Platform
 
-16. Name your OAuth 2.0 client.
-17. Add your **Authorized redirect URIs**. These are the Callback URLs you copied in the previous procedure. Add entries for all your organization custom domain callbacks, e.g. `account.customdomainone.com/login/callback`, `account.customdomaintwo.com/login/callback`, etc.
-18. Click **Create**.
-19. Copy your **Client ID** and **Client Secret** from the confirmation window.
+1. Open [Google Auth Platform](https://console.cloud.google.com/auth/overview).
+2. On a first-time project, **OAuth Overview** shows **Google Auth Platform not configured yet**. Select **Get started**.
+
+   {/* SCREENSHOT-TODO(Tamal): Google Auth Platform Overview in a new project, showing the empty state and Get started. Filename: gcp-auth-platform-overview-get-started.png. Alt text: "Google Auth Platform Overview in a new project, showing Google Auth Platform not configured yet and the Get started button" */}
+
+3. Complete the **Get started** wizard:
+
+   1. **App Information**: enter the app name and user support email.
+   2. **Audience**: for a typical Kinde customer app, select **External**. **Internal** says "Only available to users within your organization. You will not need to submit your app for verification." **External** says "Available to any test user with a Google Account. Your app will start in testing mode and will only be available to users you add to the list of test users. Once your app is ready to push to production, you may need to verify your app."
+   3. **Contact Information**.
+   4. Select **Finish**, then **Create**.
+
+   {/* SCREENSHOT-TODO(Tamal): Get started wizard Audience step, Internal and External. Filename: gcp-get-started-audience.png. Alt text: "Google Auth Platform project configuration wizard on the Audience step, with Internal and External user type options" */}
+
+4. After setup, the left menu is **Overview**, **Branding**, **Audience**, **Clients**, **Data Access**, **Verification Center**, and **Settings**.
+
+### Testing and publishing
+
+1. Go to **Audience**. **Publishing status** starts as **Testing**. In **Testing**, only test users can sign in. There is a **100** user cap, counted over the lifetime of the app. Select **Add users** to add test users.
+2. **Verification Center** says "Verification is not required since your app is configured with a Testing publishing status."
+
+   ![google auth platform audience page in testing](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4751ffcc-12db-482a-e4f7-27d6a4a14800/socialsharingimage)
+
+3. Move the app to **In production** before you go live. Finish **Branding** first (app name, user support email, and developer contact). **Publish app** stays unavailable until Branding is complete. The helper says "To publish your app, you must complete your configuration on the Branding page."
+4. On **Audience**, select **Publish app**.
+
+### Create the OAuth client
+
+1. Go to **Clients** and select **Create client**. The form heading is **Create OAuth client ID**.
+2. For Kinde-hosted sign-in, set **Application type** to **Web application**.
+3. Enter a **Name**. The helper says "The name of your OAuth 2.0 client. This name is only used to identify the client in the console and will not be shown to end users."
+4. Leave **Authorized JavaScript origins** empty. The helper says "For use with requests from a browser". They are not required for Kinde-hosted sign-in.
+5. Under **Authorized redirect URIs**, add each Kinde callback you copied. The helper says "For use with requests from a web server". Every URI needs `https://`. For example, `https://yourdomain.kinde.com/login/callback`. If you use custom domains, also add each organization callback, for example `https://auth.yourdomain.com/login/callback`.
+6. The form says "It may take 5 minutes to a few hours for settings to take effect".
+
+   ![create oauth client id form with web application selected](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8103bb03-1411-45b1-f2ee-e32176d7c200/socialsharingimage)
+
+7. Select **Create**.
+8. Copy the client secret immediately. Google shows it only in this dialog, with **Copy** and **Download JSON**. The dialog says you will no longer be able to view or download the client secret once you close it. Paste the secret into Kinde in the next section. The **Client ID** stays visible later under **Clients**.
+
+### Scopes (optional)
+
+Adding scopes in **Data Access** is optional for basic Kinde sign-in. By default no scopes are listed. Sign-in still works, because Kinde requests `openid`, `profile`, and `email`.
+
+If you add scopes, go to **Data Access** and select **Add or remove scopes**. The panel is titled **Update selected scopes**. **Manually add scopes** needs the full `https://` strings:
+
+- `https://www.googleapis.com/auth/userinfo.email`
+- `https://www.googleapis.com/auth/userinfo.profile`
+- `openid`
+
+![google auth platform data access page with the update selected scopes panel open](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/4a6e5a50-f5b9-43ef-b850-88ad3f514400/socialsharingimage)
 
 ## Add Google credentials to Kinde
 
-1. In Kinde, go to **Settings** and select **Authentication**.
-2. On the Google tile, select the **Configure** link.
-3. Paste your **Client ID** and **Client Secret** into the two fields.
-4. Set **Email address trust**: Google social connections are set to **Trust** by default. For details about the options, see [Trusting emails from providers](/authenticate/about-auth/identity-and-verification/#trusting-emails-from-providers).
-5. Add any [upstream params](/authenticate/auth-guides/pass-params-idp/) that you want to pass to the IdP. For example, you can pass a param that forces the Google account selector to display.
-6. Select which applications to switch this on for.
-7. Select **Save**. Your users will now be able to sign in using their Google credentials.
+1. In Kinde, go to **Settings > Environment > Authentication**.
+2. In **Social connections**, select **Configure** on the Google tile.
+3. Under **Details**:
+   1. **Connection ID** is read-only.
+   2. **Connection name**. The helper says "Add a name that helps you identify this connection internally".
+   3. **External name**. The helper says "The external name appears on user-facing screens". The default is **Google**. This is the label on the hosted sign-in button.
+4. Under **Provisioning**, keep **Email address trust** on **Trust**. The helper says "Choose how much to trust email addresses from this connection when they match an existing Kinde user".
+
+   - **Don't trust**. "Keep them as separate users. Safest if the identity provider doesn't verify email addresses".
+   - **Verify, then trust (Recommended)**. "Send a one-time code to the email address on first sign-in. Create the user, or merge with the existing user, once it's entered".
+   - **Trust**, selected by default. "Merge with the existing user straight away. Only use if the identity provider verifies email addresses".
+
+   Keep **Trust** for Google. Google verifies email addresses, Kinde treats Google as the provider it trusts, and **Trust** is the default. Keep **Trust** even when **Verify, then trust** is labeled **Recommended**. For how the options work, see [Trusting emails from providers](/authenticate/about-auth/identity-and-verification/#trusting-emails-from-providers).
+
+   ![configure google connection dialog with trust selected for email address trust](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/bf1c6a8e-cddb-4f2f-21ce-c8ecc1edc300/socialsharingimage)
+
+5. Under **Keys**, paste the **Client ID** and **Client secret** from Google.
+   - **Client ID** is marked **Optional**. The helper says "Leave blank to use Kinde ID (not recommended)".
+   - **Client secret** is marked **Optional**. The helper says "Leave blank to use Kinde client secret (not recommended)".
+   - Before you make production live, paste your own Client ID and client secret. Do not leave the fields blank in production.
+6. Under **Callback URL**, confirm the HTTPS callback matches the **Authorized redirect URI** you added in Google. To use a custom domain, turn on **Use custom domain instead** and see [Show your own domain on the Google sign-in screen](#show-your-own-domain-on-the-google-sign-in-screen).
+
+   ![configure google connection dialog with client id, client secret, and callback url](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/cbd638a8-feb0-4b1e-cfa4-39ce8ebeaa00/socialsharingimage)
+
+7. **Permissions** says "Kinde automatically requires basic profile permissions." **Email address** is listed and checked.
+8. **Allow passkeys for users of this connection** is off by default. The helper says "Offer passkey setup after signing in with this connection (required when passkeys are mandatory)". See [Enable Passkeys to sign in users](/authenticate/authentication-methods/passkeys/).
+9. Under **Advanced**, you can add [upstream params](/authenticate/auth-guides/pass-params-idp/) to pass to Google. For example, `prompt=select_account` forces the Google account selector.
+10. Under **Applications**, turn on Google for the applications that should use it. Choose which applications can use Google authentication. Each application has its own toggle, and every toggle is off on a new connection. Enable only one Google connection per application. If two Google connections are enabled for the same app, the hosted sign-in page shows two identical **Continue with Google** buttons. If you need both, set a distinct **External name** on each connection. You can also turn connections on or off under **Applications > [app] > Authentication**.
+11. Select **Save**.
+
+## Show your own domain on the Google sign-in screen
+
+With an unverified brand, Google's account chooser shows **"to continue to"** the domain of the Authorized redirect URI. [Manage OAuth App Branding](https://support.google.com/cloud/answer/15549049?hl=en) says that without brand verification, only the application domain is visible to users. The app name and logo appear after the brand is verified.
+
+The default Kinde callback is on a `*.kinde.com` host, so the chooser shows **kinde.com**. That is expected.
+
+A custom-domain callback changes the domain Google shows.
+
+1. Use a custom domain that is already **Provisioned** in Kinde. See [Use a custom domain with Kinde](/build/domains/pointing-your-domain/), including [Add the custom domain to social sign-in](/build/domains/pointing-your-domain/#add-the-custom-domain-to-social-sign-in).
+2. In the Google connection, under **Callback URL**, turn on **Use custom domain instead**, select the callback (for example `https://auth.yourdomain.com/login/callback`), and select **Save**.
+
+   ![configure google connection dialog with use custom domain instead turned on](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/57380a51-6048-47b0-61f1-946b867bcb00/socialsharingimage)
+
+3. In the Google Cloud client, add that same URL as an **Authorized redirect URI**. You can keep the `kinde.com` callback as well.
+4. In **Branding > Authorized domains**, add the custom domain's root, for example `yourdomain.com`, not the `auth.` hostname. This is likely needed. The setup that showed the custom domain on the chooser included this step. The client form also says "The domains of the URIs you add below will be automatically added to your OAuth consent screen as authorized domains."
+
+   {/* TODO(Tamal): Confirm whether Branding > Authorized domains must be updated manually with the custom domain's root, or whether Google adds it automatically when you add the redirect URI. The client form says URI domains are added automatically. The successful 16 Nov 2026 test also added the root domain manually. Treat it as likely needed until confirmed. */}
+
+5. Wait for Google's settings to take effect. The client form says "It may take 5 minutes to a few hours for settings to take effect". Google can return **Error 400: redirect_uri_mismatch** ("Access blocked: This app's request is invalid") shortly after you save. That error is often the delay. Wait and retry before you change anything else.
+6. Start sign-in on the custom domain. The app's Kinde domain, often `KINDE_ISSUER_URL`, must be the custom domain. [Use a custom domain with Kinde](/build/domains/pointing-your-domain/) covers that change. If users still arrive through the `kinde.com` host, the chooser still shows **kinde.com**.
+
+The chooser then shows **"to continue to"** your domain, for example **yourdomain.com** when the callback is `https://auth.yourdomain.com/login/callback`. The developer-info popup shows the app name as that domain.
+
+![google account chooser showing to continue to a custom domain](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/193e70ed-d66e-49d1-521b-4c1e985fd000/socialsharingimage)
+
+![google developer info popup showing the custom domain as the app name](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/8ab39a85-e180-4996-b30a-562926405800/socialsharingimage)
+
+Brand verification is a later step, if you want the app name and logo on the Google screen. It needs a home page on a domain verified in Google Search Console, a privacy policy, and a logo. See [Manage OAuth App Branding](https://support.google.com/cloud/answer/15549049?hl=en). Basic Google sign-in works without brand verification.
