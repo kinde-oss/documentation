@@ -38,10 +38,10 @@ keywords:
   - invalid callback url
   - kinde management api
   - vercel preview urls
-updated: 2026-07-19
+updated: 2026-11-17
 featured: false
 deprecated: false
-ai_summary: "Guide to configuring allowed callback URLs and logout redirect URLs for Kinde applications. Explains how to add redirect URIs in Settings > Environment > Applications, including allowed callback URLs and allowed logout redirect URLs, with notes on trailing spaces, multiple URLs, and silent logout limitations. Lists common callback paths for the Next.js, React, and TanStack Start SDKs, plus custom endpoints when not using an SDK. Covers wildcard callback URL syntax and limitations for subdomains and platforms such as Vercel, security guidance for non-production use, and managing dynamic URLs via the Kinde Management API callbacks endpoint including Vercel preview deployments. Includes FAQs on regex support, distinguishing sign-in from sign-up on the callback, and troubleshooting invalid callback URL errors including Client ID and environment variable mismatches. Intended for developers and admins connecting apps to Kinde."
+ai_summary: "Guide to configuring allowed callback URLs and logout redirect URLs for Kinde applications. Explains how to add redirect URIs in Settings > Environment > Applications, including allowed callback URLs and allowed logout redirect URLs, with notes on trailing spaces, multiple URLs, and silent logout limitations. Lists common callback paths for the Next.js, React, and TanStack Start SDKs, plus custom endpoints when not using an SDK. Covers wildcard callback URL syntax and limitations for subdomains and platforms such as Vercel, security guidance for non-production use, and managing dynamic callback and logout redirect URLs via the Kinde Management API, including the machine-to-machine scopes used for Vercel preview deployments. Includes FAQs on regex support, distinguishing sign-in from sign-up on the callback, and troubleshooting invalid callback URL errors including Client ID and environment variable mismatches. Intended for developers and admins connecting apps to Kinde."
 ---
 
 When a user signs in with Kinde, they are redirected back to your app after authentication. Callback URLs—also known as redirect URIs—tell Kinde exactly which URLs it is allowed to send users to, and you must register them in your Kinde application before auth will work. Kinde only redirects to URLs you have explicitly allowlisted, so if the URL in your code does not match one registered in Kinde, authentication fails with an invalid callback URL error. You will also need to configure allowed logout redirect URLs so users are sent to the right place when they sign out.
@@ -69,7 +69,9 @@ When a user signs in with Kinde, they are redirected back to your app after auth
 Kinde's OAuth flow requires a redirect to the logout endpoint to end the session. Silent logout (ending the session without any redirect to a logout page) is not supported.
 
 <Aside>
-Make sure the callback and logout redirect URLs are also set in your codebase, and that they exactly match the URLs you added in Kinde. With a Kinde SDK, these are usually set in your environment variables or SDK configuration (see your [SDK's documentation](/developer-tools/about/our-sdks/)). If you're using [Kinde without an SDK](/developer-tools/about/using-kinde-without-an-sdk/), pass them in your authorization and logout requests.
+The allowed callback URL is the address Kinde redirects to when authentication finishes: the SDK callback route, or your own callback endpoint if you are not using an SDK. Set that same URL in your codebase. It is not the page your app shows after the callback is handled.
+
+Also set logout redirect URLs in your codebase so they match the allowed logout redirect URLs in Kinde. With a Kinde SDK, these values usually live in environment variables or SDK configuration (see your [SDK's documentation](/developer-tools/about/our-sdks/)). Server SDKs often use `KINDE_POST_LOGIN_REDIRECT_URL` for the page after the callback route, and `KINDE_POST_LOGOUT_REDIRECT_URL` for logout. If you're using [Kinde without an SDK](/developer-tools/about/using-kinde-without-an-sdk/), pass the registered callback and logout URLs in your authorization and logout requests.
 </Aside>
 
 ## Common SDK callback URLs
@@ -110,11 +112,13 @@ We recommend using wildcards only for non-production purposes, as they present i
 
 ### Using Kinde Management API
 
-A more secure way to manage dynamic callback URLs is to integrate with the Kinde Management API and manage them via API calls. This ensures only allowed callbacks can authenticate against your Kinde instance.
+A more secure way to manage dynamic callback and logout redirect URLs is to add them with the Kinde Management API. This keeps each allowlist limited to the URLs you register.
 
-If your application lives in a [GitHub](https://github.com/) repository connected to [Vercel](https://vercel.com/), see [this section](/developer-tools/sdks/backend/nextjs-sdk/#working-with-preview-urls) on adding callback URLs via the Kinde API.
+Preview deployments need both collections updated: allowed callback URLs and allowed logout redirect URLs. The machine-to-machine application that calls the API needs the `create:application_redirect_uris` and `create:application_logout_uris` scopes.
 
-You can also use the [callbacks endpoint](/kinde-apis/management#tag/callbacks) in the Management API to add specific callbacks at the relevant point in your deployment.
+If your application lives in a [GitHub](https://github.com/) repository connected to [Vercel](https://vercel.com/), follow the [Next.js preview URL workflow](/developer-tools/sdks/backend/nextjs-sdk/#add-callback-urls-and-logout-redirect-urls-to-kinde-dynamically). It registers both URL collections and turns on those scopes.
+
+You can also add URLs at the relevant point in your deployment. Use the [callbacks endpoint](/kinde-apis/management#tag/callbacks) for callback URLs, and `POST /api/v1/applications/{application_id}/auth_logout_urls` for logout redirect URLs.
 
 ## FAQs
 

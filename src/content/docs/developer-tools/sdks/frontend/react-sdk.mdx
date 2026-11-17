@@ -32,7 +32,7 @@ keywords:
   - register
   - logout
   - access tokens
-updated: 2026-04-14
+updated: 2026-11-17
 featured: false
 deprecated: false
 ai_summary: Complete guide for React SDK including installation, provider setup, authentication hooks, callback handling, and API integration for React 18+ applications.
@@ -167,8 +167,10 @@ You can also pass additional parameters to the auth URL.
 
 Both the `login` and `register` methods accept all the extra authentication params that can be passed to Kinde as part of the auth flow:
 
-- `loginHint` - prepopulates a user's email address on the sign-up and sign-in screens.
-- `lang` - if you offer multi-language support, Kinde automatically selects the best language for your user based on their browser. To force a language and override the user's preference, pass this attribute.
+- `loginHint` - prepopulates the sign-in identifier.
+- `lang` - sets the language of the sign-in screen.
+
+Accepted formats and validation rules are in the [login](#login) API reference.
 
 ```jsx
 <button onClick={() => 
@@ -708,7 +710,7 @@ To sign up a user to a particular organization, pass the `orgCode` from your Kin
 <button onClick={() => login({orgCode: "org_1234"})} type="button">Sign In</button>
 ```
 
-Following authentication, Kinde provides a JSON Web Token (JWT) to your application. In addition to standard claims, the token includes the `org_code` and the `permissions` for that organization (this is important because a user can belong to multiple organizations and have different permissions for each). Example of a returned token:
+Following authentication, Kinde provides a JSON Web Token (JWT) to your application. When the user signs in to an organization, the token includes an `org_code` claim. It includes a `permissions` claim for that organization only when permissions are assigned to the user or their role. A user can belong to multiple organizations and have different permissions for each. If no permissions are assigned, Kinde omits the `permissions` claim, so check that it exists before you read it. Example of a token when the claim is present:
 
 ```json
 {
@@ -728,7 +730,7 @@ For more information about how organizations work in Kinde, see [Kinde organizat
 
 ## User Permissions
 
-After a user signs in, your project or application receives a JWT token containing an array of permissions for that user. Configure your project to read permissions and unlock the respective functions.
+After a user signs in to an organization, the access token may include a `permissions` array for that user. Kinde includes this claim only when permissions are assigned to the user or their role, and omits it when none are assigned. Check that the claim exists before you read it. Configure your project to read permissions and unlock the respective functions.
 
 [Configure permissions](/manage-users/roles-and-permissions/user-permissions/) in Kinde first. Here is an example set of permissions.
 
