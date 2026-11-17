@@ -33,10 +33,13 @@ keywords:
   - application catalog
   - single logout
   - self-serve portal
-updated: 2026-09-09
+  - workflows
+  - post-authentication workflow
+  - token generation workflow
+updated: 2026-11-17
 featured: false
 deprecated: false
-ai_summary: "Workforce identity lets your own team sign in to third-party tools such as Google Workspace, Microsoft 365, Slack, and Salesforce using Kinde as a SAML 2.0 identity provider (IdP). This is the inverse of enterprise connections, where Kinde acts as a service provider consuming a customer's IdP. Settings > Environment > Applications is split into Customer identity (OAuth applications that make up your product) and Workforce identity (SAML applications your team signs in to). Kinde ships a catalog of around 120 pre-configured SAML applications, with a SAML application option available for anything not listed. Sign-in can be service provider initiated, identity provider initiated from the self-serve portal, or triggered by Test SSO in the admin. Access is controlled per application: Enabled and role-based access control decide who can sign in, while Show on self-serve portal and Limit to organizations decide who sees the application tile in the portal. Single logout ends SAML sessions only and does not sign the person out of Kinde. Available on the Kinde Scale plan."
+ai_summary: "Workforce identity lets your own team sign in to third-party tools such as Google Workspace, Microsoft 365, Slack, and Salesforce using Kinde as a SAML 2.0 identity provider (IdP). This is the inverse of enterprise connections, where Kinde acts as a service provider consuming a customer's IdP. Settings > Environment > Applications is split into Customer identity (OAuth applications that make up your product) and Workforce identity (SAML applications your team signs in to). Kinde ships a catalog of around 120 pre-configured SAML applications, with a SAML application option available for anything not listed. Sign-in can be service provider initiated, identity provider initiated from the self-serve portal, or triggered by Test SSO in the admin. Access is controlled per application: Enabled and role-based access control decide who can sign in, while Show on self-serve portal and Limit to organizations decide who sees the application tile in the portal. Single logout ends SAML sessions only and does not sign the person out of Kinde. For SAML applications, the user post-authentication workflow trigger runs when a person signs in to Kinde to open one but not when an existing Kinde session is reused, the user token generation trigger does not run, and a workflow cannot change the SAML assertion, which Kinde builds from the person's profile and the application's Attribute mapping tab. Available on the Kinde Scale plan."
 ---
 
 <Aside type="upgrade">
@@ -120,6 +123,15 @@ These two settings affect the portal only. They do not block sign-in. Someone wh
 If you set a logout URL on an application, Kinde supports SAML single logout for it. When a connected tool sends a logout request, Kinde ends the SAML session for that tool and notifies other connected tools that have logout configured.
 
 Single logout ends SAML sessions only. It does not sign the person out of Kinde, and it does not revoke access or refresh tokens for your own applications. Those end only through an explicit Kinde action such as signing out of Kinde, a credential change, or an admin action.
+
+## Workflows and SAML applications
+
+A SAML application receives a SAML assertion, not access and ID tokens. This affects which [workflows](/workflows/about-workflows/) run when someone opens one.
+
+- **User post-authentication runs** when the person signs in to Kinde to open the application. It does not run when they already have an active Kinde session and Kinde sends the assertion without asking them to sign in. See [Sign-ins that start from a SAML application](/workflows/example-workflows/workflow-user-post-auth/#sign-ins-that-start-from-a-saml-application).
+- **User token generation does not run**, because no access or ID tokens are generated. See [SAML applications](/workflows/example-workflows/user-token-generation/#saml-applications).
+
+A workflow cannot change the SAML assertion. Kinde builds it from the person's Kinde profile and the mappings on the application's **Attribute mapping** tab.
 
 ## Get started
 

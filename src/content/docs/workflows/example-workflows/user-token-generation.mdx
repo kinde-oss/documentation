@@ -6,6 +6,7 @@ sidebar:
 relatedArticles:
   - 69b42223-701c-4707-b961-e52c7cb05399
   - 62fafade-5d33-4f85-9fd2-712c533db3d0
+  - c00a7687-2d59-427d-b8a4-f2f05d29a7f2
 description: Learn about the user token generation workflow trigger that fires when tokens are created, allowing customization of access and ID tokens with custom claims from external APIs.
 topics:
   - "workflows"
@@ -25,10 +26,12 @@ keywords:
   - "ID token"
   - "external API"
   - "authentication triggers"
-updated: "2025-01-27"
+  - "SAML application"
+  - "SAML assertion"
+updated: "2026-11-17"
 featured: false
 deprecated: false
-ai_summary: "Documentation for user token generation workflow trigger that fires when tokens are created, allowing customization of access and ID tokens with custom claims from external APIs."
+ai_summary: "Documentation for user token generation workflow trigger that fires when tokens are created, allowing customization of access and ID tokens with custom claims from external APIs. Also explains that the trigger does not fire for sign-ins to a SAML application, where Kinde acts as the identity provider: no access or ID tokens are generated, no workflow runs when the SAML assertion is built, and custom claims set with the kinde.accessToken and kinde.idToken bindings are not added to the assertion. The assertion is built from the user's Kinde profile and the application's Attribute mapping tab. Sign-ins through a SAML enterprise connection are not affected."
 ---
 
 Trigger: `user:tokens_generation`
@@ -38,6 +41,8 @@ This trigger fires when ID and Access tokens are generated for a user.
 - After authentication - a sign in or sign up event.
 - After a pre-authentication event - i.e the user is redirected to Kinde and returned invisibly to your app because they were already authenticated.
 - When a refresh token is generated.
+
+It does not fire for sign-ins to a SAML application. See [SAML applications](#saml-applications).
 
 ## Security considerations
 
@@ -62,6 +67,16 @@ Kinde automatically populates the access token with data such as `permissions` a
 ### Modify Kinde claim format
 
 Some external systems rely on claims to be in a certain format. For example, Kinde supplies roles as an array of objects, but some systems require a space separated string. This workflow allows you to restructure the format of these Kinde claims.
+
+## SAML applications
+
+This trigger does not fire when a user signs in to a [SAML application](/workforce-identity/add-saml-application/), where Kinde acts as the identity provider. Kinde does not generate access or ID tokens for that sign-in. It sends the application a SAML assertion instead, and no workflow runs when the assertion is built.
+
+This means custom claims you set with the `kinde.accessToken` and `kinde.idToken` bindings are not added to the SAML assertion. The assertion is built from the user's Kinde profile and the mappings on the application's **Attribute mapping** tab. To change what the application receives, [update the attribute mapping](/workforce-identity/add-saml-application/#4-map-user-attributes).
+
+The [user post-authentication workflow](/workflows/example-workflows/workflow-user-post-auth/#sign-ins-that-start-from-a-saml-application) does run for these sign-ins.
+
+Sign-ins to your own applications through a SAML enterprise connection are not affected. Tokens are generated for those as usual, and this trigger fires.
 
 ## Workflow code
 

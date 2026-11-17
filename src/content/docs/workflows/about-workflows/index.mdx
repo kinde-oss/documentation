@@ -33,10 +33,10 @@ keywords:
   - "M2M token"
   - "external integrations"
   - "authentication flows"
-updated: 2026-07-28
+updated: 2026-11-17
 featured: false
 deprecated: false
-ai_summary: "Overview of Kinde workflows for developers. Explains that a workflow is code you own in your own repo, synced to Kinde and executed on defined triggers. Covers when to use workflows, such as customizing access and ID token claims, reducing token size, and changing claim data types. Includes a sample TypeScript workflow that removes permissions and feature_flags from the access token using the Kinde infrastructure package. Lists available triggers including user token generation, post-authentication, pre-registration, pre-MFA, M2M token generation, password-provided events, and plan selection or cancellation. Summarizes basic rules for file naming and languages, and limitations around built-in verification and auth tokens in custom emails. Links to the infrastructure repo, base template, quick start, and token customization tutorial."
+ai_summary: "Overview of Kinde workflows for developers. Explains that a workflow is code you own in your own repo, synced to Kinde and executed on defined triggers. Covers when to use workflows, such as customizing access and ID token claims, reducing token size, and changing claim data types. Includes a sample TypeScript workflow that removes permissions and feature_flags from the access token using the Kinde infrastructure package. Lists available triggers including user token generation, post-authentication, pre-registration, pre-MFA, M2M token generation, password-provided events, and plan selection or cancellation. Summarizes basic rules for file naming and languages, and limitations around built-in verification, auth tokens in custom emails, and SAML applications, where workflows cannot change the SAML assertion. Links to the infrastructure repo, base template, quick start, and token customization tutorial."
 ---
 
 A workflow is code you own, triggered by Kinde, that shapes tokens, auth steps, and integrations that Kinde doesn't support out of the box.
@@ -120,6 +120,7 @@ We'll add more triggers over time, including the option to create your own.
 
 - Workflows cannot prevent or bypass Kinde's built-in verification (for example, email verification or OTP delivery). Those steps always run as part of the auth flow.
 - Workflows cannot expose the authentication token (or verification code) for use in your own custom emails. Tokens and codes are only available within Kinde's secure flow; use [custom email content](/design/content-customization/email-content/) and [custom sender](/get-started/connect/customize-email-sender/) to brand the emails Kinde sends.
+- Workflows cannot change the SAML assertion Kinde sends to a [SAML application](/workforce-identity/add-saml-application/). The user token generation trigger [does not fire for these sign-ins](/workflows/example-workflows/user-token-generation/#saml-applications), and the user post-authentication trigger [only fires when the user actually signs in](/workflows/example-workflows/workflow-user-post-auth/#sign-ins-that-start-from-a-saml-application).
 
 ## See more
 
