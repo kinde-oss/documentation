@@ -40,7 +40,7 @@ keywords:
 updated: 2026-11-17
 featured: false
 deprecated: false
-ai_summary: "Step-by-step guide to connecting a third-party tool as a SAML application in Kinde, with Kinde acting as the identity provider. Workforce identity is available on the Kinde Scale plan. Covers adding an application from the catalog or as a SAML application, entering service provider details (SP entity ID, ACS URL, Name ID format and source) or importing SP metadata, copying Kinde IdP metadata into the third-party tool, mapping Kinde fields (Email, First name, Last name, User ID, Username) to SP attribute names, and choosing authentication methods, including enterprise connections and their home realm domains, which apply to sign-ins that start from the application. User properties and organization-specific role claims cannot be mapped yet. Describes what Kinde sends in the assertion: the standard attributes mail, eduPersonPrincipalName, sn, givenName, and cn are always sent under urn:oid names when the user has a value, in addition to mapped attributes, and cannot be switched off. The authentication context class is always urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport, whichever method or connection was used to sign in. Kinde issues its own assertion from the Kinde user profile and does not forward claims from an upstream enterprise identity provider such as Microsoft Entra ID (tenant ID, object ID, groups). Explains testing with Test SSO, showing the app tile on the self-serve portal (including enabling the Applications module), restricting access by role, setting session lifetime (default 86400 seconds, max 30 days) and SAML assertion validity (default 3600 seconds, max 24 hours), signing and encryption (the SAML response is always signed; Sign assertion controls the assertion signature only; Encrypt assertion needs Sign assertion on, otherwise sign-ins fail), configuring single logout via the SP logout callback URL, and deleting an application. Includes troubleshooting for access denied errors, empty signing certificates, rejected assertions, missing portal tiles, and SAML test tools that show empty claims because Kinde uses namespace-prefixed elements. Intended for developers and admins."
+ai_summary: "Step-by-step guide to connecting a third-party tool as a SAML application in Kinde, with Kinde acting as the identity provider. Workforce identity is available on the Kinde Scale plan. Covers adding an application from the catalog or as a SAML application, entering service provider details (SP entity ID, ACS URL, Name ID format and source) or importing SP metadata, copying Kinde IdP metadata into the third-party tool, mapping Kinde fields (Email, First name, Last name, User ID, Username) to SP attribute names, and choosing authentication methods, including enterprise connections and their home realm domains, which apply to sign-ins that start from the application. User properties and organization-specific role claims cannot be mapped yet. Describes what Kinde sends in the assertion: the standard attributes mail, eduPersonPrincipalName, sn, givenName, and cn are always sent under urn:oid names when the user has a value, in addition to mapped attributes, and cannot be switched off. The authentication context class is always urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport, whichever method or connection was used to sign in. Kinde issues its own assertion from the Kinde user profile and does not forward claims from an upstream enterprise identity provider such as Microsoft Entra ID (tenant ID, object ID, groups). Workflows cannot change the assertion: the user token generation trigger does not run for SAML applications, and the user post-authentication workflow runs only when the person actually signs in. Explains testing with Test SSO, showing the app tile on the self-serve portal (including enabling the Applications module), restricting access by role, setting session lifetime (default 86400 seconds, max 30 days) and SAML assertion validity (default 3600 seconds, max 24 hours), signing and encryption (the SAML response is always signed; Sign assertion controls the assertion signature only; Encrypt assertion needs Sign assertion on, otherwise sign-ins fail), configuring single logout via the SP logout callback URL, and deleting an application. Includes troubleshooting for access denied errors, empty signing certificates, rejected assertions, missing portal tiles, and SAML test tools that show empty claims because Kinde uses namespace-prefixed elements. Intended for developers and admins."
 ---
 
 Add a SAML application to let your team sign in to a third-party tool using Kinde as the identity provider. For background, see [Workforce identity in Kinde](/workforce-identity/).
@@ -202,6 +202,8 @@ If your application needs one of these values under a different name, add a mapp
 
 When someone signs in through an enterprise connection, such as Microsoft Entra ID, Kinde does not forward that provider's response to your application. Kinde signs the user in, then builds a new assertion from their Kinde user profile. Claims that exist only in the upstream provider's response, such as a tenant ID, object ID, or group membership, are not included, and there is currently no way to add them.
 
+A workflow cannot change the assertion, and the user token generation trigger [does not run for SAML applications](/workflows/example-workflows/user-token-generation/#saml-applications).
+
 If your application expects a claim under the name another provider uses, map a Kinde field to that exact name. For example, to send the email address under the name Microsoft Entra ID uses, map **Email** to `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress`.
 
 ## Secure the connection
@@ -236,6 +238,8 @@ Two separate timers on the **Sessions** tab decide how long a sign-in stays vali
 
 - **SAML authentication validity period** is the expiry window written into each issued assertion, which the service provider checks when it receives one. Keep this short. The default is `3600` seconds (one hour). The maximum is 24 hours.
 
+The user post-authentication workflow [runs only when the person actually signs in](/workflows/example-workflows/workflow-user-post-auth/#sign-ins-that-start-from-a-saml-application), not each time Kinde sends an assertion for an existing session.
+
 To require a sign-in for every launch of the application, regardless of these timers:
 
 1. Go to the **Details** tab.
@@ -258,7 +262,7 @@ Kinde always signs the SAML response that carries the assertion, so **Sign asser
 
 The **SP encryption certificate** is required when **Encrypt assertion** is on.
 
-Encryption only works while **Sign assertion** is on. If you turn on **Encrypt assertion** with **Sign assertion** off, sign-ins to the application fail with an internal server error.
+Encryption only works while **Sign assertion** is on. If you turn on **Encrypt assertion** with **Sign assertion** off, sign-ins to the application fail with a server error.
 
 </Aside>
 
