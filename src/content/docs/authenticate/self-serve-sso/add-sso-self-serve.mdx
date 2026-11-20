@@ -1,21 +1,20 @@
 ---
 page_id: ab20745f-0918-403a-8103-fc5749082dba
-title: Add SSO connection via self-serve portal
-description: Guide for enabling a business customer to set up their own SSO enterprise connection via the self-serve portal.
+title: Let customers set up SSO in the self-serve portal
+description: How a business customer sets up their own SSO enterprise connection with the guided set up in the self-serve portal, and what you need to prepare first.
 sidebar:
   order: 1
 relatedArticles:
+  - 6bfab126-8887-4030-97aa-f44335fe489d
+  - 2a54764d-eb85-4905-8098-9c4e7a5073d7
   - a2668524-5842-4c68-ab50-30b7e8c3e842
   - f36bce4a-52bb-4785-865b-6b33356f9838
+tableOfContents:
+  maxHeadingLevel: 3
 topics:
   - self-serve-portal
   - organizations
-  - billing
-sdk:
-  - react
-languages:
-  - javascript
-  - jsx
+  - enterprise SSO
 audience: developers
 complexity: intermediate
 keywords:
@@ -23,10 +22,17 @@ keywords:
   - enterprise connection
   - SSO
   - self-serve portal
-updated: 2025-08-25
+  - SAML
+  - Microsoft Entra ID
+  - Okta
+  - Google Workspace
+  - verified domains
+  - test sign-in
+  - attribute mapping
+updated: 2026-11-20
 featured: false
 deprecated: false
-ai_summary: Guide for enabling a business customer to set up their own SSO enterprise connection via the self-serve portal.
+ai_summary: Guide to self-serve SSO in the Kinde organization portal. Explains what the Kinde admin prepares (the Enterprise SSO portal function, the authentication permissions, and a verified domain for the organization), then walks through the six-step guided set up an organization admin follows, covering confirm domain, choose provider, set up in the identity provider, connect, test, and turn on. Covers leaving and resuming a set up, the test sign-in that changes no accounts, SAML attribute mapping, what happens to existing members on their first SSO sign-in, and how to edit, disable or delete a connection afterwards.
 ---
 
 <Aside type="upgrade">
@@ -35,68 +41,129 @@ This feature is only available on the [Kinde Scale plan](https://kinde.com/prici
 
 </Aside>
 
-Your business customers who have their own organizations in Kinde can set up and manage their own SSO connections. This can save time going back and forth trying to get app credentials configured. Instead, your customer (who is the Identity Provider for their users) can set up an app and use the credentials to configure a connection. While you manage Kinde settings as the Service Provider. 
+Your business customers who have their own organizations in Kinde can set up single sign-on (SSO) for their team themselves. An admin in the organization opens the self-serve portal and follows a guided set up. It tells them what to create in their identity provider, tests the connection, and turns it on when they are ready.
 
-## Before an organization can set up an SSO connection
+This saves you going back and forth to exchange app credentials. Your customer is the identity provider for their users. You stay the service provider, and you keep control of the settings that affect your whole environment.
 
-- Ensure that you have switched on the option in the [self-serve portal settings](/build/self-service-portal/self-serve-portal-for-orgs/)
-- Check that the person setting up the connection has the [right role and permissions](/manage-users/roles-and-permissions/user-roles/). They need to be an Admin.
-- Add a domain to the verified domains list for the org (see below). Connections can only be set up for verified domains.
+## Before an organization can set up SSO
+
+Check these three things in Kinde. Until all three are in place, the organization can't start.
+
+- Switch on **Enterprise SSO** in the [self-serve portal settings](/build/self-service-portal/self-serve-portal-for-orgs/), either for every organization or for [one organization](/authenticate/self-serve-sso/self-manage-sso-per-org/).
+- Give the person setting it up a [role](/manage-users/roles-and-permissions/user-roles/) that includes the `org:read:authentication` and `org:write:authentication` permissions. With only the read permission they can see the organization's connections but can't set one up.
+- Add the customer's email domain to the organization's verified domains (see below). A connection can only be set up for a verified domain.
 
 ### Add a verified domain to the customer organization in Kinde
 
-This is like pre-setting the home realm domain for a connection.
+A connection sends everyone who signs in with an email at its domain to the customer's identity provider. That is why an organization can only use domains you have verified for it.
 
 1. Open the organization record in Kinde.
 2. If prompted, in the **Activate advanced organization features** box, select **Activate**.
 3. Go to **Policies** in the menu.
-4. In the **Verified domains** text field, add the customer's domain or domains. Add each on a new line. Make sure you include only the domain, e.g. `mybusiness.com` and not the full domain URL such as `http://www.mybusiness.com`.
-5. Select **Save**.
+4. Switch on **Allow org members to be auto-added**. The **Verified domains** field only appears, and domains are only kept, while this is on.
+5. In the **Verified domains** text field, add the customer's domain or domains. Add each on a new line. Make sure you include only the domain, e.g. `mybusiness.com` and not the full domain URL such as `http://www.mybusiness.com`.
+6. Select **Save**.
 
-## Add an SSO connection via the self-serve portal (Instructions for end-users)
+Only add domains you trust are owned by this organization. A domain can be used by one connection in an environment, so the first organization to set up a connection for a domain holds it.
+
+## Set up SSO in the self-serve portal (instructions for your customer)
 
 Provide these instructions to the customer in case they need assistance.
 
-1. Navigate to the self-serve portal and select **SSO**.
-2. Select **Add connection**.
-3. Select the connection type and then select **Next**. The configuration dialog opens.
-4. Add a name for the connection - this name will be shown to end users when they sign in.
-5. Complete the other fields with details from your IdP, e.g. **Entity ID**, provisioning options, mapping, certificates, etc. For a SAML connection, provide the IdP metadata either as an **IdP metadata URL** or by pasting the file into **IdP metadata XML**. See [Custom SAML enterprise connection](/authenticate/enterprise-connections/custom-saml/#step-2-configure-the-connection) for how the two options differ.
-6. Copy the **ACS URL** - you will need to add this to your IdP application.
-7. Select **Save**.
+Before they start, the customer needs:
 
-## Finish setting up the connection for the organization (Instructions for Kinde admin)
+- Admin access to their identity provider, e.g. Okta, Microsoft Entra ID, or Google Workspace.
+- The email domain their team signs in with, e.g. `mybusiness.com`.
 
-There are some enterprise connection functions that are only configurable by you in Kinde. After the customer has entered their details, you can finish setting up the connection. 
+To start, go to the self-serve portal, select **SSO**, and select **Start set up**. If the organization already has a connection, select **Add connection** instead.
 
-Open the connection in Kinde and adjust any of the following settings (if relevant):
-- **Create a user record in Kinde** - Add users if they do not exist when signing in. This is switched on by default.
-- **Always show sign-in button** - Show the SSO button on the app home screen. This is switched on by default.
-- **Auto-add users** - Allows users to join the organization if their credentials are accepted. Default is switched on.
-- **Upstream params** - these have the following default, but more can be added at the customer's request.
-  ```txt
-  { 
-      "login_hint": {
-	  		"alias": "login_hint"
-	  	}
-  }
-  ```
+The set up has six steps. Select **Save and exit** at any point to leave and come back later.
 
-## Make the connection available to end-users
+### 1. Confirm domain
 
-This is the process for end-users to make the connection live. It can also be enabled in the Kinde admin.
+Enter the company domain. The step lists the domains approved for the organization, and starts with the ones that are free to use. Add each domain on a new line, then select **Next**.
 
-1. Open the connection configuration dialog via the self-service portal (end users).
-2. Select the **Enable for organization** option.
-3. Select **Save**.
+If the step says no domains are approved for the organization yet, the domain has to be added in Kinde first. See [Add a verified domain](#add-a-verified-domain-to-the-customer-organization-in-kinde).
+
+### 2. Choose provider
+
+Select the service the team signs in with, then select **Next**. The options include Okta, Google Workspace, Microsoft Entra ID (SAML, OAuth 2.0, or WS-Fed), Cloudflare, and a custom SAML option for any other provider.
+
+### 3. Set up in the identity provider
+
+This step shows short instructions written for the provider that was chosen. For most providers there is also a button to open the provider's admin console in a new tab.
+
+- **For a SAML provider**, copy the **Single sign-on URL (ACS URL)** and the **Audience URI (Entity ID)** into the new application in the identity provider. Kinde creates a signing certificate for the connection. Select **Download certificate** if the identity provider asks for one to verify sign-in requests.
+- **For Microsoft Entra ID (OAuth 2.0 or WS-Fed)**, copy the **Redirect URI (callback URL)** into the new app registration.
+
+When the application exists in the identity provider, continue to the next step.
+
+### 4. Connect
+
+Bring the identity provider's details back to Kinde.
+
+- **For a SAML provider**, paste the **Metadata URL** from the identity provider, or upload the metadata XML file. Either works. The URL must be a public HTTPS URL, and the file can be up to 1MB.
+- **For Microsoft Entra ID (OAuth 2.0 or WS-Fed)**, enter the **Microsoft Entra ID domain**, **Client ID**, and **Client secret**. The domain is the **Primary domain** shown on the Microsoft Entra ID **Overview** page for the tenant, e.g. `contoso.onmicrosoft.com`. It is not shown on the app registration.
+
+Select **Continue to test**.
+
+### 5. Test
+
+Select **Test sign-in** and sign in through the identity provider with a real account from the team. The test opens in a new tab.
+
+The test only checks that the identity provider sends a person back to Kinde. It doesn't sign anyone in to your app, it doesn't create or change any user, and it doesn't turn SSO on for anyone.
+
+When the test passes, the step shows what the identity provider sent back as the **Email**, **First name**, **Last name**, and **User ID**. If one of these is empty on a SAML connection, the identity provider probably uses a different name for it. Select **Map attributes** and choose the right attribute from the list of what the test received.
+
+Select **Continue** to go on. To carry on without testing, select **Skip the test for now**.
+
+### 6. Turn on
+
+Check the summary of the provider, the domains, and the test result. Enter an **IT contact email** for the person responsible for this connection, then select **Turn on single sign-on**.
+
+From this point, anyone with an email address at the connection's domains is sent to the identity provider when they sign in.
+
+Two things are worth doing straight after:
+
+- Ask one colleague to sign in before telling everyone.
+- Keep one admin on a password until you've confirmed it works.
+
+## Leave a set up and come back to it
+
+A set up that isn't finished stays on the **SSO** page in the portal with a **Set up incomplete** badge and its progress, e.g. **3/6 steps completed**. Nobody can sign in through it yet.
+
+1. Go to the self-serve portal and select **SSO**.
+2. Select the three dots menu on the connection card, and choose **Continue set up**.
+
+A set up that is no longer needed can be deleted from the same menu.
+
+## What happens to existing users
+
+When SSO is turned on, people who already have an account in the organization keep it. The first time one of them signs in through the identity provider, Kinde emails them a one-time code to confirm the address is theirs. After they enter it, their existing account is moved onto the SSO connection. This applies to people who belong to this organization only. See [How existing users are matched](/authenticate/self-serve-sso/manage-self-serve-connections/#how-existing-users-are-matched) for the exceptions.
+
+By default, their other ways of signing in (such as a password or an email code) are then removed, so SSO is the only way in. You can change this for new connections with the **Strict mode** default. See [Manage SSO connections added by customers](/authenticate/self-serve-sso/manage-self-serve-connections/).
+
+People who don't have an account yet are added to Kinde and to the organization when they first sign in, unless you have changed the provisioning defaults.
+
+## Change a connection after it is set up
+
+1. Go to the self-serve portal and select **SSO**. Each connection shows whether it is enabled, when it was last used, and how many sign-ins it has had.
+2. Select the three dots menu on the connection card, and choose **Edit**.
+3. Make your changes and select **Save**.
+
+To change the domains, select **Change domains** in the edit window. This opens the first step of the set up for that connection.
+
+To change the identity provider, disable the connection first. Changing the provider clears the connection details that were entered, so the new provider is set up from the start.
 
 ## Enable or disable a connection
 
-1. Navigate to the self-serve portal and select **SSO**.
-2. Select the three dots menu on the connection card, and choose **Enable** or **Disable**.
+1. Go to the self-serve portal and select **SSO**.
+2. Select the three dots menu on the connection card, and choose **Disable connection**. To enable it again, choose **Edit**, select **Enable for organization**, and select **Save**.
 
 ## Delete a connection
 
-1. Navigate to the self-serve portal and select **SSO**.
-2. Select the three dots menu on the connection card, and choose **Delete**.
+Make sure users can sign in another way before deleting a connection. This action can't be reversed.
+
+1. Go to the self-serve portal and select **SSO**.
+2. Select the three dots menu on the connection card, and choose **Delete connection**.
 3. Confirm that you want to delete the connection.
