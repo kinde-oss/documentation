@@ -1,22 +1,20 @@
 ---
 page_id: 6bfab126-8887-4030-97aa-f44335fe489d
 title: Manage SSO connections added by customers
-description: This is a support topic for when a business customer sets up their own SSO enterprise connection via the self-serve portal.
+description: Set the defaults for SSO connections your customers create in the self-serve portal, and manage and troubleshoot those connections from Kinde.
 sidebar:
   order: 2
 relatedArticles:
   - ab20745f-0918-403a-8103-fc5749082dba
+  - 2a54764d-eb85-4905-8098-9c4e7a5073d7
   - a2668524-5842-4c68-ab50-30b7e8c3e842
   - f36bce4a-52bb-4785-865b-6b33356f9838
+tableOfContents:
+  maxHeadingLevel: 3
 topics:
   - self-serve-portal
   - organizations
-  - billing
-sdk:
-  - react
-languages:
-  - javascript
-  - jsx
+  - enterprise SSO
 audience: developers
 complexity: intermediate
 keywords:
@@ -24,34 +22,78 @@ keywords:
   - enterprise connection
   - SSO
   - self-serve portal
-updated: 2025-08-25
+  - default enterprise settings
+  - strict mode
+  - email address trust
+  - provisioning
+  - troubleshooting
+updated: 2026-11-20
 featured: false
 deprecated: false
-ai_summary: This is a support topic for when a business customer sets up their own SSO enterprise connection via the self-serve portal.
+ai_summary: Support topic for Kinde admins whose business customers set up their own SSO enterprise connections in the self-serve portal. Covers the Default enterprise settings dialog (provisioning, strict mode, auto-add users, email address trust, sign-in button, custom domain, SAML and Microsoft Entra ID options) and that defaults apply to new connections only, how existing users are matched on their first SSO sign-in, how unfinished set ups appear and when a connection counts toward the plan, how to configure, enable, disable and delete a customer's connection from the organization's Authentication page, and a troubleshooting checklist.
 ---
 
-If you allow your business customers to set up and manage their own SSO enterprise connections in your app, this topic describes how to help manage and troubleshoot the connections.
+If you allow your business customers to set up and manage their own SSO enterprise connections in your app, this topic describes how to set what those connections start with, and how to manage and troubleshoot them.
 
-Self-serve portal connections for accessing your site or app are fully under your control. Even though your customer can do the basic configuration, there are some things you'll probably want to manage on your side, such as provisioning behavior and other connection defaults.
+Self-serve portal connections for accessing your site or app are fully under your control. Your customer does the set up with their identity provider. You decide the provisioning behavior and the other defaults, and you can open and change any connection a customer has created.
 
-## Troubleshoot self-serve SSO connections
+## Set the defaults for new connections
 
-If a customer can't sign in using the SSO connection they set up, check these things.
+The guided set up in the portal only asks your customer for what they know: their domain, their provider, and their provider's details. Everything else comes from your default enterprise settings.
 
-- They have added the ACS URL to the application on their identity provider side
-- They have a verified domain (home realm domain) selected in the configuration
-- The email they are trying to test belongs to the verified domain
-- The credentials and certificates are all valid
-- The connection is enabled and is being accessed in the relevant environment
-- The org code is being passed when a user goes to sign in
-- If there are any issues with upstream params being parsed
-- All required fields are included in the configuration, including key attributes (if relevant)
+1. Go to **Settings > Environment > Authentication**.
+2. In the **Enterprise connections** section, select **Default settings**.
+3. Choose the settings new connections should start with, and select **Save**.
+
+New enterprise connections start with these settings, including ones organizations set up themselves. Changing them does not change existing connections.
+
+### Provisioning
+
+- **Create a user record in Kinde** - If the user signing in does not exist in Kinde, add them.
+- **Strict mode** - Keep users on their connection only. Turn off to let them sign in with their email without SSO.
+- **Auto-add users** - Users signing in with an organization's connection are automatically added as members of that organization.
+- **Email address trust** - Choose how much to trust email addresses from a new connection when they match an existing Kinde user:
+  - **Don't trust** - Keep them as separate users. Safest if the identity provider doesn't verify email addresses.
+  - **Verify, then trust (Recommended)** - Send a one-time code to the email address and merge with the existing user once it's entered.
+  - **Trust** - Merge with the existing user straight away. Only use if the identity provider verifies email addresses.
+
+<Aside>
+
+A connection that belongs to an organization never starts on **Trust**. If your default is **Trust**, these connections start on **Verify, then trust** instead. The organization's own admin runs the identity provider behind the connection, so its word alone is not enough to merge a sign-in into another user's account.
+
+</Aside>
+
+### Sign-in
+
+- **Sign-in button** - **Auto** shows the button unless a home realm domain is set. **Show** always displays it. **Hide** never displays it.
+- **Use custom domain** - New SAML and Microsoft Entra ID (OAuth 2.0) connections send people back to your custom domain instead of the Kinde domain. This only takes effect while the environment has a custom domain.
+
+### SAML and Microsoft Entra ID
+
+Under **SAML** you can set the sign request algorithm, the protocol binding, and the Name ID format new SAML connections use. Under **Microsoft Entra ID (OAuth 2.0)** you can set **Use common endpoint**, **Sync user profiles and attributes on sign in**, **Include extended user profile**, and **Get user groups**.
+
+If you never save the dialog, connections set up in the portal start with a user record being created, strict mode on, auto-add users on, **Don't trust**, and the sign-in button on **Auto**.
+
+## How existing users are matched
+
+A customer who turns on SSO usually already has people in their organization with a password or another sign-in method. What happens on their first SSO sign-in depends on **Email address trust**:
+
+- **Verify, then trust** - Kinde emails the person a one-time code. When they enter it, the SSO sign-in is merged with their existing user.
+- **Don't trust** - For a connection the organization set up in the portal, Kinde still offers to move the person's existing account onto SSO, but only when the account belongs to that organization and no other, and the email is at one of the connection's domains. The person is emailed a one-time code first. A user who belongs to more than one organization, or who is managed by a SCIM directory, is not moved and is kept as a separate user.
+
+With **Strict mode** on, a user who is moved onto SSO can no longer sign in with their email and a password or an email code. On a connection the organization set up in the portal with **Don't trust**, their username, phone, and social sign-ins are removed as well, so SSO is the only way in. Identities on the organization's other enterprise connections are kept. With **Strict mode** off, nothing is removed.
+
+## Set ups that are not finished
+
+A customer can start a set up and leave it. In the portal it shows as **Set up incomplete**. Nobody can sign in through it, and it does not count toward your plan's enterprise connections until it is enabled.
+
+A set up that isn't finished still holds its domain, so another connection can't use that domain. If a customer has abandoned a set up, delete the connection to free the domain.
 
 ## How to access and manage enterprise connections created by your customers
 
 1. Open the organization for the customer.
 2. In the left menu, select **Authentication**. The customer's connections are shown.
-3. Select the three dots on the connection, and select **Configure**. 
+3. Select the three dots on the connection, and select **Configure**.
 4. In the connection configuration window, make the changes you want, and select **Save**.
 
 ## Enable or disable a connection
@@ -70,3 +112,26 @@ This completely disables and deletes the connection. This action can't be revers
 2. In the left menu, select **Authentication**. The customer's connections are shown.
 3. Select the three dots menu on the connection card, and choose **Delete**.
 4. Confirm that you want to delete the connection.
+
+## Troubleshoot self-serve SSO connections
+
+If a customer can't set up or sign in with their SSO connection, check these things.
+
+**They can't start or finish the set up**
+
+- **Enterprise SSO** is switched on for the portal, for the environment or for their organization.
+- They have the `org:write:authentication` permission. With only `org:read:authentication` they can see connections but not set one up.
+- The domain they are entering is in the organization's **Verified domains**, and **Allow org members to be auto-added** is on for the organization.
+- The domain is not already used by another connection in the environment, including a set up that was started and not finished.
+- They are not trying to change the provider of a connection that is enabled. It has to be disabled first.
+- The test was passed or skipped. A connection can't be turned on before that.
+
+**The test or a sign-in fails**
+
+- They have added the ACS URL and Entity ID (SAML) or the callback URL (Microsoft Entra ID) to the application on their identity provider side.
+- The metadata URL is a public HTTPS URL, or the metadata file they uploaded is the identity provider's metadata and not another file.
+- The credentials and certificates are all valid.
+- The person signing in is assigned to the application in the identity provider.
+- The email they are trying to sign in with belongs to one of the connection's domains.
+- On a SAML connection, the email, name and user ID are mapped to the attributes the identity provider sends. The **Test** step shows what was received.
+- The connection is enabled and is being accessed in the relevant environment.
