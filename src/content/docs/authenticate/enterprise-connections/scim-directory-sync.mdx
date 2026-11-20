@@ -383,7 +383,16 @@ Check **Provisioning > Logs** for the failed requests. Common causes:
 
 **Members lost access to the organization**
 
-The directory was enabled before your IdP provisioned them. Once a directory is enabled, only members your IdP has provisioned can access the organization. Provision them from your IdP, or disable the directory while you finish the sync. See [Disable or enable a directory](#disable-or-enable-a-directory).
+The directory was enabled before your IdP provisioned them. Once a directory is enabled, only members your IdP has provisioned can access the organization.
+
+To restore access straight away, disable the directory while you finish the sync. See [Disable or enable a directory](#disable-or-enable-a-directory).
+
+Provisioning a member from your IdP restores their access only if Kinde can match them to their existing user, for example through a pre-provisioned enterprise identity. Otherwise:
+
+- A member who already signed in through the enterprise connection can't be provisioned. Your IdP gets a `409 User already exists` error.
+- A member who signs in another way, such as with a password or social sign-in, isn't matched. SCIM creates a separate user with access, and the original user stays without access.
+
+See [Users who already exist in Kinde](#users-who-already-exist-in-kinde).
 
 **You can't add members, or change a user's roles, in Kinde**
 
