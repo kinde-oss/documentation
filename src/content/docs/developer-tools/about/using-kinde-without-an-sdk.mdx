@@ -38,10 +38,10 @@ keywords:
   - max_age
   - amr
   - auth_time
-updated: 2026-11-04
+updated: 2026-11-20
 featured: false
 deprecated: false
-ai_summary: "Guide to integrating Kinde authentication in any language or framework without an official SDK, using OAuth 2.0 and OpenID Connect. A nine-step quickstart covers creating a Kinde application, configuring callback URLs and auth methods, discovering OpenID endpoints, and implementing either the Authorization Code Flow for backend apps or Authorization Code Flow with PKCE for SPAs and mobile clients. It walks through generating state and nonce values, building authorization URLs, validating callbacks, exchanging codes for tokens, and decoding the id_token while verifying the nonce claim. Further sections cover two-layer route protection with frontend expiry checks and backend RS256 JWT verification against JWKS, silent access token refresh, sign-out via the logout endpoint, and self-serve portal links via the Account API. Includes grant type guidance, OAuth scopes, and a full request parameter reference covering state, nonce, prompt, login_hint, org_code, audience, acr_values, max_age and more, and RFC 9470 step-up authentication with the acr, amr and auth_time claims. FAQs explain why Implicit Flow is unsupported and when to use the userinfo endpoint. Intended for developers building custom OAuth integrations."
+ai_summary: "Guide to integrating Kinde authentication in any language or framework without an official SDK, using OAuth 2.0 and OpenID Connect. A nine-step quickstart covers creating a Kinde application, configuring callback URLs and auth methods, discovering OpenID endpoints, and implementing either the Authorization Code Flow for backend apps or Authorization Code Flow with PKCE for SPAs and mobile clients. It walks through generating state and nonce values, building authorization URLs, validating callbacks, exchanging codes for tokens, and decoding the id_token while verifying the nonce claim. Further sections cover two-layer route protection with frontend expiry checks and backend RS256 JWT verification against JWKS, silent access token refresh, sign-out via the logout endpoint, and self-serve portal links via the Account API. Includes grant type guidance, OAuth scopes, and a full request parameter reference covering state, nonce, prompt, login_hint, org_code, audience, acr_values, max_age and more, and RFC 9470 step-up authentication (acr_values on the Kinde Scale and Enterprise plans) with the acr, amr and auth_time claims. FAQs explain why Implicit Flow is unsupported and when to use the userinfo endpoint. Intended for developers building custom OAuth integrations."
 ---
 
 Kinde is designed to help founders and developers build SaaS products by providing software infrastructure like authentication, feature flags, user management, and more.
@@ -487,6 +487,14 @@ To register a logout URL, go to **Settings > Applications > [Your app] > View de
 
 ## Step-up authentication
 
+<Aside type="upgrade">
+
+Requesting `acr_values=mfa` or `acr_values=phr` requires the [Kinde Scale or Enterprise plan](https://kinde.com/pricing/). On other plans, Kinde returns an error to your callback for these requests. See [When your plan does not include step-up](#when-your-plan-does-not-include-step-up).
+
+`max_age` works on every plan, and tokens have the `acr`, `amr` and `auth_time` claims on every plan.
+
+</Aside>
+
 Kinde implements [RFC 9470](https://datatracker.ietf.org/doc/html/rfc9470) step-up authentication. Your app or API can require a stronger authentication context for sensitive operations, and Kinde will collect only what is missing.
 
 ```http
@@ -523,7 +531,7 @@ Tokens can carry three claims. Kinde adds them to tokens whether or not you requ
 | --- | --- |
 | `acr` | The context that was met: `mfa` or `phr`. Omitted when the user authenticated with a single factor. |
 | `amr` | The methods that were used, as an array. Omitted when Kinde has no record of the methods, for example for a session that started before Kinde recorded them. |
-| `auth_time` | When the user last actively authenticated, as seconds since the Unix epoch. Always present on the ID token; present on the access token when Kinde can establish it. Read it from the ID token. If step-up is not available (see [Discovery](#discovery)), the ID token still has `auth_time`, but its value can be the time a token was issued rather than the time the user authenticated. |
+| `auth_time` | When the user last actively authenticated, as seconds since the Unix epoch. Always present on the ID token; present on the access token when Kinde can establish it. Read it from the ID token. If Kinde has turned step-up off for the environment (see [Discovery](#discovery)), the ID token still has `auth_time`, but its value can be the time a token was issued rather than the time the user authenticated. |
 
 `acr` is deliberately absent for a single-factor login. A single factor is the baseline every authenticated session meets. Read `amr` if you need to know what was used. An absent `acr` means "neither `mfa` nor `phr`":
 
@@ -567,7 +575,7 @@ If the user cannot satisfy the request, Kinde redirects to your callback with an
 
 The error is:
 
-```jsx
+```http
 302 https://YOUR_CALLBACK_URL?
 error=unmet_authentication_requirements&
 error_description=The+requested+authentication+context+could+not+be+met&
@@ -584,6 +592,27 @@ With `prompt=none`, Kinde cannot show a screen to collect the extra factor, so i
 - If the user's session is older than `max_age`, or the user has no session, Kinde returns `login_required`. Kinde keeps the session.
 
 In each case, send the user through an interactive request (without `prompt=none`) to complete the step-up.
+
+### When your plan does not include step-up
+
+Step-up authentication is on the [Kinde Scale and Enterprise plans](https://kinde.com/pricing/). On other plans, a request with `acr_values=mfa` or `acr_values=phr` gets this error. A value that Kinde reads as `mfa`, for example `urn:okta:loa:2fa:any`, gets it too:
+
+```jsx
+302 https://YOUR_CALLBACK_URL?
+error=unmet_authentication_requirements&
+error_description=Step-up+authentication+(acr_values)+is+not+included+in+the+plan+of+this+Kinde+business&
+state=YOUR_STATE
+```
+
+Kinde returns this error before it asks the user to sign in, and also with `prompt=none`. It does not issue a token that ignores the request, because an API that does not check the `acr` claim would accept that token as stepped up.
+
+The one exception is an environment where Kinde has turned step-up off. There, Kinde ignores `acr_values` on every plan and does not return this error. See [Discovery](#discovery).
+
+As with the cases above, retrying the same request produces the same error. To fix it, remove `acr_values` from the request or upgrade your plan.
+
+Requests without `acr_values`, and requests that use only `max_age`, work on every plan. Kinde does not refuse a value that it does not recognise, because an unrecognised value is not a requirement.
+
+After you upgrade, step-up requests work within a few minutes. The [discovery document](#discovery) can take up to an hour to list `acr_values_supported`.
 
 ### Protecting an API with step-up
 
@@ -609,7 +638,13 @@ The contexts Kinde can return are advertised at `https://<your_kinde_subdomain>.
 "claims_supported": ["aud", "exp", "iat", "iss", "sub", "acr", "amr", "auth_time"]
 ```
 
-Check for `acr_values_supported` before you rely on step-up. If the document does not list it, Kinde ignores `acr_values` and `max_age`, and does not add the `acr` and `amr` claims. The ID token still has `auth_time`, but its value can be the time a token was issued rather than the time the user authenticated. Do not use it to check recency in this case. To require a fresh sign-in, send `prompt=login`.
+Check for `acr_values_supported` before you send `acr_values`. The document can be in one of three states:
+
+| `acr_values_supported` | `acr`, `amr` and `auth_time` in `claims_supported` | What it means |
+| --- | --- | --- |
+| Listed | Listed | Step-up is available. Kinde acts on `acr_values` and `max_age`. |
+| Not listed | Listed | Your plan does not include step-up. Kinde returns `unmet_authentication_requirements` for `acr_values=mfa` or `acr_values=phr`. See [When your plan does not include step-up](#when-your-plan-does-not-include-step-up). Kinde still acts on `max_age`, and tokens still have the `acr`, `amr` and `auth_time` claims. |
+| Not listed | Not listed | Kinde has turned step-up off for the environment. This applies on every plan: Kinde ignores `acr_values` and `max_age` without checking the plan, so it does not return the plan error. It does not add the `acr` and `amr` claims. The ID token still has `auth_time`, but its value can be the time a token was issued rather than the time the user authenticated. Do not use it to check recency in this case. To require a fresh sign-in, send `prompt=login`. |
 
 <Aside type="warning" title="What the mfa context does and does not assert">
 
@@ -782,7 +817,7 @@ Accepts a space-separated list; the highest context requested is applied. Values
 
 Kinde also accepts some values that other providers use, so a client that you move to Kinde can keep its request: `http://schemas.openid.net/pape/policies/2007/06/multi-factor` and `urn:okta:loa:2fa:any` are read as `mfa`. Kinde does not return these values. When a token has an `acr` claim, its value is always `mfa` or `phr`. `urn:okta:loa:2fa:any:ifpossible` is not accepted, because Kinde cannot make an optional requirement. Kinde ignores this value.
 
-If the requested context cannot be met - for example `phr` for a user with no usable passkey - Kinde returns an error to your callback rather than issuing a token that does not satisfy the request. See [Step-up authentication](#step-up-authentication).
+If the requested context cannot be met - for example `phr` for a user with no usable passkey - Kinde returns an error to your callback rather than issuing a token that does not satisfy the request. Requesting `mfa` or `phr` requires the [Kinde Scale or Enterprise plan](https://kinde.com/pricing/). On other plans, Kinde returns the same error before it asks the user to sign in. See [Step-up authentication](#step-up-authentication).
 
 Type: `string`
 
@@ -798,6 +833,8 @@ If the user has a session, Kinde keeps the session. The user stays signed in to 
 - `max_age` with `acr_values=mfa` or `acr_values=phr`: the user verifies only the factor that `acr_values` requires. Kinde does not ask for the first factor again. Kinde asks for this verification whenever the session is older than `max_age`, even if it already meets `acr_values`. The verification sets a new `auth_time`.
 
 Use `max_age=0` to require re-authentication on every request.
+
+`max_age` works on every plan, including plans that do not include `acr_values`.
 
 Kinde ignores an empty value and the values `undefined`, `null` and `NaN`. Some SDKs send these values when no `max_age` is set. Kinde treats a different value that is not a non-negative whole number as requiring re-authentication.
 
