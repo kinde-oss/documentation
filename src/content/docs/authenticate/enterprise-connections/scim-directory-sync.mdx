@@ -9,8 +9,8 @@ tableOfContents:
 relatedArticles:
   - 2c58dabc-fe5c-4919-ade7-4caab8da47e8
   - fcf28a71-c3a8-4474-9564-ad089d3f2105
-description: "Provision, update, and suspend Kinde users from your IdP with SCIM, and map directory groups to roles."
-ai_summary: "Guide to setting up SCIM 2.0 directory sync so an identity provider keeps a Kinde organization's users and roles up to date. Explains that each organization has one directory tied to an enterprise connection, and that Kinde issues a SCIM endpoint URL and secret token for the IdP. Covers creating a directory, including choosing a connection when more than one is enabled, then configuring provisioning in Microsoft Entra ID and Okta, with the same credential fields for other SCIM 2.0 providers such as Google Workspace, OneLogin, JumpCloud, CyberArk, PingFederate, and Rippling. Describes linking synced groups to Kinde roles, automatic mapping of core user attributes and the enterprise extension, and mapping custom attributes to user properties. Explains create, update, suspend, reactivate, and unassign behavior, directory-managed read-only organizations, and how existing users are matched by enterprise identity. Includes token regeneration, connection changes, deletion through the Kinde Management API, the supported SCIM operations and error codes, and troubleshooting for failed syncs. Intended for developers, enterprise admins, and security engineers on the Scale or Enterprise plan."
+description: "Provision, update, and suspend Kinde users from your IdP with SCIM, map directory groups to roles, and enable the directory when you're ready to switch over."
+ai_summary: "Guide to setting up SCIM 2.0 directory sync so an identity provider keeps a Kinde organization's users and roles up to date. Explains that each organization has one directory tied to an enterprise connection, and that Kinde issues a SCIM endpoint URL and secret token for the IdP. Explains that new directories start disabled: the IdP can sync users and groups straight away, but the organization is not managed by directory sync until the directory is enabled, so existing members keep their access while you set up and check the sync. Covers creating a directory, including choosing a connection when more than one is enabled, then configuring provisioning in Microsoft Entra ID and Okta, with the same credential fields for other SCIM 2.0 providers such as Google Workspace, OneLogin, JumpCloud, CyberArk, PingFederate, and Rippling. Describes linking synced groups to Kinde roles, automatic mapping of core user attributes and the enterprise extension, and mapping custom attributes to user properties. Explains enabling the directory as the switch-over, after which members the directory did not provision lose access to the organization, and disabling it again, which needs the delete:scim_directories permission. Explains that users the directory provisioned are always read-only, create, update, suspend, reactivate, and unassign behavior, directory-managed organizations, and how existing users are matched by enterprise identity. Includes token regeneration, connection changes, deletion and the is_enabled field in the Kinde Management API, the supported SCIM operations and error codes, and troubleshooting for failed syncs and members who lose access. Intended for developers, enterprise admins, and security engineers on the Scale or Enterprise plan."
 featured: false
 deprecated: false
 topics:
@@ -33,7 +33,9 @@ keywords:
   - Entra ID
   - Okta
   - custom attributes
-updated: 2026-11-09
+  - enable directory
+  - disable directory
+updated: 2026-11-20
 ---
 
 <Aside type="upgrade">
@@ -57,10 +59,13 @@ Kinde supports SCIM 2.0 and works with Microsoft Entra ID (Azure AD), Okta, Goog
 
 Directory sync is set up per organization. Each organization can have one directory, and the directory is tied to one of the organization's enterprise connections.
 
-1. You create a directory in Kinde. Kinde gives you a **SCIM Endpoint URL** and a **Secret Token**.
+1. You create a directory in Kinde. Kinde gives you a **SCIM Endpoint URL** and a **Secret Token**. The directory starts disabled.
 2. You add these to your IdP's SCIM provisioning settings.
 3. Your IdP sends user and group changes to Kinde.
 4. Kinde creates each provisioned user in the organization and gives them an identity on the enterprise connection. Users then sign in through that connection with SSO.
+5. When you've checked the sync, you enable the directory. From then on, your IdP manages the organization's members.
+
+While the directory is disabled, your IdP syncs as normal, but the organization is managed as it is today: existing members keep their access, and you can still add members in Kinde. Enabling the directory is the switch-over. See [Enable the directory](#5-enable-the-directory).
 
 Kinde does not send password or SSO credentials to your IdP, and SCIM does not replace your enterprise connection. Users still authenticate through the connection. SCIM only manages who exists in the organization and what roles they have.
 
@@ -69,7 +74,7 @@ Kinde does not send password or SSO credentials to your IdP, and SCIM does not r
 - [Set up an enterprise connection](/authenticate/enterprise-connections/about-enterprise-connections/) for the organization (for example, SAML or Entra ID) and make sure it's enabled. You can't create a directory without one.
 - Make sure the organization's default roles are set the way you want. Kinde gives these roles to every user it provisions.
 - Decide which existing users will be managed by SCIM. See [Users who already exist in Kinde](#users-who-already-exist-in-kinde).
-- Decide what to do with the organization's current members before you create the directory. Once the directory exists, every member becomes read-only, including users your IdP will never provision. You can't edit, suspend, or delete them in Kinde, or change their roles. Remove anyone you don't want in the organization first, or plan to manage them through your IdP. See [Directory-managed organizations](#directory-managed-organizations).
+- Decide what to do with the organization's current members before you enable the directory. Once it's enabled, only members your IdP has provisioned can access the organization. Make sure your IdP provisions everyone who should keep access before you enable it. See [Directory-managed organizations](#directory-managed-organizations).
 
 ## Configuration
 
@@ -84,7 +89,11 @@ Kinde does not send password or SSO credentials to your IdP, and SCIM does not r
 
    ![create directory when multiple enterprise connections are available](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/f972b8b8-d160-411f-711d-d692a8b04100/socialsharingimage)
 
-3. Select **Create directory**. The directory creation window opens.
+3. Leave **Enable directory sync now** clear, so you can set up your IdP and check the first sync before the directory manages the organization. Select it only if you want the directory to take effect straight away. See [Enable the directory](#5-enable-the-directory) for what that means for existing members.
+
+   [screenshot: Create directory form with the Enable directory sync now checkbox]
+
+4. Select **Create directory**. The directory creation window opens.
 
    ![manage directory window](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b748b514-1c23-4a59-6b9d-bf60d741ef00/socialsharingimage)
 
@@ -204,6 +213,32 @@ Mapped values sync whenever a user is created or updated. Attributes only appear
 
 Other SCIM attributes, such as phone numbers, addresses, and titles, are stored with the user's SCIM record but aren't mapped to Kinde fields. To see everything your IdP sent for a user, open the user's profile and select **View SCIM user data**.
 
+### 5. Enable the directory
+
+A new directory starts disabled. Your IdP can sync users and groups into it, and the users it provisions are managed by the directory, but the organization itself isn't managed by directory sync yet:
+
+- Members your IdP hasn't provisioned keep their access.
+- You can still add members in Kinde, by invitation, sign-up, the Kinde admin area, or the Management API.
+
+Use this time to check that your IdP has provisioned everyone who should have access, with the right roles. The **Synced users** count and **Provisioning > Logs** help here.
+
+When you're ready, enable the directory:
+
+1. On the **Directory** page, under **Directory status**, select **Enable directory sync**.
+2. Read the confirmation, then select **Enable**.
+
+[screenshot: Directory status section showing the Disabled badge and the Enable directory sync button]
+
+Once the directory is enabled, it manages the organization. Only members your IdP has provisioned can access the organization, and members can only be added through your IdP. See [Directory-managed organizations](#directory-managed-organizations).
+
+<Aside type="warning">
+
+Members your IdP hasn't provisioned lose access to the organization as soon as you enable the directory. Their Kinde accounts and memberships aren't deleted. They get access back if you disable the directory, or if your IdP provisions them and Kinde matches them to their existing user (see [Users who already exist in Kinde](#users-who-already-exist-in-kinde)).
+
+</Aside>
+
+To enable the directory you need permission to update directories (`update:scim_directories`).
+
 ## What happens when users change in your IdP
 
 | Change in your IdP                               | What happens in Kinde                                                                                                                                                                                                                       |
@@ -225,15 +260,26 @@ When SCIM changes a user, Kinde sends a `user.updated` [webhook](/integrate/webh
 
 ## Directory-managed organizations
 
-Once an organization has a directory, your IdP is the source of truth for its members. To stop changes in Kinde from being overwritten by the next sync, Kinde makes the organization's users read-only:
+Once an organization's directory is enabled, your IdP is the source of truth for its members:
+
+- Only members your IdP has provisioned can access the organization. Other members keep their Kinde accounts, but they can't sign in to the organization and aren't shown in its member lists, counts, Management API responses, webhooks, or exports.
+- Members can't be added or invited in the Kinde admin area, through the Management API, or in the self-serve portal, and users can't join the organization by signing up or through verified domain auto-join.
+- Roles in the organization can't be changed manually. Use group-to-role links instead.
+
+**Users the directory provisioned are always read-only**
+
+Whether the directory is enabled or disabled, users your IdP has provisioned are managed by the directory. To stop changes in Kinde from being overwritten by the next sync, Kinde makes them read-only:
 
 - User details can't be edited, and the user's profile shows that they're managed by the directory.
-- Users can't be added, invited, deleted, or suspended in the Kinde admin area, through the Management API, or in the self-serve portal.
-- Roles in the organization can't be changed manually. Use group-to-role links instead.
+- They can't be deleted or suspended in Kinde, removed from the organization, or have their roles in it changed.
 - Identities can't be added, changed, or removed.
 - A directory-managed user can only belong to that one organization. They aren't added to other organizations, including through verified domain auto-join.
 
-This applies to every member of the organization, including members who were added before the directory was created. Make changes in your IdP instead.
+Make changes in your IdP instead.
+
+**While the directory is disabled**
+
+The organization is managed as it would be without a directory. Members your IdP hasn't provisioned keep their access and can be edited as usual, and you can add members in Kinde. Your IdP keeps syncing, and the users it provisions are read-only as described above.
 
 ## Users who already exist in Kinde
 
@@ -271,11 +317,24 @@ After the first request, the connection is locked. To use a different connection
 
 If the directory's enterprise connection is deleted, provisioning stops working until you select another connection on the **Directory** page.
 
+### Disable or enable a directory
+
+Disabling a directory stops it managing the organization without deleting anything. Members your IdP hasn't provisioned get their access back, and you can add members in Kinde again. Your IdP keeps syncing, and the users it provisioned stay read-only.
+
+1. On the **Directory** page, under **Directory status**, select **Disable directory sync**.
+2. Read the confirmation, then select **Disable**.
+
+To enable it again, select **Enable directory sync**. Members your IdP hasn't provisioned lose access again as soon as you do.
+
+Disabling a directory gives members access back, which is otherwise only possible by deleting it, so you need permission to delete directories (`delete:scim_directories`) as well as to update them. Enabling needs only `update:scim_directories`.
+
 ### Delete a directory
 
 You can delete a directory with the [Management API](/kinde-apis/management/#tag/directories). Deleting a directory removes its SCIM user and group records and stops your IdP from syncing. Users, their organization membership, and their roles stay in Kinde.
 
 You can also create, list, update, and regenerate tokens for directories through the Management API. These endpoints require the `read:scim_directories`, `create:scim_directories`, `update:scim_directories`, and `delete:scim_directories` scopes.
+
+A directory created through the Management API starts disabled, as it does in the Kinde admin area. Send `is_enabled: true` to enable it as you create it, or enable it later by updating the directory with `is_enabled: true`. Disabling a directory through the API (`is_enabled: false`) needs both the `update:scim_directories` and `delete:scim_directories` scopes.
 
 ## SCIM API reference for IdP integrations
 
@@ -321,6 +380,18 @@ Check **Provisioning > Logs** for the failed requests. Common causes:
 - The user has no email address in your IdP.
 - The user already signed in through the enterprise connection before SCIM was set up (`409 User already exists`).
 - The user is already managed by a directory on another organization.
+
+**Members lost access to the organization**
+
+The directory was enabled before your IdP provisioned them. Once a directory is enabled, only members your IdP has provisioned can access the organization. Provision them from your IdP, or disable the directory while you finish the sync. See [Disable or enable a directory](#disable-or-enable-a-directory).
+
+**You can't add members, or change a user's roles, in Kinde**
+
+The directory is enabled, or the user was provisioned by the directory. Make the change in your IdP. See [Directory-managed organizations](#directory-managed-organizations).
+
+**You can't see the option to disable the directory**
+
+Disabling needs permission to delete directories (`delete:scim_directories`) as well as to update them. Ask an admin who has both.
 
 **Duplicate users**
 
