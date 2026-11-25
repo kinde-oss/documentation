@@ -52,6 +52,8 @@ Use the webhook approach on this page when you want full control over the email 
 - Respond with a 2xx quickly after queuing work; use retries and make processing idempotent (e.g., de-duplicate by event ID).
 - Filter the webhook payload to determine whether the user was created manually or via API. The `source` field is `admin` or `api`. Treat these differently if needed.
 - If you subscribe to `user.updated`, don't send an email for every event. `user.updated` also fires when a user's roles or permissions change, and the payload has no field that says why it was sent. Store each user's organization memberships, compare the incoming `organizations` array with what you stored, and only send the email when a new organization code appears.
+- Seed the stored memberships for existing users before you subscribe to `user.updated`. Without a stored record, the first update treats every current organization as new and can send emails for organizations the user already belongs to.
+- Don't assume events arrive in order. A failed delivery is retried for up to 36 hours (see [Webhooks responses and retry policy](/integrate/webhooks/about-webhooks/#webhooks-responses-and-retry-policy)), so an older `user.updated` can arrive after a newer one. Store the `event_timestamp` of the last event you applied for each user, and ignore any event with an earlier `event_timestamp`. Otherwise a late snapshot can overwrite newer memberships and cause a duplicate email.
 
 Payload example:
 
