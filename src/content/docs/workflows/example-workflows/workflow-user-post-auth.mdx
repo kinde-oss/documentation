@@ -6,6 +6,7 @@ sidebar:
 relatedArticles:
   - 69b42223-701c-4707-b961-e52c7cb05399
   - f499ebb0-d7f5-4244-bf92-6bf0f6082b62
+  - c00a7687-2d59-427d-b8a4-f2f05d29a7f2
 description: Learn about the user post-authentication workflow trigger that fires after successful authentication, with examples for external system synchronization and security checks.
 topics:
   - "workflows"
@@ -25,10 +26,12 @@ keywords:
   - "HubSpot sync"
   - "impossible travel"
   - "authentication triggers"
-updated: "2025-01-27"
+  - "SAML application"
+  - "workforce identity"
+updated: "2026-11-17"
 featured: false
 deprecated: false
-ai_summary: "Documentation for user post-authentication workflow trigger that fires after successful authentication, with examples for external system synchronization and security checks."
+ai_summary: "Documentation for user post-authentication workflow trigger that fires after successful authentication, with examples for external system synchronization and security checks. Also explains how the trigger behaves for sign-ins that start from a SAML application, where Kinde acts as the identity provider: the workflow runs when the user signs in to Kinde and before they are returned to the application, but not when Kinde reuses an existing session, so it does not run on every request from the service provider. The application's Force re-authentication and Session lifetime settings decide how often users sign in. The client ID in the event is the self-serve portal's, not the SAML application's, and workflows cannot change the SAML assertion."
 ---
 
 Trigger: `user:post_authentication`
@@ -58,6 +61,21 @@ If the user has been invited to join multiple organizations you can add them as 
 ### Determine if the user is a first time user
 
 Users can be created in multiple ways (imported / API / via the UI / self-registration). This could well be an existing user in your own database, so we tell you if this is a new user from a Kinde perspective. i.e we create a new record so you can act accordingly. [Example code](https://github.com/kinde-starter-kits/workflow-examples/blob/main/postUserAuthentication/syncNewUserToHubspotWorkflow.ts)
+
+## Sign-ins that start from a SAML application
+
+If you use Kinde as a SAML identity provider ([workforce identity](/workforce-identity/)), this trigger also fires when a user signs in to Kinde to open a [SAML application](/workforce-identity/add-saml-application/). The workflow runs after the user authenticates and before Kinde returns them to the application.
+
+The workflow only runs when the user actually signs in. If they already have an active Kinde session, Kinde sends the SAML assertion to the application without asking them to sign in, and the workflow does not run. Don't expect a workflow run for every request the service provider sends to Kinde.
+
+How often users sign in depends on the application's [session settings](/workforce-identity/add-saml-application/#control-how-often-people-must-sign-in):
+
+- When **Force re-authentication** is on, users sign in every time they open the application, so the workflow runs every time.
+- When it is off, a signed-in user is only asked to sign in again once the application's **Session lifetime** has passed since they last signed in. The workflow runs at that sign-in.
+
+The `clientId` values in the event are the client ID of Kinde's self-serve portal application, not an ID for the SAML application. Sign-ins to the self-serve portal itself use the same client ID, and nothing else in the event identifies the SAML application. Keep this in mind if your workflow branches on client ID.
+
+Workflows can't change the SAML assertion Kinde sends to the application. See [SAML applications](/workflows/example-workflows/user-token-generation/#saml-applications).
 
 ## Workflow code
 
