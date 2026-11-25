@@ -42,7 +42,7 @@ keywords:
   - JIT provisioning
   - home realm domains
   - email address trust
-updated: 2026-11-03
+updated: 2026-11-11
 ai_summary: "Complete guide to configuring a custom SAML enterprise connection with any identity provider. Explains user provisioning choices, optional signed certificates and private keys, and an example OpenSSL command for generating a certificate pair. Walks through adding an organization-specific or shared connection and configuring the Entity ID, IdP metadata via URL or pasted XML (XML takes precedence when both are set), sign-in URL, signing algorithm, protocol binding, Name ID format, and attribute mapping. Documents how Kinde trusts all signing certificates in metadata, IdP certificate rotation, and 30-day dashboard warnings for pasted metadata. Covers home realm domains, the assertion consumer service URL, just-in-time provisioning, Verify, then trust for Email address trust, optional request signing, and connection testing. Intended for developers, enterprise admins, and security engineers."
 ---
 
@@ -131,9 +131,12 @@ Depending on your SAML set up, you may need to include advanced configurations f
 9. (Optional) Add a first name and last name key attribute.
 10. Enter any relevant **Home realm domains**. This is how SAML recognizes a user’s credentials and routes them to the correct sign in page. Note that home realm domains need to be unique across all connections in an environment. [Read more about home realm domains](/authenticate/enterprise-connections/home-realm-discovery/).
 
-    ![Home realm domains in SAML configuration](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/dbdccca5-2e6c-4dd8-eaec-e029574daf00/public)
+    ![Home realm domains and Sign-in button in SAML configuration](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/63795de2-874d-46e8-2501-f611b847f800/public)
 
-11. If you use home realm domains, the sign in button is hidden on the auth screen by default. To show the SSO button, select the **Always show sign-in button** option. 
+11. Set the **Sign-in button** option to control when the SSO button for this connection appears on the auth screen:
+    - **Auto** (default) — the button is shown only if the connection has no home realm domains. If you use home realm domains, the button is hidden and users are routed silently based on their email domain.
+    - **Show** — the button is always shown, even if home realm domains are set.
+    - **Hide** — the button is never shown. Home realm discovery still works, so users with a matching email domain are still routed to this connection.
 12. Copy the relevant reply URL: 
 
     ![ACS URL and custom domain option](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/885eda9c-ca4f-4340-db17-224023b8c300/public)
