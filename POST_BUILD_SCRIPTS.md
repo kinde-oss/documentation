@@ -1,242 +1,100 @@
 # Post-Build Scripts
 
-This document explains the automated post-build scripts that run after every documentation build to generate LLM training files and update security configurations.
+Two scripts run automatically after every `astro build`, via the `postbuild` npm script:
 
-## Overview
+1. **`scripts/update-csp.js`** - updates the Content Security Policy for inline scripts
+2. **`scripts/generate-llms-txt.js`** - generates the LLM text files (`llms.txt` and friends)
 
-The documentation site runs several post-build scripts automatically after each build to:
-
-1. **Update Content Security Policy (CSP)** - Ensures security compliance for inline scripts
-2. **Generate LLM Training Files** - Creates documentation files optimized for AI/LLM training
-
-These scripts are integrated into the build process via the `postbuild` npm script and run automatically in CI/CD and local builds.
-
-## Post-Build Scripts
-
-### 1. CSP Update Script (`scripts/update-csp.js`)
-
-**Purpose**: Updates Content Security Policy headers to allow inline scripts generated during the build process.
-
-**What it does**:
-- Scans all HTML files in the `dist/` directory for inline scripts
-- Generates SHA256 hashes for each inline script
-- Updates the CSP `script-src` directive in `customHttp.yml` with these hashes
-- Ensures security compliance while allowing necessary inline scripts
-
-**Output**: Updates `customHttp.yml` in the repo root and writes a copy to `dist/customHttp.yml` so the updated headers are included in the deployed artifact (e.g. AWS Amplify).
-
-### 2. LLM Generation Scripts
-
-**Purpose**: Generate documentation files optimized for Large Language Model (LLM) training.
-
-**Generated Files**:
-- **`llms.txt`** - Main index file with links to all LLM documentation
-- **`llms-abridged.txt`** - Compact version with frontmatter only (title, description, keywords, topics)
-- **`llms-full.txt`** - Complete documentation with full content
-- **Section-specific files** - Individual files for each documentation section
-
-## LLM Generated Files
-
-The LLM scripts write directly to the **build output** (`dist/`), not to `public/`. Astro copies `public/` into `dist/` during the build; post-build scripts run after that, so writing to `dist/` ensures the generated files are what gets deployed.
-
-### Main Files (in `dist/` after build)
-- `llms.txt` - Index file with links to all LLM documentation (static file from `public/`)
-- `llms-abridged.txt` - Abridged documentation (frontmatter only), generated
-- `llms-full.txt` - Complete documentation with full content, generated
-
-### Section Files (in `dist/_llms-txt/` after build)
-- `authenticate.txt` - Authentication documentation
-- `billing.txt` - Billing and subscription management
-- `build.txt` - Building applications on Kinde
-- `developer-tools.txt` - Developer tools and APIs
-- `get-started.txt` - Getting started guides
-- `integrate.txt` - Third-party integrations
-- `machine-to-machine-applications.txt` - M2M applications
-- `manage-users.txt` - User management
-- `manage-your-account.txt` - Account management
-- `manage-your-apis.txt` - API management
-- `properties.txt` - Custom properties
-- `workflows.txt` - Workflow automation
-
-## Build Integration
-
-### Automatic Execution
-All post-build scripts run automatically when you run:
-```bash
-npm run build
-```
-
-The build process follows this sequence:
-1. **Astro build** - Generates the static site
-2. **Post-build scripts** (automatic):
-   - `scripts/update-csp.js` - Updates CSP headers
-   - `scripts/generate-llms-txt-abridged.js` - Generates abridged LLM files
-   - `scripts/generate-llms-txt-full.js` - Generates complete LLM files
-   - `scripts/generate-llms-txt-sections.js` - Generates section-specific LLM files
-
-### Package.json Configuration
 ```json
 {
   "scripts": {
     "build": "astro build",
-    "postbuild": "node ./scripts/update-csp.js && node ./scripts/generate-llms-txt-abridged.js && node ./scripts/generate-llms-txt-full.js && node ./scripts/generate-llms-txt-sections.js"
+    "postbuild": "node ./scripts/update-csp.js && node ./scripts/generate-llms-txt.js"
   }
 }
 ```
 
-## LLM Generation Scripts
+npm runs `postbuild` straight after `build`, so `npm run build` runs both scripts, both locally and in the deploy pipeline (AWS Amplify). If either script fails, the build fails and nothing is deployed.
 
-### `scripts/generate-llms-txt-abridged.js`
-Generates the abridged documentation file containing only frontmatter data:
-- Extracts `title`, `description`, `keywords`, and `topics` from all MDX files
-- Creates a compact format suitable for quick reference
-- Output: `dist/llms-abridged.txt`
+## CSP update (`scripts/update-csp.js`)
 
-### `scripts/generate-llms-txt-full.js`
-Generates the complete documentation file with full content:
-- Extracts frontmatter and complete content from all MDX files
-- Formats page titles with folder paths (e.g., "Authenticate - About auth")
-- Minifies content by removing line breaks
-- Output: `dist/llms-full.txt`
+- Scans every HTML file in `dist/` for inline scripts
+- Generates a SHA256 hash for each one
+- Updates the CSP `script-src` directive in `customHttp.yml` with these hashes
+- Writes the updated file to the repo root and to `dist/customHttp.yml`, so the deployed artifact gets the new headers
 
-### `scripts/generate-llms-txt-sections.js`
-Generates individual files for each top-level documentation section:
-- Creates separate files for each section (authenticate, billing, etc.)
-- Uses the same format as the full documentation
-- Output: `dist/_llms-txt/[section].txt`
+## LLM text files (`scripts/generate-llms-txt.js`)
 
-## Manual Script Execution
+The script reads every `.mdx` file in `src/content/docs/` once and writes these files into `dist/`:
 
-### Prerequisites
-- Node.js installed
-- Dependencies installed (`npm install`)
+| Deployed URL | Contents |
+|---|---|
+| `https://docs.kinde.com/llms.txt` | Index: an overview of Kinde, the documentation sets, and a link to every section file |
+| `https://docs.kinde.com/llms-abridged.txt` | Frontmatter only for every page: title, `ai_summary` (or `description`), last updated date, keywords, topics |
+| `https://docs.kinde.com/llms-full.txt` | Every page in full |
+| `https://docs.kinde.com/_llms-txt/<section>.txt` | Every page in one top-level folder of `src/content/docs/`, in full |
 
-### Run Individual Scripts
-```bash
-# Update CSP headers only
-node scripts/update-csp.js
+The script writes to `dist/`, not `public/`. Astro copies `public/` into `dist/` during the build, before `postbuild` runs, so anything written to `public/` would miss that deploy. Generated files are gitignored in `public/` so stale copies can't be committed.
 
-# Generate abridged documentation only
-node scripts/generate-llms-txt-abridged.js
+### What updates automatically
 
-# Generate complete documentation only
-node scripts/generate-llms-txt-full.js
+Everything below happens on every build, without manual steps:
 
-# Generate section-specific files only
-node scripts/generate-llms-txt-sections.js
+- **Page content and metadata**: add or edit an `.mdx` page and it appears in the abridged, full and section files.
+- **New sections**: a new top-level folder in `src/content/docs/` gets its own `_llms-txt/<folder>.txt` file and a link in `llms.txt`.
+- **`updated` dates** in each generated file's frontmatter are set to the build date.
+
+### What is edited by hand
+
+- **The `llms.txt` intro and links** live in `scripts/llms.template.txt`. Edit that file to change the description of Kinde, the documentation sets, notes or optional links. The `{{SECTION_LINKS}}` placeholder is replaced with the generated section list, so keep it in the template.
+- **Section labels and descriptions** come from the `SECTIONS` map at the top of `scripts/generate-llms-txt.js`. A folder that isn't in the map still gets a file and a link, using a label made from its folder name and the `description` from its `index.mdx` (if it has one). The build log prints a warning for it. Add an entry to the map to give it a proper label, description and fixed `page_id`.
+
+### Page format
+
+Abridged (`llms-abridged.txt`):
+
+```
+## Section name
+
+### Page title
+
+Last updated: 2026-01-01
+
+AI summary or description
+keyword1, keyword2
+topic1, topic2
 ```
 
-### Run All Post-Build Scripts
-```bash
-# Run all post-build scripts manually
-npm run postbuild
-```
+Full and section files:
 
-## File Formats
-
-### Abridged Format
 ```
-# Page Title
-Page description
-keyword1, keyword2, keyword3
-topic1, topic2, topic3
+# Section - Subfolder - Page title
 
-# Next Page Title
-Next page description
-...
-```
-
-### Full Format
-```
-# Section - Page Title - Page Description
 > Page description
-keyword1, keyword2, keyword3
-topic1, topic2, topic3
-Full page content without line breaks...
 
-# Next Section - Next Page Title - Next Page Description
-...
+Last updated: 2026-01-01
+
+keyword1, keyword2
+topic1, topic2
+
+Page content as Markdown, with headings, lists and code blocks intact
 ```
 
-## Source Data
+The page content keeps its Markdown structure and line breaks so code samples stay readable. MDX component `import` lines are removed, and runs of blank lines are collapsed.
 
-All LLM files are generated from MDX files in `src/content/docs/`. The scripts:
-1. Scan all `.mdx` files recursively
-2. Extract frontmatter using the `gray-matter` library
-3. Parse content and apply formatting rules
-4. Write output files to the `public/` directory
+## Running the scripts manually
 
-## Dependencies
+```bash
+npm install
+npm run build                       # full build, including both post-build scripts
+node scripts/generate-llms-txt.js   # regenerate only the LLM files (needs an existing dist/)
+```
 
-### CSP Update Script
-- `cheerio` - HTML parsing and manipulation
-- `crypto` - SHA256 hash generation
-- `js-yaml` - YAML file parsing and writing
-- Node.js `fs` and `path` modules
-
-### LLM Generation Scripts
-- `gray-matter` - Frontmatter parsing
-- `glob` - File pattern matching
-- Node.js `fs` and `path` modules
-
-## Publishing
-
-Files in the `public/` directory are automatically served by Astro at the root URL:
-- `https://docs.kinde.com/llms.txt`
-- `https://docs.kinde.com/llms-abridged.txt`
-- `https://docs.kinde.com/llms-full.txt`
-- `https://docs.kinde.com/_llms-txt/[section].txt`
-
-## Maintenance
-
-### Automatic Updates
-All post-build scripts run automatically during:
-- Local development builds (`npm run build`)
-- CI/CD pipeline builds
-- Production deployments
-
-### Manual Updates
-The `llms.txt` file is manually maintained and should be updated when:
-- Adding new section files
-- Changing file locations
-- Updating descriptions or links
-
-### When Scripts Run
-- **CSP Update**: Every build (ensures security compliance)
-- **LLM Generation**: Every build (keeps training data current)
-- **Content Changes**: Automatically detected and processed
+`astro dev` doesn't serve the LLM files, because they only exist in `dist/`. Run a build and use `npm run preview` to check them locally.
 
 ## Troubleshooting
 
-### Common Issues
-1. **Missing dependencies**: Run `npm install` to ensure all packages are available
-2. **File not found errors**: Ensure MDX files exist in `src/content/docs/`
-3. **Permission errors**: Check write permissions for the `public/` directory
-4. **Empty output**: Verify MDX files have proper frontmatter structure
-5. **CSP errors**: Check that `customHttp.yml` exists and is writable
-6. **Build failures**: Scripts run in sequence - if one fails, subsequent scripts won't run
-
-### Validation
-After build completion, verify:
-- **CSP Update**: Check `customHttp.yml` for updated script hashes
-- **LLM Files**: All expected files are created in `public/` and `public/_llms-txt/`
-- **File sizes**: Reasonable sizes (not empty or unusually large)
-- **Content format**: Properly formatted with frontmatter
-- **Links**: All links in `llms.txt` point to existing files
-
-### Build Output
-Successful build should show:
-```
-> documentation@0.0.1 postbuild
-> node ./scripts/update-csp.js && node ./scripts/generate-llms-txt-abridged.js && node ./scripts/generate-llms-txt-full.js && node ./scripts/generate-llms-txt-sections.js
-
-YAML configuration has been updated.
-Abridged documentation created: dist/llms-abridged.txt
-Processed 392 files
-Complete documentation created: dist/llms-full.txt
-Processed 392 files
-Generating section documentation files...
-Found 16 sections: authenticate, billing, build, contribute, design, developer-tools, get-started, integrate, machine-to-machine-applications, manage-users, manage-your-account, manage-your-apis, properties, releases, trust-center, workflows
-...
-All section documentation files have been generated in public/_llms-txt/
-```
+- **A section is missing from `llms.txt`**: check that the folder contains at least one `.mdx` file.
+- **A section has a generic label**: add it to `SECTIONS` in `scripts/generate-llms-txt.js`.
+- **`llms.template.txt must contain {{SECTION_LINKS}}`**: the placeholder was removed from the template. Put it back under `## Section Documentation`.
+- **A page is missing or has empty metadata**: check its frontmatter. The script logs any file it can't parse.
