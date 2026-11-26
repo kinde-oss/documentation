@@ -10,7 +10,7 @@ relatedArticles:
   - 2c58dabc-fe5c-4919-ade7-4caab8da47e8
   - fcf28a71-c3a8-4474-9564-ad089d3f2105
 description: "Provision, update, and suspend Kinde users from your IdP with SCIM, and map directory groups to roles."
-ai_summary: "Guide to setting up SCIM 2.0 directory sync so an identity provider keeps a Kinde organization's users and roles up to date. Explains that each organization has one directory tied to an enterprise connection, and that Kinde issues a SCIM endpoint URL and secret token for the IdP. Covers creating a directory, including choosing a connection when more than one is enabled, then configuring provisioning in Microsoft Entra ID and Okta, with the same credential fields for other SCIM 2.0 providers such as Google Workspace, OneLogin, JumpCloud, CyberArk, PingFederate, and Rippling. Describes linking synced groups to Kinde roles, automatic mapping of core user attributes and the enterprise extension, and mapping custom attributes to user properties. Explains create, update, suspend, reactivate, and unassign behavior, directory-managed read-only organizations, and how existing users are matched by enterprise identity. Includes token regeneration, connection changes, deletion through the Kinde Management API, the supported SCIM operations and error codes, and troubleshooting for failed syncs. Intended for developers, enterprise admins, and security engineers on the Scale or Enterprise plan."
+ai_summary: "Guide to setting up SCIM 2.0 directory sync so an identity provider keeps a Kinde organization's users and roles up to date. Explains that each organization has one directory tied to an enterprise connection, and that Kinde issues a SCIM endpoint URL and secret token for the IdP. Covers creating a directory, including choosing a connection when more than one is enabled, then configuring provisioning in Microsoft Entra ID and Okta, with the same credential fields for other SCIM 2.0 providers such as Google Workspace, OneLogin, JumpCloud, CyberArk, PingFederate, and Rippling. Describes linking synced groups to Kinde roles, automatic mapping of core user attributes and the enterprise extension, and mapping custom attributes to user properties. Explains create, update, suspend, reactivate, and unassign behavior, directory-managed read-only organizations, dormant memberships for existing members the directory doesn't provision, and how existing users are matched by enterprise identity. Includes token regeneration, connection changes, deletion through the Kinde Management API, the supported SCIM operations and error codes, and troubleshooting for failed syncs. Intended for developers, enterprise admins, and security engineers on the Scale or Enterprise plan."
 featured: false
 deprecated: false
 topics:
@@ -33,7 +33,8 @@ keywords:
   - Entra ID
   - Okta
   - custom attributes
-updated: 2026-11-09
+  - dormant members
+updated: 2026-11-19
 ---
 
 <Aside type="upgrade">
@@ -69,7 +70,7 @@ Kinde does not send password or SSO credentials to your IdP, and SCIM does not r
 - [Set up an enterprise connection](/authenticate/enterprise-connections/about-enterprise-connections/) for the organization (for example, SAML or Entra ID) and make sure it's enabled. You can't create a directory without one.
 - Make sure the organization's default roles are set the way you want. Kinde gives these roles to every user it provisions.
 - Decide which existing users will be managed by SCIM. See [Users who already exist in Kinde](#users-who-already-exist-in-kinde).
-- Decide what to do with the organization's current members before you create the directory. Once the directory exists, every member becomes read-only, including users your IdP will never provision. You can't edit, suspend, or delete them in Kinde, or change their roles. Remove anyone you don't want in the organization first, or plan to manage them through your IdP. See [Directory-managed organizations](#directory-managed-organizations).
+- Decide what to do with the organization's current members before you create the directory. Once the directory exists, members your IdP doesn't provision become dormant: they can't sign in to the organization, and they're hidden from its members, roles, and user count. Their membership isn't deleted, so if you delete the directory they get their access back. To keep someone in the organization, make sure your IdP provisions them as the same user. See [Members the directory doesn't provision](#members-the-directory-doesnt-provision).
 
 ## Configuration
 
@@ -225,25 +226,36 @@ When SCIM changes a user, Kinde sends a `user.updated` [webhook](/integrate/webh
 
 ## Directory-managed organizations
 
-Once an organization has a directory, your IdP is the source of truth for its members. To stop changes in Kinde from being overwritten by the next sync, Kinde makes the organization's users read-only:
+Once an organization has a directory, your IdP is the source of truth for its members. To stop changes in Kinde from being overwritten by the next sync, Kinde makes the users your IdP provisions read-only:
 
 - User details can't be edited, and the user's profile shows that they're managed by the directory.
-- Users can't be added, invited, deleted, or suspended in the Kinde admin area, through the Management API, or in the self-serve portal.
+- Users can't be deleted or suspended in the Kinde admin area, through the Management API, or in the self-serve portal.
 - Roles in the organization can't be changed manually. Use group-to-role links instead.
 - Identities can't be added, changed, or removed.
 - A directory-managed user can only belong to that one organization. They aren't added to other organizations, including through verified domain auto-join.
 
-This applies to every member of the organization, including members who were added before the directory was created. Make changes in your IdP instead.
+The organization also only accepts members from your IdP. Adding a user in the Kinde admin area, through the Management API, or in the self-serve portal, accepting an invitation, and verified domain auto-join are all refused. The Management API returns the error code `ORGANIZATION_MANAGED_BY_DIRECTORY_SYNC`. Make changes in your IdP instead.
+
+### Members the directory doesn't provision
+
+Members who were in the organization before you created the directory keep their membership record, but Kinde ignores it unless your IdP provisions that same user. Until then the membership is dormant:
+
+- The member can't sign in to the organization, and their tokens don't include it.
+- They don't appear in the organization's members list, role assignments, or user count, or in the organization's Management API responses, exports, or webhook events.
+- They aren't locked to the organization. They can still join and use other organizations, and you manage them like any other Kinde user.
+- You can't remove the dormant membership. This keeps directory sync reversible.
+
+If your IdP provisions the same user, for example through a [pre-provisioned enterprise identity](#users-who-already-exist-in-kinde), the membership becomes active again. If you [delete the directory](#delete-a-directory), every dormant member gets their access back, with the roles they had before.
 
 ## Users who already exist in Kinde
 
 Kinde matches SCIM users to existing users through their enterprise identity, not their email address alone:
 
 - **Pre-provisioned users.** If you've already [added an enterprise identity](/authenticate/enterprise-connections/provision-users-enterprise/#provisioning-method-1-assign-a-connection-identity-to-a-user-recommended) for the user on the directory's connection, SCIM takes over that user.
-- **Users with another sign-in method.** A user with the same email who signs in with a password, email code, or social sign-in isn't linked. SCIM creates a separate user.
-- **Users who have already signed in through the connection.** Your IdP gets a `409 User already exists` error for these users.
+- **Users with another sign-in method.** A user with the same email who signs in with a password, email code, or social sign-in isn't linked. SCIM creates a separate user. If the existing user was a member of the organization, their membership becomes [dormant](#members-the-directory-doesnt-provision), so only the new SCIM user is active in the organization.
+- **Users who have already signed in through the connection.** Your IdP gets a `409 User already exists` error for these users, and their existing membership stays dormant.
 
-To avoid duplicates, set up directory sync before users start signing in through the enterprise connection, or [migrate them to an enterprise identity](/authenticate/enterprise-connections/migrate-users-to-enterprise-identity/) first.
+To keep existing members, set up directory sync before users start signing in through the enterprise connection, or [migrate them to an enterprise identity](/authenticate/enterprise-connections/migrate-users-to-enterprise-identity/) first.
 
 ## Manage the directory
 
@@ -273,7 +285,7 @@ If the directory's enterprise connection is deleted, provisioning stops working 
 
 ### Delete a directory
 
-You can delete a directory with the [Management API](/kinde-apis/management/#tag/directories). Deleting a directory removes its SCIM user and group records and stops your IdP from syncing. Users, their organization membership, and their roles stay in Kinde.
+You can delete a directory with the [Management API](/kinde-apis/management/#tag/directories). Deleting a directory removes its SCIM user and group records and stops your IdP from syncing. Users, their organization membership, and their roles stay in Kinde. Members who were [dormant](#members-the-directory-doesnt-provision) because the directory didn't provision them get their access back, with the roles they had.
 
 You can also create, list, update, and regenerate tokens for directories through the Management API. These endpoints require the `read:scim_directories`, `create:scim_directories`, `update:scim_directories`, and `delete:scim_directories` scopes.
 
@@ -325,6 +337,10 @@ Check **Provisioning > Logs** for the failed requests. Common causes:
 **Duplicate users**
 
 The user had a non-SSO identity (such as an email and password) before SCIM was set up. See [Users who already exist in Kinde](#users-who-already-exist-in-kinde).
+
+**Existing members disappeared from the organization after you created a directory**
+
+Their membership is dormant because your IdP hasn't provisioned them. Pre-provision their enterprise identity on the directory's connection, then assign them in your IdP so SCIM matches the same user. Or delete the directory to give them their access back. See [Members the directory doesn't provision](#members-the-directory-doesnt-provision).
 
 **Roles aren't being assigned**
 
