@@ -1,7 +1,7 @@
 ---
 page_id: 2219e226-2b23-5132-a2a7-c578b1cfb0c1
 title: About MCP servers in Kinde
-description: "Use Kinde MCP to expose your APIs to AI agents—or manage users, orgs, and roles from Cursor, Claude, and VS Code"
+description: "Use Kinde MCP to expose your APIs to AI agents—or manage users, orgs, roles and more from Claude, ChatGPT, Grok, Cursor and VS Code, by signing in with your Kinde account or with an Environment API key"
 sidebar:
   order: 1
   label: About MCP servers
@@ -9,7 +9,11 @@ prev: false
 relatedArticles:
   - edb34665-0eda-47a1-b8e1-89f705c6ac87
   - 1119f226-3b22-4131-b2a6-a568b1dfb011
+  - 08e5abe4-5d6d-4639-bffa-8be76327f31b
   - f3a4b5c6-d7e8-4f9a-b0c1-d2e3f4a5b6c7
+  - fbb561f0-f8fc-4aad-b557-19939cef6b97
+  - e20dc04e-84cc-403c-82bc-8690cddb306c
+  - 8c4a1882-5fce-4e3c-87de-9e0190ab31b1
   - 50284476-2442-414c-af20-01ed3ef4ca4e
 app_context: []
 topics:
@@ -32,10 +36,14 @@ keywords:
   - environment api key
   - openapi
   - cursor
-updated: 2026-07-15
+  - claude
+  - chatgpt
+  - grok
+  - oauth sign-in
+updated: 2026-11-10
 featured: false
 deprecated: false
-ai_summary: "Overview of MCP (Model Context Protocol) support in Kinde for AI agents such as Cursor, Claude, and VS Code. Covers two options: MCP connections that expose your registered APIs as tools from an OpenAPI spec, authenticated with a user API key and proxied with audit logging (beta), and the Kinde Management MCP server at the business MCP endpoint for managing users, organizations, roles, and permissions with an MCP-enabled Environment API key. Includes a comparison of endpoints, purpose, auth, tools source, and where to configure each option in the dashboard. Points readers to setup guides for adding an MCP connection and configuring the Management MCP server."
+ai_summary: "Overview of MCP (Model Context Protocol) support in Kinde for AI agents such as Claude, ChatGPT, Grok, Cursor, and VS Code. Covers two options: MCP connections that expose your registered APIs as tools from an OpenAPI spec, authenticated with a user API key and proxied with audit logging (beta), and the Kinde Management MCP server at the business MCP endpoint, which exposes the Management API as one tool per operation (create, read, update and delete) and accepts either sign-in with a Kinde account, scoped by team role access level, or an MCP-enabled Environment API key. Includes a comparison of endpoints, purpose, auth, tools source, and where to configure each option in the dashboard. Points readers to setup guides for adding an MCP connection, enabling sign-in, and connecting Claude, ChatGPT and Grok."
 ---
 
 Kinde supports MCP (Model Context Protocol) so AI agents like Cursor, Claude, and VS Code can call tools over a standard protocol.
@@ -64,15 +72,14 @@ See [Add a new MCP connection](/mcp-servers/add-mcp-connection/).
 
 ## Manage your Kinde account with MCP
 
-The Kinde Management MCP server lets AI agents interact with your Kinde account using a subset of the [Kinde Management API](/kinde-apis/management/).
+The Kinde Management MCP server lets AI assistants such as Claude, ChatGPT, Grok, Cursor and VS Code work with your Kinde account through the [Kinde Management API](/kinde-apis/management/). Ask in plain language to look up users, inspect organizations, review roles and permissions, or make changes, and the assistant calls the API for you. Tools that change or delete data ask you to confirm first.
 
-- Kinde MCP endpoint: `https://<your_business>.kinde.com/mcp`
-- Clients authenticate with an MCP-enabled Environment API key
-- Tools cover users, organizations, roles, permissions, and related operations
+The server is at your environment's MCP endpoint, `https://YOUR_BUSINESS.kinde.com/mcp`, and an assistant can connect in two ways:
 
-Use this when you want to manage your Kinde account using natural language.
+- **Sign in with your Kinde account.** An owner or admin enables AI agent sign-in for the environment and sets an access level for each team role. People then connect by signing in; there is no key to share, and access follows their role. See [Sign in with your Kinde account](/mcp-servers/sign-in-with-your-kinde-account/).
+- **Environment API key.** Create a key enabled for the MCP server, choose its scopes, and configure it in the assistant. Everyone using that assistant shares the key. See [Manage Kinde account with AI agents](/mcp-servers/manage-kinde-account-with-ai-agents/).
 
-See [Manage Kinde account with AI agents](/mcp-servers/manage-kinde-account-with-ai-agents/).
+Setup guides: [Claude](/mcp-servers/connect-claude/), [ChatGPT](/mcp-servers/connect-chatgpt/), [Grok](/mcp-servers/connect-grok/).
 
 ![Screenshot showing AI agent response to "What organizations do I have in Kinde?"](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/bdad7e5f-3cc2-4a0e-8666-46be583d1000/socialsharingimage)
 
@@ -82,11 +89,13 @@ See [Manage Kinde account with AI agents](/mcp-servers/manage-kinde-account-with
 | --- | --- | --- |
 | **Endpoint** | `https://<your_business>.kinde.com/mcp/<connection-id>` | `https://<your_business>.kinde.com/mcp` |
 | **Purpose** | Expose **your** API operations as MCP tools | Manage your Kinde account from an AI agent |
-| **Auth** | User API key for the authorized API | Environment API key |
-| **Tools source** | Your OpenAPI spec operations | Kinde Management API operations |
+| **Auth** | User API key for the authorized API | Sign in with a Kinde account (per-person, scoped by team role), or an MCP-enabled Environment API key |
+| **Tools source** | Your OpenAPI spec operations | The Kinde Management API, one tool per operation, covering create, read, update and delete |
 | **Where to configure** | **Dashboard > MCP Servers > Connections** | **Dashboard > Settings > Environment > APIs > Kinde Management API > API keys** |
 
 ## Next steps
 
 - [Add a new MCP connection](/mcp-servers/add-mcp-connection/) — expose your APIs to MCP clients
 - [Manage Kinde account with AI agents](/mcp-servers/manage-kinde-account-with-ai-agents/) — set up the Management MCP server
+- [Sign in with your Kinde account](/mcp-servers/sign-in-with-your-kinde-account/) — per-person access without a shared key
+- [Connect Kinde to Claude](/mcp-servers/connect-claude/), [ChatGPT](/mcp-servers/connect-chatgpt/) or [Grok](/mcp-servers/connect-grok/)

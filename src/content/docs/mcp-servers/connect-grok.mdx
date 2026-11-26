@@ -1,0 +1,164 @@
+---
+page_id: 8c4a1882-5fce-4e3c-87de-9e0190ab31b1
+title: Connect Kinde to Grok
+description: "Add the Kinde Management MCP server to grok.com, the Grok Bot, or the Grok CLI, and manage your Kinde environment from a chat"
+sidebar:
+  order: 8
+tableOfContents:
+  maxHeadingLevel: 3
+relatedArticles:
+  - 08e5abe4-5d6d-4639-bffa-8be76327f31b
+  - 1119f226-3b22-4131-b2a6-a568b1dfb011
+  - f3a4b5c6-d7e8-4f9a-b0c1-d2e3f4a5b6c7
+  - fbb561f0-f8fc-4aad-b557-19939cef6b97
+  - e20dc04e-84cc-403c-82bc-8690cddb306c
+app_context:
+  - m: api_details
+    s: api_keys
+topics:
+  - mcp-servers
+  - developer-tools
+  - kinde-api
+sdk: []
+languages: []
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - grok
+  - xai
+  - grok cli
+  - grok bot
+  - grok connectors
+  - custom connector
+  - mcp server
+  - environment api key
+updated: 2026-11-10
+featured: false
+deprecated: false
+ai_summary: "Step-by-step guide to adding the Kinde Management MCP server to Grok: grok.com with an Environment API key, the Grok Bot by adding a custom connector and signing in on first use, and the Grok CLI with an API key header. Includes creating an Acme organization from the bot and troubleshooting. Notes that signing in from grok.com isn't supported yet."
+---
+
+Kinde publishes a remote [MCP](https://modelcontextprotocol.io) server that lets Grok work with your Kinde environment in natural language. Once connected, you can ask Grok to look up users, inspect organizations, review roles and permissions, and make routine changes.
+
+You can connect from grok.com, the Grok Bot, or the Grok CLI. grok.com and the CLI use an **Environment API key**. The Grok Bot asks you to sign in with your Kinde account the first time you use the connector. Signing in from grok.com isn't available yet; see the note at the end of this page.
+
+## What you need
+
+- A Kinde business with the **Environment API keys** feature enabled.
+- An Environment API key enabled for the MCP server. Create one in **Settings > APIs > Kinde Management API > API keys**, choose its scopes, and copy the value; Kinde shows it only once. See [Create an Environment API key](/mcp-servers/manage-kinde-account-with-ai-agents/#step-1-create-an-environment-api-key).
+- The [Grok CLI](https://docs.x.ai/build/features/mcp-servers), or a Grok plan that includes connectors on grok.com. On Grok Business and Enterprise, a team admin provisions connectors first.
+- Your environment's MCP URL: `https://YOUR_BUSINESS.kinde.com/mcp`. If you use a custom domain, use that domain instead.
+
+## Option 1: Grok.com (Web)
+
+1. Go to `grok.com/connectors`, or open **Connectors** from the menu.
+2. Select **New Connector**, then **Custom**.
+3. Enter a name, such as `Kinde`, and the **Remote MCP server URL**: `https://YOUR_BUSINESS.kinde.com/mcp`.
+4. If the form has an **Authorization** or bearer token field, enter `Bearer YOUR_API_KEY`, including `Bearer ` and the space.
+5. Select **Add Connector**.
+
+If the form only asks for OAuth details (client ID, authorization endpoint, token endpoint), Grok can't connect to Kinde from grok.com yet. Use the Grok Bot or the Grok CLI instead.
+
+## Option 2: Grok Bot
+
+1. Open Grok and select the **Connect apps** icon.
+
+    ![Connect apps icon in Grok](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/fe2d6085-b3eb-4b8c-4ece-426820b9fd00/socialsharingimage)
+
+2. Scroll down and select **Add a custom connector**.
+
+    ![Add a custom connector in Grok](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/cd360731-f798-45b9-68d5-2648bbc33a00/socialsharingimage)
+
+3. Enter a name, such as `Kinde`, and the MCP URL `https://YOUR_BUSINESS.kinde.com/mcp`, then add the connector.
+
+    ![Grok custom connector form for the Kinde MCP URL](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/b77e9ac6-0b5d-449a-199a-b231f810ee00/socialsharingimage)
+
+4. The first time you call the connector, Grok prompts you to connect to Kinde. Sign in and authorize Kinde with your user.
+
+    ![Kinde connect card in a Grok conversation](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/7c3d4340-fa90-49f9-1048-c151fbe0bb00/socialsharingimage)
+
+5. Run a query, for example "Create an organization called Acme". Grok creates the organization.
+
+    ![Grok confirming the Acme organization was created in Kinde](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/dcdafee3-1fc8-4085-7206-f861a1c11900/socialsharingimage)
+
+6. In Kinde, go to **Organizations** to see the organization the bot created.
+
+    ![Acme organization in the Kinde organizations list](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/22e6db4d-f88f-4487-8ca8-da90d56e9400/socialsharingimage)
+
+## Option 3: Grok CLI
+
+Add the server with the key as a header. Keep the key in an environment variable so it stays out of your shell history:
+
+```bash
+export KINDE_API_KEY="YOUR_API_KEY"
+grok mcp add --transport http kinde https://YOUR_BUSINESS.kinde.com/mcp \
+  --header "Authorization: Bearer ${KINDE_API_KEY}"
+```
+
+Check the connection:
+
+```bash
+grok mcp doctor kinde
+```
+
+The equivalent entry in `config.toml` is:
+
+```toml
+[mcp_servers.kinde]
+url = "https://YOUR_BUSINESS.kinde.com/mcp"
+headers = { "Authorization" = "Bearer YOUR_API_KEY" }
+```
+
+Run `grok mcp list` to see the server, and `grok mcp remove kinde` to remove it.
+
+## Use the connector
+
+Ask in plain language, for example:
+
+- "How many users are in the _Acme_ organization?"
+- "List every user who has the _admin_ role and which organizations they hold it in."
+- "Create a new role called _Support Agent_."
+
+Grok only sees the tools your key's scopes cover. Read-only tools run without asking; tools that create, change or delete data are annotated so Grok asks you to confirm before running them.
+
+### Signing in with your Kinde account
+
+[AI agent sign-in](/mcp-servers/sign-in-with-your-kinde-account/) lets Claude and ChatGPT connect without a key by signing in with a Kinde account. The Grok Bot prompts you to sign in the first time you use the connector. grok.com doesn't register itself with Kinde the way those assistants do, so sign-in from grok.com isn't supported yet. Use an Environment API key there, or use the Grok CLI.
+
+### Troubleshooting FAQs
+
+<details>
+<summary>No tools appear after connecting</summary>
+
+The key is missing scopes, isn't enabled for the MCP server, or the Environment API keys feature isn't enabled. Add the scopes and reconnect.
+
+</details>
+
+<details>
+<summary>"Authentication required" or the connection is rejected</summary>
+
+Check that the key is active, that it is the environment key created for the MCP server (it starts with `k_live_`), that the header value starts with `Bearer ` followed by a space, and that the MCP URL belongs to the environment the key was created in.
+
+</details>
+
+<details>
+<summary>grok.com asks for OAuth client details</summary>
+
+Kinde sign-in isn't available from grok.com yet. Use the Grok CLI with an Environment API key.
+
+</details>
+
+### Security best practices
+
+- Scope the key tightly. Prefer read-only scopes unless Grok genuinely needs to make changes.
+- Use a dedicated key for Grok so you can revoke it without affecting other integrations, and rotate or revoke it from **Settings > APIs > Kinde Management API > API keys** if it is exposed.
+- Keep the key out of prompts and chat history. Put it in the connector configuration or an environment variable only.
+- Review every write action before approving it.
+
+## Next steps
+
+- [Manage Kinde account with AI agents](/mcp-servers/manage-kinde-account-with-ai-agents/) — more on Environment API keys and scopes
+- [Operations and scopes for the Kinde MCP server](/mcp-servers/operations-and-scopes/)
+- [MCP servers](https://docs.x.ai/build/features/mcp-servers) in xAI's documentation
