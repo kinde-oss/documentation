@@ -1,0 +1,110 @@
+---
+page_id: ee01d924-d7e0-4a93-a1c6-926a4428a918
+title: Kinde and Lettr for custom SMTP
+description: Guide to configuring Kinde with Lettr for custom SMTP email delivery including domain verification, API key setup, sandbox testing, and SMTP configuration
+sidebar:
+  order: 15
+relatedArticles:
+  - 0222489b-3478-48a7-a5c9-c99c6044f0e9
+  - c4182a6d-64ca-4c82-ba33-e5fc5d8b8cad
+  - 0979c63d-fc54-461d-9a83-a81bea7353f6
+  - 5d958ce9-27ee-420a-9e20-09a2ed7fb179
+topics:
+  - integrate
+  - third-party-tools
+sdk: []
+languages: []
+audience:
+  - developers
+  - admins
+complexity: intermediate
+keywords:
+  - lettr
+  - smtp
+  - email
+  - api key
+  - sandbox api key
+  - domain verification
+  - email deliverability
+  - troubleshooting
+updated: 2026-11-16
+featured: false
+deprecated: false
+ai_summary: Guide to configuring Kinde with Lettr for custom SMTP email delivery including domain verification, API key setup, sandbox testing, and SMTP configuration.
+---
+
+You can configure Kinde to send emails using your Lettr account. This means your users will receive communications from your business’s email address, and not Kinde’s.
+
+Other benefits include better control of email deliverability, analytics and tracking, scalability, email compliance, etc.
+
+Please review the documentation at [Customize email sender](/get-started/connect/customize-email-sender/) for details about how custom SMTP works with Kinde and third-party providers.
+
+## Verify a sending domain in Lettr
+
+Lettr only sends emails from domains you have verified. When you use a live API key, the sender email you set in Kinde must be an address on one of these domains. If you only want to test with a [sandbox API key](#test-with-a-sandbox-api-key-optional), you can verify your domain later.
+
+See Lettr's [Sending Domains](https://docs.lettr.com/learn/domains/sending-domains) documentation for adding and verifying your domain.
+
+## Create an API key in Lettr
+
+You'll need a Lettr API key to use as the password for authenticating with their SMTP server. Lettr API keys start with `lttr_`.
+
+You can use an existing API key from Lettr if you have one already. Or you can create a new API key in the Lettr dashboard.
+
+See Lettr's [API Keys](https://docs.lettr.com/learn/api-keys/introduction) documentation for more details.
+
+## Test with a sandbox API key (optional)
+
+If you want to try Lettr with Kinde before your domain is verified, you can use a Lettr sandbox API key. Sandbox keys start with `lttr_sandbox_`. When you use a sandbox key:
+
+- You don't need a verified domain.
+- Every email goes to the inbox of the person who created the key, not to the recipient.
+- The sender domain is changed to `dev.uselettr.com`.
+
+This makes sandbox keys useful for checking your SMTP details with the **Send test email** button in Kinde. See Lettr's [Sandbox API Keys](https://docs.lettr.com/learn/api-keys/sandbox) documentation for more details.
+
+<Aside type="danger" title="Don't leave a sandbox key saved in a live environment">
+
+If a sandbox key is saved for a live environment, all emails Kinde sends to your users go to the key creator's inbox instead. This includes sign-in codes and password reset codes, so your users won't be able to sign in. Replace the sandbox key with a live API key before your users rely on this environment.
+
+</Aside>
+
+## Add email sender SMTP details
+
+If you are setting this up and your production environment is already live, we recommend testing this in a staging or test environment first. Email sender details are set for each environment, so repeat these steps in every environment that will send through Lettr.
+
+1. In Kinde, go to **Settings > Environment > Messaging > Email Sender**.
+2. Enter a **Sender name**. This is usually your business name, but might be a specific person.
+3. In **Send emails using**, select **Custom SMTP server**. The **SMTP settings** section opens.
+4. Enter the **Sender email**. This is the address your users will receive emails from (e.g., `noreply@yourdomain.com`). With a live API key, it must be on a domain you verified in Lettr. With a sandbox key, the domain doesn't need to be verified, because Lettr changes it to `dev.uselettr.com`.
+5. Enter the SMTP details of your email provider:
+
+   - Server address - `smtp.lettr.com`
+   - Port - `587` (STARTTLS, recommended) or `465` (TLS/SSL)
+   - Username - `lettr`. This is the same for every Lettr account.
+   - Password - Use your Lettr API key
+
+   <Aside type="warning">
+
+   Don't use Lettr's alternate port `2465`. Kinde only treats port `465` as a TLS/SSL port, so connections to `2465` fail.
+
+   </Aside>
+
+6. Select **Send test email**. This sends a test email to the email address you are logged into Kinde with. If you're using a sandbox key, the test email goes to the inbox of the person who created the key instead.
+7. If the test is successful, select **Save**.
+8. If the test is not successful, check the SMTP details (step 5) and try sending a test email again. If this does not work, see the troubleshooting section below.
+
+If you [customize the email sender for an organization](/build/organizations/email-sender-organization/), the organization's sender email must also be on a domain you verified in Lettr.
+
+## Troubleshooting
+
+If sending a test email fails:
+
+- **Check the sender domain** - An error like `451 4.7.1 Temporary error forwarding message: API error: API returned status 400` usually means the sender email isn't on a verified Lettr domain. Lettr accepts the username and password, then rejects the email because of the sender address. Check that your domain is verified in Lettr, and that the **Sender email** in Kinde uses that domain.
+- **Check Lettr's API logs** - Emails sent over SMTP appear in Lettr's [API Logs](https://docs.lettr.com/learn/logs/introduction) as `POST api/emails` requests with the user agent `SMTP`. Open a request with a `400` status to see why Lettr rejected the email.
+- **Confirm your SMTP details** - Check the server address is `smtp.lettr.com`, the port is `587` or `465`, the username is `lettr`, and the password is your full API key, including the `lttr_` prefix.
+- **Wait after repeated failed sign-ins** - After 5 failed SMTP sign-in attempts in 5 minutes, Lettr blocks SMTP sign-in for 15 minutes on all ports. This can happen if the API key was copied incorrectly. Fix the password, wait 15 minutes, then send the test email again.
+
+If emails stop sending after your setup was working, see [Email sending alerts](/get-started/connect/customize-email-sender/#email-sending-alerts).
+
+For more details, see Lettr's [SMTP documentation](https://docs.lettr.com/quickstart/smtp/introduction).
