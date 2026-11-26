@@ -30,7 +30,7 @@ keywords:
   - security
   - retry policy
   - endpoints
-updated: 2026-04-03
+updated: 2026-11-13
 featured: false
 deprecated: false
 ai_summary: Comprehensive guide to Kinde webhooks including event monitoring, security best practices, JWT handling, and retry policies for real-time notifications.
@@ -38,7 +38,7 @@ ai_summary: Comprehensive guide to Kinde webhooks including event monitoring, se
 
 <Aside type="warning">
 
-If you are experiencing issues with webhooks, it could be because the webhook request content-type header has changed from `application/json` to `application/jwt`. Read the full details [here](https://kinde.notion.site/Important-notice-for-webhooks-users-7fcf184faece41368603e513267dffc6). We apologize for any inconvenience.
+If you are experiencing issues with webhooks related to content-type, Kinde sends webhook requests with the `application/jwt` content-type and may send a fallback request with `application/json` after a failed first attempt. See [Fallback request with `application/json`](/integrate/webhooks/about-webhooks#fallback-request-with-applicationjson).
 
 </Aside>
 
@@ -68,7 +68,7 @@ You’ll come across these terms when you start using webhooks.
 
 **Request** - the request object sent to your endpoint that contains a JSON Web Token (JWT) with the event data and details about the event.
 
-**Attempt** - an instance of an HTTP request attempt. Multiple request attempts may be made if Kinde does not receive a 200 response.
+**Attempt** - an instance of an HTTP request attempt. Multiple request attempts may be made if Kinde does not receive a `2xx` response.
 
 
 ## Webhooks flow
@@ -76,8 +76,8 @@ You’ll come across these terms when you start using webhooks.
 1. Webhook endpoints are registered in Kinde.
 2. An event occurs in your account, e.g. `user.created`.
 3. Your endpoint will be called with a JWT containing the data object about that event, and details about the webhook.
-   1. If a `200` response is received, the workflow is complete. Once you respond with HTTP 200, Kinde considers delivery successful and will not resend.
-   2. If Kinde fails to receive a response, it will retry using a back-off policy (see **Webhooks responses and retry policy** below).
+   1. If a `2xx` response is received, the workflow is complete. Kinde considers delivery successful and will not resend.
+   2. If Kinde does not receive a `2xx` response, it will retry using a back-off policy (see **Webhooks responses and retry policy** below).
 4. In your application you should verify the authenticity of the webhook request, and decode the JWT (see **Webhooks security** below).
 5. Logic is triggered in your application using the event data.
 
@@ -90,6 +90,38 @@ The body of the request is a JWT token that is signed by Kinde.
 ```text
 eyJhbGciOiJSUzI1NiIsImtpZCI6IjJhOmUwOjRmO...
 ```
+
+### Fallback request with `application/json`
+
+Webhook requests were originally sent with the `application/json` content-type. To keep older endpoints working, Kinde makes one fallback request when the first attempt fails:
+
+- If your endpoint returns a non-`2xx` response to the first attempt, Kinde immediately sends the same request again with `Content-Type: application/json`.
+- The body is the same signed JWT. It is not a JSON document.
+- The `webhook-id` header is the same as on the first request.
+- A `2xx` response to the fallback request counts as a successful delivery.
+- The fallback is sent once for each webhook request, straight after the first attempt. It is not sent if your endpoint could not be reached, and later retries are sent as `application/jwt` only.
+
+If you see a request with `Content-Type: application/json`, your endpoint returned an error to the `application/jwt` request that came just before it. Make sure your endpoint accepts `application/jwt` and returns a `2xx` response, and the fallback request will not be sent.
+
+<Aside>
+
+Some frameworks choose a body parser from the content-type header. A JSON parser will reject the fallback request because the body is a JWT, not JSON. Read the request body as plain text on your webhook route for both content types. For example, in Express:
+
+```javascript
+app.post(
+  "/kinde-webhook",
+  express.text({ type: ["application/jwt", "application/json"] }),
+  (req, res) => {
+    const token = req.body; // the signed JWT as a string
+    // verify and handle the token, then:
+    res.sendStatus(200);
+  }
+);
+```
+
+Register this route before any global `express.json()` middleware.
+
+</Aside>
 
 ### Example decoded payload
 
@@ -183,20 +215,26 @@ Ensure webhooks are secure and optimized.
 - Verify the JWT to ensure that the request came from Kinde using your public JWKS file
 - Only subscribe to the events that your implementation requires; listening for all events creates unnecessary load on your server
 - Endpoints must use HTTPS
-- Return a 200 from your endpoint to indicate it has received the request
+- Return a `2xx` response from your endpoint to indicate it has received the request
 
 ## Webhooks responses and retry policy
 
-If Kinde fails to receive a 200 response from your endpoint, Kinde operates a back-off retry policy, which roughly equates to the following attempts:
+Kinde treats any `2xx` response from your endpoint as a successful delivery and does not send the request again.
 
-- Immediately
-- After 5 seconds
-- After 30 seconds
-- After 2 minutes
-- After 10 minutes
-- After 1 hour
-- After 4 hours
-- Every 12 hours until 36 hours
+An attempt fails if your endpoint returns any other status, cannot be reached, or does not respond within 2 minutes. When an attempt fails, Kinde retries using a back-off policy. Kinde makes up to 6 attempts for each webhook request:
+
+| Attempt | Wait after the previous attempt fails | Approximate time since the first attempt |
+| ------- | ------------------------------------- | ---------------------------------------- |
+| 1       | None                                  | Immediately                              |
+| 2       | 5 seconds                             | 5 seconds                                |
+| 3       | 50 seconds                            | 1 minute                                 |
+| 4       | 8 minutes                             | 9 minutes                                |
+| 5       | 1 hour 23 minutes                     | 1.5 hours                                |
+| 6       | 12 hours                              | 13.5 hours                               |
+
+If the sixth attempt fails, Kinde stops trying to deliver that request.
+
+Every retry is sent with the `application/jwt` content-type and the same `webhook-id` header as the first attempt. After a failed first attempt, Kinde also makes one extra request with the `application/json` content-type. See [Fallback request with `application/json`](#fallback-request-with-applicationjson).
 
 ## Webhooks auto-disable policy
 
