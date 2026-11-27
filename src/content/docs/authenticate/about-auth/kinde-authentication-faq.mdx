@@ -1,7 +1,7 @@
 ---
 page_id: c93d0dc2-adad-4bb3-9618-6dc2109d5aa8
 title: Top questions about Kinde authentication
-description: "Find answers for Kinde authentication, from social and enterprise sign-in to MFA, sessions, and troubleshooting"
+description: "Find answers for Kinde authentication, from social and enterprise sign-in to MFA, iframes and popups, sessions, and troubleshooting"
 sidebar:
   order: 5
 relatedArticles:
@@ -11,7 +11,7 @@ relatedArticles:
   - c62fc730-1d48-42fe-a05e-34f4d330887d
 featured: false
 deprecated: false
-ai_summary: "Answers to common questions about setting up and operating Kinde authentication. Covers choosing authentication methods, password and passwordless options, and automatic account linking through the Email address trust setting. Explains when to use Trust (only when the provider verifies email addresses and prevents users from changing their primary email address) or Verify, then trust for social connections and notes that Google uses Trust by default. Also covers enterprise and SAML questions, multi-factor authentication, username sign-in, and the Device Authorization Flow. Includes custom authentication pages and redirect-based security limits, including the lack of support for embedded login and the Resource Owner Password Credentials grant. Developer answers cover callback URLs and token validation for the JavaScript, React, Next.js, TypeScript, React Native, and PHP SDKs. Also covers troubleshooting for verification codes, sessions, and common sign-in errors. Intended for developers, product managers, and security engineers."
+ai_summary: "Answers to common questions about setting up and operating Kinde authentication. Covers choosing authentication methods, password and passwordless options, and automatic account linking through the Email address trust setting. Explains when to use Trust (only when the provider verifies email addresses and prevents users from changing their primary email address) or Verify, then trust for social connections and notes that Google uses Trust by default. Also covers enterprise and SAML questions, multi-factor authentication, username sign-in, and the Device Authorization Flow. Includes custom authentication pages and redirect-based security limits, including why hosted authentication pages cannot be embedded in a modal or iframe (apps that run inside an iframe can authenticate through React and JavaScript SDK popups) and the lack of support for the Resource Owner Password Credentials grant. Developer answers cover callback URLs and token validation for the JavaScript, React, Next.js, TypeScript, React Native, and PHP SDKs. Also covers troubleshooting for verification codes, sessions, and common sign-in errors. Intended for developers, product managers, and security engineers."
 topics:
   - authenticate
   - authentication-methods
@@ -25,6 +25,8 @@ keywords:
   - passwordless
   - social sign-in
   - enterprise SSO
+  - popup
+  - iframe
   - MFA
   - account linking
   - callback URLs
@@ -99,7 +101,15 @@ Use multi-domain authentication to maintain sign-in sessions across domains and 
 <details>
 <summary><strong>Can I embed Kinde authentication inside a modal or iframe in my application?</strong></summary>
 
-No. Kinde uses redirect-based OAuth 2.0 flows rather than inline embeddable authentication. Users are redirected to Kinde (or your custom domain) to sign in and then redirected back to your app. Embedding the auth flow in a modal or iframe is not supported.
+Kinde's hosted authentication pages cannot be embedded in an iframe or an in-page modal. Kinde uses redirect-based OAuth 2.0 flows, and the hosted pages send strict CSP and security headers that prevent them from being framed. This is deliberate — it protects your users from clickjacking and credential theft.
+
+If **your application** runs inside an iframe, that is supported. The React and JavaScript SDKs detect that they are framed and open Kinde in a popup window rather than redirecting the framed page. The user authenticates in a genuine top-level window, and the SDK returns the result to your app automatically.
+
+- [React SDK — Authentication in a popup window](/developer-tools/sdks/frontend/react-sdk/#authentication-in-a-popup-window)
+- [JavaScript SDK — Authentication in a popup window](/developer-tools/sdks/frontend/javascript-sdk/#authentication-in-a-popup-window)
+
+If you want authentication to feel native to your app, build [custom sign-up and sign-in pages](/authenticate/custom-configurations/custom-authentication-pages/) instead. You control the styling and layout, while Kinde continues to host the security-critical steps such as password entry, code verification, and MFA.
+
 [Set callback and redirect URLs](/get-started/connect/callback-urls/)
 </details>
 
