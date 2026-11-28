@@ -79,7 +79,14 @@ Learn more about [environments in Kinde](/build/environments/environments/).
 
 ### 3. Test the sign-in flow
 
+<Aside>
+
+Make sure to create the test application in the same environment as the Google connection. Kinde environments are isolated from each other with unique issuer URL, callback URLs, and client IDs.
+
+</Aside>
+
 1. Open a [Kinde-enabled application](/get-started/guides/byo-code) and select **Sign in** or **Sign up**.
+
 
    ![application sign in page](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/cc6f0fde-659b-4730-523c-372ce0e08f00/socialsharingimage)
 
@@ -238,7 +245,9 @@ It may take 5 minutes to a few hours for Google settings to take effect. If sign
    - **Connection ID** is read-only.
    - **Connection name**: enter an internal name for this connection.
    - **External name**: enter the label for the hosted sign-in button. The default is **Google**.
-4. Under **Provisioning**, keep **Email address trust** set to **Trust**. Google is authoritative for Gmail and Google Workspace accounts.
+4. Under **Provisioning**, set **Email address trust** based on the addresses your application accepts:
+   - **Trust**: use this only if your application accepts only Gmail and Google Workspace addresses. Google is authoritative for these accounts.
+   - **Verify, then trust**: use this if your application accepts other email addresses. Users must enter a one-time code sent to the address before accounts are linked.
 
    <Aside>
 
@@ -291,20 +300,21 @@ By default, the Google sign-in screen shows the app name as **kinde.com**. This 
 
 Showing your own domain requires your own Google client. Complete [Create your own Google app](#create-your-own-google-app) first.
 
-If you have been using the Kinde domain and now want to use your own custom domain, follow these steps. Google can verify your own domain for branding, but it cannot verify `kinde.com`, so you need to remove the Kinde callback first.
+If you have been using the Kinde domain and now want to use your own custom domain, follow these steps. Keep the existing `kinde.com` callback registered until the custom domain works, so sign-in keeps working during the switch. Google can verify your own domain for branding, but it cannot verify `kinde.com`, so you remove the Kinde callback at the end.
 
 1. Use a custom domain that is already **Provisioned** in Kinde. See [Use a custom domain with Kinde](/build/domains/pointing-your-domain/).
-2. In the Google OAuth client, under **Authorized redirect URIs**, remove the `kinde.com` callback, for example `https://yourdomain.kinde.com/login/callback`. Google sign-in does not work again until you finish the remaining steps. If you need to go back to the Kinde domain later, add this callback back and turn off **Use custom domain instead** in Kinde.
-3. In **Branding > Authorized domains**, add the custom domain's root, for example `yourdomain.com`, not the `auth.` hostname. Register this domain before you add its callback URL.
-4. In the Google OAuth client, add the custom domain callback URL as an **Authorized redirect URI**, for example `https://auth.yourdomain.com/login/callback`.
-5. Wait for the Google settings to take effect. This can take 5 minutes to a few hours.
-6. In the Kinde Google connection, under **Callback URL**, turn on **Use custom domain instead**, select the callback URL, and select **Save**.
+2. In **Branding > Authorized domains**, add the custom domain's root, for example `yourdomain.com`, not the `auth.` hostname. Register this domain before you add its callback URL.
+3. In the Google OAuth client, under **Authorized redirect URIs**, add the custom domain callback URL, for example `https://auth.yourdomain.com/login/callback`. Leave the existing `kinde.com` callback in place.
+4. Wait for the Google settings to take effect. This can take 5 minutes to a few hours.
+5. In the Kinde Google connection, under **Callback URL**, turn on **Use custom domain instead**, select the callback URL, and select **Save**.
 
    ![configure google connection dialog with use custom domain instead turned on](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/57380a51-6048-47b0-61f1-946b867bcb00/socialsharingimage)
 
-7. Start the sign-in flow on the custom domain. Your app's Kinde domain, often `KINDE_ISSUER_URL`, must be the custom domain. See [Use a custom domain with Kinde](/build/domains/pointing-your-domain/).
+6. Switch your application to the custom domain. Your app's Kinde domain, often `KINDE_ISSUER_URL`, must be the custom domain. See [Use a custom domain with Kinde](/build/domains/pointing-your-domain/).
+7. Start the sign-in flow on the custom domain and confirm it works.
+8. Once sign-in works, remove the `kinde.com` callback from **Authorized redirect URIs**, for example `https://yourdomain.kinde.com/login/callback`. If you need to go back to the Kinde domain later, add this callback back and turn off **Use custom domain instead** in Kinde.
 
-The chooser then shows **"to continue to"** your domain, for example **yourdomain.com** when the callback is `https://auth.yourdomain.com/login/callback`. The developer info popup shows the app name as that domain.
+The chooser then shows **"to continue to"** your domain, for example **yourdomain.com** when the callback is `https://auth.yourdomain.com/login/callback`.
 
 ![google account chooser showing to continue to a custom domain](https://imagedelivery.net/skPPZTHzSlcslvHjesZQcQ/193e70ed-d66e-49d1-521b-4c1e985fd000/socialsharingimage)
 
